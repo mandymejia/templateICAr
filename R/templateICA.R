@@ -34,6 +34,14 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
     stop('mesh argument should be of class templateICA_mesh. See help(make_mesh).')
   }
 
+  #project data to the mesh locations
+  Amat <- mesh$A # n_orig x n_mesh matrix
+  nmesh <- ncol(Amat)
+  if(nrow(Amat) != nvox) error('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+  template_mean_mesh <- template_mean %*% Amat
+  template_var_mesh <- template_var %*% Amat
+  BOLD_mesh <- BOLD %*% Amat
+
   #check that maxQ makes sense
   if(is.null(maxQ)) maxQ <- ntime
   if(maxQ < L){
@@ -45,9 +53,12 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
     maxQ <- ntime
   }
 
+
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
 
   if(maxQ > L){
+
+    ## use BOLD_mesh!
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -58,24 +69,23 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   } else {
 
     # USE ORIGINAL DATA, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- BOLD
+    BOLD3 <- BOLD_mesh
 
   }
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
   BOLD3 <- scale_BOLD(BOLD3)
-  dat <- dim_reduce(BOLD3, L)
-  BOLD4 <- dat$data_reduced
-  H <- dat$H
-  Hinv <- dat$Hinv
-  C_diag <- dat$C_diag
-
+  dat_list <- dim_reduce(BOLD3, L)
+  BOLD4 <- dat_list$data_reduced
+  H <- dat_list$H
+  Hinv <- dat_list$H_inv
+  C_diag <- dat_list$C_diag
 
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD3, template_mean)
+  dat_DR <- dual_reg(BOLD3, template_mean_mesh)
   #dat_DR$A <- scale(dat_DR$A) #would this have the same effect as the code below?
   HA <- H %*% dat_DR$A #apply dimension reduction
   HA <- orthonorm(HA)  #orthogonalize
@@ -84,18 +94,18 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   theta0 <- list(A = HA)
 
   #initialize residual variance
-  theta0$nu0_sq = dat$sigma_sq
+  theta0$nu0_sq = dat_list$sigma_sq #this value is huge.  what if we switch the observations and variables in the dimension reduction step?
 
   #initialize kappa parameters (spatial model only)
-  if(!is.null(mesh)) theta0$kappa <- rep(1, Q)
+  if(!is.null(mesh)) theta0$kappa <- rep(1, L)
 
 
   ### 4. RUN EM ALGORITHM!
 
   if(is.null(mesh)) {
-    resultEM <- EM_templateICA(tempICmean, tempICvar, BOLD4, theta0, C_diag)
+    resultEM <- EM_templateICA.independent(template_mean_mesh, template_var_mesh, BOLD4, theta0, C_diag)
   } else {
-    resultEM <- EM_templateICA(tempICmean, tempICvar, mesh, BOLD4, theta0, C_diag)
+    resultEM <- EM_templateICA.spatial(template_mean_mesh, template_var_mesh, mesh, BOLD4, theta0, C_diag)
 
 #TO DO: revise EM_algorithm function to take mesh (made from make_mesh) instead of spde
 #TO DO: make a wrapper EM_templateICA function to call the right algorithm

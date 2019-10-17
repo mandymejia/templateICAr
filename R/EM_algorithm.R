@@ -1,11 +1,11 @@
-#' EM Algorithm for Spatial Template ICA
+#' EM Algorithm for Template ICA with Spatial Priors
 #'
-#' @description Implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the spatial template ICA model.
+#' @description Implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA with spatial priors model.
 #'
-#' @param tempICmean (QxV matrix) mean of each IC in template
-#' @param tempICvar  (QxV matrix) between-subject variance of each IC in template
-#' @param spde (inla.spde object) SPDE object containing triangular mesh
-#' @param Y (QxV matrix) dimension-reduced fMRI data
+#' @param template_mean (QxN matrix) mean maps for each IC in template. Q is the number of ICs, N is the number of mesh locations.
+#' @param template_var  (QxN matrix) between-subject variance maps for each IC in template
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
+#' @param BOLD (QxN matrix) dimension-reduced fMRI data at each mesh location.
 #' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param max_iter maximum number of EM iterations
@@ -13,28 +13,39 @@
 #'
 #' @return  A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 #' @export
+#' @importFrom INLA inla.spde2.matern
 #'
 #' @details If original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 #'
-EM_spatialICA = function(tempICmean, tempICvar, spde, Y, theta0, C_diag, max_iter=100, epsilon=0.01){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, max_iter=100, epsilon=0.01){
 
-##  Q - number of ICs in template
-##  V - number of voxels/vertices in data
+  if(!all.equal(dim(template_var), dim(template_mean))) error('The dimensions of template_mean and template_var must match.')
 
-##							- spde$n.spde must equal V
+  ntime <- nrow(BOLD) #length of timeseries
+  nmesh <- ncol(BOLD) #number of mesh locations
+  if(ntime > nmesh) warning('More time points than mesh locations. Are you sure?')
+  if(ncol(template_mean) != nmesh) error('Templates and BOLD must have the same number of mesh locations (columns).')
+
+  Q <- nrow(template_mean) #number of ICs
+  if(Q > nmesh) error('Cannot estimate more ICs than mesh locations.')
+  if(Q > ntime) error('Cannot estimate more ICs than time points.')
+
+  spde <- inla.spde2.matern(mesh$mesh, alpha=2)
+  if(spde$n.spde != nmesh) error('The mesh does not have the right number of locations.')
 
 
-	Q = nrow(Y)
-	V = ncol(Y)
 	iter = 1
 	theta = theta0
 	success = 1
-	tempICvar[tempICvar < .00001] = .00001 #to prevent problems when inverting covariance
+	template_var[template_var < .00001] = .00001 #to prevent problems when inverting covariance
 
 	err = 1000 #large initial value for difference between iterations
 	while(err > epsilon){
+
+	  print(paste0('\n ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
+
 		t00 <- Sys.time()
-		theta_new = UpdateTheta(tempICmean, tempICvar, spde, Y, theta, C_diag)
+		theta_new = UpdateTheta(template_mean, template_var, spde, BOLD, theta, C_diag)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters
@@ -76,8 +87,8 @@ EM_spatialICA = function(tempICmean, tempICvar, spde, Y, theta0, C_diag, max_ite
 	var_s = matrix(NA, nrow=Q, ncol=V)
 	for(v in 1:V){
 		y_v <- Y[,v]
-		s0_v <- tempICmean[,v]
-		E_v_inv <- diag(1/tempICvar[,v])
+		s0_v <- template_mean[,v]
+		E_v_inv <- diag(1/template_var[,v])
 		Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
 		miu_s[,v] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
 		var_s[,v] <- diag(Sigma_s_v)
@@ -95,7 +106,7 @@ EM_spatialICA = function(tempICmean, tempICvar, spde, Y, theta0, C_diag, max_ite
 ####################################################################################
 ####################################################################################
 
-UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FALSE){
+UpdateTheta = function(template_mean, template_var, spde, BOLD, theta, C_diag, verbose=FALSE){
 
 ## ###################### OUTPUT ######################
 ##
@@ -110,8 +121,8 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 ##  ICvar - variance of subject-level ICs (for inference)
 
 
-	Q = nrow(Y)
-	V = ncol(Y)
+	Q = nrow(BOLD)
+	V = ncol(BOLD)
 
 	#initialize new objects
 	theta_new = list(A = matrix(NA, Q, Q), nu0_sq = NA, kappa = rep(NA, Q))
@@ -133,14 +144,14 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 
 	for(v in 1:V){
 
-		y_v = Y[,v]
-		s0_v = tempICmean[,v]
+		y_v = BOLD[,v]
+		s0_v = template_mean[,v]
 
 		##########################################
 		### E-STEP FOR A AND nu0^2: POSTERIOR MOMENTS OF s_i(v)
 		##########################################
 
-		E_v_inv = diag(1/tempICvar[,v])
+		E_v_inv = diag(1/template_var[,v])
 		Sigma_s_v = solve(E_v_inv + At_nu0Cinv_A)
 		miu_s_v = Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
 		miu_ssT_v = (miu_s_v %*% t(miu_s_v)) + Sigma_s_v #QxQ
@@ -171,7 +182,7 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 
 	for(v in 1:V){
 
-		y_v = Y[,v]
+		y_v = BOLD[,v]
 
 		nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
 		nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
@@ -196,7 +207,7 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 	C1 = 1/(4*pi)
 	Sigma_inv_list = vector('list', Q)
 	for(q in 1:Q){
-		D_q_inv = Diagonal(V, 1/sqrt(tempICvar[q,])) #sparse diagonal matrix
+		D_q_inv = Diagonal(V, 1/sqrt(template_var[q,])) #sparse diagonal matrix
 		kappa_q = theta$kappa[q]
 		R_q_inv = C1 * (kappa_q^2 * F + 2 * G + kappa_q^(-2) * GFinvG)
 		Sigma_q_inv = D_q_inv %*% R_q_inv %*% D_q_inv
@@ -230,8 +241,8 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 	print('Computing part 1 of trace terms involving big matrix inverse')
 
 	t0 <- Sys.time()
-	yvec <- as.vector(Y) # [y(1),...,y(V)]
-	s0vec <- as.vector(tempICmean) # [s0(1),...,s0(V)]
+	yvec <- as.vector(BOLD) # [y(1),...,y(V)]
+	s0vec <- as.vector(template_mean) # [s0(1),...,s0(V)]
 	Pmvec <- t(P) %*% bigAC %*% (yvec - bigA %*% s0vec)
 	inla.setOption(smtp="pardiso")
 	#1 minute or less using pardiso!!
@@ -242,7 +253,7 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 	for(q in 1:Q){
 
 		# K_q = sparse matrix appearing in trace, D_q^(-1) * GFinvG * D_q^(-1)
-		D_q_inv = Diagonal(V, 1/sqrt(tempICvar[q,]))
+		D_q_inv = Diagonal(V, 1/sqrt(template_var[q,]))
 		K_q1 <- D_q_inv %*% F %*% D_q_inv
 		K_q2 <- D_q_inv %*% GFinvG %*% D_q_inv
 
@@ -282,7 +293,7 @@ UpdateTheta = function(tempICmean, tempICvar, spde, Y, theta, C_diag, verbose=FA
 	for(q in 1:Q){
 		if(verbose) print(paste('Block ',q,' of ',Q))
 		inds_q <- (1:V) + (q-1)*V
-		D_q_inv = Diagonal(V, 1/sqrt(tempICvar[q,]))
+		D_q_inv = Diagonal(V, 1/sqrt(template_var[q,]))
 		K_q1 <- D_q_inv %*% F %*% D_q_inv
 		K_q2 <- D_q_inv %*% GFinvG %*% D_q_inv
 

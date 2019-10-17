@@ -12,6 +12,7 @@ dim_reduce = function(X, Q=NULL){
 
   nvox = ncol(X) #number of brain locations
   ntime = nrow(X) #number of fMRI volumes (reduce this)
+  if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
   # check that X has been centered both ways
   tol = 1e-12
@@ -38,10 +39,13 @@ dim_reduce = function(X, Q=NULL){
   H = diag(1/sqrt(D1 - sigma_sq)) %*% t(U)
   H_inv = U %*% diag(sqrt(D1 - sigma_sq))
 
+  #for residual variance after prewhitening
+  C_diag = diag(H %*% t(H))
+
   #prewhitened data
   X_new <- H %*% X
 
-  result = list(data_reduced=X_new, H=H, H_inv=H_inv, sigma_sq=sigma_sq, C_diag, Q=Q)
+  result = list(data_reduced=X_new, H=H, H_inv=H_inv, sigma_sq=sigma_sq, C_diag=C_diag, Q=Q)
   return(result)
 
 }

@@ -11,12 +11,12 @@ dual_reg <- function(dat, GICA){
 
   ntime <- nrow(dat) #length of timeseries
   nvox <- ncol(dat) #number of data locations
-  Q <- nrow(GICA) #number of ICs
-
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
+  if(nvox != ncol(GICA)) error('The number of voxels in dat and GICA must match')
+
+  Q <- nrow(GICA) #number of ICs
   if(Q > nvox) warning('More ICs than voxels. Are you sure?')
   if(Q > ntime) warning('More ICs than time points. Are you sure?')
-  if(nvox != ncol(GICA)) error('The number of voxels in dat and GICA must match')
 
   #center timeseries data across space and time and standardize scale
   dat_ctr <- scale_BOLD(dat)

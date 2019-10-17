@@ -10,7 +10,6 @@ scale_BOLD <- function(BOLD){
   dat <- BOLD
   ntime <- nrow(dat) #length of timeseries
   nvox <- ncol(dat) #number of data locations
-
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
   #center timeseries data across space and time and standardize scale
