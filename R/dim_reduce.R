@@ -1,0 +1,47 @@
+#' PCA-based Dimension Reduction and Prewhitening for ICA
+#'
+#' @description Performs dimension reduction and prewhitening based on probablistic PCA using SVD. If dimensionality is not specified, it is estimated using the method described in Minka (2008).
+#'
+#' @param X TxV fMRI timeseries data matrix, centered by columns and rows (columns are actually all that matter, but MATLAB implementation of Minka method also assumes rows have been centered (implicit in use of cov function))
+#' @param Q Number of latent dimensions to estimate. If not specified, estimated using the Minka (2008) method.
+#'
+#' @return A list containing the dimension-reduced data (data_reduced, a QxV matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
+#' @export
+#'
+dim_reduce = function(X, Q=NULL){
+
+  nvox = ncol(X) #number of brain locations
+  ntime = nrow(X) #number of fMRI volumes (reduce this)
+
+  # check that X has been centered both ways
+  tol = 1e-12
+  if(max(colMeans(X)^2) > tol) error('Columns of X must be centered')
+  if(max(rowMeans(X)^2) > tol) warning('Rows of X should be centered')
+
+  #determine PCA dimensionality
+  if(is.null(Q)){
+    probs = minka(X) # TO DO: FINALIZE MINKA FUNCTION
+    Q = which.max(probs)
+  }
+
+  #perform dimension reduction
+  XXt = X %*% t(X) / n
+  svd_XXt = svd(XXt)
+  U = svd_XXt$u[,1:q]
+  D1 = svd_XXt$d[1:q]
+  D2 = svd_XXt$d[(q+1):length(svd_XXt$d)]
+
+  #residual variance
+  sigma_sq = mean(D2)
+
+  #prewhitening matrix
+  H = diag(1/sqrt(D1 - sigma_sq)) %*% t(U)
+  H_inv = U %*% diag(sqrt(D1 - sigma_sq))
+
+  #prewhitened data
+  X_new <- H %*% X
+
+  result = list(data_reduced=X_new, H=H, H_inv=H_inv, sigma_sq=sigma_sq, C_diag, Q=Q)
+  return(result)
+
+}

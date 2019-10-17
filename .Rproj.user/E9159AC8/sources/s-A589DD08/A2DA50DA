@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1570047653576.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "A2DA50DA",
+    "lastKnownWriteTime" : 1570477344,
+    "last_content_update" : 1570477344607,
+    "path" : "~/Box Sync/SOFTWARE/templateICAr/R/EM_algorithm.R",
+    "project_path" : "R/EM_algorithm.R",
+    "properties" : {
+        "cursorPosition" : "18,0",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

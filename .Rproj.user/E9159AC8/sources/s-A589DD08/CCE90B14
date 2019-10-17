@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1570476677690.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "CCE90B14",
+    "lastKnownWriteTime" : 1570478386,
+    "last_content_update" : 1570478386766,
+    "path" : "~/Box Sync/SOFTWARE/templateICAr/R/make_mesh.R",
+    "project_path" : "R/make_mesh.R",
+    "properties" : {
+        "cursorPosition" : "18,24",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
