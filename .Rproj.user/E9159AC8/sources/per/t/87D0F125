@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1571329549018.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3325464946",
+    "id" : "87D0F125",
+    "lastKnownWriteTime" : 1571331281,
+    "last_content_update" : 1571331281866,
+    "path" : "~/Dropbox/RESEARCH/SpatialTemplateICA/simulation/simulation.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "132,0",
+        "scrollLine" : "122"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

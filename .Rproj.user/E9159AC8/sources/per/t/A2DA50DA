@@ -5,20 +5,20 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "0",
+    "hash" : "1473978538",
     "id" : "A2DA50DA",
     "lastKnownWriteTime" : 1570477344,
     "last_content_update" : 1570477344607,
     "path" : "~/Box Sync/SOFTWARE/templateICAr/R/EM_algorithm.R",
     "project_path" : "R/EM_algorithm.R",
     "properties" : {
-        "cursorPosition" : "18,0",
-        "scrollLine" : "0"
+        "cursorPosition" : "341,13",
+        "scrollLine" : "324"
     },
     "read_only" : false,
     "read_only_alternatives" : [
     ],
-    "relative_order" : 3,
+    "relative_order" : 2,
     "source_on_save" : false,
     "source_window" : "",
     "type" : "r_source"

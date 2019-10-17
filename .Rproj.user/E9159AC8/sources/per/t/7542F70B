@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1571328501458.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1842667673",
+    "id" : "7542F70B",
+    "lastKnownWriteTime" : 1571331280,
+    "last_content_update" : 1571331280802,
+    "path" : "~/Box Sync/SOFTWARE/templateICAr/R/templateICA.R",
+    "project_path" : "R/templateICA.R",
+    "properties" : {
+        "cursorPosition" : "86,40",
+        "scrollLine" : "72"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
