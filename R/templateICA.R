@@ -3,7 +3,7 @@
 #' @param template_mean (LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
 #' @param template_var (LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
-#' @param mesh Object of type \code{templateICA_mesh} created by \code{make_mesh()} (in which case spatial priors are assumed on each independent component) or NULL (in which case spatial independence is assumed.)
+#' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01 or 1%)
@@ -34,13 +34,15 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
     stop('mesh argument should be of class templateICA_mesh. See help(make_mesh).')
   }
 
-  #project data to the mesh locations
-  Amat <- mesh$A # n_orig x n_mesh matrix
-  nmesh <- ncol(Amat)
-  if(nrow(Amat) != nvox) error('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-  template_mean_mesh <- template_mean %*% Amat
-  template_var_mesh <- template_var %*% Amat
-  BOLD_mesh <- BOLD %*% Amat
+  #project data to the mesh locations if using spatial priors
+  if(!is.null(mesh)){
+    Amat <- mesh$A # n_orig x n_mesh matrix
+    nmesh <- ncol(Amat)
+    if(nrow(Amat) != nvox) error('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+    template_mean_mesh <- template_mean %*% Amat
+    template_var_mesh <- template_var %*% Amat
+    BOLD_mesh <- BOLD %*% Amat
+  }
 
   #check that maxQ makes sense
   if(is.null(maxQ)) maxQ <- ntime
@@ -58,7 +60,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
 
   if(maxQ > L){
 
-    ## use BOLD_mesh!
+    ## use BOLD_mesh! if(!is.null(mesh))
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -69,7 +71,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   } else {
 
     # USE ORIGINAL DATA, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- BOLD_mesh
+    if(!is.null(mesh)) BOLD3 <- BOLD_mesh else BOLD3 <- BOLD
 
   }
 
@@ -103,9 +105,9 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   ### 4. RUN EM ALGORITHM!
 
   if(is.null(mesh)) {
-    resultEM <- EM_templateICA.independent(template_mean_mesh, template_var_mesh, BOLD4, theta0, C_diag)
+    resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag)
   } else {
-    resultEM <- EM_templateICA.spatial(template_mean_mesh, template_var_mesh, mesh, BOLD4, theta0, C_diag)
+    resultEM <- EM_templateICA.spatial(template_mean_mesh, template_var_mesh, mesh, BOLD_mesh=BOLD4, theta0, C_diag)
 
 #TO DO: revise EM_algorithm function to take mesh (made from make_mesh) instead of spde
 #TO DO: make a wrapper EM_templateICA function to call the right algorithm

@@ -2,10 +2,10 @@
 #'
 #' @description Implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA with spatial priors model.
 #'
-#' @param template_mean (QxN matrix) mean maps for each IC in template. Q is the number of ICs, N is the number of mesh locations.
-#' @param template_var  (QxN matrix) between-subject variance maps for each IC in template
+#' @param template_mean_mesh (QxN matrix) mean maps for each IC in template, projected to mesh locations. Q is the number of ICs, N is the number of mesh locations.
+#' @param template_var_mesh  (QxN matrix) between-subject variance maps for each IC in template, projected to mesh locations.
 #' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
-#' @param BOLD (QxN matrix) dimension-reduced fMRI data at each mesh location.
+#' @param BOLD_mesh (QxN matrix) dimension-reduced fMRI data at each mesh location.
 #' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param max_iter maximum number of EM iterations
@@ -17,35 +17,34 @@
 #'
 #' @details If original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, max_iter=100, epsilon=0.01){
+EM_templateICA.spatial = function(template_mean_mesh, template_var_mesh, mesh, BOLD_mesh, theta0, C_diag, max_iter=100, epsilon=0.01){
 
-  if(!all.equal(dim(template_var), dim(template_mean))) error('The dimensions of template_mean and template_var must match.')
+  if(!all.equal(dim(template_var_mesh), dim(template_mean_mesh))) error('The dimensions of template_mean_mesh and template_var_mesh must match.')
 
-  ntime <- nrow(BOLD) #length of timeseries
-  nmesh <- ncol(BOLD) #number of mesh locations
+  ntime <- nrow(BOLD_mesh) #length of timeseries
+  nmesh <- ncol(BOLD_mesh) #number of mesh locations
   if(ntime > nmesh) warning('More time points than mesh locations. Are you sure?')
-  if(ncol(template_mean) != nmesh) error('Templates and BOLD must have the same number of mesh locations (columns).')
+  if(ncol(template_mean_mesh) != nmesh) error('Templates and BOLD_mesh must have the same number of mesh locations (columns).')
 
-  Q <- nrow(template_mean) #number of ICs
+  Q <- nrow(template_mean_mesh) #number of ICs
   if(Q > nmesh) error('Cannot estimate more ICs than mesh locations.')
   if(Q > ntime) error('Cannot estimate more ICs than time points.')
 
   spde <- inla.spde2.matern(mesh$mesh, alpha=2)
   if(spde$n.spde != nmesh) error('The mesh does not have the right number of locations.')
 
-
 	iter = 1
 	theta = theta0
 	success = 1
-	template_var[template_var < .00001] = .00001 #to prevent problems when inverting covariance
+	template_var_mesh[template_var_mesh < .00001] = .00001 #to prevent problems when inverting covariance
 
 	err = 1000 #large initial value for difference between iterations
 	while(err > epsilon){
 
-	  print(paste0('\n ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
+	  print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
 
 		t00 <- Sys.time()
-		theta_new = UpdateTheta(template_mean, template_var, spde, BOLD, theta, C_diag)
+		theta_new = UpdateTheta.spatial(template_mean_mesh, template_var_mesh, spde, BOLD_mesh, theta, C_diag)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters
@@ -83,12 +82,12 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	A = theta$A
 	At_nu0Cinv = t(theta$A) %*% diag(1/(C_diag*theta$nu0_sq))
 	At_nu0Cinv_A = At_nu0Cinv %*% theta$A
-	miu_s = matrix(NA, nrow=Q, ncol=V)
-	var_s = matrix(NA, nrow=Q, ncol=V)
-	for(v in 1:V){
-		y_v <- Y[,v]
-		s0_v <- template_mean[,v]
-		E_v_inv <- diag(1/template_var[,v])
+	miu_s = matrix(NA, nrow=Q, ncol=nmesh)
+	var_s = matrix(NA, nrow=Q, ncol=nmesh)
+	for(v in 1:nmesh){
+		y_v <- BOLD_mesh[,v]
+		s0_v <- template_mean_mesh[,v]
+		E_v_inv <- diag(1/template_var_mesh[,v])
 		Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
 		miu_s[,v] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
 		var_s[,v] <- diag(Sigma_s_v)
@@ -106,7 +105,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 ####################################################################################
 ####################################################################################
 
-UpdateTheta = function(template_mean, template_var, spde, BOLD, theta, C_diag, verbose=FALSE){
+UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, verbose=FALSE){
 
 ## ###################### OUTPUT ######################
 ##
