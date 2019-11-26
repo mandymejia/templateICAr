@@ -16,7 +16,7 @@ dim_reduce = function(X, Q=NULL){
 
   # check that X has been centered both ways
   tol = 1e-12
-  if(max(colMeans(X)^2) > tol) error('Columns of X must be centered')
+  if(max(colMeans(X)^2) > tol) stop('Columns of X must be centered')
   if(max(rowMeans(X)^2) > tol) warning('Rows of X should be centered')
 
   #determine PCA dimensionality
@@ -26,11 +26,11 @@ dim_reduce = function(X, Q=NULL){
   }
 
   #perform dimension reduction
-  XXt = X %*% t(X) / n
+  XXt = X %*% t(X) / nvox
   svd_XXt = svd(XXt)
-  U = svd_XXt$u[,1:q]
-  D1 = svd_XXt$d[1:q]
-  D2 = svd_XXt$d[(q+1):length(svd_XXt$d)]
+  U = svd_XXt$u[,1:Q]
+  D1 = svd_XXt$d[1:Q]
+  D2 = svd_XXt$d[(Q+1):length(svd_XXt$d)]
 
   #residual variance
   sigma_sq = mean(D2)

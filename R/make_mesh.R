@@ -4,7 +4,7 @@
 #'
 #' @return List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
 #' @export
-#' @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A
+#' @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A inla.spde2.matern
 #'
 make_mesh <- function(mask){
 

@@ -12,7 +12,7 @@ dual_reg <- function(dat, GICA){
   ntime <- nrow(dat) #length of timeseries
   nvox <- ncol(dat) #number of data locations
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
-  if(nvox != ncol(GICA)) error('The number of voxels in dat and GICA must match')
+  if(nvox != ncol(GICA)) stop('The number of voxels in dat and GICA must match')
 
   Q <- nrow(GICA) #number of ICs
   if(Q > nvox) warning('More ICs than voxels. Are you sure?')

@@ -6,12 +6,12 @@
 #' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
 #' @param maxiter Maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations (e.g. .01 or 1%)
+#' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
+#' @importFrom INLA inla inla.spde.result
 #'
-#' @examples
 templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL, maxiter=100, epsilon=0.01){
 
   ntime <- nrow(BOLD) #length of timeseries
@@ -38,10 +38,10 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   if(!is.null(mesh)){
     Amat <- mesh$A # n_orig x n_mesh matrix
     nmesh <- ncol(Amat)
-    if(nrow(Amat) != nvox) error('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-    template_mean_mesh <- template_mean %*% Amat
-    template_var_mesh <- template_var %*% Amat
-    BOLD_mesh <- BOLD %*% Amat
+    if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+    template_mean <- template_mean %*% Amat
+    template_var <- template_var %*% Amat
+    BOLD <- BOLD %*% Amat
   }
 
   #check that maxQ makes sense
@@ -71,7 +71,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   } else {
 
     # USE ORIGINAL DATA, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    if(!is.null(mesh)) BOLD3 <- BOLD_mesh else BOLD3 <- BOLD
+    BOLD3 <- BOLD
 
   }
 
@@ -87,7 +87,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD3, template_mean_mesh)
+  if(!is.null(mesh)) dat_DR <- dual_reg(BOLD3, template_mean) else dat_DR <- dual_reg(BOLD3, template_mean)
   #dat_DR$A <- scale(dat_DR$A) #would this have the same effect as the code below?
   HA <- H %*% dat_DR$A #apply dimension reduction
   HA <- orthonorm(HA)  #orthogonalize
@@ -96,7 +96,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
   theta0 <- list(A = HA)
 
   #initialize residual variance
-  theta0$nu0_sq = dat_list$sigma_sq #this value is huge.  what if we switch the observations and variables in the dimension reduction step?
+  theta0$nu0_sq = dat_list$sigma_sq
 
   #initialize kappa parameters (spatial model only)
   if(!is.null(mesh)) theta0$kappa <- rep(1, L)
@@ -104,16 +104,39 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
 
   ### 4. RUN EM ALGORITHM!
 
-  if(is.null(mesh)) {
-    resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag)
-  } else {
-    resultEM <- EM_templateICA.spatial(template_mean_mesh, template_var_mesh, mesh, BOLD_mesh=BOLD4, theta0, C_diag)
+  print('INITIALIZING WITH STANDARD TEMPLATE ICA')
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
-#TO DO: revise EM_algorithm function to take mesh (made from make_mesh) instead of spde
-#TO DO: make a wrapper EM_templateICA function to call the right algorithm
+  print('PICKING GOOD PARAMETER STARTING VALUES')
+  #if using spatial model, use standard template ICA results to pick good starting values
+  if(!is.null(mesh)) {
 
+    #starting value for mixing matrix
+    theta0$A <- resultEM$theta_MLE$A
+
+    #starting value for kappas
+    theta0$kappa <- rep(NA, L)
+    for(q in 1:L){
+      d_q <- Amat %*% (resultEM$subjICmean[q,] - template_mean[q,])
+      data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
+      formula_q <- y ~ -1 + f(x, model = mesh$spde)
+      result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
+      result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
+      print(theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa)$mean)
+    }
+
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, maxiter=maxiter)
   }
 
+  A <- Hinv %*% resultEM$theta_MLE$A
+  St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
+  A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
 
-
+  if(!is.null(mesh)){
+    resultEM$subjICmean <- resultEM$subjICmean %*% t(Amat)
+    resultEM$subjICvar <- resultEM$subjICvar %*% t(Amat)
+  }
+  resultEM$A <- A
+  resultEM$A_reg <- A_reg
+  return(resultEM)
 }
