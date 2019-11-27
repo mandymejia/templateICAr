@@ -9,6 +9,7 @@
 #' @param mesh NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
 #' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
+#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param maxiter maximum number of EM iterations
 #' @param epsilon smallest proportion change between iterations (e.g. .001)
 #'
@@ -25,7 +26,7 @@ NULL
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.01){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -53,7 +54,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
 
 		t00 <- Sys.time()
-		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag)
+		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters

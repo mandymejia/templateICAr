@@ -4,8 +4,9 @@
 \alias{templateICA}
 \title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
-templateICA(template_mean, template_var, BOLD, mesh = NULL,
-  maxQ = NULL, maxiter = 100, epsilon = 0.01)
+templateICA(template_mean, template_var, BOLD, scale_BOLD = FALSE,
+  mesh = NULL, maxQ = NULL, maxiter = 100, epsilon = 0.01,
+  verbose = TRUE)
 }
 \arguments{
 \item{template_mean}{(LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
@@ -14,6 +15,8 @@ templateICA(template_mean, template_var, BOLD, mesh = NULL,
 
 \item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
+\item{scale_BOLD}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+
 \item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)}
 
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
@@ -21,6 +24,8 @@ templateICA(template_mean, template_var, BOLD, mesh = NULL,
 \item{maxiter}{Maximum number of EM iterations}
 
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
+
+\item{verbose}{If TRUE, display progress of algorithm}
 }
 \value{
 A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)

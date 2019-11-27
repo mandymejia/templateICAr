@@ -115,7 +115,7 @@ minka = function(data, alpha = 0, beta = 0, eps = 1e-10){
   p0 = -n*d/2*log(v0) - 0.5*log(d)
 
   if(alpha > 0){
-    p0 = p0 - n*d/2 - 0.5*log(n1) + alpha*d/2*log(beta*d/2) - lgamma(alpha*d/2)
+    p0 = p0 - n*d/2 - 0.5*log(n) + alpha*d/2*log(beta*d/2) - lgamma(alpha*d/2)
   }
   if(p0 >= pmax){
     k = 0

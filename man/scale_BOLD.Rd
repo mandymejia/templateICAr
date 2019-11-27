@@ -4,7 +4,7 @@
 \alias{scale_BOLD}
 \title{Center BOLD data across space and time and scale by global temporal standard deviation}
 \usage{
-scale_BOLD(BOLD)
+scale_BOLD(BOLD, scale = FALSE)
 }
 \arguments{
 \item{BOLD}{(TxV matrix) fMRI timeseries data matrix}

@@ -5,7 +5,7 @@
 #' @return Centered and scaled BOLD data (TxV matrix)
 #' @export
 #'
-scale_BOLD <- function(BOLD){
+scale_BOLD <- function(BOLD, scale=FALSE){
 
   dat <- BOLD
   ntime <- nrow(dat) #length of timeseries
@@ -17,7 +17,7 @@ scale_BOLD <- function(BOLD){
   dat_t <- t(dat) #transpose image matrix
   sig <- sqrt(mean(colVars(dat_t))) #variance across image, averaged across time, square root to get SD
   dat <- t(scale(dat_t, scale=FALSE)) #center each image (centering across space)
-  dat <- dat/sig #standardize by global SD
+  if(scale) dat <- dat/sig #standardize by global SD
   dat_ctr <- dat
 
   return(dat_ctr)

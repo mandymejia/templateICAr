@@ -9,6 +9,7 @@
 #' @param spde NULL for spatial independence model, otherwise SPDE object representing spatial prior on deviations.
 #' @param theta A list of current parameter estimates (mixing matrix A, noise variance nu0_sq and (for spatial model) SPDE parameters kappa)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
+#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
 #'
 #' @return An updated list of parameter estimates, theta
@@ -20,7 +21,7 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsample inla.qsolve inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, verbose=FALSE){
+UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE){
 
   Q = nrow(BOLD)
   V = ncol(BOLD)
@@ -79,20 +80,19 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   Cinv = diag(1/C_diag)
   Cinv_A = Cinv %*% A_hat
   At_Cinv_A = t(A_hat) %*% Cinv %*% A_hat
-  # nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
-  #
-  # for(v in 1:V){
-  #
-  #   y_v = BOLD[,v]
-  #
-  #   nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-  #   nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
-  #   nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
-  #
-  # }
-  #
-  # nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-  nu0sq_hat <- theta$nu0_sq
+  nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
+
+  for(v in 1:V){
+
+    y_v = BOLD[,v]
+
+    nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+    nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
+    nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
+
+  }
+
+  nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
 
   ##########################################
   ### E-STEP for kappa_q: SECOND POSTERIOR MOMENT OF delta_i
@@ -229,15 +229,26 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
 
   print("Performing numerical optimization for kappa_q's")
 
-  kappa_opt <- rep(NA, Q)
-  t0 <- Sys.time()
-  for(q in 1:Q){
-    if(verbose) print(paste('Optimization ',q,' of ',Q))
-    kappa_opt_q <- optimize(Q2_kappa_q, lower=-10, upper=10, maximum=TRUE,
-                            Fmat=F, Gmat=G, GFinvG=GFinvG,
-                            bigTrace1=Trace1_part1[q] + Trace1_part2[q],
-                            bigTrace2=Trace2_part1[q] + Trace2_part2[q])
-    kappa_opt[q] <- exp(kappa_opt_q$maximum)
+  if(common_smoothness==FALSE){
+    kappa_opt <- rep(NA, Q)
+    t0 <- Sys.time()
+    for(q in 1:Q){
+      if(verbose) print(paste('Optimization ',q,' of ',Q))
+      kappa_opt_q <- optimize(Q2_kappa, lower=-10, upper=10, maximum=TRUE,
+                              Fmat=F, Gmat=G, GFinvG=GFinvG,
+                              bigTrace1=Trace1_part1[q] + Trace1_part2[q],
+                              bigTrace2=Trace2_part1[q] + Trace2_part2[q])
+      kappa_opt[q] <- exp(kappa_opt_q$maximum)
+    }
+  } else {
+    if(verbose) print('Optimizing kappa')
+    kappa_opt <- optimize(Q2_kappa, lower=-10, upper=10, maximum=TRUE,
+                          Fmat=F, Gmat=G, GFinvG=GFinvG,
+                          bigTrace1=sum(Trace1_part1 + Trace1_part2),
+                          bigTrace2=sum(Trace2_part1 + Trace2_part2),
+                          Q=Q) #to indicate common smoothness model
+    kappa_opt <- rep(exp(kappa_opt$maximum), Q)
+
   }
   print(Sys.time() - t0)
 

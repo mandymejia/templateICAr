@@ -3,16 +3,18 @@
 #' @param template_mean (LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
 #' @param template_var (LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
+#' @param scale_BOLD Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
+#' @param verbose If TRUE, display progress of algorithm
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
 #'
-templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL, maxiter=100, epsilon=0.01){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, maxiter=100, epsilon=0.01, verbose=TRUE){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -77,7 +79,7 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
-  BOLD3 <- scale_BOLD(BOLD3)
+  BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
   dat_list <- dim_reduce(BOLD3, L)
   BOLD4 <- dat_list$data_reduced
   H <- dat_list$H
@@ -104,15 +106,17 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
 
   ### 4. RUN EM ALGORITHM!
 
-  print('INITIALIZING WITH STANDARD TEMPLATE ICA')
+  if(verbose) if(!is.null(mesh)) print('INITIALIZING WITH STANDARD TEMPLATE ICA')
+  template_mean <- t(scale(t(template_mean), scale=FALSE))
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
-  print('PICKING GOOD PARAMETER STARTING VALUES')
   #if using spatial model, use standard template ICA results to pick good starting values
   if(!is.null(mesh)) {
 
-    #starting value for mixing matrix
+    if(verbose) print('PICKING GOOD PARAMETER STARTING VALUES')
+
     theta0$A <- resultEM$theta_MLE$A
+    theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
 
     #starting value for kappas
     theta0$kappa <- rep(NA, L)
@@ -122,9 +126,11 @@ templateICA <- function(template_mean, template_var, BOLD, mesh=NULL, maxQ=NULL,
       formula_q <- y ~ -1 + f(x, model = mesh$spde)
       result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
       result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
-      print(theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa)$mean)
+      theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
+      if(verbose) print(paste0('Starting value for kappa',q,' = ',theta0$kappa[q]))
     }
 
+    print('RUNNING SPATIAL TEMPLATE ICA')
     resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, maxiter=maxiter)
   }
 

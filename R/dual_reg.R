@@ -19,7 +19,7 @@ dual_reg <- function(dat, GICA){
   if(Q > ntime) warning('More ICs than time points. Are you sure?')
 
   #center timeseries data across space and time and standardize scale
-  dat_ctr <- scale_BOLD(dat)
+  dat_ctr <- scale_BOLD(dat, scale=FALSE)
 
   #center each group IC over voxels
   GICA_t <- scale(t(GICA), scale=FALSE)

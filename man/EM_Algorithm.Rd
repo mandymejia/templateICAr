@@ -7,7 +7,7 @@
 \title{EM Algorithms for Template ICA Models}
 \usage{
 EM_templateICA.spatial(template_mean, template_var, mesh, BOLD, theta0,
-  C_diag, maxiter = 100, epsilon = 0.01)
+  C_diag, common_smoothness = TRUE, maxiter = 100, epsilon = 0.01)
 
 EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
   C_diag, maxiter = 100, epsilon = 0.01)
@@ -24,6 +24,8 @@ EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
 \item{theta0}{(list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)}
 
 \item{C_diag}{(Qx1) diagonal elements of matrix proportional to residual variance.}
+
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{maximum number of EM iterations}
 
