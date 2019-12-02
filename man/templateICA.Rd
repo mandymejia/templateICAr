@@ -5,8 +5,8 @@
 \title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
 \usage{
 templateICA(template_mean, template_var, BOLD, scale_BOLD = FALSE,
-  mesh = NULL, maxQ = NULL, maxiter = 100, epsilon = 0.01,
-  verbose = TRUE)
+  mesh = NULL, maxQ = NULL, common_smoothness = TRUE,
+  maxiter = 100, epsilon = 0.01, verbose = TRUE, error_sd = NULL)
 }
 \arguments{
 \item{template_mean}{(LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
@@ -21,11 +21,15 @@ templateICA(template_mean, template_var, BOLD, scale_BOLD = FALSE,
 
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
 
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+
 \item{maxiter}{Maximum number of EM iterations}
 
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{error_sd}{The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.}
 }
 \value{
 A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)

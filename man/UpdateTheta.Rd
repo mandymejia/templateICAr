@@ -7,7 +7,7 @@
 \title{Parameter Estimates in EM Algorithm for Template ICA Model}
 \usage{
 UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag,
-  common_smoothness = TRUE, verbose = FALSE)
+  common_smoothness = TRUE, verbose = FALSE, error_sd = NULL)
 
 UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 }
@@ -27,6 +27,8 @@ UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 \item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{verbose}{If TRUE, print progress updates for slow steps.}
+
+\item{error_sd}{The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.}
 }
 \value{
 An updated list of parameter estimates, theta

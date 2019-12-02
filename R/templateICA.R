@@ -6,15 +6,17 @@
 #' @param scale_BOLD Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
+#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
+#' @param error_sd The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, maxiter=100, epsilon=0.01, verbose=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, error_sd=NULL){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -117,6 +119,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
     theta0$A <- resultEM$theta_MLE$A
     theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
+    if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
     #starting value for kappas
     theta0$kappa <- rep(NA, L)
@@ -127,11 +130,11 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
       result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
       result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
       theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
-      if(verbose) print(paste0('Starting value for kappa',q,' = ',theta0$kappa[q]))
+      if(verbose) print(paste0('Starting value for kappa',q,' = ',round(theta0$kappa[q],3)))
     }
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, maxiter=maxiter)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, error_sd=error_sd)
   }
 
   A <- Hinv %*% resultEM$theta_MLE$A

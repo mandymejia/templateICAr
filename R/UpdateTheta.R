@@ -11,6 +11,7 @@
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
+#' @param error_sd The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.
 #'
 #' @return An updated list of parameter estimates, theta
 #'
@@ -21,7 +22,7 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsample inla.qsolve inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE){
+UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE, error_sd=NULL){
 
   Q = nrow(BOLD)
   V = ncol(BOLD)
@@ -93,6 +94,8 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   }
 
   nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+
+  if(!is.null(error_sd)) nu0sq_hat <- error_sd^2
 
   ##########################################
   ### E-STEP for kappa_q: SECOND POSTERIOR MOMENT OF delta_i
@@ -246,7 +249,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
                           Fmat=F, Gmat=G, GFinvG=GFinvG,
                           bigTrace1=sum(Trace1_part1 + Trace1_part2),
                           bigTrace2=sum(Trace2_part1 + Trace2_part2),
-                          Q=Q) #to indicate common smoothness model
+                          Q=Q) #to indicate common smoothness model to the Q2_kappa function
     kappa_opt <- rep(exp(kappa_opt$maximum), Q)
 
   }
