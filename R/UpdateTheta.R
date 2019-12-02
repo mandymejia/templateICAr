@@ -11,7 +11,6 @@
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
-#' @param error_sd The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.
 #'
 #' @return An updated list of parameter estimates, theta
 #'
@@ -22,7 +21,7 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsample inla.qsolve inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE, error_sd=NULL){
+UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE){
 
   Q = nrow(BOLD)
   V = ncol(BOLD)
@@ -76,26 +75,28 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
   ##########################################
 
-  print('Updating Error Variance nu0_sq')
+  ### Update: Use PCA-based estimate for nu0_sq
 
-  Cinv = diag(1/C_diag)
-  Cinv_A = Cinv %*% A_hat
-  At_Cinv_A = t(A_hat) %*% Cinv %*% A_hat
-  nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
+  # print('Updating Error Variance nu0_sq')
 
-  for(v in 1:V){
+  # Cinv = diag(1/C_diag)
+  # Cinv_A = Cinv %*% A_hat
+  # At_Cinv_A = t(A_hat) %*% Cinv %*% A_hat
+  # nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
 
-    y_v = BOLD[,v]
+  # for(v in 1:V){
 
-    nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-    nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
-    nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
+  #   y_v = BOLD[,v]
 
-  }
+  #   nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+  #   nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
+  #   nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
 
-  nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+  # }
 
-  if(!is.null(error_sd)) nu0sq_hat <- error_sd^2
+  # nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+
+  nu0sq_hat <- theta$nu0_sq
 
   ##########################################
   ### E-STEP for kappa_q: SECOND POSTERIOR MOMENT OF delta_i

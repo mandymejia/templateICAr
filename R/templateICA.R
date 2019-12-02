@@ -10,13 +10,12 @@
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
-#' @param error_sd The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, error_sd=NULL){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -36,16 +35,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_mesh).')
   } else if(class(mesh) != 'templateICA_mesh'){
     stop('mesh argument should be of class templateICA_mesh. See help(make_mesh).')
-  }
-
-  #project data to the mesh locations if using spatial priors
-  if(!is.null(mesh)){
-    Amat <- mesh$A # n_orig x n_mesh matrix
-    nmesh <- ncol(Amat)
-    if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-    template_mean <- template_mean %*% Amat
-    template_var <- template_var %*% Amat
-    BOLD <- BOLD %*% Amat
   }
 
   #check that maxQ makes sense
@@ -81,6 +70,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
+  if(verbose) print('PERFORMING DIMENSION REDUCTION')
+
   BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
   dat_list <- dim_reduce(BOLD3, L)
   BOLD4 <- dat_list$data_reduced
@@ -101,50 +92,57 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   #initialize residual variance
   theta0$nu0_sq = dat_list$sigma_sq
-
-  #initialize kappa parameters (spatial model only)
-  if(!is.null(mesh)) theta0$kappa <- rep(1, L)
+  if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
 
 
   ### 4. RUN EM ALGORITHM!
 
-  if(verbose) if(!is.null(mesh)) print('INITIALIZING WITH STANDARD TEMPLATE ICA')
   template_mean <- t(scale(t(template_mean), scale=FALSE))
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
+  
+  if(is.null(mesh)){
+  
+    resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
-  #if using spatial model, use standard template ICA results to pick good starting values
-  if(!is.null(mesh)) {
+  } else {
 
-    if(verbose) print('PICKING GOOD PARAMETER STARTING VALUES')
+    # theta0$A <- resultEM$theta_MLE$A
+    # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
+    # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
-    theta0$A <- resultEM$theta_MLE$A
-    theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
-    if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
+    # #starting value for kappas
+    # theta0$kappa <- rep(NA, L)
+    # for(q in 1:L){
+    #   d_q <- Amat %*% (resultEM$subjICmean[q,] - template_mean[q,])
+    #   data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
+    #   formula_q <- y ~ -1 + f(x, model = mesh$spde)
+    #   result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
+    #   result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
+    #   theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
+    #   if(verbose) print(paste0('Starting value for kappa',q,' = ',round(theta0$kappa[q],3)))
+    # }
 
-    #starting value for kappas
-    theta0$kappa <- rep(NA, L)
-    for(q in 1:L){
-      d_q <- Amat %*% (resultEM$subjICmean[q,] - template_mean[q,])
-      data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
-      formula_q <- y ~ -1 + f(x, model = mesh$spde)
-      result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
-      result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
-      theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
-      if(verbose) print(paste0('Starting value for kappa',q,' = ',round(theta0$kappa[q],3)))
-    }
+    #project BOLD and templates to mesh locations
+    Amat <- mesh$A # n_orig x n_mesh matrix
+    nmesh <- ncol(Amat)
+    if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+    template_mean <- template_mean %*% Amat
+    template_var <- template_var %*% Amat
+    BOLD4 <- BOLD4 %*% Amat
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, error_sd=error_sd)
+    theta0$kappa <- rep(0.1, L)    
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter)
+
+    #project BOLD and templates back to data locations
+    resultEM$subjICmean <- resultEM$subjICmean %*% t(Amat)
+    resultEM$subjICvar <- resultEM$subjICvar %*% t(Amat)
+
   }
 
   A <- Hinv %*% resultEM$theta_MLE$A
   St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
-  A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
+  A_reg <- Hinv %*% BOLD4 %*% t(Amat) %*% St %*% solve(t(St) %*% St)
 
-  if(!is.null(mesh)){
-    resultEM$subjICmean <- resultEM$subjICmean %*% t(Amat)
-    resultEM$subjICvar <- resultEM$subjICvar %*% t(Amat)
-  }
   resultEM$A <- A
   resultEM$A_reg <- A_reg
   return(resultEM)

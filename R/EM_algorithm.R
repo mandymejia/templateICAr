@@ -12,7 +12,6 @@
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param maxiter maximum number of EM iterations
 #' @param epsilon smallest proportion change between iterations (e.g. .001)
-#' @param error_sd The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.
 #'
 #' @return  A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 #'
@@ -27,7 +26,7 @@ NULL
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.01, error_sd=NULL){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.01){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -55,7 +54,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
 
 		t00 <- Sys.time()
-		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=common_smoothness, error_sd=error_sd)
+		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=common_smoothness)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters

@@ -7,8 +7,7 @@
 \title{EM Algorithms for Template ICA Models}
 \usage{
 EM_templateICA.spatial(template_mean, template_var, mesh, BOLD, theta0,
-  C_diag, common_smoothness = TRUE, maxiter = 100, epsilon = 0.01,
-  error_sd = NULL)
+  C_diag, common_smoothness = TRUE, maxiter = 100, epsilon = 0.01)
 
 EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
   C_diag, maxiter = 100, epsilon = 0.01)
@@ -31,8 +30,6 @@ EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
 \item{maxiter}{maximum number of EM iterations}
 
 \item{epsilon}{smallest proportion change between iterations (e.g. .001)}
-
-\item{error_sd}{The residual standard deviation from dimension reduction, or NULL if to be estimated through EM.}
 }
 \value{
 A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
