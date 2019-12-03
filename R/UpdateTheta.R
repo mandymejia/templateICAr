@@ -38,7 +38,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   At_nu0Cinv = t(A) %*% nu0C_inv
   At_nu0Cinv_A = At_nu0Cinv %*% A
 
-  print('Updating A')
+  if(verbose) print('Updating A')
 
   #store posterior moments for M-step of nu0_sq
   miu_s = matrix(NA, nrow=Q, ncol=V)
@@ -102,7 +102,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   ### E-STEP for kappa_q: SECOND POSTERIOR MOMENT OF delta_i
   ##########################################
 
-  print('Updating SPDE Parameters kappa_q')
+  print('Updating SPDE Parameters (kappa)')
 
   #SPDE matrices, needed to construct R_q_inv
   F = spde$param.inla$M0
@@ -231,7 +231,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
 
   # NUMERICALLY ESTIMATE MLEs for kappa_q's -- 10 MIN
 
-  print("Performing numerical optimization for kappa_q's")
+  print("Performing numerical optimization for kappa")
 
   if(common_smoothness==FALSE){
     kappa_opt <- rep(NA, Q)
@@ -319,24 +319,27 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
   ##########################################
 
-  print('Updating Error Variance nu0_sq')
+  # print('Updating Error Variance nu0_sq')
+  #
+  # #use A-hat or A?
+  #
+  # Cinv = diag(1/C_diag)
+  # Cinv_A = Cinv %*% A_hat
+  # At_Cinv_A = t(A_hat) %*% Cinv %*% A_hat
+  # nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
+  #
+  # for(v in 1:V){
+  #
+  #   y_v = BOLD[,v]
+  #   nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+  #   nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
+  #   nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
+  # }
+  #
+  # nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
 
-  #use A-hat or A?
+  nu0sq_hat <- theta$nu0_sq
 
-  Cinv = diag(1/C_diag)
-  Cinv_A = Cinv %*% A_hat
-  At_Cinv_A = t(A_hat) %*% Cinv %*% A_hat
-  nu0sq_part1 = nu0sq_part2 = nu0sq_part3 = 0
-
-  for(v in 1:V){
-
-    y_v = BOLD[,v]
-    nu0sq_part1 = nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-    nu0sq_part2 = nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
-    nu0sq_part3 = nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
-  }
-
-  nu0sq_hat = 1/(Q*V)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
 
   # RETURN NEW PARAMETER ESTIMATES
 

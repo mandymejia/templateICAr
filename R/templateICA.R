@@ -141,7 +141,12 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   A <- Hinv %*% resultEM$theta_MLE$A
   St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
-  A_reg <- Hinv %*% BOLD4 %*% t(Amat) %*% St %*% solve(t(St) %*% St)
+  if(is.null(mesh)){
+    A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
+    else {
+    A_reg <- Hinv %*% BOLD4 %*% t(Amat) %*% St %*% solve(t(St) %*% St)
+
+    }
 
   resultEM$A <- A
   resultEM$A_reg <- A_reg
