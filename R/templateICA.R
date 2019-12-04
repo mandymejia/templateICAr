@@ -98,9 +98,9 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   ### 4. RUN EM ALGORITHM!
 
   template_mean <- t(scale(t(template_mean), scale=FALSE))
-  
+
   if(is.null(mesh)){
-  
+
     resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
   } else {
@@ -130,7 +130,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     BOLD4 <- BOLD4 %*% Amat
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    theta0$kappa <- rep(0.1, L)    
+    theta0$kappa <- rep(0.1, L)
     resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter)
 
     #project BOLD and templates back to data locations
@@ -143,10 +143,9 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
   if(is.null(mesh)){
     A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
-    else {
+  } else {
     A_reg <- Hinv %*% BOLD4 %*% t(Amat) %*% St %*% solve(t(St) %*% St)
-
-    }
+  }
 
   resultEM$A <- A
   resultEM$A_reg <- A_reg
