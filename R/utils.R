@@ -57,12 +57,12 @@ sqrt_XtX = function(X, inverse=FALSE){
 
 #' Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
-#' @param logkappa Value of log(kappa) for which to compute log-likelihood
+#' @param kappa Value of kappa for which to compute log-likelihood
 #' @param Fmat A diagonal matrix appearing in SPDE precision
 #' @param Gmat A sparse neighborhood matrix appearing in SPDE precision
 #' @param GFinvG (Optional) Pre-computed value of \eqn{GFinvG = Gmat * (1/Fmat)* Gmat} (available from SPDE object)
-#' @param bigTrace1 Value of first large trace term appearing in optimization function (see Details)
-#' @param bigTrace2 Value of second large trace term appearing in optimization function (see Details)
+#' @param part1 Value of terms in optimization function multiplied by kappa^2 (see Details)
+#' @param part2 Value of terms in optimization function multiplied by kappa^(-2) (see Details)
 #' @param C1 For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
@@ -71,7 +71,7 @@ sqrt_XtX = function(X, inverse=FALSE){
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
-#' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s. The optimization function includes two Trace terms involving
+#' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s. (UPDATE THIS:) The optimization function includes two Trace terms involving
 #' very large matrices, which are passed to this function as `bigTrace1` and `bigTrace2`.  `bigTrace1` is equal to
 #'
 #' \deqn{K1q = Trace(Dq_inv * F * Dq_inv * E[delta_q*t(delta_q)])}
@@ -82,26 +82,27 @@ sqrt_XtX = function(X, inverse=FALSE){
 #'
 #' For the common smoothness model, a single kappa value is assumed over all of the IC's. The two Trace terms are then equal to \eqn{\sum_q(K1q)} and \eqn{\sum_q(K2q)}.
 #'
-Q2_kappa <- function(logkappa, Fmat, Gmat, GFinvG=NULL, bigTrace1, bigTrace2, C1 = 1/(4*pi), Q=NULL){
+Q2_kappa <- function(kappa, Fmat, Gmat, GFinvG=NULL, part1, part2, C1 = 1/(4*pi), Q=NULL){
 
   if(is.null(GFinvG)) GFinvG <- Gmat %*% solve(Fmat) %*% Gmat
 
-  kappa <- exp(logkappa)
-
   #log determinant part
-  part1_mat <- kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG
-  logdet <- as.numeric(determinant(part1_mat)) #on log scale
-  if(logdet[2] == -1) warning('negative determinant of precision matrix')
-  part1 <- logdet[1]
-  if(!is.null(Q)) part1 <- Q*part1
+  detpart_mat <- kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG
+  logdet <- as.numeric(determinant(detpart_mat)) #on log scale
+  if(logdet[2] == -1) {
+    warning('negative determinant of precision matrix, returning NA')
+    return(NA)
+  }
+  detpart <- 1/C1*logdet[1]
+  if(!is.null(Q)) detpart <- Q*detpart
 
-  #first trace term in Q2
-  part2a <- C1*(kappa^2) * bigTrace1
+  #terms involving kappa^2 in Q2
+  trpart1 <- (kappa^2) * part1
 
-  #second trace term in Q2
-  part2b <- C1*(kappa^(-2)) * bigTrace2
+  #terms involving kappa^(-2) in Q2
+  trpart2 <- (kappa^(-2)) * part2
 
-  result <- part1 - part2a - part2b
+  result <- detpart + trpart1 + trpart2
   return(result)
 
   # part1 decreases with kappa

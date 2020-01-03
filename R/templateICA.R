@@ -10,12 +10,14 @@
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
+#' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (slow) (common smoothness model only)
+#' @param kappa_init (Optional) Starting value for kappa.  If NULL, starting value will be determined automatically.
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -37,6 +39,17 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     stop('mesh argument should be of class templateICA_mesh. See help(make_mesh).')
   }
 
+  if(!is.null(maxQ)){
+    if(class(maxQ) != 'numeric' & class(max) != 'integer') stop('maxQ must be NULL or numeric/integer')
+    if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number')
+  }
+
+  if(round(maxiter) != maxiter | maxiter <= 0) stop('maxiter must be a positive integer')
+
+  if(!is.null(kappa_init)){
+    if(length(kappa_init) != 1 | kappa_init <= 0) stop('kappa_init must be a positive scalar or NULL')
+  }
+
   #check that maxQ makes sense
   if(is.null(maxQ)) maxQ <- ntime
   if(maxQ < L){
@@ -46,6 +59,14 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   if(maxQ > ntime){
     warning('maxQ must be no more than T.  Setting maxQ = T.')
     maxQ <- ntime
+  }
+
+  if(class(scale_BOLD) != 'logical' | length(scale_BOLD) != 1) stop('scale_BOLD must be a logical value')
+  if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
+  if(class(return_kappa_fun) != 'logical' | length(return_kappa_fun) != 1) stop('return_kappa_fun must be a logical value')
+  if(return_kappa_fun==TRUE & common_smoothness==FALSE){
+    warning('I can only return the kappa function when common_smoothness==TRUE.  Setting return_kappa_fun to FALSE.')
+    return_kappa_fun <- FALSE
   }
 
 
@@ -74,6 +95,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
   dat_list <- dim_reduce(BOLD3, L)
+
+  # Keep?
   BOLD4 <- dat_list$data_reduced
   H <- dat_list$H
   Hinv <- dat_list$H_inv
@@ -84,11 +107,14 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   if(!is.null(mesh)) dat_DR <- dual_reg(BOLD3, template_mean) else dat_DR <- dual_reg(BOLD3, template_mean)
   #dat_DR$A <- scale(dat_DR$A) #would this have the same effect as the code below?
+
+  # Keep?
   HA <- H %*% dat_DR$A #apply dimension reduction
-  HA <- orthonorm(HA)  #orthogonalize
-  sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
-  HA <- HA %*% diag(1/sd_A) #standardize scale of A
+  # HA <- orthonorm(HA)  #orthogonalize
+  # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
+  # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
+  #theta0 <- list(A = dat_DR$A)
 
   #initialize residual variance
   theta0$nu0_sq = dat_list$sigma_sq
@@ -97,29 +123,35 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   ### 4. RUN EM ALGORITHM!
 
-  template_mean <- t(scale(t(template_mean), scale=FALSE))
+  template_mean <- t(scale(t(template_mean), scale=FALSE)) #center template IC means
 
-  if(is.null(mesh)){
+  if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
-    resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
-
-  } else {
+  if(!is.null(mesh)){
 
     # theta0$A <- resultEM$theta_MLE$A
     # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
     # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
-    # #starting value for kappas
-    # theta0$kappa <- rep(NA, L)
-    # for(q in 1:L){
-    #   d_q <- Amat %*% (resultEM$subjICmean[q,] - template_mean[q,])
-    #   data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
-    #   formula_q <- y ~ -1 + f(x, model = mesh$spde)
-    #   result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
-    #   result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
-    #   theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
-    #   if(verbose) print(paste0('Starting value for kappa',q,' = ',round(theta0$kappa[q],3)))
-    # }
+    #starting value for kappas
+    if(is.null(kappa_init)){
+      if(verbose) print('Running INLA on tICA estimates to determine starting value(s) for kappa')
+      theta0$kappa <- rep(NA, L)
+      for(q in 1:L){
+        print(paste0('IC ',q,' of ',L))
+        d_q <- resultEM$subjICmean[q,] - template_mean[q,]
+        data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
+        formula_q <- y ~ -1 + f(x, model = mesh$spde)
+        result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
+        result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
+        theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
+      }
+      if(common_smoothness) theta0$kappa <- rep(mean(theta0$kappa), L)
+      if(verbose) print(paste0('Starting value for kappa = ',paste(round(theta0$kappa,3), collapse=', ')))
+    } else {
+      theta0$kappa <- rep(kappa_init, L)
+    }
 
     #project BOLD and templates to mesh locations
     Amat <- mesh$A # n_orig x n_mesh matrix
@@ -127,24 +159,26 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
     template_mean <- template_mean %*% Amat
     template_var <- template_var %*% Amat
+
+    BOLD4_orig <- BOLD4
     BOLD4 <- BOLD4 %*% Amat
+    #BOLD4 <- BOLD3 %*% Amat  #Keep (no dim reduction)?
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    theta0$kappa <- rep(0.1, L)
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose)
 
-    #project BOLD and templates back to data locations
-    resultEM$subjICmean <- resultEM$subjICmean %*% t(Amat)
-    resultEM$subjICvar <- resultEM$subjICvar %*% t(Amat)
+    #project estimates back to data locations
+    resultEM$subjICmean2 <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
 
   }
 
   A <- Hinv %*% resultEM$theta_MLE$A
-  St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
   if(is.null(mesh)){
+    St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
     A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
   } else {
-    A_reg <- Hinv %*% BOLD4 %*% t(Amat) %*% St %*% solve(t(St) %*% St)
+    St <- scale(t(resultEM$subjICmean2), scale=FALSE) #center each column of S
+    A_reg <- Hinv %*% BOLD4_orig %*% St %*% solve(t(St) %*% St)
   }
 
   resultEM$A <- A
