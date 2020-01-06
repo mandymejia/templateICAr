@@ -23,7 +23,7 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsample inla.qsolve inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=TRUE, verbose=FALSE, return_kappa_fun=FALSE, return_MAP=FALSE){
+UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, Hinv, common_smoothness=TRUE, verbose=FALSE, return_kappa_fun=FALSE, return_MAP=FALSE){
 
   Q = nrow(template_mean)
   V = ncol(BOLD)
@@ -67,9 +67,8 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   stuff <- compute_Sigma_inv(spde, kappa=theta$kappa, template_var, C1=1/(4*pi))
   Sigma_inv <- stuff$Sigma_inv
   Fmat <- stuff$Fmat
-  Gmat <- stuff$Fmat
+  Gmat <- stuff$Gmat
   GFinvG <- stuff$GFinvG
-
 
   #set up P as a sparse matrix (see OneNote for illustration of this)
   P <- make_Pmat(Q, V)
@@ -103,8 +102,11 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
     yPm <- yPm + yPm_v #sum up to later divide by V to average
   }
   A_hat <- c2*yPm/V
-  #A_hat = orthonorm(A_hat)
-  #fix SD of columns of A on original dimensionality?
+  A_hat = orthonorm(A_hat)
+  # #fix SD of columns of A on original dimensionality?
+  # sd_A <- sqrt(colVars(Hinv %*% A_hat)) #get scale of A (after reverse-prewhitening)
+  # A_hat <- A_hat %*% diag(1/sd_A) #standardize scale of A
+
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq
@@ -375,7 +377,9 @@ compute_mu_s <- function(y_vec, s0_vec, Sigma_inv, theta, P, C_diag){
   Pt_Bt_nu0C_inv = t(P) %*% t(B) %*% nu0C_inv
 
   # Compute m and Omega (using previous parameter estimates in theta)
-  m_vec <- Pt_Bt_nu0C_inv %*% y_vec + Sigma_inv %*% s0_vec
+  m1_vec <- Pt_Bt_nu0C_inv %*% y_vec
+  m2_vec <- Sigma_inv %*% s0_vec
+  m_vec <- m1_vec + m2_vec
   Omega <- Sigma_inv + Pt_Bt_nu0C_inv %*% B %*% P
 
   # Compute mu_s|y by solving for x in the system of equations Omega*x = m

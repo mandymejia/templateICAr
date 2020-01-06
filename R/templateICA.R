@@ -40,7 +40,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   }
 
   if(!is.null(maxQ)){
-    if(class(maxQ) != 'numeric' & class(max) != 'integer') stop('maxQ must be NULL or numeric/integer')
     if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number')
   }
 
@@ -165,7 +164,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     #BOLD4 <- BOLD3 %*% Amat  #Keep (no dim reduction)?
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose)
 
     #project estimates back to data locations
     resultEM$subjICmean2 <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)

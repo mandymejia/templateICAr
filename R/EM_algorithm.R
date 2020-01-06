@@ -27,7 +27,7 @@ NULL
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, Hinv, common_smoothness=TRUE, maxiter=100, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -56,7 +56,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
 
 		t00 <- Sys.time()
-		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, common_smoothness=common_smoothness, verbose=verbose, return_kappa_fun=return_kappa_fun)
+		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, Hinv, common_smoothness=common_smoothness, verbose=verbose, return_kappa_fun=return_kappa_fun)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters
