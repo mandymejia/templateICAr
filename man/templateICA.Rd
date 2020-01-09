@@ -6,7 +6,9 @@
 \usage{
 templateICA(template_mean, template_var, BOLD, scale_BOLD = FALSE,
   mesh = NULL, maxQ = NULL, common_smoothness = TRUE,
-  maxiter = 100, epsilon = 0.01, verbose = TRUE)
+  maxiter = 100, epsilon = 0.01, verbose = TRUE,
+  return_kappa_fun = FALSE, kappa_init = NULL,
+  dim_reduce_flag = FALSE)
 }
 \arguments{
 \item{template_mean}{(LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
@@ -28,6 +30,12 @@ templateICA(template_mean, template_var, BOLD, scale_BOLD = FALSE,
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{return_kappa_fun}{If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (slow) (common smoothness model only)}
+
+\item{kappa_init}{(Optional) Starting value for kappa.  If NULL, starting value will be determined automatically.}
+
+\item{dim_reduce_flag}{If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.}
 }
 \value{
 A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)

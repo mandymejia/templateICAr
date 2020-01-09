@@ -7,7 +7,8 @@
 \title{Parameter Estimates in EM Algorithm for Template ICA Model}
 \usage{
 UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag,
-  common_smoothness = TRUE, verbose = FALSE)
+  Hinv, common_smoothness = TRUE, verbose = FALSE,
+  return_kappa_fun = FALSE, return_MAP = FALSE, dim_reduce_flag)
 
 UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 }
@@ -27,9 +28,15 @@ UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 \item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{verbose}{If TRUE, print progress updates for slow steps.}
+
+\item{return_kappa_fun}{If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)}
+
+\item{return_MAP}{If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates}
+
+\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
 }
 \value{
-An updated list of parameter estimates, theta
+An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
 }
 \description{
 Parameter Estimates in EM Algorithm for Template ICA Model

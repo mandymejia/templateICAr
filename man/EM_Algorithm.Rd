@@ -7,7 +7,9 @@
 \title{EM Algorithms for Template ICA Models}
 \usage{
 EM_templateICA.spatial(template_mean, template_var, mesh, BOLD, theta0,
-  C_diag, common_smoothness = TRUE, maxiter = 100, epsilon = 0.01)
+  C_diag, Hinv, common_smoothness = TRUE, maxiter = 100,
+  epsilon = 0.01, return_kappa_fun = FALSE, verbose = FALSE,
+  dim_reduce_flag)
 
 EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
   C_diag, maxiter = 100, epsilon = 0.01)
@@ -30,6 +32,10 @@ EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
 \item{maxiter}{maximum number of EM iterations}
 
 \item{epsilon}{smallest proportion change between iterations (e.g. .001)}
+
+\item{return_kappa_fun}{If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)}
+
+\item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
 }
 \value{
 A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))

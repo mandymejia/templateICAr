@@ -4,11 +4,11 @@
 \alias{Q2_kappa}
 \title{Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
 \usage{
-Q2_kappa(logkappa, Fmat, Gmat, GFinvG = NULL, bigTrace1, bigTrace2,
-  C1 = 1/(4 * pi), Q = NULL)
+Q2_kappa(kappa, Fmat, Gmat, GFinvG = NULL, part1, part2, C1 = 1/(4 *
+  pi), Q = NULL)
 }
 \arguments{
-\item{logkappa}{Value of log(kappa) for which to compute log-likelihood}
+\item{kappa}{Value of kappa for which to compute log-likelihood}
 
 \item{Fmat}{A diagonal matrix appearing in SPDE precision}
 
@@ -16,9 +16,9 @@ Q2_kappa(logkappa, Fmat, Gmat, GFinvG = NULL, bigTrace1, bigTrace2,
 
 \item{GFinvG}{(Optional) Pre-computed value of \eqn{GFinvG = Gmat * (1/Fmat)* Gmat} (available from SPDE object)}
 
-\item{bigTrace1}{Value of first large trace term appearing in optimization function (see Details)}
+\item{part1}{Value of terms in optimization function multiplied by kappa^2 (see Details)}
 
-\item{bigTrace2}{Value of second large trace term appearing in optimization function (see Details)}
+\item{part2}{Value of terms in optimization function multiplied by kappa^(-2) (see Details)}
 
 \item{C1}{For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}}
 
@@ -33,7 +33,7 @@ Computes part of log-likelihood involving kappa (or kappa_q) for numerical optim
 \details{
 This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
-the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s. The optimization function includes two Trace terms involving
+the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s. (UPDATE THIS:) The optimization function includes two Trace terms involving
 very large matrices, which are passed to this function as \code{bigTrace1} and \code{bigTrace2}.  \code{bigTrace1} is equal to
 
 \deqn{K1q = Trace(Dq_inv * F * Dq_inv * E[delta_q*t(delta_q)])}
