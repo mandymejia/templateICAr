@@ -137,7 +137,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   #T_mat_inv <- solve(T_mat)
 
   #A-hat = yPmu * T_mat^(-1)
-  A_hat_t <- solve(t(T_mat), t(yPmu)) #A_hat <- yPmu %*% T_mat_inv
+  A_hat <- t(solve(t(T_mat), t(yPmu))) #A_hat <- yPmu %*% T_mat_inv
 
   # yPm <- matrix(0, nrow=ntime, ncol=Q)
   # Pm_vec <- P %*% m_vec
