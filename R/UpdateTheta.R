@@ -496,6 +496,7 @@ compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
 compute_Sigma_inv <- function(spde, kappa, template_var, C1=1/(4*pi)){
 
   Q <- length(kappa)
+  V <- ncol(template_var)
 
   #SPDE matrices, needed to construct R_q_inv
   Fmat = spde$param.inla$M0
