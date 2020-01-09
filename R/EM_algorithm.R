@@ -13,6 +13,7 @@
 #' @param maxiter maximum number of EM iterations
 #' @param epsilon smallest proportion change between iterations (e.g. .001)
 #' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)
+#' @param dim_reduce_flag If FALSE, data is in the original resolution (no dimension reduction).
 #'
 #' @return  A list with 4 elements: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
 #'
@@ -27,7 +28,7 @@ NULL
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, Hinv, common_smoothness=TRUE, maxiter=100, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, Hinv, common_smoothness=TRUE, maxiter=100, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE, dim_reduce_flag){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -56,7 +57,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	  print(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ '))
 
 		t00 <- Sys.time()
-		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, Hinv, common_smoothness=common_smoothness, verbose=verbose, return_kappa_fun=return_kappa_fun)
+		theta_new = UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag, Hinv, common_smoothness=common_smoothness, verbose=verbose, return_kappa_fun=return_kappa_fun, dim_reduce_flag=dim_reduce_flag)
 		print(Sys.time() - t00)
 
 		### Compute change in parameters

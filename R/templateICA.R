@@ -12,12 +12,13 @@
 #' @param verbose If TRUE, display progress of algorithm
 #' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (slow) (common smoothness model only)
 #' @param kappa_init (Optional) Starting value for kappa.  If NULL, starting value will be determined automatically.
+#' @param dim_reduce_flag If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=FALSE){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -90,12 +91,11 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
-  if(verbose) print('PERFORMING DIMENSION REDUCTION')
+  if(dim_reduce_flag) if(verbose) print('PERFORMING DIMENSION REDUCTION')
 
   BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
   dat_list <- dim_reduce(BOLD3, L)
 
-  # Keep?
   BOLD4 <- dat_list$data_reduced
   H <- dat_list$H
   Hinv <- dat_list$H_inv
@@ -104,7 +104,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  if(!is.null(mesh)) dat_DR <- dual_reg(BOLD3, template_mean) else dat_DR <- dual_reg(BOLD3, template_mean)
+  dat_DR <- dual_reg(BOLD3, template_mean)
   #dat_DR$A <- scale(dat_DR$A) #would this have the same effect as the code below?
 
   # Keep?
@@ -113,7 +113,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
-  #theta0 <- list(A = dat_DR$A)
+
 
   #initialize residual variance
   theta0$nu0_sq = dat_list$sigma_sq
@@ -128,6 +128,12 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
   if(!is.null(mesh)){
+
+    if(dim_reduce_flag == FALSE){
+      BOLD4 <- BOLD3
+      C_diag <- rep(1, ntime)
+      theta0$A <- dat_DR$A
+    }
 
     # theta0$A <- resultEM$theta_MLE$A
     # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
@@ -164,23 +170,21 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     #BOLD4 <- BOLD3 %*% Amat  #Keep (no dim reduction)?
 
     print('RUNNING SPATIAL TEMPLATE ICA')
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
 
     #project estimates back to data locations
     resultEM$subjICmean2 <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
 
   }
 
-  A <- Hinv %*% resultEM$theta_MLE$A
-  if(is.null(mesh)){
-    St <- scale(t(resultEM$subjICmean), scale=FALSE) #center each column of S
-    A_reg <- Hinv %*% BOLD4 %*% St %*% solve(t(St) %*% St)
-  } else {
-    St <- scale(t(resultEM$subjICmean2), scale=FALSE) #center each column of S
-    A_reg <- Hinv %*% BOLD4_orig %*% St %*% solve(t(St) %*% St)
+  if(dim_reduce_flag==TRUE) {
+    A <- Hinv %*% resultEM$theta_MLE$A
+    resultEM$A <- A
   }
 
-  resultEM$A <- A
-  resultEM$A_reg <- A_reg
+  #regression-based final estimate of A
+  if(is.null(mesh)){ S <- resultEM$subjICmean } else { S <- resultEM$subjICmean2 }
+  tmp <- dual_reg(BOLD3, S)
+  resultEM$A_reg <- tmp$A
   return(resultEM)
 }
