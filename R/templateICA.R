@@ -124,10 +124,17 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   template_mean <- t(scale(t(template_mean), scale=FALSE)) #center template IC means
 
+  #TEMPLATE ICA
   if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
 
+  #SPATIAL TEMPLATE ICA
   if(!is.null(mesh)){
+
+    #include regression-based estimate of A for tICA & save results
+    tmp <- dual_reg(BOLD3, resultEM$subjICmean)
+    resultEM$A_reg <- tmp$A
+    resultEM_tICA <- resultEM
 
     if(dim_reduce_flag == FALSE){
       BOLD4 <- BOLD3
@@ -144,7 +151,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
       if(verbose) print('Running INLA on tICA estimates to determine starting value(s) for kappa')
       theta0$kappa <- rep(NA, L)
       for(q in 1:L){
-        print(paste0('IC ',q,' of ',L))
+        #print(paste0('IC ',q,' of ',L))
         d_q <- resultEM$subjICmean[q,] - template_mean[q,]
         data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
         formula_q <- y ~ -1 + f(x, model = mesh$spde)
@@ -173,7 +180,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
 
     #project estimates back to data locations
-    resultEM$subjICmean2 <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
+    resultEM$subjICmean <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
 
   }
 
@@ -183,8 +190,11 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
   }
 
   #regression-based final estimate of A
-  if(is.null(mesh)){ S <- resultEM$subjICmean } else { S <- resultEM$subjICmean2 }
-  tmp <- dual_reg(BOLD3, S)
+  tmp <- dual_reg(BOLD3, resultEM$subjICmean)
   resultEM$A_reg <- tmp$A
+
+  #for stICA, return tICA estimates also
+  if(!is.null(mesh)){ resultEM$result_tICA <- resultEM_tICA  }
+
   return(resultEM)
 }

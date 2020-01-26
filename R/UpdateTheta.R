@@ -114,8 +114,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
 
   nsamp <- 1000 #number of samples
   if(verbose) print(paste0('Drawing ',nsamp,' Monte Carlo samples for estimation of covariance terms'))
-  tmp <- system.time(musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=4))
-  if(verbose) print(tmp) #50 seconds for Q=3 and V=4214
+  musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=4) #50 seconds for Q=3 and V=4214
 
   T_mat <- matrix(0, Q, Q)
   for(v in 1:V){
@@ -134,29 +133,10 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
     T_vv <- T1_vv + T2_vv
     T_mat <- T_mat + T_vv
   }
-  #T_mat_inv <- solve(T_mat)
 
-  #A-hat = yPmu * T_mat^(-1)
   A_hat <- t(solve(t(T_mat), t(yPmu))) #A_hat <- yPmu %*% T_mat_inv
 
-  # yPm <- matrix(0, nrow=ntime, ncol=Q)
-  # Pm_vec <- P %*% m_vec
-  # for(v in 1:V){
-  #   inds_y <- (1:ntime) + (v-1)*ntime
-  #   inds_Pm <- (1:Q) + (v-1)*Q
-  #   y_v <- y_vec[inds_y]
-  #   Pm_v <- Pm_vec[inds_Pm]
-  #   yPm_v <- outer(y_v, Pm_v)
-  #   yPm <- yPm + yPm_v #sum up to later divide by V to average
-  # }
-  # A_hat <- c2*yPm
-  print(colVars(as.matrix(A_hat)))
   if(dim_reduce_flag==TRUE) A_hat = orthonorm(A_hat)
-  # #fix SD of columns of A on original dimensionality?
-  # sd_A <- sqrt(colVars(Hinv %*% A_hat)) #get scale of A (after reverse-prewhitening)
-  # sd_A <- sqrt(colVars(A_hat)) #get scale of A
-  # A_hat <- A_hat %*% diag(1/sd_A) #standardize scale of A
-
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq
@@ -441,8 +421,6 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
 #'
 #' @return A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
 #'
-#' @details
-#'
 #' @import Matrix
 #' @importFrom INLA inla.qsolve
 #'
@@ -488,8 +466,6 @@ compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
 #' @param C1 Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2
 #'
 #' @return A list containing Sigma inverse and SPDE matrices
-#'
-#' @details
 #'
 #' @import Matrix
 #'

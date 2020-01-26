@@ -9,6 +9,8 @@
 #'
 orthonorm = function(X){
 
+  X <- as.matrix(X)
+
   #check that X is invertible (required for orthonorm(X) %*% t(orthonorm(X)) = I)
   if(!is.finite(determinant(X)$modulus)) stop('X not invertible')
 
