@@ -180,6 +180,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
 
     #project estimates back to data locations
+    resultEM$subjICmean_mesh <- resultEM$subjICmean
     resultEM$subjICmean <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
 
   }
