@@ -6,9 +6,20 @@
 \alias{UpdateTheta.independent}
 \title{Parameter Estimates in EM Algorithm for Template ICA Model}
 \usage{
-UpdateTheta.spatial(template_mean, template_var, spde, BOLD, theta, C_diag,
-  Hinv, common_smoothness = TRUE, verbose = FALSE,
-  return_kappa_fun = FALSE, return_MAP = FALSE, dim_reduce_flag)
+UpdateTheta.spatial(
+  template_mean,
+  template_var,
+  spde,
+  BOLD,
+  theta,
+  C_diag,
+  Hinv,
+  common_smoothness = TRUE,
+  verbose = FALSE,
+  return_kappa_fun = FALSE,
+  return_MAP = FALSE,
+  dim_reduce_flag
+)
 
 UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 }

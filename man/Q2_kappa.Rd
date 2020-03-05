@@ -4,8 +4,16 @@
 \alias{Q2_kappa}
 \title{Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
 \usage{
-Q2_kappa(kappa, Fmat, Gmat, GFinvG = NULL, part1, part2, C1 = 1/(4 *
-  pi), Q = NULL)
+Q2_kappa(
+  kappa,
+  Fmat,
+  Gmat,
+  GFinvG = NULL,
+  part1,
+  part2,
+  C1 = 1/(4 * pi),
+  Q = NULL
+)
 }
 \arguments{
 \item{kappa}{Value of kappa for which to compute log-likelihood}

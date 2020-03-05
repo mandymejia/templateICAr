@@ -6,13 +6,31 @@
 \alias{EM_templateICA.independent}
 \title{EM Algorithms for Template ICA Models}
 \usage{
-EM_templateICA.spatial(template_mean, template_var, mesh, BOLD, theta0,
-  C_diag, Hinv, common_smoothness = TRUE, maxiter = 100,
-  epsilon = 0.01, return_kappa_fun = FALSE, verbose = FALSE,
-  dim_reduce_flag)
+EM_templateICA.spatial(
+  template_mean,
+  template_var,
+  mesh,
+  BOLD,
+  theta0,
+  C_diag,
+  Hinv,
+  common_smoothness = TRUE,
+  maxiter = 10,
+  epsilon = 0.01,
+  return_kappa_fun = FALSE,
+  verbose = FALSE,
+  dim_reduce_flag
+)
 
-EM_templateICA.independent(template_mean, template_var, BOLD, theta0,
-  C_diag, maxiter = 100, epsilon = 0.01)
+EM_templateICA.independent(
+  template_mean,
+  template_var,
+  BOLD,
+  theta0,
+  C_diag,
+  maxiter = 100,
+  epsilon = 0.01
+)
 }
 \arguments{
 \item{template_mean}{(QxN matrix) mean maps for each IC in template, where Q is the number of ICs, N is the number of data or mesh locations.}

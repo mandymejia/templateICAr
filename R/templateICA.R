@@ -16,7 +16,7 @@
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
-#' @importFrom INLA inla inla.spde.result
+#' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @import pesel
 #' @importFrom ica icaimax
 #'
