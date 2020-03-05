@@ -28,7 +28,7 @@ NULL
 #' @export
 #' @importFrom INLA inla.spde2.matern
 #'
-EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, Hinv, common_smoothness=TRUE, maxiter=100, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE, dim_reduce_flag){
+EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta0, C_diag, Hinv, common_smoothness=TRUE, maxiter=10, epsilon=0.01, return_kappa_fun=FALSE, verbose=FALSE, dim_reduce_flag){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 

@@ -20,7 +20,11 @@
 #' @import pesel
 #' @importFrom ica icaimax
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=10, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
+
+  flag <- inla.pardiso.check()
+  if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
+  inla.setOption(smtp='pardiso')
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -76,7 +80,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
 
   if(maxQ > L){
 
-
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
     BOLD1 <- scale_BOLD(BOLD, scale=FALSE)
     DR1 <- dual_reg(BOLD1, template_mean)
@@ -90,13 +93,14 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
     pesel_BOLD2 <- pesel(BOLD2, npc.max=100, method='homogenous')
     Q2_hat <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+    if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2_hat,' NUISANCE COMPONENTS'))
 
     #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
     ICA_BOLD2 <- icaimax(t(BOLD2), nc=Q2_hat, center=TRUE)
 
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
     fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
-    BOLD3 <- BOLD1 - fit #data without nuisance ICs
+    BOLD3 <- BOLD1 - fit #original data without nuisance ICs
 
   } else {
 
@@ -121,11 +125,10 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   dat_DR <- dual_reg(BOLD3, template_mean)
-  #dat_DR$A <- scale(dat_DR$A) #would this have the same effect as the code below?
 
   # Keep?
   HA <- H %*% dat_DR$A #apply dimension reduction
-  # HA <- orthonorm(HA)  #orthogonalize
+  HA <- orthonorm(HA)  #orthogonalize
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
@@ -147,6 +150,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
   #SPATIAL TEMPLATE ICA
   if(!is.null(mesh)){
 
+    theta0$A <- resultEM$theta_MLE$A
+
     #include regression-based estimate of A for tICA & save results
     tmp <- dual_reg(BOLD3, resultEM$subjICmean)
     resultEM$A_reg <- tmp$A
@@ -162,7 +167,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
     # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
     # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
-    #HERE --> CAN WE JUST OBTAIN THE LIKELIHOOD FOR KAPPA?
+    #HERE --> CAN WE JUST OBTAIN THE MLE of KAPPA?
 
     #starting value for kappas
     if(is.null(kappa_init)){

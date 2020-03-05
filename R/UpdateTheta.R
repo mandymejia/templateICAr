@@ -65,6 +65,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   s0_vec = as.vector(t(template_mean))
   y_vec = as.vector(BOLD)
 
+  if(verbose) print('...posterior precision') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
   stuff <- compute_Sigma_inv(spde, kappa=theta$kappa, template_var, C1=1/(4*pi))
   R_inv <- stuff$R_inv
@@ -77,7 +78,8 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   P <- make_Pmat(Q, V)
 
   #1. Compute mu_s
-  stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta, P, C_diag)
+  if(verbose) print('...posterior mean') #20 seconds with pardiso! (1 hour without)
+  print(system.time(stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta, P, C_diag)))
   mu_s <- stuff$mu
   m_vec <- stuff$m
   Omega <- stuff$Omega
@@ -89,6 +91,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   }
 
   if(verbose) print('Updating A')
+  t00 <- Sys.time()
 
   #2. Compute constant term in equation (10): c2 = 1/(1+m'mu_sy)
   #c2 <- as.numeric(1/(1 + t(m_vec) %*% mu_s))
@@ -112,9 +115,12 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   Omega_PP <- P %*% Omega %*% t(P)
   D_PP <- P %*% D %*% t(P)
 
-  nsamp <- 1000 #number of samples
+  nsamp <- 500 #number of samples
   if(verbose) print(paste0('Drawing ',nsamp,' Monte Carlo samples for estimation of covariance terms'))
-  musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=4) #50 seconds for Q=3 and V=4214
+  musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8)
+  #1000 samples --> 50 seconds for Q=3 and V=4214
+  #1000 samples --> > 1 hour for Q=16 and V=5500
+  #100 samples --> 45 minutes for Q=16 and V=5500
 
   T_mat <- matrix(0, Q, Q)
   for(v in 1:V){
@@ -137,6 +143,7 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   A_hat <- t(solve(t(T_mat), t(yPmu))) #A_hat <- yPmu %*% T_mat_inv
 
   if(dim_reduce_flag==TRUE) A_hat = orthonorm(A_hat)
+  print(Sys.time() - t00)
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq
@@ -148,14 +155,14 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   ### Update posterior moments of S with A_hat
   ##########################################
 
-  if(verbose) print('Updating posterior moments of S')
+  #if(verbose) print('Updating posterior mean of S')
 
-  #1. Compute m and Omega, then compute mu_sy by solving for x in the system of equations Omega*x = m
-  stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta_new, P, C_diag)
-  mu_s <- stuff$mu
-  m_vec <- stuff$m
-  Omega <- stuff$Omega
-  Omega_inv_m <- stuff$Omega_inv_m
+  # #1. Compute m and Omega, then compute mu_sy by solving for x in the system of equations Omega*x = m
+  # system.time(stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta_new, P, C_diag))
+  # mu_s <- stuff$mu
+  # m_vec <- stuff$m
+  # Omega <- stuff$Omega
+  # Omega_inv_m <- stuff$Omega_inv_m
 
   ##########################################
   ### E-STEP for kappa_q
@@ -171,15 +178,19 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   # Tr(K1 * Omega_inv_qq) --> Use inla.qsample to draw from N(0, Omega_inv_qq), then estimate necessary elements (non-zeros in K1) of Omega_inv_qq for q=1,...,Q
   # Tr(K1 * M_q) --> M = outer(Omega_inv*m,Omega_inv*m), where Omega_inv*m is known. Just calculate necessary elements (non-zeros in K1) of M_q for q=1,...,Q
 
-  if(verbose) print('Computing trace terms in log-likelihood of kappa')
+  if(verbose) print('..Computing trace terms in log-likelihood of kappa')
 
   # SETUP FOR FIRST TERM IN PARTS A & B (Trace with Omega-inv-hat)
 
-  nsamp <- 1000 #number of samples
-  if(verbose) print(paste0('Drawing ',nsamp,' Monte Carlo samples for covariance estimation:'))
-  tmp <- system.time(musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=4)) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
+  nsamp <- 500 #number of samples
+  if(verbose) print(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation:'))
+  tmp <- system.time(musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8)) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
   if(verbose) print(tmp)
   #30-60 sec for 1000 samples with V*Q = 4214*3 = 12,642
+  #1000 samples --> 1 hour with V=5500 and Q=16 (V*Q=88,000)
+  #100 samples --> 35 min with V=5500 and Q=16 (V*Q=88,000)
+
+  if(verbose) print('....setting things up') #15 sec (Q=16, V=5500)
 
   #set up estimation of only terms necessary for trace computation
   nonzero_GFinvG <- as.matrix(1*(GFinvG != 0))
@@ -213,13 +224,16 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   K1 <- Fmat
   K2 <- GFinvG
 
+  if(verbose) print('....computing trace block-wise') #26 sec for V=5500, Q=16
+
+  t00 <- Sys.time()
   for(q in 1:Q){
-    if(verbose) print(paste('Block ',q,' of ',Q))
+    #if(verbose) print(paste('......block ',q,' of ',Q))
     inds_q <- (1:V) + (q-1)*V
 
-    # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY!) -- 13 SEC
+    # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY!)
 
-    Xctr_q <- scale(t(musamp[inds_q,]), scale=FALSE) # < 1 sec
+    Xctr_q <- scale(t(musamp[inds_q,]), scale=FALSE)
 
     #left-multiplication matrix
     vals_left_X <- as.vector(Xctr_q)
@@ -271,11 +285,12 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
     PartB3[q] <- t(u_q) %*% K2 %*% v_q
 
   }
-  if(verbose) print(Sys.time() - t0)
+  if(verbose) print(Sys.time() - t00)
 
-  # NUMERICALLY ESTIMATE MLEs for kappa_q's -- 10 MIN
+  # NUMERICALLY ESTIMATE MLEs for kappa_q's -- 10 MIN(??)
 
   print("Performing numerical optimization for kappa")
+  #8 seconds for V=5500, Q=16
 
   t0 <- Sys.time()
   if(common_smoothness==FALSE){
@@ -451,7 +466,7 @@ compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
   Omega <- R_inv + D %*% Pt_Bt_nu0C_inv %*% B %*% P %*% D
 
   # Compute mu_s|y by solving for x in the system of equations Omega*x = m
-  Omega_inv_m <- inla.qsolve(Q = Omega, B=m_vec, method='solve')
+  Omega_inv_m <- inla.qsolve(Q = Omega, B=m_vec, method='solve') # <-- slowest part (up to 1 hour for Q=16, V=5500), but with inla.setOption(smtp='pardiso') goes down to 20 seconds!
   mu_s <- D %*% Omega_inv_m
 
   return(list(mu=mu_s, m=m_vec, Omega=Omega, Omega_inv_m=Omega_inv_m))
