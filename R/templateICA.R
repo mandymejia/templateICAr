@@ -17,8 +17,10 @@
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result
+#' @import pesel
+#' @importFrom ica icaimax
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=FALSE){
+templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
   ntime <- nrow(BOLD) #length of timeseries
   nvox <- ncol(BOLD) #number of data locations
@@ -74,18 +76,33 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   if(maxQ > L){
 
-    ## use BOLD_mesh! if(!is.null(mesh))
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
+    BOLD1 <- scale_BOLD(BOLD, scale=FALSE)
+    DR1 <- dual_reg(BOLD1, template_mean)
+
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    #iii. ESTIMATE THE NUMBER OF REMAINING ICS USING THE MINKA METHOD (TO DO)
-    #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX (TO DO)
+    fit <- DR1$A %*% DR1$S
+    BOLD2 <- BOLD1 - fit #data without template ICs
+
+    #iii. ESTIMATE THE NUMBER OF REMAINING ICS
+    #pesel function expects nxp data and will determine asymptotic framework
+    #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
+    pesel_BOLD2 <- pesel(BOLD2, npc.max=100, method='homogenous')
+    Q2_hat <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+
+    #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
+    ICA_BOLD2 <- icaimax(t(BOLD2), nc=Q2_hat, center=TRUE)
+
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
+    fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
+    BOLD3 <- BOLD1 - fit #data without nuisance ICs
 
   } else {
 
     # USE ORIGINAL DATA, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
     BOLD3 <- BOLD
+    BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
 
   }
 
@@ -93,7 +110,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
 
   if(dim_reduce_flag) if(verbose) print('PERFORMING DIMENSION REDUCTION')
 
-  BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
   dat_list <- dim_reduce(BOLD3, L)
 
   BOLD4 <- dat_list$data_reduced
@@ -146,24 +162,29 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
     # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
+    #HERE --> CAN WE JUST OBTAIN THE LIKELIHOOD FOR KAPPA?
+
     #starting value for kappas
     if(is.null(kappa_init)){
       if(verbose) print('Running INLA on tICA estimates to determine starting value(s) for kappa')
       theta0$kappa <- rep(NA, L)
+      locs <- mesh$mesh$idx$loc[!is.na(mesh$mesh$idx$loc)]
       for(q in 1:L){
-        #print(paste0('IC ',q,' of ',L))
+        print(paste0('IC ',q,' of ',L))
         d_q <- resultEM$subjICmean[q,] - template_mean[q,]
-        data_inla_q <- list(y = d_q, x = mesh$mesh$idx$loc)
+        data_inla_q <- list(y = d_q, x = locs)
         formula_q <- y ~ -1 + f(x, model = mesh$spde)
         result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
         result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
         theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
       }
-      if(common_smoothness) theta0$kappa <- rep(mean(theta0$kappa), L)
+      if(common_smoothness) theta0$kappa <- median(theta0$kappa)
       if(verbose) print(paste0('Starting value for kappa = ',paste(round(theta0$kappa,3), collapse=', ')))
     } else {
       theta0$kappa <- rep(kappa_init, L)
     }
+
+    if(common_smoothness) theta0$kappa <- rep(theta0$kappa, L)
 
     #project BOLD and templates to mesh locations
     Amat <- mesh$A # n_orig x n_mesh matrix
@@ -177,7 +198,9 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=FALSE, mes
     #BOLD4 <- BOLD3 %*% Amat  #Keep (no dim reduction)?
 
     print('RUNNING SPATIAL TEMPLATE ICA')
+    t000 <- Sys.time()
     resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+    print(Sys.time() - t000)
 
     #project estimates back to data locations
     resultEM$subjICmean_mesh <- resultEM$subjICmean
