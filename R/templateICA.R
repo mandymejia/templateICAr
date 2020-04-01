@@ -3,7 +3,7 @@
 #' @param template_mean (LxV matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
 #' @param template_var (LxV matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
-#' @param scale_BOLD Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
+#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
@@ -20,7 +20,7 @@
 #' @import pesel
 #' @importFrom ica icaimax
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=10, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=30, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
   flag <- inla.pardiso.check()
   if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
@@ -67,7 +67,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
     maxQ <- ntime
   }
 
-  if(class(scale_BOLD) != 'logical' | length(scale_BOLD) != 1) stop('scale_BOLD must be a logical value')
+  if(class(scale) != 'logical' | length(scale) != 1) stop('scale must be a logical value')
   if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
   if(class(return_kappa_fun) != 'logical' | length(return_kappa_fun) != 1) stop('return_kappa_fun must be a logical value')
   if(return_kappa_fun==TRUE & common_smoothness==FALSE){
@@ -81,7 +81,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
   if(maxQ > L){
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    BOLD1 <- scale_BOLD(BOLD, scale=FALSE)
+    print('SCALING DATA FOR REAL')
+    if(scale) BOLD1 <- scale_BOLD(BOLD, scale=TRUE) else BOLD1 <- scale_BOLD(BOLD, scale=FALSE)
     DR1 <- dual_reg(BOLD1, template_mean)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -104,9 +105,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
 
   } else {
 
-    # USE ORIGINAL DATA, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- BOLD
-    BOLD3 <- scale_BOLD(BOLD3, scale=FALSE)
+  # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
+   BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
 
   }
 
@@ -141,8 +141,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
 
   ### 4. RUN EM ALGORITHM!
 
-  template_mean <- t(scale(t(template_mean), scale=FALSE)) #center template IC means
-
   #TEMPLATE ICA
   if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
@@ -167,59 +165,71 @@ templateICA <- function(template_mean, template_var, BOLD, scale_BOLD=TRUE, mesh
     # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
     # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
-    #HERE --> CAN WE JUST OBTAIN THE MLE of KAPPA?
-
     #starting value for kappas
     if(is.null(kappa_init)){
-      if(verbose) print('Running INLA on tICA estimates to determine starting value(s) for kappa')
-      theta0$kappa <- rep(NA, L)
+      if(verbose) print('Running INLA on tICA estimates to determine starting value for kappa')
       locs <- mesh$mesh$idx$loc[!is.na(mesh$mesh$idx$loc)]
+
+      #organize data and replicates
       for(q in 1:L){
-        print(paste0('IC ',q,' of ',L))
+        #print(paste0('IC ',q,' of ',L))
         d_q <- resultEM$subjICmean[q,] - template_mean[q,]
-        data_inla_q <- list(y = d_q, x = locs)
-        formula_q <- y ~ -1 + f(x, model = mesh$spde)
-        result_q <- inla(formula_q, data = data_inla_q, verbose = FALSE)
-        result_spde_q <- inla.spde.result(result_q, name='x', spde=mesh$spde)
-        theta0$kappa[q] <- exp(result_spde_q$summary.log.kappa$mean)
+        rep_q <- rep(q, length(d_q))
+        D_diag_q <- sqrt(template_var[q,])
+        if(q==1) {
+          dev <- d_q
+          rep <- rep_q
+          D_diag <- D_diag_q
+        } else {
+          dev <- c(dev, d_q)
+          rep <- c(rep, rep_q)
+          D_diag <- c(D_diag, D_diag_q)
+        }
       }
-      if(common_smoothness) theta0$kappa <- median(theta0$kappa)
-      if(verbose) print(paste0('Starting value for kappa = ',paste(round(theta0$kappa,3), collapse=', ')))
-    } else {
-      theta0$kappa <- rep(kappa_init, L)
+
+      #determine MLE of kappa
+      opt <- optim(par=c(0,-10),
+                     fn=loglik_kappa_est,
+                     method='L-BFGS-B',
+                     lower=c(-5,-20),
+                     upper=c(1,Inf), #kappa usually less than 1, log(1)=0
+                     delta=dev,
+                     D_diag=D_diag,
+                     mesh=mesh,
+                     Q=L)
+      kappa_init <- exp(opt$par[1])
+
+      # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
+      # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
+      # result <- inla(formula, data = data_inla, verbose = FALSE)
+      # result_spde <- inla.spde.result(result, name='x', spde=mesh$spde)
+      # kappa_init <- exp(result_spde$summary.log.kappa$mean)
+      if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
     }
 
-    if(common_smoothness) theta0$kappa <- rep(theta0$kappa, L)
+    theta0$kappa <- rep(kappa_init, L)
 
     #project BOLD and templates to mesh locations
     Amat <- mesh$A # n_orig x n_mesh matrix
     nmesh <- ncol(Amat)
     if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-    template_mean <- template_mean %*% Amat
-    template_var <- template_var %*% Amat
-
-    BOLD4_orig <- BOLD4
-    BOLD4 <- BOLD4 %*% Amat
-    #BOLD4 <- BOLD3 %*% Amat  #Keep (no dim reduction)?
 
     print('RUNNING SPATIAL TEMPLATE ICA')
     t000 <- Sys.time()
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, Hinv, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
     print(Sys.time() - t000)
 
     #project estimates back to data locations
-    resultEM$subjICmean_mesh <- resultEM$subjICmean
-    resultEM$subjICmean <- t(matrix(resultEM$subjICmean, ncol=L)) %*% t(Amat)
-
+    resultEM$subjICmean_mat <- t(matrix(resultEM$subjICmean, ncol=L))
   }
 
-  if(dim_reduce_flag==TRUE) {
+  if(dim_reduce_flag) {
     A <- Hinv %*% resultEM$theta_MLE$A
     resultEM$A <- A
   }
 
   #regression-based final estimate of A
-  tmp <- dual_reg(BOLD3, resultEM$subjICmean)
+  tmp <- dual_reg(BOLD3, resultEM$subjICmean_mat)
   resultEM$A_reg <- tmp$A
 
   #for stICA, return tICA estimates also

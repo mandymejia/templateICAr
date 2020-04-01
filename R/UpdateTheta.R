@@ -3,12 +3,15 @@
 #'
 #' @title Parameter Estimates in EM Algorithm for Template ICA Model
 #'
-#' @param template_mean mean maps for each IC in template
-#' @param template_var between-subject variance maps for each IC in template
+#' @param template_mean (QxV matrix) mean maps for each IC in template
+#' @param template_var (QxV matrix) between-subject variance maps for each IC in template
 #' @param BOLD dimension-reduced fMRI data
 #' @param spde NULL for spatial independence model, otherwise SPDE object representing spatial prior on deviations.
 #' @param theta A list of current parameter estimates (mixing matrix A, noise variance nu0_sq and (for spatial model) SPDE parameters kappa)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
+#' @param s0_vec
+#' @param D
+#' @param Dinv_s0
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
 #' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)
@@ -24,11 +27,12 @@ NULL
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsample inla.qsolve inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C_diag, Hinv, common_smoothness=TRUE, verbose=FALSE, return_kappa_fun=FALSE, return_MAP=FALSE, dim_reduce_flag){
+UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_kappa_fun=FALSE, return_MAP=FALSE, dim_reduce_flag){
 
   Q = nrow(template_mean)
   V = ncol(BOLD)
   ntime = nrow(BOLD)
+  spde = mesh$spde
 
   #initialize new parameter values
   theta_new = list(A = NULL, nu0_sq = NULL, kappa = NULL)
@@ -60,16 +64,14 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   # nu0C_inv = "(nu_0^2 C)^{-1}" (big diagonal matrix)
   # B = "I_v \otimes A" (big block diagonal matrix)
 
-  if(verbose) print('Computing Posterior Moments of S')
+  if(verbose) cat('Computing Posterior Moments of S \n')
 
-  s0_vec = as.vector(t(template_mean))
   y_vec = as.vector(BOLD)
 
-  if(verbose) print('...posterior precision') # less than 1 sec
+  if(verbose) cat('...posterior precision \n') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
-  stuff <- compute_Sigma_inv(spde, kappa=theta$kappa, template_var, C1=1/(4*pi))
+  stuff <- compute_Sigma_inv(mesh, kappa=theta$kappa, template_var, C1=1/(4*pi))
   R_inv <- stuff$R_inv
-  D <- stuff$D
   Fmat <- stuff$Fmat
   Gmat <- stuff$Gmat
   GFinvG <- stuff$GFinvG
@@ -78,19 +80,21 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   P <- make_Pmat(Q, V)
 
   #1. Compute mu_s
-  if(verbose) print('...posterior mean') #20 seconds with pardiso! (1 hour without)
-  print(system.time(stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta, P, C_diag)))
+  if(verbose) cat('...posterior mean \n') #20 seconds with pardiso! (1 hour without)
+  stuff <- compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
   mu_s <- stuff$mu
   m_vec <- stuff$m
   Omega <- stuff$Omega
   Omega_inv_m <- stuff$Omega_inv_m
+
+  if(verbose) print(summary(as.vector(mu_s)))
 
   if(return_MAP){
     return(list(mu_s = mu_s, Omega_s = Omega))
     stop()
   }
 
-  if(verbose) print('Updating A')
+  if(verbose) cat('Updating A \n')
   t00 <- Sys.time()
 
   #2. Compute constant term in equation (10): c2 = 1/(1+m'mu_sy)
@@ -115,8 +119,9 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   Omega_PP <- P %*% Omega %*% t(P)
   D_PP <- P %*% D %*% t(P)
 
+  if(verbose) cat(paste0('Drawing ',nsamp,' Monte Carlo samples for estimation of covariance estimation \n'))
+
   nsamp <- 500 #number of samples
-  if(verbose) print(paste0('Drawing ',nsamp,' Monte Carlo samples for estimation of covariance terms'))
   musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8)
   #1000 samples --> 50 seconds for Q=3 and V=4214
   #1000 samples --> > 1 hour for Q=16 and V=5500
@@ -143,7 +148,6 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   A_hat <- t(solve(t(T_mat), t(yPmu))) #A_hat <- yPmu %*% T_mat_inv
 
   if(dim_reduce_flag==TRUE) A_hat = orthonorm(A_hat)
-  print(Sys.time() - t00)
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq
@@ -155,83 +159,80 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
   ### Update posterior moments of S with A_hat
   ##########################################
 
-  #if(verbose) print('Updating posterior mean of S')
-
+  # if(verbose) cat('Updating posterior mean of S \n')
+  #
   # #1. Compute m and Omega, then compute mu_sy by solving for x in the system of equations Omega*x = m
-  # system.time(stuff <- compute_mu_s(y_vec, s0_vec, R_inv, D, theta_new, P, C_diag))
+  # system.time(stuff <- compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag))
   # mu_s <- stuff$mu
   # m_vec <- stuff$m
   # Omega <- stuff$Omega
   # Omega_inv_m <- stuff$Omega_inv_m
+  #
+  # print(summary(as.vector(mu_s)))
 
   ##########################################
-  ### E-STEP for kappa_q
+  ### E-STEP for kappa
   ##########################################
 
-  if(verbose) print('Updating SPDE Parameters (kappa)')
+  if(verbose) cat('Updating kappa  \n')
 
-  # Likelihood in terms of kappa_q's.  With K1=F and K2=GFinvG:
-  # PartA = Tr(K1 * Omega_inv_qq) + Tr(K1 * M_q) + u_q'*K1*v_q
-  # PartB = Tr(K2 * Omega_inv_qq) + Tr(K2 * M_q) + u_q'*K2*v_q
-  # PartC = 1/c1 * log(det(kappa^2*Fmat + 2*Gmat + kappa^(-2)*GFinvG))
+  # Likelihood in terms of kappa_q's.
+  # LL2_part1 = log(det(R_q_inv))
+  # LL2_part2 = Tr(R_q_inv * Omega_inv_q) + Tr(R_q_inv * W_hat_q)
+  # LL2_part3 = u_q' * R_q_inv * v_hat_q
+  #             u_q = Dinv * s0
+  #             v_q = 2 Omega_inv * m - Dinv * s0
 
-  # Tr(K1 * Omega_inv_qq) --> Use inla.qsample to draw from N(0, Omega_inv_qq), then estimate necessary elements (non-zeros in K1) of Omega_inv_qq for q=1,...,Q
-  # Tr(K1 * M_q) --> M = outer(Omega_inv*m,Omega_inv*m), where Omega_inv*m is known. Just calculate necessary elements (non-zeros in K1) of M_q for q=1,...,Q
+  # Tr(R_q_inv * Omega_inv_q) --> Use inla.qsample to draw from N(0, Omega_inv_q), then estimate necessary elements (non-zeros in R_q_inv) of Omega_inv_q for q=1,...,Q
+  # Tr(R_q_inv * W_hat_q) --> W_hat_q = outer(Omega_inv*m,Omega_inv*m)_qq, where Omega_inv*m is known. Just calculate necessary elements (non-zeros in R_q_inv) of W_hat_q for q=1,...,Q
 
-  if(verbose) print('..Computing trace terms in log-likelihood of kappa')
+  if(verbose) cat('..Computing trace terms in log-likelihood of kappa \n')
 
-  # SETUP FOR FIRST TERM IN PARTS A & B (Trace with Omega-inv-hat)
+  ### SET UP FOR PART 2
+
+  #1. Generate Monte Carlo samples for estimation of Omega_hat^{-1}_qq
+
+  if(verbose) cat(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation \n'))
 
   nsamp <- 500 #number of samples
-  if(verbose) print(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation:'))
-  tmp <- system.time(musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8)) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
-  if(verbose) print(tmp)
-  #30-60 sec for 1000 samples with V*Q = 4214*3 = 12,642
-  #1000 samples --> 1 hour with V=5500 and Q=16 (V*Q=88,000)
-  #100 samples --> 35 min with V=5500 and Q=16 (V*Q=88,000)
+  musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
+  #9 sec for 500 samples with V*Q = 2530*3 = 12,642
 
-  if(verbose) print('....setting things up') #15 sec (Q=16, V=5500)
+  #2. Determine non-zero terms of R_q_inv
+
+  if(verbose) cat('....setting up helper objects for trace computation \n') #15 sec (Q=16, V=5500)
 
   #set up estimation of only terms necessary for trace computation
-  nonzero_GFinvG <- as.matrix(1*(GFinvG != 0))
-  diag(nonzero_GFinvG) <- 1 #make sure all diagonal elements estimated (required for Trace 1)
-  nonzero_cols <- which(GFinvG != 0, arr.ind = TRUE)[,2] #column indices of non-zero locations
+  nonzero_Rinv <- as.matrix(1*(R_inv[1:V,1:V] != 0))
+  #diag(nonzero_Rinv) <- 1 #make sure all diagonal elements estimated (required for Trace 1)
+  nonzero_cols <- which(R_inv[1:V,1:V] != 0, arr.ind = TRUE)[,2] #column indices of non-zero locations
+
+  #3. Set up matrices needed for computation of only necessary elements of Omega_hat^{-1}
 
   X <- matrix(1, nrow=nsamp, ncol=V) #placeholder for X in Omega^(-1) = XX'
   bigX_left <- KhatriRao(diag(1, V), X) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
-  bigX_right <- KhatriRao(nonzero_GFinvG, X) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
+  bigX_right <- KhatriRao(nonzero_Rinv, X) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
   inds_left_X <- which(bigX_left != 0, arr.ind=TRUE)
   inds_right_X <- which(bigX_right != 0, arr.ind=TRUE)
 
-  # SETUP FOR SECOND TERM IN PARTS A & B (Trace with M-hat)
+  #4. Set up vectors needed for computation of only necessary elements of W_hat
 
   x <- matrix(1, nrow=1, ncol=V) #placeholder for x in M = xx'
   bigx_left <- KhatriRao(diag(1, V), x) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
-  bigx_right <- KhatriRao(nonzero_GFinvG, x) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
+  bigx_right <- KhatriRao(nonzero_Rinv, x) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
   inds_left_x <- which(bigx_left != 0, arr.ind=TRUE)
   inds_right_x <- which(bigx_right != 0, arr.ind=TRUE)
 
-  # SETUP FOR THIRD TERM IN PARTS A & B (u'*K*v)
+  if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
+  #15 sec for Q=16, V=5500
 
-  u <- inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve') #Dinv_s0 = D^(-1)*s0
-  v <- 2*Omega_inv_m - u
+  if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
 
-  t0 <- Sys.time()
-  PartA1 <- PartB1 <- rep(NA, Q) #Tr(Kr * Omega_inv_qq), r=1,2
-  PartA2 <- PartB2 <- rep(NA, Q) #Tr(Kr * M_q), r=1,2
-  PartA3 <- PartB3 <- rep(NA, Q) #u_q'*Kr*v_q, r=1,2
-
-  K1 <- Fmat
-  K2 <- GFinvG
-
-  if(verbose) print('....computing trace block-wise') #26 sec for V=5500, Q=16
-
-  t00 <- Sys.time()
   for(q in 1:Q){
-    #if(verbose) print(paste('......block ',q,' of ',Q))
+    #if(verbose) cat(paste('......block ',q,' of ',Q,' \n'))
     inds_q <- (1:V) + (q-1)*V
 
-    # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY!)
+    # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY)
 
     Xctr_q <- scale(t(musamp[inds_q,]), scale=FALSE)
 
@@ -245,16 +246,13 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
     #multiply together
     Omega_inv_qq <- t(bigX_left_q) %*% bigX_right_q / (nsamp - 1)
 
-    # COMPUTE M[q,q]
+    # COMPUTE W_hat[q,q] = Omega_inv_m[q] * Omega_inv_m[q' (NECESSARY ENTRIES ONLY)
 
     # T_q = matrix that selects the qth block of size V from a matrix with V*Q rows
     e_q <- Matrix(0, nrow=1, ncol=Q, sparse=TRUE)
     e_q[1,q] <- 1
     T_q <- kronecker(e_q, Diagonal(V))
-
     Omega_inv_m_q <- T_q %*% Omega_inv_m
-
-    #compute M = Omega_inv_m * Omega_inv_m' (necessary entries only)
 
     #left-multiplication matrix
     vals_left_x <- as.vector(Omega_inv_m_q)
@@ -264,71 +262,43 @@ UpdateTheta.spatial = function(template_mean, template_var, spde, BOLD, theta, C
     vals_right_x <- as.vector(x_repcols)
     bigx_right_q <- sparseMatrix(i = inds_right_x[,1], j = inds_right_x[,2], x = vals_right_x)
     #multiply together
-    M_hat_qq <- t(bigx_left_q) %*% bigx_right_q
+    W_hat_qq <- t(bigx_left_q) %*% bigx_right_q
 
-    ### PARTS A1 & B1
+    # COMBINE OMEGA_INV[q,q] AND W_hat[q,q] --> two trace terms involving R_q_inv can be combined
 
-    #compute Trace for this part of the matrix
-    PartA1[q] <- sum(K1 * Omega_inv_qq) #equivalent to sum(diag(K_q1 %*% cov_s_qq)) and FAST (note: K_q symmetric)
-    PartB1[q] <- sum(K2 * Omega_inv_qq) #equivalent to sum(diag(K_q2 %*% cov_s_qq)) and FAST (note: K_q symmetric)
-
-    ### PARTS A2 & B2
-
-    PartA2[q] <- sum(K1 * M_hat_qq)
-    PartB2[q] <- sum(K2 * M_hat_qq)
-
-    ### PARTS A3 & B3
-
-    u_q <- T_q %*% u
-    v_q <- T_q %*% v
-    PartA3[q] <- t(u_q) %*% K1 %*% v_q
-    PartB3[q] <- t(u_q) %*% K2 %*% v_q
-
+    OplusW_qq <- Omega_inv_qq + W_hat_qq
+    if(common_smoothness){
+      if(q==1) OplusW <- OplusW_qq else OplusW <- OplusW + OplusW_qq
+    } else {
+      OplusW[[q]] <- OplusW_qq
+    }
   }
-  if(verbose) print(Sys.time() - t00)
 
-  # NUMERICALLY ESTIMATE MLEs for kappa_q's -- 10 MIN(??)
 
-  print("Performing numerical optimization for kappa")
-  #8 seconds for V=5500, Q=16
+  ### SET UP FOR PART 3
 
-  t0 <- Sys.time()
-  if(common_smoothness==FALSE){
+  u <- Dinv_s0
+  v <- 2*Omega_inv_m - u
+
+  # NUMERICALLY SOLVE FOR MLE OF KAPPA
+
+  cat("..Performing numerical optimization \n")
+  #~8 seconds for V=5500, Q=3 (comon smoothness)
+
+  if(common_smoothness){
+    kappa_opt <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
+             spde=spde, OplusW=OplusW, u=u, v=v, Q=Q)  #Q=Q to indicate common smoothness model to the LL2_kappa function
+    kappa_opt <- rep(kappa_opt$maximum, Q)
+  } else {
     kappa_opt <- rep(NA, Q)
     for(q in 1:Q){
-      if(verbose) print(paste('Optimization ',q,' of ',Q))
-      kappa_opt_q <- optimize(Q2_kappa, lower=-10, upper=10, maximum=TRUE,
-                              Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG,
-                              part1 = -1*PartA1[q] - PartA2[q] + PartA3[q], #factor times kappa^2
-                              part2 = -1*PartB1[q] - PartB2[q] + PartB3[q]) #factor times kappa^(-2)
+      if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
+      inds_q <- (1:V) + (q-1)*V
+      kappa_opt_q <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
+             spde=spde, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
       kappa_opt[q] <- (kappa_opt_q$maximum)
     }
   }
-
-  if(common_smoothness==TRUE){
-    #if(verbose) print('Optimizing kappa')
-    kappa_opt <- optimize(Q2_kappa, lower=0, upper=5, maximum=TRUE,
-                          Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG,
-                          part1 = sum(-1*PartA1 - PartA2 + PartA3),
-                          part2 = sum(-1*PartB1 - PartB2 + PartB3),
-                          Q=Q) #to indicate common smoothness model to the Q2_kappa function
-    kappa_opt <- rep(kappa_opt$maximum, Q)
-
-    ### COMPUTE AND RETURN OBJECTIVE FUNCTION IN A NEIGHBORHOOD OF KAPPA-OPT
-    if(return_kappa_fun){
-      kappa_vals <- exp(seq(floor(log(kappa_opt[1])-1), ceiling(log(kappa_opt[1])+2), 0.05)) #pick range on log scale to avoid values of kappa below zero
-      #kappa_vals <- seq(-3, -1, 0.05)
-      kappa_opt_fun <- rep(NA, length(kappa_vals))
-      part1 = sum(-1*PartA1 - PartA2 + PartA3) #factor times kappa^2
-      part2 = sum(-1*PartB1 - PartB2 + PartB3) #factor times kappa^(-2)
-      for(k in 1:length(kappa_vals)){ kappa_opt_fun[k] <- Q2_kappa(kappa_vals[k], Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, part1, part2, Q=Q) }
-    }
-  }
-  print(Sys.time() - t0)
-
-  # plot(log(kappa_vals), kappa_opt_fun, type='l', ylim=c(-1e6, 6e5),
-  #      main = expression(paste("MLE of ",kappa[q])), xlab = expression(log(kappa[q])), ylab = expression(f[q]))
-  # abline(v=log(kappa_opt), lty=2)
 
   # RETURN NEW PARAMETER ESTIMATES
 
@@ -356,7 +326,7 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
   At_nu0Cinv = t(A) %*% nu0C_inv
   At_nu0Cinv_A = At_nu0Cinv %*% A
 
-  print('Updating A')
+  cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
   miu_s = matrix(NA, nrow=Q, ncol=V)
@@ -393,7 +363,7 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
   ##########################################
 
-  # print('Updating Error Variance nu0_sq')
+  # cat('Updating Error Variance nu0_sq \n')
   #
   # #use A-hat or A?
   #
@@ -439,7 +409,7 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
 #' @import Matrix
 #' @importFrom INLA inla.qsolve
 #'
-compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
+compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
   ntime <- length(C_diag)
   Q <- ncol(theta$A)
@@ -453,9 +423,6 @@ compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
   B = kronecker(ones, A)
   nu0C_inv = kronecker(ones, diag(1/(C_diag*nu0_sq)))
   Pt_Bt_nu0C_inv = t(P) %*% t(B) %*% nu0C_inv
-
-  #compute D^(-1)*s0
-  Dinv_s0 <- inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve')
 
   #compute m (using current parameter estimates in theta)
   m1_vec <- D %*% Pt_Bt_nu0C_inv %*% y_vec
@@ -484,30 +451,49 @@ compute_mu_s <- function(y_vec, s0_vec, R_inv, D, theta, P, C_diag){
 #'
 #' @import Matrix
 #'
-compute_Sigma_inv <- function(spde, kappa, template_var, C1=1/(4*pi)){
+compute_Sigma_inv <- function(mesh, kappa, template_var, C1=1/(4*pi)){
 
   Q <- length(kappa)
   V <- ncol(template_var)
 
   #SPDE matrices, needed to construct R_q_inv
+  spde = mesh$spde
   Fmat = spde$param.inla$M0
-  Gmat = 1/2*(spde$param.inla$M1 + t(spde$param.inla$M1))
+  Gmat = 1/2*(spde$param.inla$M1 + Matrix::t(spde$param.inla$M1))
   GFinvG = spde$param.inla$M2 #this equals G %*% solve(F) %*% G
 
-  #set up Sigma (QVxQV) as a sparse block diagonal matrix
-  R_inv_list = vector('list', Q)
-  D_list = vector('list', Q)
-  for(q in 1:Q){
-    kappa_q = kappa[q]
-    R_q_inv = C1 * (kappa_q^2 * Fmat + 2 * Gmat + kappa_q^(-2) * GFinvG)
-    D_q = Diagonal(V, sqrt(template_var[q,])) #sparse diagonal matrix
-    R_inv_list[[q]] = R_q_inv
-    D_list[[q]] = D_q
-  }
-  R_inv = bdiag(R_inv_list)
-  D = bdiag(D_list)
+  if(var(kappa)==0) onekappa <- TRUE
+  if(length(kappa)==1) onekappa <- TRUE
+  if(onekappa) kappa <- kappa[1]
 
-  return(list(R_inv=R_inv, D=D, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG))
+  #get inmesh and notinmesh indices
+  Amat = mesh$A #n_loc x n_mesh
+  N = ncol(mesh$A) #number of mesh locations
+  inmesh = which(colSums(Amat) > 0)
+  notinmesh = setdiff(1:N, inmesh)
+
+
+  #set up R^{-1} (QVxQV) as a sparse block diagonal matrix
+  if(onekappa){ #just compute Rinv once
+    Qmat = C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
+    Q11 = Qmat[inmesh,inmesh] # = Amat %*% Qmat %*% t(Amat)
+    Q12 = Qmat[inmesh, notinmesh]
+    Q21 = Qmat[notinmesh, inmesh]
+    Q22 = Qmat[notinmesh,notinmesh]
+    Q22_inv <- solve(Q22)
+    R_q_inv = Q11 - (Q12 %*% Q22_inv %*% Q21)
+    R_inv_list <- rep(list(R_q_inv), Q)
+  } else { # compute Rinv block-wise
+    R_inv_list = vector('list', Q)
+    for(q in 1:Q){
+      kappa_q = kappa[q]
+      R_q_inv = C1 * (kappa_q^2 * Fmat + 2 * Gmat + kappa_q^(-2) * GFinvG)
+      R_inv_list[[q]] = R_q_inv
+    }
+  }
+  R_inv <- bdiag(R_inv_list)
+
+  return(list(R_inv=R_inv, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG))
 }
 
 #' Creates permutation matrix P to regroup elements of s by locations instead of by ICs
