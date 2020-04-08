@@ -10,8 +10,7 @@
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
-#' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (slow) (common smoothness model only)
-#' @param kappa_init (Optional) Starting value for kappa.  If NULL, starting value will be determined automatically.
+#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
 #' @param dim_reduce_flag If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
@@ -19,8 +18,9 @@
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @import pesel
 #' @importFrom ica icaimax
+#' @importFrom stats optim
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=30, epsilon=0.01, verbose=TRUE, return_kappa_fun=FALSE, kappa_init=NULL, dim_reduce_flag=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
   flag <- inla.pardiso.check()
   if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
@@ -69,12 +69,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   if(class(scale) != 'logical' | length(scale) != 1) stop('scale must be a logical value')
   if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
-  if(class(return_kappa_fun) != 'logical' | length(return_kappa_fun) != 1) stop('return_kappa_fun must be a logical value')
-  if(return_kappa_fun==TRUE & common_smoothness==FALSE){
-    warning('I can only return the kappa function when common_smoothness==TRUE.  Setting return_kappa_fun to FALSE.')
-    return_kappa_fun <- FALSE
-  }
-
 
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
 
@@ -128,7 +122,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   # Keep?
   HA <- H %*% dat_DR$A #apply dimension reduction
-  HA <- orthonorm(HA)  #orthogonalize
+  #HA <- orthonorm(HA)  #orthogonalize
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
@@ -143,12 +137,12 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   #TEMPLATE ICA
   if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter)
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon)
 
   #SPATIAL TEMPLATE ICA
   if(!is.null(mesh)){
 
-    theta0$A <- resultEM$theta_MLE$A
+    #theta0$A <- resultEM$theta_MLE$A
 
     #include regression-based estimate of A for tICA & save results
     tmp <- dual_reg(BOLD3, resultEM$subjICmean)
@@ -167,13 +161,14 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     #starting value for kappas
     if(is.null(kappa_init)){
-      if(verbose) print('Running INLA on tICA estimates to determine starting value for kappa')
+      if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
       locs <- mesh$mesh$idx$loc[!is.na(mesh$mesh$idx$loc)]
 
       #organize data and replicates
       for(q in 1:L){
         #print(paste0('IC ',q,' of ',L))
         d_q <- resultEM$subjICmean[q,] - template_mean[q,]
+        #d_q <- tmp[,q] - template_mean[q,]
         rep_q <- rep(q, length(d_q))
         D_diag_q <- sqrt(template_var[q,])
         if(q==1) {
@@ -188,7 +183,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
       }
 
       #determine MLE of kappa
-      opt <- optim(par=c(0,-10),
+      print(system.time(opt <- optim(par=c(0,-20),
                      fn=loglik_kappa_est,
                      method='L-BFGS-B',
                      lower=c(-5,-20),
@@ -196,7 +191,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
                      delta=dev,
                      D_diag=D_diag,
                      mesh=mesh,
-                     Q=L)
+                     Q=L)))
       kappa_init <- exp(opt$par[1])
 
       # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
@@ -216,7 +211,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     print('RUNNING SPATIAL TEMPLATE ICA')
     t000 <- Sys.time()
-    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, return_kappa_fun=return_kappa_fun, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+    resultEM <- EM_templateICA.spatial(template_mean, template_var, mesh, BOLD=BOLD4, theta0, C_diag, common_smoothness=common_smoothness, maxiter=maxiter, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
     print(Sys.time() - t000)
 
     #project estimates back to data locations

@@ -16,12 +16,17 @@ Depends: R (>= 3.6.0)
 License: GPL-3
 Encoding: UTF-8
 Imports:
+  excursions,
+  ica,
+  INLA,
+  Matrix,
   matrixStats,
-  stats,
-  INLA, 
-  Matrix
+  methods,
+  pesel,
+  SQUAREM,
+  stats
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues

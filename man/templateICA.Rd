@@ -8,14 +8,13 @@ templateICA(
   template_mean,
   template_var,
   BOLD,
-  scale_BOLD = TRUE,
+  scale = TRUE,
   mesh = NULL,
   maxQ = NULL,
   common_smoothness = TRUE,
-  maxiter = 10,
-  epsilon = 0.01,
+  maxiter = 100,
+  epsilon = 0.001,
   verbose = TRUE,
-  return_kappa_fun = FALSE,
   kappa_init = NULL,
   dim_reduce_flag = TRUE
 )
@@ -27,7 +26,7 @@ templateICA(
 
 \item{BOLD}{(TxV matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
-\item{scale_BOLD}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
 \item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)}
 
@@ -41,9 +40,7 @@ templateICA(
 
 \item{verbose}{If TRUE, display progress of algorithm}
 
-\item{return_kappa_fun}{If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (slow) (common smoothness model only)}
-
-\item{kappa_init}{(Optional) Starting value for kappa.  If NULL, starting value will be determined automatically.}
+\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 
 \item{dim_reduce_flag}{If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.}
 }

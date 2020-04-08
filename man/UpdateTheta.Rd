@@ -9,26 +9,28 @@
 UpdateTheta.spatial(
   template_mean,
   template_var,
-  spde,
+  mesh,
   BOLD,
   theta,
   C_diag,
-  Hinv,
+  s0_vec,
+  D,
+  Dinv_s0,
   common_smoothness = TRUE,
   verbose = FALSE,
-  return_kappa_fun = FALSE,
   return_MAP = FALSE,
-  dim_reduce_flag
+  dim_reduce_flag,
+  update = c("all", "kappa", "A")
 )
 
 UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 }
 \arguments{
-\item{template_mean}{mean maps for each IC in template}
+\item{template_mean}{(QxV matrix) mean maps for each IC in template}
 
-\item{template_var}{between-subject variance maps for each IC in template}
+\item{template_var}{(QxV matrix) between-subject variance maps for each IC in template}
 
-\item{spde}{NULL for spatial independence model, otherwise SPDE object representing spatial prior on deviations.}
+\item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
 
 \item{BOLD}{dimension-reduced fMRI data}
 
@@ -36,15 +38,21 @@ UpdateTheta.independent(template_mean, template_var, BOLD, theta, C_diag)
 
 \item{C_diag}{(Qx1) diagonal elements of matrix proportional to residual variance.}
 
+\item{s0_vec}{Vectorized template means}
+
+\item{D}{Sparse diagonal matrix of template standard deviations}
+
+\item{Dinv_s0}{The inverse of D times s0_vec}
+
 \item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{verbose}{If TRUE, print progress updates for slow steps.}
 
-\item{return_kappa_fun}{If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)}
-
 \item{return_MAP}{If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates}
 
 \item{dim_reduce_flag}{If FALSE, data is in the original resolution (no dimension reduction).}
+
+\item{update}{Which parameters to update. Either "all", "A" or "kappa".}
 }
 \value{
 An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields

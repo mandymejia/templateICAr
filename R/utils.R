@@ -60,7 +60,7 @@ sqrt_XtX = function(X, inverse=FALSE){
 #' Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
 #' @param kappa Value of kappa for which to compute log-likelihood
-#' @param spde Object of class SPDE representing spatial process
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
 #' @param OplusW Sparse matrix containing estimated values of RHS of trace in part 2 of log-likelihood. In common smoothness model, represents the sum over q=1,...,Q.
 #' @param u Vector needed for part 3 of log-likelihood
 #' @param v Vector needed for part 3 of log-likelihood
@@ -72,21 +72,19 @@ sqrt_XtX = function(X, inverse=FALSE){
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
-#' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s. (UPDATE THIS:) The optimization function includes two Trace terms involving
-#' very large matrices, which are passed to this function as `bigTrace1` and `bigTrace2`.  `bigTrace1` is equal to
+#' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
 #'
-#' \deqn{K1q = Trace(Dq_inv * F * Dq_inv * E[delta_q*t(delta_q)])}
-#'
-#' and `bigTrace2` is equal to
-#'
-#' \deqn{K2q = Trace(Dq_inv * G * F_inv * G * Dq_inv * E[delta_q*t(delta_q)]).}
-#'
-#' For the common smoothness model, a single kappa value is assumed over all of the IC's. The two Trace terms are then equal to \eqn{\sum_q(K1q)} and \eqn{\sum_q(K2q)}.
-#'
-LL2_kappa <- function(kappa, spde, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
+LL2_kappa <- function(kappa, mesh, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
+
+  #get inmesh and notinmesh indices
+  Amat = mesh$A #n_loc x n_mesh
+  N = ncol(mesh$A) #number of mesh locations
+  inmesh = which(colSums(Amat) > 0)
+  notinmesh = setdiff(1:N, inmesh)
 
   #COMPUTE R_q_inv FOR CURRENT VALUE OF kappa
 
+  spde = mesh$spde
   Fmat = spde$param.inla$M0
   Gmat = 1/2*(spde$param.inla$M1 + t(spde$param.inla$M1))
   GFinvG = spde$param.inla$M2 #this equals G %*% solve(F) %*% G
@@ -126,6 +124,89 @@ LL2_kappa <- function(kappa, spde, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
   return(as.numeric(result))
 
 }
+
+
+#' Computes log-likelihood of kappa given an initial estimate of delta
+#'
+#' @description Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
+#'
+#' @param par Vector of parameter values (log kappa, log variance)
+#' @param delta Estimate of delta (subject effect or deviation)
+#' @param D_diag Diagonal values of D matrix (template standard deviations)
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
+#' @param C1 For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}
+#' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
+#'
+#' @return Value of negative log likelihood
+#' @import Matrix
+#'
+loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
+
+  kappa <- exp(par[1]) #log kappa -> kappa
+  sigma_sq <- exp(par[2]) #log variance -> variance
+
+  Dmat = Diagonal(length(D_diag), as.vector(D_diag)) #VxV or QVxQV
+  delta = as.vector(delta) #on data locations #length = V
+
+  #construct indicator matrix of non-data locations in mesh
+  Amat = mesh$A #n_loc x n_mesh
+  N = ncol(mesh$A) #number of mesh locations
+  V = nrow(mesh$A) #number of data locations
+  inmesh = which(colSums(Amat) > 0)
+  notinmesh = setdiff(1:N, inmesh)
+  #Imat = diag(x=1, nrow=N, ncol=N)
+  #Amat_c = Imat[notinmesh,]
+
+  #SPDE matrices
+  spde = mesh$spde
+  Fmat = spde$param.inla$M0
+  Gmat = 1/2*(spde$param.inla$M1 + t(spde$param.inla$M1))
+  GFinvG = spde$param.inla$M2 #this equals G %*% solve(F) %*% G
+  Qmat = C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
+  Q11 = Qmat[inmesh,inmesh] # = Amat %*% Qmat %*% t(Amat)
+  Q12 = Qmat[inmesh, notinmesh]
+  Q21 = Qmat[notinmesh, inmesh]
+  Q22 = Qmat[notinmesh,notinmesh]
+  Q22_inv <- solve(Q22)
+  Rinv = Q11 - (Q12 %*% Q22_inv %*% Q21)
+  cholR = chol(Rinv) #Rmat = cholR'cholR, log(det(Rmat)) = 2*sum(log(diag(cholR)))
+  det_Rinv <- 2*sum(log(diag(cholR))) #log determinant
+  if(!is.null(Q)) det_Rinv <- Q*det_Rinv
+
+  if(!is.null(Q)) Rinv <- bdiag(rep(list(Rinv), Q))
+  W = Rinv + 1/sigma_sq * (Dmat^2) #W is the matrix K in paper
+  cholW = chol(W) #W = cholW'cholW
+  det_W <- 2*sum(log(diag(cholW))) #log determinant
+
+  #compute determinant part of log-likelihood
+  det_sig <- if(is.null(Q)) V*log(sigma_sq) else V*Q*log(sigma_sq)
+  det_part <- det_Rinv - det_W - det_sig
+  if(abs(det_Rinv) == Inf | abs(det_W) == Inf) {
+    stop('negative determinant of precision matrix, returning NA')
+    return(NA)
+  }
+
+  #compute exponential part of log-likelihood
+  D_delta <- Dmat %*% delta
+  Winv_D_delta <- inla.qsolve(Q = W, B=matrix(D_delta, ncol=1), method='solve')
+  # mu_post <- 1/sigma_sq * (Dmat %*% Winv_D_delta)
+  # Dinv_mupost <- inla.qsolve(Q = Dmat, B = matrix(mu_post, ncol=1))
+  # exp_part1 <- as.numeric(t(Dinv_mupost) %*% Rinv %*% Dinv_mupost)
+  # diff <- delta - mu_post
+  # exp_part2 <- 1/sigma_sq * sum(diff^2)
+  # exp_part <- exp_part1 + exp_part2
+  # loglik = det_part - exp_part
+
+  exp_part1 <- as.numeric(1/sigma_sq * sum(delta^2))
+  exp_part2 <- as.numeric(1/(sigma_sq^2) * t(D_delta) %*% Winv_D_delta)
+  exp_part <- -1*exp_part1 + exp_part2
+
+  loglik = det_part + exp_part
+
+  return(-1*loglik) #return negative log-likelihood for minimization
+
+}
+
 
 
 # ####################################################################

@@ -6,17 +6,17 @@
 #' @param template_mean (QxV matrix) mean maps for each IC in template
 #' @param template_var (QxV matrix) between-subject variance maps for each IC in template
 #' @param BOLD dimension-reduced fMRI data
-#' @param spde NULL for spatial independence model, otherwise SPDE object representing spatial prior on deviations.
+#' @param mesh NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
 #' @param theta A list of current parameter estimates (mixing matrix A, noise variance nu0_sq and (for spatial model) SPDE parameters kappa)
 #' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
-#' @param s0_vec
-#' @param D
-#' @param Dinv_s0
+#' @param s0_vec Vectorized template means
+#' @param D Sparse diagonal matrix of template standard deviations
+#' @param Dinv_s0 The inverse of D times s0_vec
 #' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If TRUE, print progress updates for slow steps.
-#' @param return_kappa_fun If TRUE, return the log likelihood as a function of kappa in a neighborhood of the MLE (common smoothness model only)
 #' @param return_MAP If TRUE, returns the posterior mean and precision of the latent fields instead of the parameter estimates
 #' @param dim_reduce_flag If FALSE, data is in the original resolution (no dimension reduction).
+#' @param update Which parameters to update. Either "all", "A" or "kappa".
 #'
 #' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
 #'
@@ -25,9 +25,9 @@ NULL
 #' @rdname UpdateTheta
 #' @export
 #' @importFrom stats optimize
-#' @importFrom INLA inla.qsample inla.qsolve inla.setOption
+#' @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @import Matrix
-UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_kappa_fun=FALSE, return_MAP=FALSE, dim_reduce_flag){
+UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, dim_reduce_flag, update=c('all','kappa','A')){
 
   Q = nrow(template_mean)
   V = ncol(BOLD)
@@ -35,34 +35,23 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
   spde = mesh$spde
 
   #initialize new parameter values
-  theta_new = list(A = NULL, nu0_sq = NULL, kappa = NULL)
+  theta_new = theta
+
+  #which parameters to update
+  update_A <- (update[1] == 'all' | update[1] =='A')
+  update_kappa <- (update[1] == 'all' | update[1] =='kappa')
+  if(update_A) theta_new$A <- NA
+  if(update_kappa) theta_new$kappa <- NA
+  if(!update_A & !update_kappa & !return_MAP) stop('Please indicate at least one parameter to update (e.g. update="A") or set return_MAP=TRUE to return MAP estimates of S based on current parameter values.')
 
   #1. Compute mu_sy by solving for x in the system of equations Omega*x = m
   #   Compute m and Omega (using previous parameter estimates)
-  #   Omega = Sigma_inv + P'B'(nu0C_inv)BP
-  #   m = P'B'(nu0C_inv)y + Sigma_inv*s0
-
-  #2. Compute constant term in equation (10): 1/(1+m'mu_sy)
-
-  #3. Compute diagonal blocks size Q of y*m'
-  #   - Sum along the way and divide by V at the end
-
-  #4. Compute A-hat:
-  #   - Multiply block avg by constant term from (2)
-  #   - Orthogonalize
-  #   - Make each column have var=1 on original dimensionality
-
-  ### Ingredients for Omega and m
-
-  # s0_vec = "s_0" (long vector organized by ICs)
-  # y (long vector organized by locations)
-
-  # Sigma_inv = D_inv*R_inv*D_inv, where D_inv contains template sd (big diagonal matrix) & R_inv is SPDE spatial corr matrix (big block diagonal matrix)
-
-  # P (permutation matrix)
-
-  # nu0C_inv = "(nu_0^2 C)^{-1}" (big diagonal matrix)
-  # B = "I_v \otimes A" (big block diagonal matrix)
+  #   Ingredients for Omega and m:
+  #     s0_vec = "s_0" (long vector organized by ICs)
+  #     y (long vector organized by locations)
+  #     D, big diagonal matrix of template standard deviations
+  #     R_inv, prior inverse correlation matrix for data locations (big block diagonal matrix, each block is sparse-ish)
+  #     P (permutation matrix)
 
   if(verbose) cat('Computing Posterior Moments of S \n')
 
@@ -70,7 +59,7 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
 
   if(verbose) cat('...posterior precision \n') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
-  stuff <- compute_Sigma_inv(mesh, kappa=theta$kappa, template_var, C1=1/(4*pi))
+  stuff <- compute_R_inv(mesh, kappa=theta$kappa, C1=1/(4*pi))
   R_inv <- stuff$R_inv
   Fmat <- stuff$Fmat
   Gmat <- stuff$Gmat
@@ -94,221 +83,234 @@ UpdateTheta.spatial = function(template_mean, template_var, mesh, BOLD, theta, C
     stop()
   }
 
-  if(verbose) cat('Updating A \n')
-  t00 <- Sys.time()
+  if(update_A){
+    if(verbose) cat('Updating A \n')
+    t00 <- Sys.time()
 
-  #2. Compute constant term in equation (10): c2 = 1/(1+m'mu_sy)
-  #c2 <- as.numeric(1/(1 + t(m_vec) %*% mu_s))
+    #Compute first matrix appearing in A-hat
+    Pmu_vec <- P %*% mu_s
+    yPmu <- matrix(0, nrow=ntime, ncol=Q)
+    for(v in 1:V){
+      inds_y <- (1:ntime) + (v-1)*ntime
+      inds_Pmu <- (1:Q) + (v-1)*Q
+      y_v <- y_vec[inds_y]
+      Pmu_v <- Pmu_vec[inds_Pmu]
+      yPmu_v <- outer(y_v, Pmu_v)
+      yPmu <- yPmu + yPmu_v #sum up to later divide by V to average
+    }
 
-  #3. Compute diagonal blocks size Q of y*m'P'
-  #   - Sum along the way and divide by V at the end
+    #Compute second matrix appearing in A-hat
+    Omega_PP <- P %*% Omega %*% t(P)
+    D_PP <- P %*% D %*% t(P)
 
-  #Compute first matrix appearing in A-hat
-  Pmu_vec <- P %*% mu_s
-  yPmu <- matrix(0, nrow=ntime, ncol=Q)
-  for(v in 1:V){
-    inds_y <- (1:ntime) + (v-1)*ntime
-    inds_Pmu <- (1:Q) + (v-1)*Q
-    y_v <- y_vec[inds_y]
-    Pmu_v <- Pmu_vec[inds_Pmu]
-    yPmu_v <- outer(y_v, Pmu_v)
-    yPmu <- yPmu + yPmu_v #sum up to later divide by V to average
+    if(verbose) cat('..Calculating only non-sparse covariance terms \n')
+
+    #set up sparse indicator matrix for needed elements of Omega_PP^{-1}
+    oneblock <- matrix(1, nrow=Q, ncol=Q)
+    ind_mat <- bdiag_m(rep(list(oneblock), V))
+
+    #augment Omega_PP with additional non-sparse locations
+    attributes(ind_mat)$x <- 0*attributes(ind_mat)$x
+    Omega_PP_aug <- Omega_PP + ind_mat
+    Omega_PP_inv <- inla.qinv(Omega_PP_aug)
+
+    T_mat <- matrix(0, Q, Q)
+    for(v in 1:V){
+      inds <- (1:Q) + (v-1)*Q
+
+      #T1 matrix
+      Omega_PP_inv_vv <- Omega_PP_inv[inds,inds]
+      T1_vv <- D_PP[inds,inds] %*% Omega_PP_inv_vv %*% D_PP[inds,inds]
+
+      #T2 matrix
+      Pmu_v <- Pmu_vec[inds]
+      T2_vv <- outer(Pmu_v, Pmu_v)
+
+      #T(v,v)
+      T_vv <- T1_vv + T2_vv
+      T_mat <- T_mat + T_vv
+    }
+
+    A_hat <- t(solve(t(T_mat), t(yPmu))) # = yPmu %*% T_mat_inv
+    theta_new$A <- A_hat
+
+    LL1 <- 0
+    for(v in 1:V){
+      inds_y <- (1:ntime) + (v-1)*ntime
+      inds_Pmu <- (1:Q) + (v-1)*Q
+      y_v <- y_vec[inds_y]
+      y_v_Cinv <- y_v * (1/C_diag)
+      Pmu_v <- Pmu_vec[inds_Pmu] #t(v) vector in paper
+
+      LL1_v <- 2 * t(y_v_Cinv) %*% A_hat %*% Pmu_v
+      LL1 <- LL1 + as.numeric(LL1_v)
+    }
+    theta_new$LL[1] <- LL1
+
   }
 
-  #Compute second matrix appearing in A-hat
-  Omega_PP <- P %*% Omega %*% t(P)
-  D_PP <- P %*% D %*% t(P)
-
-  if(verbose) cat(paste0('Drawing ',nsamp,' Monte Carlo samples for estimation of covariance estimation \n'))
-
-  nsamp <- 500 #number of samples
-  musamp <- inla.qsample(nsamp, Q = Omega_PP, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8)
-  #1000 samples --> 50 seconds for Q=3 and V=4214
-  #1000 samples --> > 1 hour for Q=16 and V=5500
-  #100 samples --> 45 minutes for Q=16 and V=5500
-
-  T_mat <- matrix(0, Q, Q)
-  for(v in 1:V){
-    inds <- (1:Q) + (v-1)*Q
-
-    #T2 matrix
-    Pmu_v <- Pmu_vec[inds]
-    T2_vv <- outer(Pmu_v, Pmu_v)
-
-    #T1 matrix
-    Xctr_v <- scale(t(musamp[inds,]), scale=FALSE) # < 1 sec
-    Omega_PP_inv_vv <- crossprod(Xctr_v)/(nsamp-1)
-    T1_vv <- D_PP[inds,inds] %*% Omega_PP_inv_vv %*% D_PP[inds,inds]
-
-    #T(v,v)
-    T_vv <- T1_vv + T2_vv
-    T_mat <- T_mat + T_vv
-  }
-
-  A_hat <- t(solve(t(T_mat), t(yPmu))) #A_hat <- yPmu %*% T_mat_inv
-
-  if(dim_reduce_flag==TRUE) A_hat = orthonorm(A_hat)
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq
-
-  theta_new$A <- A_hat
   theta_new$nu0_sq <- nu0sq_hat[1]
-
-  ##########################################
-  ### Update posterior moments of S with A_hat
-  ##########################################
-
-  # if(verbose) cat('Updating posterior mean of S \n')
-  #
-  # #1. Compute m and Omega, then compute mu_sy by solving for x in the system of equations Omega*x = m
-  # system.time(stuff <- compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag))
-  # mu_s <- stuff$mu
-  # m_vec <- stuff$m
-  # Omega <- stuff$Omega
-  # Omega_inv_m <- stuff$Omega_inv_m
-  #
-  # print(summary(as.vector(mu_s)))
 
   ##########################################
   ### E-STEP for kappa
   ##########################################
 
-  if(verbose) cat('Updating kappa  \n')
+  if(update_kappa){
 
-  # Likelihood in terms of kappa_q's.
-  # LL2_part1 = log(det(R_q_inv))
-  # LL2_part2 = Tr(R_q_inv * Omega_inv_q) + Tr(R_q_inv * W_hat_q)
-  # LL2_part3 = u_q' * R_q_inv * v_hat_q
-  #             u_q = Dinv * s0
-  #             v_q = 2 Omega_inv * m - Dinv * s0
+    if(verbose) cat('Updating kappa  \n')
 
-  # Tr(R_q_inv * Omega_inv_q) --> Use inla.qsample to draw from N(0, Omega_inv_q), then estimate necessary elements (non-zeros in R_q_inv) of Omega_inv_q for q=1,...,Q
-  # Tr(R_q_inv * W_hat_q) --> W_hat_q = outer(Omega_inv*m,Omega_inv*m)_qq, where Omega_inv*m is known. Just calculate necessary elements (non-zeros in R_q_inv) of W_hat_q for q=1,...,Q
+    # Likelihood in terms of kappa_q's.
+    # LL2_part1 = log(det(R_q_inv))
+    # LL2_part2 = Tr(R_q_inv * Omega_inv_q) + Tr(R_q_inv * W_hat_q)
+    # LL2_part3 = u_q' * R_q_inv * v_hat_q
+    #             u_q = Dinv * s0
+    #             v_q = 2 Omega_inv * m - Dinv * s0
 
-  if(verbose) cat('..Computing trace terms in log-likelihood of kappa \n')
+    # Tr(R_q_inv * Omega_inv_q) --> Use inla.inv to compute necessary elements (non-zeros in R_q_inv) of Omega_inv_q for q=1,...,Q
+    # Tr(R_q_inv * W_hat_q) --> W_hat_q = outer(Omega_inv*m,Omega_inv*m)_qq, where Omega_inv*m is known. Just calculate necessary elements (non-zeros in R_q_inv) of W_hat_q for q=1,...,Q
 
-  ### SET UP FOR PART 2
+    if(verbose) cat('..Computing trace terms in log-likelihood of kappa \n')
 
-  #1. Generate Monte Carlo samples for estimation of Omega_hat^{-1}_qq
+    ### SET UP FOR PART 2
 
-  if(verbose) cat(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation \n'))
+    #1. Generate Monte Carlo samples for estimation of Omega_hat^{-1}_qq
 
-  nsamp <- 500 #number of samples
-  musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
-  #9 sec for 500 samples with V*Q = 2530*3 = 12,642
+    # if(verbose) cat(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation \n'))
+    #
+    # nsamp <- 5000 #number of samples
+    # musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
+    #9 sec for 500 samples with V*Q = 2530*3 = 12,642
 
-  #2. Determine non-zero terms of R_q_inv
+    #2. Determine non-zero terms of R_q_inv
 
-  if(verbose) cat('....setting up helper objects for trace computation \n') #15 sec (Q=16, V=5500)
+    if(verbose) cat('....calculating only non-sparse covariance terms \n')
 
-  #set up estimation of only terms necessary for trace computation
-  nonzero_Rinv <- as.matrix(1*(R_inv[1:V,1:V] != 0))
-  #diag(nonzero_Rinv) <- 1 #make sure all diagonal elements estimated (required for Trace 1)
-  nonzero_cols <- which(R_inv[1:V,1:V] != 0, arr.ind = TRUE)[,2] #column indices of non-zero locations
+    #set up estimation of only terms necessary for trace computation
+    nonzero_Rinv <- as.matrix(1*(R_inv[1:V,1:V] != 0))
+    #diag(nonzero_Rinv) <- 1 #make sure all diagonal elements estimated (required for Trace 1)
+    nonzero_cols <- which(R_inv[1:V,1:V] != 0, arr.ind = TRUE)[,2] #column indices of non-zero locations
 
-  #3. Set up matrices needed for computation of only necessary elements of Omega_hat^{-1}
+    #augment Omega with additional non-sparse locations
+    ind_mat <- 1*(R_inv[1:V,1:V] != 0)
+    attributes(ind_mat)$x <- 0*attributes(ind_mat)$x
+    Omega_aug <- Omega + bdiag(rep(list(ind_mat), Q)) #technically not needed since Omega and R_inv have same sparsity structure
 
-  X <- matrix(1, nrow=nsamp, ncol=V) #placeholder for X in Omega^(-1) = XX'
-  bigX_left <- KhatriRao(diag(1, V), X) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
-  bigX_right <- KhatriRao(nonzero_Rinv, X) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
-  inds_left_X <- which(bigX_left != 0, arr.ind=TRUE)
-  inds_right_X <- which(bigX_right != 0, arr.ind=TRUE)
+    #compute elements of Omega_inv that are non-sparse in Omega
+    Omega_inv <- inla.qinv(Omega_aug)
 
-  #4. Set up vectors needed for computation of only necessary elements of W_hat
+    #if(verbose) cat('....setting up helper objects for trace computation \n') #15 sec (Q=16, V=5500)
 
-  x <- matrix(1, nrow=1, ncol=V) #placeholder for x in M = xx'
-  bigx_left <- KhatriRao(diag(1, V), x) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
-  bigx_right <- KhatriRao(nonzero_Rinv, x) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
-  inds_left_x <- which(bigx_left != 0, arr.ind=TRUE)
-  inds_right_x <- which(bigx_right != 0, arr.ind=TRUE)
+    # #3. Set up matrices needed for computation of only necessary elements of Omega_hat^{-1}
+    #
+    # X <- matrix(1, nrow=nsamp, ncol=V) #placeholder for X in Omega^(-1) = XX'
+    # bigX_left <- KhatriRao(diag(1, V), X) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
+    # bigX_right <- KhatriRao(nonzero_Rinv, X) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
+    # inds_left_X <- which(bigX_left != 0, arr.ind=TRUE)
+    # inds_right_X <- which(bigX_right != 0, arr.ind=TRUE)
+    #
+    #4. Set up vectors needed for computation of only necessary elements of W_hat
 
-  if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
-  #15 sec for Q=16, V=5500
+    x <- matrix(1, nrow=1, ncol=V) #placeholder for x in M = xx'
+    bigx_left <- KhatriRao(diag(1, V), x) # -- 13 SEC (do one time instead of KhatriRao(diag(1, V), Xctr_q) for each q)
+    bigx_right <- KhatriRao(nonzero_Rinv, x) # -- 160 SEC (do one time instead of KhatriRao(as.matrix(1*(K_q != 0)), Xctr_q) for each q)
+    inds_left_x <- which(bigx_left != 0, arr.ind=TRUE)
+    inds_right_x <- which(bigx_right != 0, arr.ind=TRUE)
 
-  if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
+    if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
+    #15 sec for Q=16, V=5500
 
-  for(q in 1:Q){
-    #if(verbose) cat(paste('......block ',q,' of ',Q,' \n'))
-    inds_q <- (1:V) + (q-1)*V
+    if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
 
-    # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY)
-
-    Xctr_q <- scale(t(musamp[inds_q,]), scale=FALSE)
-
-    #left-multiplication matrix
-    vals_left_X <- as.vector(Xctr_q)
-    bigX_left_q <- sparseMatrix(i = inds_left_X[,1], j = inds_left_X[,2], x = vals_left_X)
-    #right-multiplication matrix
-    X_repcols <- Xctr_q[,nonzero_cols]
-    vals_right_X <- as.vector(X_repcols)
-    bigX_right_q <- sparseMatrix(i = inds_right_X[,1], j = inds_right_X[,2], x = vals_right_X)
-    #multiply together
-    Omega_inv_qq <- t(bigX_left_q) %*% bigX_right_q / (nsamp - 1)
-
-    # COMPUTE W_hat[q,q] = Omega_inv_m[q] * Omega_inv_m[q' (NECESSARY ENTRIES ONLY)
-
-    # T_q = matrix that selects the qth block of size V from a matrix with V*Q rows
-    e_q <- Matrix(0, nrow=1, ncol=Q, sparse=TRUE)
-    e_q[1,q] <- 1
-    T_q <- kronecker(e_q, Diagonal(V))
-    Omega_inv_m_q <- T_q %*% Omega_inv_m
-
-    #left-multiplication matrix
-    vals_left_x <- as.vector(Omega_inv_m_q)
-    bigx_left_q <- sparseMatrix(i = inds_left_x[,1], j = inds_left_x[,2], x = vals_left_x)
-    #right-multiplication matrix
-    x_repcols <- t(Omega_inv_m_q)[,nonzero_cols]
-    vals_right_x <- as.vector(x_repcols)
-    bigx_right_q <- sparseMatrix(i = inds_right_x[,1], j = inds_right_x[,2], x = vals_right_x)
-    #multiply together
-    W_hat_qq <- t(bigx_left_q) %*% bigx_right_q
-
-    # COMBINE OMEGA_INV[q,q] AND W_hat[q,q] --> two trace terms involving R_q_inv can be combined
-
-    OplusW_qq <- Omega_inv_qq + W_hat_qq
-    if(common_smoothness){
-      if(q==1) OplusW <- OplusW_qq else OplusW <- OplusW + OplusW_qq
-    } else {
-      OplusW[[q]] <- OplusW_qq
-    }
-  }
-
-
-  ### SET UP FOR PART 3
-
-  u <- Dinv_s0
-  v <- 2*Omega_inv_m - u
-
-  # NUMERICALLY SOLVE FOR MLE OF KAPPA
-
-  cat("..Performing numerical optimization \n")
-  #~8 seconds for V=5500, Q=3 (comon smoothness)
-
-  if(common_smoothness){
-    kappa_opt <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
-             spde=spde, OplusW=OplusW, u=u, v=v, Q=Q)  #Q=Q to indicate common smoothness model to the LL2_kappa function
-    kappa_opt <- rep(kappa_opt$maximum, Q)
-  } else {
-    kappa_opt <- rep(NA, Q)
     for(q in 1:Q){
-      if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
+      #if(verbose) cat(paste('......block ',q,' of ',Q,' \n'))
       inds_q <- (1:V) + (q-1)*V
-      kappa_opt_q <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
-             spde=spde, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
-      kappa_opt[q] <- (kappa_opt_q$maximum)
+
+      # COMPUTE OMEGA_INV[q,q] (NECESSARY ENTRIES ONLY)
+
+      # Xctr_q <- scale(t(musamp[inds_q,]), scale=FALSE)
+      #
+      # #left-multiplication matrix
+      # vals_left_X <- as.vector(Xctr_q)
+      # bigX_left_q <- sparseMatrix(i = inds_left_X[,1], j = inds_left_X[,2], x = vals_left_X)
+      # #right-multiplication matrix
+      # X_repcols <- Xctr_q[,nonzero_cols]
+      # vals_right_X <- as.vector(X_repcols)
+      # bigX_right_q <- sparseMatrix(i = inds_right_X[,1], j = inds_right_X[,2], x = vals_right_X)
+      # #multiply together
+      # Omega_inv_qq <- t(bigX_left_q) %*% bigX_right_q / (nsamp - 1)
+
+      Omega_inv_qq <- Omega_inv[inds_q,inds_q]
+
+      # COMPUTE W_hat[q,q] = Omega_inv_m[q] * Omega_inv_m[q' (NECESSARY ENTRIES ONLY)
+
+      # T_q = matrix that selects the qth block of size V from a matrix with V*Q rows
+      e_q <- Matrix(0, nrow=1, ncol=Q, sparse=TRUE)
+      e_q[1,q] <- 1
+      T_q <- kronecker(e_q, Diagonal(V))
+      Omega_inv_m_q <- T_q %*% Omega_inv_m
+
+      #left-multiplication matrix
+      vals_left_x <- as.vector(Omega_inv_m_q)
+      bigx_left_q <- sparseMatrix(i = inds_left_x[,1], j = inds_left_x[,2], x = vals_left_x)
+      #right-multiplication matrix
+      x_repcols <- t(Omega_inv_m_q)[,nonzero_cols]
+      vals_right_x <- as.vector(x_repcols)
+      bigx_right_q <- sparseMatrix(i = inds_right_x[,1], j = inds_right_x[,2], x = vals_right_x)
+      #multiply together
+      W_hat_qq <- t(bigx_left_q) %*% bigx_right_q
+
+      # COMBINE OMEGA_INV[q,q] AND W_hat[q,q] --> two trace terms involving R_q_inv can be combined
+
+      OplusW_qq <- Omega_inv_qq + W_hat_qq
+      if(common_smoothness){
+        if(q==1) OplusW <- OplusW_qq else OplusW <- OplusW + OplusW_qq
+      } else {
+        OplusW[[q]] <- OplusW_qq
+      }
     }
+
+
+    ### SET UP FOR PART 3
+
+    u <- Dinv_s0
+    v <- 2*Omega_inv_m - u
+
+    # NUMERICALLY SOLVE FOR MLE OF KAPPA
+
+    if(verbose) cat("..Performing numerical optimization \n")
+    #~8 seconds for V=5500, Q=3 (comon smoothness)
+
+    if(common_smoothness){
+      kappa_opt <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
+                            mesh=mesh, OplusW=OplusW, u=u, v=v, Q=Q)  #Q=Q to indicate common smoothness model to the LL2_kappa function
+      LL2 <- kappa_opt$objective
+      kappa_opt <- rep(kappa_opt$maximum, Q)
+    } else {
+      kappa_opt <- LL2 <- rep(NA, Q)
+      for(q in 1:Q){
+        if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
+        inds_q <- (1:V) + (q-1)*V
+        kappa_opt_q <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
+                                spde=spde, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
+        LL2[q] <- kappa_opt_q$objective
+        kappa_opt[q] <- (kappa_opt_q$maximum)
+      }
+      LL2 <- sum(LL2)
+    }
+
+    theta_new$kappa <- kappa_opt
+    theta_new$LL[2] <- LL2
+
   }
 
   # RETURN NEW PARAMETER ESTIMATES
 
-  theta_new$kappa <- kappa_opt
-  if(return_kappa_fun) theta_new$kappa_fun <- cbind(kappa_vals, kappa_opt_fun)
-
   return(theta_new)
 
 }
-
 #' @rdname UpdateTheta
 #' @export
 UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_diag){
@@ -357,7 +359,8 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
 
   }
 
-  A_hat = orthonorm(A_part1 %*% solve(A_part2))
+  #A_hat = orthonorm(A_part1 %*% solve(A_part2))
+  A_hat = (A_part1 %*% solve(A_part2))
 
   ##########################################
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
@@ -397,9 +400,9 @@ UpdateTheta.independent = function(template_mean, template_var, BOLD, theta, C_d
 #' Computes posterior mean and precision matrix of s
 #'
 #' @param y_vec Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.
-#' @param s0_vec Vectorized template mean, grouped by ICs.A vector of length QV.
+#' @param D Sparse diagonal matrix of template standard deviations
+#' @param Dinv_s0 The inverse of D times s0_vec
 #' @param R_inv Estimate of inverse spatial correlation matrix (sparse)
-#' @param D Diagonal matrix containing square root of template variance values along the diagonal (sparse)
 #' @param theta List of current parameter estimates
 #' @param P Permutation matrix for regrouping by locations (instead of by ICs.)
 #' @param C_diag Diagonals of residual covariance of the first level model. A vector of length Q.
@@ -440,21 +443,20 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 }
 
 
-#' Creates precision matrix for S and SPDE matrices (F, G and GFinvG)
+#' Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S
 #'
-#' @param spde Object of class SPDE representing spatial process
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
 #' @param kappa Current estimates of SPDE parameter kappa for each latent field
-#' @param template_var QxV matrix of template variances
 #' @param C1 Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2
 #'
-#' @return A list containing Sigma inverse and SPDE matrices
+#' @return A list containing R inverse and SPDE matrices
 #'
 #' @import Matrix
+#' @importFrom stats var
 #'
-compute_Sigma_inv <- function(mesh, kappa, template_var, C1=1/(4*pi)){
+compute_R_inv <- function(mesh, kappa, C1=1/(4*pi)){
 
   Q <- length(kappa)
-  V <- ncol(template_var)
 
   #SPDE matrices, needed to construct R_q_inv
   spde = mesh$spde
@@ -516,7 +518,102 @@ make_Pmat <- function(Q, V){
 }
 
 
+#' Construct block diagonal matrix of many small blocks
+#'
+#' @description Code for function provided in examples of bdiag function from Matrix package
+#'
+#' @param lmat List of matrices
+#'
+#' @import Matrix
+#' @importFrom methods new
+#'
+#' @return A sparse matrix obtained by combining the arguments into a block diagonal matrix
+#'
+bdiag_m <- function(lmat) {
+  ## Copyright (C) 2016 Martin Maechler, ETH Zurich
+  if(!length(lmat)) return(new("dgCMatrix"))
+  stopifnot(is.list(lmat), is.matrix(lmat[[1]]),
+            (k <- (d <- dim(lmat[[1]]))[1]) == d[2], # k x k
+            all(vapply(lmat, dim, integer(2)) == k)) # all of them
+  N <- length(lmat)
+  if(N * k > .Machine$integer.max)
+    stop("resulting matrix too large; would be  M x M, with M=", N*k)
+  M <- as.integer(N * k)
+  ## result: an   M x M  matrix
+  new("dgCMatrix", Dim = c(M,M),
+      ## 'i :' maybe there's a faster way (w/o matrix indexing), but elegant?
+      i = as.vector(matrix(0L:(M-1L), nrow=k)[, rep(seq_len(N), each=k)]),
+      p = k * 0L:M,
+      x = as.double(unlist(lmat, recursive=FALSE, use.names=FALSE)))
+}
 
+
+#' Helper function for SQUAREM for estimating parameters
+#'
+#' @param theta_vec Vector of initial parameter values
+#' @param template_mean Passed to UpdateTheta function
+#' @param template_var Passed to UpdateTheta function
+#' @param mesh Passed to UpdateTheta function
+#' @param BOLD Passed to UpdateTheta function
+#' @param C_diag Passed to UpdateTheta function
+#' @param s0_vec Passed to UpdateTheta function
+#' @param D Passed to UpdateTheta function
+#' @param Dinv_s0 Passed to UpdateTheta function
+#' @param common_smoothness Passed to UpdateTheta function
+#' @param verbose Passed to UpdateTheta function
+#' @param dim_reduce_flag Passed to UpdateTheta function
+#'
+#' @return Vector of updated parameter values
+#'
+UpdateThetaSQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose, dim_reduce_flag){
+
+  Q = nrow(template_mean)
+
+  #convert theta vector to list format
+  A <- theta_vec[1:(Q^2)]
+  nu0_sq <- theta_vec[(Q^2)+1]
+  kappa <- theta_vec[(Q^2+1)+(1:Q)]
+  theta <- list(A = matrix(A, nrow=Q, ncol=Q),
+                nu0_sq = nu0_sq,
+                kappa = kappa)
+
+  #update theta parameters
+  if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
+  theta_new = UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose, dim_reduce_flag=dim_reduce_flag)
+
+  #convert theta_new list to vector format
+  theta_new$A <- as.matrix(theta_new$A)
+  theta_new_vec <- unlist(theta_new[1:3]) #everything but LL
+  names(theta_new_vec)[1] <- sum(theta_new$LL)
+  return(theta_new_vec)
+}
+
+
+#' Helper function for SQUAREM for extracting log likelihood
+#'
+#' @param theta_vec Vector of current parameter values
+#' @param template_mean Not used, but squarem will return error without
+#' @param template_var  Not used, but squarem will return error without
+#' @param mesh  Not used, but squarem will return error without
+#' @param BOLD  Not used, but squarem will return error without
+#' @param C_diag  Not used, but squarem will return error without
+#' @param s0_vec  Not used, but squarem will return error without
+#' @param D  Not used, but squarem will return error without
+#' @param Dinv_s0  Not used, but squarem will return error without
+#' @param common_smoothness  Not used, but squarem will return error without
+#' @param verbose  Not used, but squarem will return error without
+#' @param dim_reduce_flag  Not used, but squarem will return error without
+#'
+#' @return Negative log-likelihood given current values of parameters
+#'
+LL_SQUAREM <- function(theta_vec, template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose, dim_reduce_flag){
+
+  LL <- names(theta_vec)[1]
+  print(LL)
+  LL <- as.numeric(LL)
+  print(LL)
+  return(-1*LL)
+}
 
 
 

@@ -4,16 +4,16 @@
 \alias{compute_mu_s}
 \title{Computes posterior mean and precision matrix of s}
 \usage{
-compute_mu_s(y_vec, s0_vec, R_inv, D, theta, P, C_diag)
+compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 }
 \arguments{
 \item{y_vec}{Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.}
 
-\item{s0_vec}{Vectorized template mean, grouped by ICs.A vector of length QV.}
+\item{D}{Sparse diagonal matrix of template standard deviations}
+
+\item{Dinv_s0}{The inverse of D times s0_vec}
 
 \item{R_inv}{Estimate of inverse spatial correlation matrix (sparse)}
-
-\item{D}{Diagonal matrix containing square root of template variance values along the diagonal (sparse)}
 
 \item{theta}{List of current parameter estimates}
 
