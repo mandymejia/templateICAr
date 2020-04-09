@@ -65,12 +65,14 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	# Negative change --> search for kappa_min, set kappa_max to kappa1.
 	kappa_min <- kappa_max <- theta0$kappa[1]
 	theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')
-	kappa_diff <- theta1$kappa[1] - theta$kappa[1]
+	kappa_diff0 <- theta1$kappa[1] - theta0$kappa[1]
 	theta <- theta0
 
-	#if change is negative, halve until kappa starts increasing
-	if(kappa_diff < 0){
+	kappa_diff <- kappa_diff0
+	if(kappa_diff0 < 0){
+
 	  if(verbose) cat('...Kappa decreasing, finding lower bound for kappa search \n ')
+
 	  kappa_min <- kappa_min/2
 	  while(kappa_diff < 0){
 	    if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
@@ -86,11 +88,10 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	      kappa_min <- kappa_min/2
 	    }
 	  }
-	}
+	} else if(kappa_diff0 > 0){
 
-	#if change is positive, double until kappa starts decreasing
-	if(kappa_diff > 0){
 	  if(verbose) cat('...Kappa increasing, finding upper bound for kappa search \n ')
+
 	  kappa_max <- kappa_max*2
 	  while(kappa_diff > 0){
 	    if(verbose) cat(paste0('... testing kappa = ',round(kappa_max, 3),'\n '))
@@ -133,8 +134,9 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	### RUN SQUAREM ALGORITHM UNTIL CONVERGENCE
 
 	theta0 <- theta1 #last tested value of kappa0
+	theta0$LL <- c(0,0)
 	theta0_vec <- unlist(theta0[1:3]) #everything but LL
-	names(theta0_vec)[1] <- sum(theta0$LL) #store LL value in names of theta0_vec
+	names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
 	t00000 <- Sys.time()
 	result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE, dim_reduce_flag)

@@ -142,8 +142,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   #SPATIAL TEMPLATE ICA
   if(!is.null(mesh)){
 
-    #theta0$A <- resultEM$theta_MLE$A
-
     #include regression-based estimate of A for tICA & save results
     tmp <- dual_reg(BOLD3, resultEM$subjICmean)
     resultEM$A_reg <- tmp$A
@@ -154,10 +152,6 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
       C_diag <- rep(1, ntime)
       theta0$A <- dat_DR$A
     }
-
-    # theta0$A <- resultEM$theta_MLE$A
-    # theta0$nu0_sq <- resultEM$theta_MLE$nu0_sq
-    # if(verbose) print(paste0('Starting value for nu0_sq = ',round(theta0$nu0_sq,1)))
 
     #starting value for kappas
     if(is.null(kappa_init)){
