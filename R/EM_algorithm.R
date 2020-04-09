@@ -142,9 +142,9 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, mesh, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE, dim_reduce_flag)
 	if(verbose) print(Sys.time() - t00000)
 
-	path_A <- result_squarem$p.inter[1:(Q^2),]
-	path_kappa <- result_squarem$p.inter[(Q^2+1)+(1:Q),]
-	path_LL <- result_squarem$p.inter[nrow(result_squarem$p.inter),]
+	path_A <- result_squarem$p.inter[,1:(Q^2)]
+	path_kappa <- result_squarem$p.inter[,(Q^2+1)+(1:Q)]
+	path_LL <- result_squarem$p.inter[,ncol(result_squarem$p.inter)]
 	theta_path <- list(A=path_A, kappa=path_kappa, LL=path_LL)
 
 	theta_MLE <- theta0

@@ -12,6 +12,7 @@
 #' @param verbose If TRUE, display progress of algorithm
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
 #' @param dim_reduce_flag If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.
+#' @param excursions If TRUE, determine areas of activation in each IC based on joint posterior probabilities using excursions approach
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
@@ -20,7 +21,7 @@
 #' @importFrom ica icaimax
 #' @importFrom stats optim
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE, excursions=TRUE){
 
   flag <- inla.pardiso.check()
   if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
@@ -210,14 +211,36 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
     #project estimates back to data locations
     resultEM$subjICmean_mat <- t(matrix(resultEM$subjICmean, ncol=L))
+
+    #identify areas of activation in each IC
+    if(excursions){
+      if(verbose) cat('Determining areas of activation in each IC \n')
+      active <- jointPPM <- marginalPPM <- matrix(NA, nrow=Q, ncol=nvox)
+      for(q in 1:L){
+        if(verbose) cat(paste0('.. ',q,' of ',L,' \n'))
+        inds_q <- (1:nvox) + (q-1)*nvox
+        if(q==1) {
+          print(system.time(res_q <- excursions(alpha = 0.1, mu = resultEM$subjICmean, Q = resultEM$subjICprec, type = ">", u = 0, ind = inds_q)))
+          rho <- res_q$rho
+        } else {
+          print(system.time(res_q <- excursions(alpha = 0.1, mu = resultEM$subjICmean, Q = resultEM$subjICprec, type = ">", u = 0, ind = inds_q, rho=rho)))
+        }
+        active[q,] <- res_q$E[inds_q]
+        jointPPM[q,] <- res_q$F[inds_q]
+        marginalPPM[q,] <- res_q$rho[inds_q]
+      }
+    }
+    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM)
   }
+
+
 
   if(dim_reduce_flag) {
     A <- Hinv %*% resultEM$theta_MLE$A
     resultEM$A <- A
   }
 
-  #regression-based final estimate of A
+  #regression-based estimate of A
   tmp <- dual_reg(BOLD3, resultEM$subjICmean_mat)
   resultEM$A_reg <- tmp$A
 
