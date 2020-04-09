@@ -18,6 +18,7 @@
 #' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @import pesel
+#' @import excursions
 #' @importFrom ica icaimax
 #' @importFrom stats optim
 #'

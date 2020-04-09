@@ -16,7 +16,8 @@ templateICA(
   epsilon = 0.001,
   verbose = TRUE,
   kappa_init = NULL,
-  dim_reduce_flag = TRUE
+  dim_reduce_flag = TRUE,
+  excursions = TRUE
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ templateICA(
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 
 \item{dim_reduce_flag}{If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.}
+
+\item{excursions}{If TRUE, determine areas of activation in each IC based on joint posterior probabilities using excursions approach}
 }
 \value{
 A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
