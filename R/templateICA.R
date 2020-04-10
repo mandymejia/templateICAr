@@ -231,7 +231,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
         marginalPPM[q,] <- res_q$rho[inds_q]
       }
     }
-    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, type='>', u=0, )
+    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM)
   }
 
 
