@@ -159,7 +159,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	if(verbose) cat('Computing final posterior mean of subject ICs \n')
 	mu_Omega_s = UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta_MLE, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose, return_MAP=TRUE)
 
-	result <- list(subjICmean=mu_Omega_s$mu_s, subjICprec=mu_Omega_s$Omega_s, theta_MLE=theta_MLE, theta_path=theta_path, success_flag=success, numiter=numiter)
+	result <- list(subjICmean=mu_Omega_s$mu_s, subjICprec=mu_Omega_s$Omega_s, theta_MLE=theta_MLE, theta_path=theta_path, success_flag=success, numiter=numiter, squarem = result_squarem)
 	return(result)
 }
 

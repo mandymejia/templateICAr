@@ -77,8 +77,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   if(maxQ > L){
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    print('SCALING DATA FOR REAL')
-    if(scale) BOLD1 <- scale_BOLD(BOLD, scale=TRUE) else BOLD1 <- scale_BOLD(BOLD, scale=FALSE)
+    BOLD1 <- scale_BOLD(BOLD, scale=scale)
     DR1 <- dual_reg(BOLD1, template_mean)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -140,6 +139,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   #TEMPLATE ICA
   if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon)
+  resultEM$A <- Hinv %*% resultEM$theta_MLE$A
 
   #SPATIAL TEMPLATE ICA
   if(!is.null(mesh)){
@@ -231,7 +231,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
         marginalPPM[q,] <- res_q$rho[inds_q]
       }
     }
-    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM)
+    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, type='>', u=0, )
   }
 
 
