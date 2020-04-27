@@ -152,14 +152,16 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	theta_MLE$kappa <- result_squarem$par[(Q^2+1)+(1:Q)]
 	theta_MLE$LL <- as.numeric(names(result_squarem$par)[1])
 
-	success <- (result_squarem$convergence==0) #0 indicates convergence, 1 indicates failure to converge within maxiter
+	#success <- (result_squarem$convergence==0) #0 indicates convergence, 1 indicates failure to converge within maxiter
 	numiter <- result_squarem$fpevals #number of parameter update steps (approximately 3x the number of SQUAREM iterations)
 
 	### Compute final posterior mean of subject ICs
 	if(verbose) cat('Computing final posterior mean of subject ICs \n')
 	mu_Omega_s = UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta_MLE, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose, return_MAP=TRUE)
 
-	result <- list(subjICmean=mu_Omega_s$mu_s, subjICprec=mu_Omega_s$Omega_s, theta_MLE=theta_MLE, theta_path=theta_path, success_flag=success, numiter=numiter, squarem = result_squarem)
+	subjICcov=(D %*% inla.qinv(mu_Omega_s$Omega_s) %*% D)
+
+	result <- list(subjICmean=mu_Omega_s$mu_s, subjICcov=subjICcov, Omega = mu_Omega_s$Omega_s, theta_MLE=theta_MLE, theta_path=theta_path, numiter=numiter, squarem = result_squarem)
 	return(result)
 }
 

@@ -221,10 +221,12 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
         if(verbose) cat(paste0('.. ',q,' of ',L,' \n'))
         inds_q <- (1:nvox) + (q-1)*nvox
         if(q==1) {
-          print(system.time(res_q <- excursions(alpha = 0.1, mu = resultEM$subjICmean, Q = resultEM$subjICprec, type = ">", u = 0, ind = inds_q)))
+          #we scale mu by D^(-1) to use Omega for precision, only works if u=0
+          Dinv_mu_s <- (resultEM$subjICmean/as.vector(t(sqrt(template_var))))
+          print(system.time(res_q <- excursions(alpha = 0.1, mu = Dinv_mu_s, Q = resultEM$Omega, type = ">", u = 0, ind = inds_q)))
           rho <- res_q$rho
         } else {
-          print(system.time(res_q <- excursions(alpha = 0.1, mu = resultEM$subjICmean, Q = resultEM$subjICprec, type = ">", u = 0, ind = inds_q, rho=rho)))
+          print(system.time(res_q <- excursions(alpha = 0.1, mu = Dinv_mu_s, Q = resultEM$Omega, type = ">", u = 0, ind = inds_q, rho=rho)))
         }
         active[q,] <- res_q$E[inds_q]
         jointPPM[q,] <- res_q$F[inds_q]
