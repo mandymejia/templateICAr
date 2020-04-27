@@ -12,17 +12,15 @@
 #' @param verbose If TRUE, display progress of algorithm
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
 #' @param dim_reduce_flag If FALSE, do not perform dimension reduction in spatial template ICA. Not applicable for standard template ICA.
-#' @param excursions If TRUE, determine areas of activation in each IC based on joint posterior probabilities using excursions approach
 #'
 #' @return A list containing the estimated independent components S (a LxV matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @import pesel
-#' @import excursions
 #' @importFrom ica icaimax
 #' @importFrom stats optim
 #'
-templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE, excursions=TRUE){
+templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL, maxQ=NULL, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=TRUE, kappa_init=NULL, dim_reduce_flag=TRUE){
 
   flag <- inla.pardiso.check()
   if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO is required for computational efficiency. See inla.pardiso().')
@@ -42,7 +40,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   if(nrow(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
 
   #check that the supplied mesh object is of type templateICA_mesh
-  if(is.null(mesh)){
+  do_spatial <- !is.null(mesh)
+  if(!do_spatial){
     message('No mesh supplied: Using standard template ICA model, which assumes spatial independence. If this is not what you want, stop and supply a valid mesh. See help(make_mesh).')
   } else if(class(mesh) != 'templateICA_mesh'){
     stop('mesh argument should be of class templateICA_mesh. See help(make_mesh).')
@@ -137,15 +136,16 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   ### 4. RUN EM ALGORITHM!
 
   #TEMPLATE ICA
-  if(!is.null(mesh)) print('INITIATING WITH STANDARD TEMPLATE ICA')
+  if(do_spatial) print('INITIATING WITH STANDARD TEMPLATE ICA')
   resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+  class(resultEM) <- 'tICA'
 
   #SPATIAL TEMPLATE ICA
-  if(!is.null(mesh)){
+  if(do_spatial){
 
     #include regression-based estimate of A for tICA & save results
-    tmp <- dual_reg(BOLD3, resultEM$subjICmean)
+    tmp <- dual_reg(BOLD3, t(resultEM$subjICmean))
     resultEM$A_reg <- tmp$A
     resultEM_tICA <- resultEM
 
@@ -211,31 +211,8 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
     print(Sys.time() - t000)
 
     #project estimates back to data locations
-    resultEM$subjICmean_mat <- t(matrix(resultEM$subjICmean, ncol=L))
-
-    #identify areas of activation in each IC
-    if(excursions){
-      if(verbose) cat('Determining areas of activation in each IC \n')
-      active <- jointPPM <- marginalPPM <- matrix(NA, nrow=Q, ncol=nvox)
-      for(q in 1:L){
-        if(verbose) cat(paste0('.. ',q,' of ',L,' \n'))
-        inds_q <- (1:nvox) + (q-1)*nvox
-        if(q==1) {
-          #we scale mu by D^(-1) to use Omega for precision, only works if u=0
-          Dinv_mu_s <- (resultEM$subjICmean/as.vector(t(sqrt(template_var))))
-          print(system.time(res_q <- excursions(alpha = 0.1, mu = Dinv_mu_s, Q = resultEM$Omega, type = ">", u = 0, ind = inds_q)))
-          rho <- res_q$rho
-        } else {
-          print(system.time(res_q <- excursions(alpha = 0.1, mu = Dinv_mu_s, Q = resultEM$Omega, type = ">", u = 0, ind = inds_q, rho=rho)))
-        }
-        active[q,] <- res_q$E[inds_q]
-        jointPPM[q,] <- res_q$F[inds_q]
-        marginalPPM[q,] <- res_q$rho[inds_q]
-      }
-    }
-    resultEM$excusions <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM)
+    resultEM$subjICmean_mat <- matrix(resultEM$subjICmean, ncol=L)
   }
-
 
 
   if(dim_reduce_flag) {
@@ -244,11 +221,83 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
   }
 
   #regression-based estimate of A
-  tmp <- dual_reg(BOLD3, resultEM$subjICmean_mat)
+  tmp <- dual_reg(BOLD3, t(resultEM$subjICmean_mat))
   resultEM$A_reg <- tmp$A
 
   #for stICA, return tICA estimates also
-  if(!is.null(mesh)){ resultEM$result_tICA <- resultEM_tICA  }
+  if(do_spatial){
+    resultEM$result_tICA <- resultEM_tICA
+    class(resultEM) <- 'stICA'
+  }
 
   return(resultEM)
+
+}
+
+
+
+
+#' Identify areas of activation in each independent component map
+#'
+#' @param result Fitted stICA or tICA model object (of class stICA or tICA)
+#' @param u Activation threshold, default = 0
+#' @param alpha Significance level for joint PPM, default = 0.1
+#' @param type Type of region.  Default is '>' (positive excursion region).
+#'
+#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+#' @export
+#' @import excursions
+#'
+#' @examples
+activations <- function(result, u=0, alpha=0.1, type=">"){
+
+  if(class(result) == 'stICA'){
+
+    nvox <- nrow(result$subjICmean_mat)
+    L <- ncol(result$subjICmean_mat)
+    template_var <- result$template$var
+
+    #identify areas of activation in each IC
+    if(verbose) cat('Determining areas of activation in each IC \n')
+    active <- jointPPM <- marginalPPM <- matrix(NA, nrow=L, ncol=nvox)
+    for(q in 1:L){
+      if(verbose) cat(paste0('.. ',q,' of ',L,' \n'))
+      inds_q <- (1:nvox) + (q-1)*nvox
+      if(q==1) {
+        #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
+        #we subtract u first since rescaling by D^(-1) would affect u too
+        Dinv_mu_s <- (result$subjICmean - u)/as.vector(sqrt(template_var))
+        print(system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q)))
+        rho <- res_q$rho
+      } else {
+        print(system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q, rho=rho)))
+      }
+      active[q,] <- res_q$E[inds_q]
+      jointPPM[q,] <- res_q$F[inds_q]
+      marginalPPM[q,] <- res_q$rho[inds_q]
+    }
+
+    result <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, u = u, alpha = alpha, type = type)
+  }
+
+  if(class(result) == 'tICA'){
+
+    nvox <- ncol(result$subjICmean)
+    L <- nrow(result$subjICmean)
+
+    t_stat <- as.matrix((result$subjICmean - u)/sqrt(result$subjICvar))
+    pvals <- 1-pnorm(t_stat)
+    active_nocorr <- matrix(NA, nrow=nvox, ncol=L)
+    active_FDR <- matrix(NA, nrow=nvox, ncol=L)
+    active_FWER <- matrix(NA, nrow=nvox, ncol=L)
+    for(q in 1:L){
+      active_nocorr[,q] <- (p_vals[,q] < alpha)
+      active_FDR[,q] <- (p.adjust(p_vals[,q], method='BH') < alpha)
+      active_FWER[ii,,q] <- (p.adjust(p_val, method='bonferroni') < alpha)
+    }
+
+    result <- list(active = list(nocorr = active_nocorr, FDR = active_FDR, FWER = active_FWER), pvals = pvals, tstats = t_stat, u = u, alpha = alpha)
+  }
+
+  return(result)
 }
