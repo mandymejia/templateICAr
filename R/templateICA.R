@@ -243,13 +243,18 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 #' @param u Activation threshold, default = 0
 #' @param alpha Significance level for joint PPM, default = 0.1
 #' @param type Type of region.  Default is '>' (positive excursion region).
+#' @param method_p If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
+#' @param verbose If TRUE, display progress of algorithm
 #'
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #' @export
 #' @import excursions
 #'
-#' @examples
-activations <- function(result, u=0, alpha=0.1, type=">"){
+activations <- function(result, u=0, alpha=0.1, type=">", method_p='BH', verbose=FALSE){
+
+  if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
+  if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
+  if(!(class(result) %in% c('stICA','tICA'))) stop("result must be of class stICA or tICA")
 
   if(class(result) == 'stICA'){
 
@@ -263,14 +268,16 @@ activations <- function(result, u=0, alpha=0.1, type=">"){
     for(q in 1:L){
       if(verbose) cat(paste0('.. ',q,' of ',L,' \n'))
       inds_q <- (1:nvox) + (q-1)*nvox
+      Dinv_mu_s <- (result$subjICmean - u)/as.vector(sqrt(template_var))
       if(q==1) {
         #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
         #we subtract u first since rescaling by D^(-1) would affect u too
-        Dinv_mu_s <- (result$subjICmean - u)/as.vector(sqrt(template_var))
-        print(system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q)))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q))
+        if(verbose) print(tmp)
         rho <- res_q$rho
       } else {
-        print(system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q, rho=rho)))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q, rho=rho))
+        if(verbose) print(tmp)
       }
       active[q,] <- res_q$E[inds_q]
       jointPPM[q,] <- res_q$F[inds_q]
@@ -282,21 +289,23 @@ activations <- function(result, u=0, alpha=0.1, type=">"){
 
   if(class(result) == 'tICA'){
 
-    nvox <- ncol(result$subjICmean)
-    L <- nrow(result$subjICmean)
+    nvox <- nrow(result$subjICmean)
+    L <- ncol(result$subjICmean)
 
     t_stat <- as.matrix((result$subjICmean - u)/sqrt(result$subjICvar))
-    pvals <- 1-pnorm(t_stat)
-    active_nocorr <- matrix(NA, nrow=nvox, ncol=L)
-    active_FDR <- matrix(NA, nrow=nvox, ncol=L)
-    active_FWER <- matrix(NA, nrow=nvox, ncol=L)
+    if(type=='>') pvals <- 1-pnorm(t_stat)
+    if(type=='<') pvals <- pnorm(t_stat)
+    if(type=='!=') pvals <- 2*(1-pnorm(abs(t_stat)))
+
+    pvals_adj <- matrix(NA, nrow=nvox, ncol=L)
+    active <- matrix(NA, nrow=nvox, ncol=L)
+    if(is.null(method_p)) method_p <- 'none'
     for(q in 1:L){
-      active_nocorr[,q] <- (p_vals[,q] < alpha)
-      active_FDR[,q] <- (p.adjust(p_vals[,q], method='BH') < alpha)
-      active_FWER[ii,,q] <- (p.adjust(p_val, method='bonferroni') < alpha)
+      pvals_adj[,q] <- p.adjust(pvals[,q], method=method_p)
+      active[,q] <- (pvals_adj[,q] < alpha)
     }
 
-    result <- list(active = list(nocorr = active_nocorr, FDR = active_FDR, FWER = active_FWER), pvals = pvals, tstats = t_stat, u = u, alpha = alpha)
+    result <- list(active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat, u = u, alpha = alpha, method_p = method_p)
   }
 
   return(result)
