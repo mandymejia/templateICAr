@@ -49,6 +49,8 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	theta = theta0
 	success = 1
 
+	template_var[template_var==0] <- 1e-5
+
 	#pre-compute s0, D and D^{-1}*s0
 	V <- ncol(template_mean)
 	s0_vec = as.vector(t(template_mean))
@@ -113,7 +115,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	if(verbose) cat('...Starting binary search for starting value of kappa \n ')
 	kappa_test <- (kappa_min + kappa_max)/2
 	kappa_change <- 1
-	while(kappa_change > 0.01){
+	while(kappa_change > epsilon){
 	  if(verbose) cat(paste0('... testing kappa = ',round(kappa_test, 3),'\n '))
 	  theta$kappa <- rep(kappa_test, Q)
 	  theta1 <- UpdateTheta.spatial(template_mean, template_var, mesh, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, dim_reduce_flag=dim_reduce_flag, update='kappa')

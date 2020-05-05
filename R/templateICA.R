@@ -106,7 +106,7 @@ templateICA <- function(template_mean, template_var, BOLD, scale=TRUE, mesh=NULL
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
-  if(dim_reduce_flag) if(verbose) print('PERFORMING DIMENSION REDUCTION')
+  if(dim_reduce_flag) if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
 
   dat_list <- dim_reduce(BOLD3, L)
 
