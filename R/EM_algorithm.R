@@ -49,7 +49,7 @@ EM_templateICA.spatial = function(template_mean, template_var, mesh, BOLD, theta
 	theta = theta0
 	success = 1
 
-	template_var[template_var==0] <- 1e-5
+	template_var[template_var < 1e-6] = 1e-6 #to prevent problems when inverting covariance
 
 	#pre-compute s0, D and D^{-1}*s0
 	V <- ncol(template_mean)
@@ -185,7 +185,7 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
   iter = 1
   theta = theta0
   success = 1
-  template_var[template_var < .00001] = .00001 #to prevent problems when inverting covariance
+  template_var[template_var < 1e-6] = 1e-6 #to prevent problems when inverting covariance
 
   err = 1000 #large initial value for difference between iterations
   while(err > epsilon){
