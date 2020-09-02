@@ -1,4 +1,4 @@
-#' Create INLA mesh and observation weight matrix based on a binary brain mask
+#' Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces
 #'
 #' @param mask Brain mask (matrix of 0/1 or TRUE/FALSE) (only supply mask OR vertices and faces)
 #' @param vertices Matrix of vertices (only supply vertices and faces OR mask)

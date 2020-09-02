@@ -7,10 +7,12 @@
 activations(
   result,
   u = 0,
-  alpha = 0.1,
+  alpha = 0.01,
   type = ">",
   method_p = "BH",
-  verbose = FALSE
+  verbose = FALSE,
+  which.ICs = NULL,
+  deviation = FALSE
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ activations(
 \item{method_p}{If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{which.ICs}{Indices of ICs for which to identify activations.  If NULL, use all ICs.}
+
+\item{deviation}{If TRUE, identify significant deviations from the template mean}
 }
 \value{
 A list containing activation maps for each IC and the joint and marginal PPMs for each IC.

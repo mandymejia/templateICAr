@@ -1,6 +1,10 @@
 {
-    "path" : "~/Box Sync/SOFTWARE/templateICAr/R",
+    "path" : "/Volumes/GoogleDrive/My Drive/FromBox/SOFTWARE/templateICAr/R",
     "sortOrder" : [
+        {
+            "ascending" : false,
+            "columnIndex" : 4
+        },
         {
             "ascending" : true,
             "columnIndex" : 2

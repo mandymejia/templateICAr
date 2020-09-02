@@ -9,7 +9,7 @@ LL2_kappa(kappa, mesh, OplusW, u, v, C1 = 1/(4 * pi), Q = NULL)
 \arguments{
 \item{kappa}{Value of kappa for which to compute log-likelihood}
 
-\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
+\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
 
 \item{OplusW}{Sparse matrix containing estimated values of RHS of trace in part 2 of log-likelihood. In common smoothness model, represents the sum over q=1,...,Q.}
 

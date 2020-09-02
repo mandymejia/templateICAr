@@ -2,9 +2,9 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{Create INLA mesh and observation weight matrix based on a binary brain mask}
+\title{Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces}
 \usage{
-make_mesh(mask = NULL, vertices = NULL, faces = NULL, keep = NULL)
+make_mesh(mask = NULL, vertices = NULL, faces = NULL, locs = NULL)
 }
 \arguments{
 \item{mask}{Brain mask (matrix of 0/1 or TRUE/FALSE) (only supply mask OR vertices and faces)}
@@ -13,13 +13,13 @@ make_mesh(mask = NULL, vertices = NULL, faces = NULL, keep = NULL)
 
 \item{faces}{Matrix of faces (only supply vertices and faces OR mask)}
 
-\item{keep}{Logical or 0/1 vector indicating vertices to keep, if using a submesh}
+\item{locs}{Indices of vertices corresponding to observed data locations}
 }
 \value{
 List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
 }
 \description{
-Create INLA mesh and observation weight matrix based on a binary brain mask
+Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces
 }
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.

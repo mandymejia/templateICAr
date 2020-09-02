@@ -1,3 +1,72 @@
+#' Match user inputs to expected values
+#'
+#' Match each user input to an expected/allowed value. Raise a warning if either
+#'  several user inputs match the same expected value, or at least one could not
+#'  be matched to any expected value. \code{ciftiTools} uses this function to
+#'  match keyword arguments for a function call. Another use is to match
+#'  brainstructure labels ("left", "right", or "subcortical").
+#'
+#' @param user Character vector of user input. These will be matched to
+#'  \code{expected} using \code{match.arg()}.
+#' @param expected Character vector of expected/allowed values.
+#' @param fail_action If any value in \code{user} could not be
+#'  matched, or repeated matches occured, what should happen? Possible values
+#'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
+#'  \code{"nothing"}.
+#' @param user_value_label How to refer to the user input in a stop or warning
+#'  message. If \code{NULL}, no label is used.
+#'
+#' @return The matched user inputs.
+#'
+#' @keywords internal
+#'
+match_input <- function(
+  user, expected,
+  fail_action=c("stop", "warning", "message", "nothing"),
+  user_value_label=NULL) {
+
+  fail_action <- match.arg(
+    fail_action,
+    c("stop", "warning", "message", "nothing")
+  )
+  unrecognized_FUN <- switch(fail_action,
+                             stop=stop,
+                             warning=warning,
+                             message=message,
+                             nothing=invisible
+  )
+
+  if (!is.null(user_value_label)) {
+    user_value_label <- paste0("\"", user_value_label, "\" ")
+  }
+  msg <- paste0(
+    "The user-input values ", user_value_label,
+    "did not match their expected values. ",
+    "Either several matched the same value, ",
+    "or at least one did not match any.\n\n",
+    "The user inputs were:\n",
+    "\t\"", paste0(user, collapse="\", \""), "\".\n",
+    "The expected values were:\n",
+    "\t\"", paste0(expected, collapse="\", \""), "\".\n"
+  )
+
+  tryCatch(
+    {
+      matched <- match.arg(user, expected, several.ok=TRUE)
+      if (length(matched) != length(user)) { stop() }
+      return(matched)
+    },
+    error = function(e) {
+      unrecognized_FUN(msg)
+    },
+    finally = {
+    }
+  )
+
+  invisible(NULL)
+}
+
+
 #' Orthonormalizes a square, invertible matrix
 #'
 #' @param X A square matrix to be orthonormalized.
@@ -60,7 +129,7 @@ sqrt_XtX = function(X, inverse=FALSE){
 #' Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
 #' @param kappa Value of kappa for which to compute log-likelihood
-#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)
 #' @param OplusW Sparse matrix containing estimated values of RHS of trace in part 2 of log-likelihood. In common smoothness model, represents the sum over q=1,...,Q.
 #' @param u Vector needed for part 3 of log-likelihood
 #' @param v Vector needed for part 3 of log-likelihood
@@ -133,7 +202,7 @@ LL2_kappa <- function(kappa, mesh, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
 #' @param par Vector of parameter values (log kappa, log variance)
 #' @param delta Estimate of delta (subject effect or deviation)
 #' @param D_diag Diagonal values of D matrix (template standard deviations)
-#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`)
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)
 #' @param C1 For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
