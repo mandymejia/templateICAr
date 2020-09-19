@@ -4,12 +4,12 @@
 \alias{make_Pmat}
 \title{Creates permutation matrix P to regroup elements of s by locations instead of by ICs}
 \usage{
-make_Pmat(Q, V)
+make_Pmat(Q, nvox)
 }
 \arguments{
 \item{Q}{The number of template ICs}
 
-\item{V}{The number of spatial locations}
+\item{nvox}{The number of spatial locations (V)}
 }
 \value{
 P Permutation matrix size QVxQV
@@ -18,5 +18,5 @@ P Permutation matrix size QVxQV
 Creates permutation matrix P to regroup elements of s by locations instead of by ICs
 }
 \details{
-If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(V)) is grouped by locations 1,...,V
+If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(nvox)) is grouped by locations 1,...,nvox
 }

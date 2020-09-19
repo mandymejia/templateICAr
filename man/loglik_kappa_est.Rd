@@ -4,10 +4,20 @@
 \alias{loglik_kappa_est}
 \title{Computes log-likelihood of kappa given an initial estimate of delta}
 \usage{
-loglik_kappa_est(par, delta, D_diag, mesh, C1 = 1/(4 * pi), Q = NULL)
+loglik_kappa_est(
+  log_kappa,
+  log_var,
+  delta,
+  D_diag,
+  mesh,
+  C1 = 1/(4 * pi),
+  Q = NULL
+)
 }
 \arguments{
-\item{par}{Vector of parameter values (log kappa, log variance)}
+\item{log_kappa}{Log of value of kappa at which to compute log likelihood}
+
+\item{log_var}{Log of value of residual variance at which to compute log likelihood}
 
 \item{delta}{Estimate of delta (subject effect or deviation)}
 

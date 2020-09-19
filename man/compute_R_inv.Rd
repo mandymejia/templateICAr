@@ -4,14 +4,16 @@
 \alias{compute_R_inv}
 \title{Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S}
 \usage{
-compute_R_inv(mesh, kappa, C1 = 1/(4 * pi))
+compute_R_inv(meshes, kappa, C1 = 1/(4 * pi), rm_extra = FALSE)
 }
 \arguments{
-\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_templateICA_mesh)})}
+\item{meshes}{A list of objects of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)}) (one element for each brain structure)}
 
 \item{kappa}{Current estimates of SPDE parameter kappa for each latent field}
 
 \item{C1}{Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2}
+
+\item{rm_extra}{If TRUE, remove extra (non-data) vertices from the mesh for greater computational efficiency}
 }
 \value{
 A list containing R inverse and SPDE matrices

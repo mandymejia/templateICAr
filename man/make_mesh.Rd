@@ -2,24 +2,22 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces}
+\title{Create INLA mesh and observation weight matrix based on a surface object}
 \usage{
-make_mesh(mask = NULL, vertices = NULL, faces = NULL, locs = NULL)
+make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
 \arguments{
-\item{mask}{Brain mask (matrix of 0/1 or TRUE/FALSE) (only supply mask OR vertices and faces)}
+\item{surf}{Object of class "surface" (see \code{make_surf()} and \code{is.surf}).}
 
-\item{vertices}{Matrix of vertices (only supply vertices and faces OR mask)}
+\item{inds_data}{Subset of vertices to include in analysis (e.g. non-medial wall locations)}
 
-\item{faces}{Matrix of faces (only supply vertices and faces OR mask)}
-
-\item{locs}{Indices of vertices corresponding to observed data locations}
+\item{inds_mesh}{Subset of vertices to retain in mesh (e.g. non-medial wall locations). Must be a superset of \code{inds_data}.}
 }
 \value{
 List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
 }
 \description{
-Create INLA mesh and observation weight matrix based on a binary brain mask or a set of vertices and faces
+Create INLA mesh and observation weight matrix based on a surface object
 }
 \note{
 This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.

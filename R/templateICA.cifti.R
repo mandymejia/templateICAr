@@ -7,7 +7,7 @@
 #' spatial template ICA (\code{spatial_model=TRUE}), must be the latter.
 #' @param spatial_model Should spatial modeling be performed? (Default FALSE) If TRUE, surface
 #' geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
-#' are much higher with spatial_model=TRUE than spatial_model=FALSE.
+#' are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -22,19 +22,18 @@
 #' @param resamp_res (Only recommended for spatial modeling) Target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
-#' @param sphereL_fname (Required for resampling) The left GIFTI sphere file in register
-#' with and the same resolution as the CIFTI data.
-#' @param sphereR_fname (Required for resampling) The right GIFTI sphere file in register
-#' with and in the same resolution as the CIFTI data.
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial
 #' standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
-#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
+#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
+#'
+#' @importFrom INLA inla.pardiso.check inla.setOption
+#' @importFrom ciftiTools read_cifti
 #'
 #' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')
 #' @export
@@ -46,14 +45,12 @@ templateICA.cifti <- function(cifti_fname,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
                               resamp_res=NULL,
-                              sphereL_fname=NULL,
-                              sphereR_fname=NULL,
                               scale=TRUE,
                               maxQ=NULL,
-                              common_smoothness=TRUE,
                               maxiter=100,
                               epsilon=0.001,
                               verbose=TRUE,
+                              common_smoothness=TRUE,
                               kappa_init=NULL,
                               write_dir=NULL){
 
@@ -76,6 +73,9 @@ templateICA.cifti <- function(cifti_fname,
   if(spatial_model){
     if(do_sub) stop('If spatial_model=TRUE, only applicable to "left" and/or "right" brainstructures. Check brainstructures argument and try again.')
     if(!is.character(template)) stop('If spatial_model=TRUE, template argument must be file path prefix to cifti files written by estimate_template.cifti().')
+    flag <- inla.pardiso.check()
+    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
+    inla.setOption(smtp='pardiso')
   }
 
   if(!spatial_model){
@@ -93,8 +93,8 @@ templateICA.cifti <- function(cifti_fname,
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
     if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
-    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname, sphereL_fname = sphereL_fname, sphereR_fname = sphereR_fname)
-    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname, sphereL_fname = sphereL_fname, sphereR_fname = sphereR_fname)
+    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
+    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
   } else {
     stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
   }
@@ -102,13 +102,13 @@ templateICA.cifti <- function(cifti_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
-  BOLD <- read_cifti(cifti_fname,
+  BOLD_cifti <- read_cifti(cifti_fname,
                      surfL_fname = surfL_fname,
                      surfR_fname = surfR_fname,
                      brainstructures = brainstructures,
-                     resamp_res=resamp_res,
-                     sphereL_fname = sphereL_fname,
-                     sphereR_fname = sphereR_fname)
+                     resamp_res=resamp_res)
+
+  #TO DO: SINGLE SPATIAL MODEL
 
   # IF SPATIAL MODELING, LOOP OVER HEMISPHERES
   if(spatial_model) {
@@ -126,7 +126,7 @@ templateICA.cifti <- function(cifti_fname,
     if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
     return(x)
   }
-  subjICmean_xifti <- subjICvar_xifti <- clear_data(BOLD)
+  subjICmean_xifti <- subjICvar_xifti <- clear_data(BOLD_cifti)
 
   models_list <- vector('list', length=length(models))
   names(models_list) <- models
@@ -134,11 +134,15 @@ templateICA.cifti <- function(cifti_fname,
 
     # IF SPATIAL MODELING, CONSTRUCT MESH
     if(spatial_model){
-      if(mod=='lh') { surf <- BOLD$surf$cortex_left; locs <- which(BOLD$meta$cortex$medial_wall_mask$left) }
-      if(mod=='rh') { surf <- BOLD$surf$cortex_right; locs <- which(BOLD$meta$cortex$medial_wall_mask$right) }
-      verts <- surf$vertices
-      faces <- surf$faces
-      mesh <- make_mesh(vertices = verts, faces = faces, locs = locs)
+      if(mod=='lh') {
+        surf <- BOLD_cifti$surf$cortex_left
+        wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
+      }
+      if(mod=='rh') {
+        surf <- BOLD_cifti$surf$cortex_right
+        wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
+      }
+      mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
     } else {
       mesh <- NULL
     }
@@ -147,15 +151,15 @@ templateICA.cifti <- function(cifti_fname,
 
     # FORM DATA MATRIX AND TEMPLATE MATRICES
     if(mod=='lh') {
-      BOLD_mat <- BOLD$data$cortex_left
+      BOLD_mat <- BOLD_cifti$data$cortex_left
       template_mean_mat <- template_mean$data$cortex_left
       template_var_mat <- template_var$data$cortex_left
     } else if(mod=='rh') {
-      BOLD_mat <- BOLD$data$cortex_right
+      BOLD_mat <- BOLD_cifti$data$cortex_right
       template_mean_mat <- template_mean$data$cortex_right
       template_var_mat <- template_var$data$cortex_right
     } else {
-      BOLD_mat <- rbind(BOLD$data$cortex_left, BOLD$data$cortex_right, BOLD$data$subcort)
+      BOLD_mat <- rbind(BOLD_cifti$data$cortex_left, BOLD_cifti$data$cortex_right, BOLD_cifti$data$subcort)
       template_mean_mat <- rbind(template_mean$data$cortex_left, template_mean$data$cortex_right, template_mean$data$subcort)
       template_var_mat <- rbind(template_var$data$cortex_left, template_var$data$cortex_right, template_var$data$subcort)
     }
@@ -168,11 +172,12 @@ templateICA.cifti <- function(cifti_fname,
                               scale = scale,
                               mesh = mesh,
                               maxQ=maxQ,
-                              common_smoothness=common_smoothness,
                               maxiter=maxiter,
                               epsilon=epsilon,
                               verbose=verbose,
+                              common_smoothness=common_smoothness,
                               kappa_init=kappa_init)
+
     models_list[[which(models==mod)]] <- result_mod
 
     # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT

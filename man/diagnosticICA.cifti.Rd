@@ -8,19 +8,24 @@ diagnosticICA.cifti(
   cifti_fname,
   templates,
   brainstructures = c("left", "right"),
+  spatial_model = FALSE,
+  surfL_fname = NULL,
+  surfR_fname = NULL,
+  resamp_res = NULL,
   scale = TRUE,
   maxQ = NULL,
   maxiter = 100,
-  epsilon = 0.001,
+  epsilon = 0.01,
   verbose = TRUE,
+  kappa_init = 0.4,
   write_dir = NULL
 )
 }
 \arguments{
 \item{cifti_fname}{File path of CIFTI-format timeseries data (ending in .dtseries.nii).}
 
-\item{templates}{LIST or VECTOR of templates, each the result of call to \code{estimate_template.cifti()} (one template for each group).
-Either a list of objects of class \code{template.cifti} OR a vector of file path prefixes (the part before "_mean.dscalar.nii"
+\item{templates}{Set of templates, each the result of call to \code{estimate_template.cifti()} (one template for each group).
+Either a LIST of objects of class \code{template.cifti} OR a VECTOR of file path prefixes (the part before "_mean.dscalar.nii"
 and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti()}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
@@ -30,6 +35,20 @@ gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).  For spatial
 modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), subcortical
 locations will be ignored.}
+
+\item{spatial_model}{Should spatial modeling be performed? (Default FALSE) If TRUE, surface
+geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
+are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.}
+
+\item{surfL_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
+file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.}
+
+\item{surfR_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
+file representing the right cortex. Only required if \code{brainstructures} includes \code{"left"}.}
+
+\item{resamp_res}{(Only recommended for spatial modeling) Target resolution for resampling (number of
+cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
+feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}
@@ -41,6 +60,8 @@ standard deviation before model fitting. If done when estimating templates, shou
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
 }

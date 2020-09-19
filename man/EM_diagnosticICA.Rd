@@ -2,9 +2,24 @@
 % Please edit documentation in R/EM_diagnosticICA.R
 \name{EM_diagnosticICA}
 \alias{EM_diagnosticICA}
-\title{EM Algorithm for Diagnostic ICA Models}
+\alias{EM_diagnosticICA.spatial}
+\alias{EM_diagnosticICA.independent}
+\title{EM Algorithms for Diagnostic ICA Models}
 \usage{
-EM_diagnosticICA(
+EM_diagnosticICA.spatial(
+  template_mean,
+  template_var,
+  meshes,
+  BOLD,
+  theta0,
+  C_diag,
+  maxiter = 100,
+  epsilon = 0.001,
+  verbose = TRUE,
+  ignore_determinant = TRUE
+)
+
+EM_diagnosticICA.independent(
   template_mean,
   template_var,
   BOLD,
@@ -16,13 +31,15 @@ EM_diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}
+\item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G, where L is the number of ICs, V is the number of data or mesh locations.}
 
 \item{template_var}{(A list of G matrices, each VxL) template variance estimates for each group 1 to G}
 
+\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)}
+
 \item{BOLD}{(VxL matrix) dimension-reduced fMRI data}
 
-\item{theta0}{(list) initial guess at mixing matrix A (LxL)}
+\item{theta0}{(list) initial guess at parameter values: A (LxL mixing matrix) and (for spatial model only) kappa (SPDE smoothness parameter)}
 
 \item{C_diag}{(Lx1) diagonal elements of residual covariance after dimension reduction}
 
@@ -31,10 +48,27 @@ EM_diagnosticICA(
 \item{epsilon}{smallest proportion change between iterations (e.g. .001)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{ignore_determinant}{For spatial model only. If TRUE, ignore the normalizing constant in p(y|z) when computing posterior probabilities of z.}
 }
 \value{
-A list with 5 elements: theta (list of final parameter estimates), group_probs (posterior probabilities of group membership), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+A list containing:
+group_probs (posterior probabilities of group membership),
+subICmean (estimates of subject-level ICs),
+subICvar (variance of subject-level ICs) for non-spatial model only OR
+subICcov (covariance of subject-level ICs, only computed for neighboring locations) and subICprec (precision of subject-level ICs) for spatial model only,
+theta_MLE (list of final parameter estimates),
+theta_path (path of parameter updates in SQUAREM, spatial model only),
+success_flag (flag indicating convergence (\code{TRUE}) or not (\code{FALSE})),
+error (change in parameter estimates at final iteration),
+numiter (number of parameter update steps, approximately 3x the number of accelerated SQUAREM iterations),
+squarem (output of SQUAREM function call),
+and the template mean and variance used in model estimation
 }
 \description{
-EM Algorithm for Diagnostic ICA Models
+EM Algorithms for Diagnostic ICA Models
+}
+\details{
+\code{EM_dignosticICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia (2020+) for estimating
+the probabilities of group membership, subject-level ICs and unknown parameters in the diagnostic ICA model with spatial priors on subject effects.
 }

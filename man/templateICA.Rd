@@ -11,11 +11,11 @@ templateICA(
   scale = TRUE,
   mesh = NULL,
   maxQ = NULL,
-  common_smoothness = TRUE,
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  kappa_init = NULL
+  common_smoothness = TRUE,
+  kappa_init = 0.5
 )
 }
 \arguments{
@@ -27,17 +27,17 @@ templateICA(
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_mesh()} (spatial priors are assumed on each independent component)}
+\item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)}
 
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
-
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations}
 
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 }

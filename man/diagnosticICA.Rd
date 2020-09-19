@@ -9,10 +9,12 @@ diagnosticICA(
   template_var,
   BOLD,
   scale = TRUE,
+  meshes = NULL,
   maxQ = NULL,
   maxiter = 100,
-  epsilon = 0.001,
-  verbose = TRUE
+  epsilon = 0.01,
+  verbose = TRUE,
+  kappa_init = 0.5
 )
 }
 \arguments{
@@ -24,6 +26,8 @@ diagnosticICA(
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
+\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)}
+
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
 
 \item{maxiter}{Maximum number of EM iterations}
@@ -31,6 +35,8 @@ diagnosticICA(
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 }
 \value{
 A list containing the posterior probabilities of group membership, the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)

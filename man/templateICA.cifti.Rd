@@ -12,14 +12,12 @@ templateICA.cifti(
   surfL_fname = NULL,
   surfR_fname = NULL,
   resamp_res = NULL,
-  sphereL_fname = NULL,
-  sphereR_fname = NULL,
   scale = TRUE,
   maxQ = NULL,
-  common_smoothness = TRUE,
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
+  common_smoothness = TRUE,
   kappa_init = NULL,
   write_dir = NULL
 )
@@ -42,7 +40,7 @@ locations will be ignored.}
 
 \item{spatial_model}{Should spatial modeling be performed? (Default FALSE) If TRUE, surface
 geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
-are much higher with spatial_model=TRUE than spatial_model=FALSE.}
+are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.}
 
 \item{surfL_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
 file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.}
@@ -54,24 +52,18 @@ file representing the right cortex. Only required if \code{brainstructures} incl
 cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.}
 
-\item{sphereL_fname}{(Required for resampling) The left GIFTI sphere file in register
-with and the same resolution as the CIFTI data.}
-
-\item{sphereR_fname}{(Required for resampling) The right GIFTI sphere file in register
-with and in the same resolution as the CIFTI data.}
-
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
-
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations}
 
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If TRUE, display progress of algorithm}
+
+\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 
