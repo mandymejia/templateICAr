@@ -1,4 +1,4 @@
-#' Estimate Template for Template or Diagnostic ICA
+#' Estimate Template for Template or Diagnostic ICA based on CIFTI-format data
 #'
 #' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries
 #'  (*.dtseries.nii) for template estimation
@@ -37,7 +37,6 @@ estimate_template.cifti <- function(
 
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
-
   brainstructures <- ciftiTools:::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
@@ -45,39 +44,33 @@ estimate_template.cifti <- function(
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-
   # Read GICA result
-  if(verbose) cat('\n Reading in GICA result')
+  if(verbose) { cat('\n Reading in GICA result') }
   GICA <- read_cifti(
     GICA_fname,
-    brainstructures=brainstructures
+    brainstructures="all" #need this for reading in BOLD data with flat=TRUE
   )
-  ## As of ciftiTools@1.3, default behavior is that a blank mwall mask will be deleted
-  ## So both a blank mwall, and no mwall at all, will be indicated by a NULL mwall entry
-  no_left_mwall <- "left" %in% brainstructures && is.null(GICA$meta$cortex$medial_wall_mask$left)
-  no_right_mwall <- "right" %in% brainstructures && is.null(GICA$meta$cortex$medial_wall_mask$left)
+  ## A blank mwall mask will be deleted so both a blank mwall, and no mwall at all, will be indicated by a NULL mwall entry
+  no_left_mwall <- is.null(GICA$meta$cortex$medial_wall_mask$left)
+  no_right_mwall <- is.null(GICA$meta$cortex$medial_wall_mask$right)
+  ### Warn the user if all vertices are being used.
   if (no_left_mwall || no_right_mwall) {
     warning(paste(
       "No medial wall vertices were detected in the",
       c("left cortex", "right cortex", "cortex")[no_left_mwall*1 + no_right_mwall*2],
       "component of the GICA CIFTI. Using all vertices.\n"
     ))
-
-    # Replace the empty medial wall mask(s).
-    if ("left" %in% brainstructures) {
-      GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left))
-    }
-    if ("right" %in% brainstructures) {
-      GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right))
-
-      if ("left" %in% brainstructures) {
-        if (length(GICA$meta$cortex$medial_wall_mask$left) != length(GICA$meta$cortex$medial_wall_mask$right)) {
-          stop("Medial wall mask needed to be inferred from vertices, but left and right vertex counts did not match.")
-        }
-      }
-    }
   }
-
+  ### Replace the empty medial wall mask(s).
+  if (no_left_mwall) {
+    GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left))
+  }
+  if (no_right_mwall) {
+    GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right))
+  }
+  if (length(GICA$meta$cortex$medial_wall_mask$left) != length(GICA$meta$cortex$medial_wall_mask$right)) {
+    stop("Left and right vertex counts did not match.")
+  }
   # Obtain the brainstructure mask for the flattened CIFTIs.
   #   It will remove any newly-detected medial wall vertices.
   flat_bs_labs <- c(
@@ -86,7 +79,7 @@ estimate_template.cifti <- function(
     rep("subcortical", length(GICA$meta$subcort$labels))
   )
   flat_bs_mask <- flat_bs_labs %in% brainstructures
-
+  flat_bs_mask2 <- flat_bs_mask[flat_bs_labs != "mwall"]
   # Flatten. GICA_flat will have the subcortical voxels in alphabetical order
   # because cifti_read_flat() returns them in alphabetical order.
   GICA_flat <- GICA
@@ -95,22 +88,21 @@ estimate_template.cifti <- function(
     GICA_flat$data$subcort <- GICA_flat$data$subcort[alpha_order,, drop=FALSE]
   }
   GICA_flat <- do.call(rbind, GICA_flat$data)
-  V <- nrow(GICA_flat); L0 <- ncol(GICA_flat)
-
+  GICA_flat <- GICA_flat[flat_bs_mask2,, drop=FALSE]
+  V <- nrow(GICA_flat); Q <- ncol(GICA_flat)
   # Center each IC map.
   GICA_flat <- scale(GICA_flat, scale=FALSE)
-
-  if(verbose){
+  if(verbose) {
     cat(paste0('\n Number of data locations: ',V))
-    cat(paste0('\n Number of group ICs: ',L0))
+    cat(paste0('\n Number of original group ICs: ',Q))
   }
 
-  L <- L0
+  L <- Q
   if(!is.null(inds)){
-    if(any(!(inds %in% 1:L0))) stop('Invalid entries in inds argument.')
+    if(any(!(inds %in% 1:Q))) stop('Invalid entries in inds argument.')
     L <- length(inds)
   } else {
-    inds <- 1:L0
+    inds <- 1:Q
   }
 
   N <- length(cifti_fnames)
@@ -139,9 +131,9 @@ estimate_template.cifti <- function(
       if(verbose) cat(paste0('\n Data not available'))
       next
     }
-    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
 
-    if(nrow(BOLD1_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and timeseries data from subject ',ii,' do not match.'))
+    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask2,, drop=FALSE]
+    if(nrow(BOLD1_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and BOLD data from subject ',ii,' do not match.'))
     ntime <- ncol(BOLD1_ii)
 
     #read in BOLD retest data OR create pseudo test-retest data
@@ -158,12 +150,14 @@ estimate_template.cifti <- function(
         if(verbose) cat(paste0('\n Data not available'))
         next
       }
-      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
+      #BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
+      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask2,, drop=FALSE]
+      if(nrow(BOLD2_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and BOLD retest data from subject ',ii,' do not match.'))
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(t(BOLD1_ii), t(GICA_flat), scale=scale)$S
-    DR2_ii <- dual_reg(t(BOLD2_ii), t(GICA_flat), scale=scale)$S
+    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale)$S
+    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale)$S
     DR1[ii,,] <- DR1_ii[inds,]
     DR2[ii,,] <- DR2_ii[inds,]
   }
@@ -176,6 +170,22 @@ estimate_template.cifti <- function(
   template_mean <- t((mean1 + mean2)/2)
 
   # ESTIMATE SIGNAL (BETWEEN-SUBJECT) VARIANCE
+
+  # mean_lmer <- var_noise_lmer <- var_signal_lmer <- matrix(NA, V, L)
+  #
+  # ids <- c(1:N, 1:N)
+  # for(v in 1:V){
+  #   print(v)
+  #   for(l in 1:L){
+  #     #fit an lmer
+  #     DR_vl <- c(DR1[,l,v], DR2[,l,v])
+  #     #bad <- is.na(DR1[,l,v]) | is.na(DR2[,l,v]) #exclude any subjects with any missing data
+  #     lmer_vl <- lmer(DR_vl ~ (1|ids))#, subset = c(!bad, !bad))
+  #     mean_lmer[v,l] <- summary(lmer_vl)$coefficients[1,1]
+  #     var_noise_lmer[v,l] <- (summary(lmer_vl)$sigma)^2
+  #     var_signal_lmer[v,l] <- VarCorr(lmer_vl)$ids[1]
+  #   }
+  # }
 
   # total variance
   if(verbose) cat('\n Estimating Total Variance')
@@ -217,8 +227,215 @@ estimate_template.cifti <- function(
     write_cifti(xifti_var, out_fname_var, verbose=verbose)
   }
 
-  result <- list(template_mean=xifti_mean, template_var=xifti_var)
+  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale)
   class(result) <- 'template.cifti'
   return(result)
 }
+
+#' Estimate Template for Template or Diagnostic ICA based on NIFTI-format data
+#'
+#' @param nifti_fnames Vector of file paths of NIFTI-format fMRI timeseries for template estimation.
+#' @param nifti_fnames2 (Optional) Vector of file paths of "retest" NIFTI-format fMRI
+#'  timeseries for template estimation.  Must be from the same subjects and in the same
+#'  order as nifti_fnames.  Should only be provided if nifti_fnames provided, but not required.
+#'  If none specified, will create pseudo test-retest data from single session.
+#' @param GICA_fname File path of NIFTI-format group ICA maps (Q IC's)
+#' @param mask_fname File path of NIFTI-format binary brain map
+#' @param inds Indicators of which L <= Q group ICs to include in template. If NULL,
+#'  use all Q original group ICs.
+#' @param scale Logical indicating whether BOLD data should be scaled by the
+#'  spatial standard deviation before template estimation.
+#' @param verbose If TRUE, display progress updates
+#' @param out_fname The path and base name prefix of the NIFTI files to write.
+#' Will be appended with "_mean.nii" for template mean maps and "_var.nii" for
+#' template variance maps.
+#'
+#' @return List of two elements: template mean of class nifti and template variance of class nifti
+#' @export
+#' @importFrom oro.nifti readNIfTI writeNIfTI
+#' @importFrom matrixStats rowVars
+estimate_template.nifti <- function(
+  nifti_fnames,
+  nifti_fnames2=NULL,
+  GICA_fname,
+  mask_fname,
+  inds=NULL,
+  scale=TRUE,
+  verbose=TRUE,
+  out_fname=NULL){
+
+  # Check arguments.
+  if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
+
+  # Read GICA result
+  if(verbose) cat('\n Reading in GICA result')
+  GICA <- readNIfTI(GICA_fname, reorient = FALSE)
+  mask2 <- mask <- readNIfTI(mask_fname, reorient = FALSE)
+  dims <- dim(mask)
+  vals <- sort(unique(as.vector(mask)))
+  if(any(!(vals %in% c(0,1)))) stop('Mask must be binary.')
+  V <- sum(mask)
+  Q <- dim(GICA)[4]
+  if(any(dim(GICA)[-4] != dims)) stop('GICA dims and mask dims do not match')
+  GICA_mat <- matrix(NA, V, Q)
+  for(q in 1:Q){
+    GICA_mat[,q] <- GICA[,,,q][mask==1]
+  }
+
+  # Center each IC map.
+  GICA_mat <- scale(GICA_mat, scale=FALSE)
+
+  if(verbose){
+    cat(paste0('\n Number of data locations: ',V))
+    cat(paste0('\n Number of original group ICs: ',Q))
+  }
+
+  L <- Q
+  if(!is.null(inds)){
+    if(any(!(inds %in% 1:Q))) stop('Invalid entries in inds argument.')
+    L <- length(inds)
+  } else {
+    inds <- 1:Q
+  }
+
+  N <- length(nifti_fnames)
+
+  if(verbose){
+    cat(paste0('\n Number of template ICs: ',L))
+    cat(paste0('\n Number of training subjects: ',N))
+  }
+
+  if(!is.null(nifti_fnames2)) retest <- TRUE else retest <- FALSE
+  if(retest){
+    if(length(nifti_fnames) != length(nifti_fnames2)) stop('If provided, nifti_fnames2 must have same length as nifti_fnames and be in the same subject order.')
+  }
+
+  # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
+  DR1 <- DR2 <- array(NA, dim=c(N, L, V))
+  missing_data <- NULL
+  ntime_vec <- c()
+  for(ii in 1:N){
+
+    ### READ IN BOLD DATA AND PERFORM DUAL REGRESSION
+
+    if(verbose) cat(paste0('\n Reading in data for subject ',ii,' of ',N))
+
+    #read in BOLD
+    fname_ii <- nifti_fnames[ii]
+    if(!file.exists(fname_ii)) {
+      missing_data <- c(missing_data, fname_ii)
+      if(verbose) cat(paste0('\n Data not available'))
+      next
+    }
+    BOLD1_ii <- readNIfTI(fname_ii, reorient = TRUE)
+    ntime <- dim(BOLD1_ii)[4]
+    if(any(dim(BOLD1_ii)[-4] != dims)) stop('BOLD dims and mask dims do not match')
+    ntime_vec <- c(ntime_vec, ntime)
+    if(length(ntime_vec)>2){
+      if(var(ntime_vec) > 0) stop('All BOLD timeseries should have the same duration')
+    }
+
+    BOLD1_ii_mat <- matrix(NA, V, ntime)
+    for(t in 1:ntime){
+      BOLD1_ii_mat[,t] <- BOLD1_ii[,,,t][mask2==1]
+    }
+
+    if(nrow(BOLD1_ii_mat) != nrow(GICA_mat)) stop(paste0('The number of data locations in GICA and BOLD timeseries data from subject ',ii,' do not match.'))
+    rm(BOLD1_ii)
+
+    #read in BOLD retest data OR create pseudo test-retest data
+    if(!retest){
+      part1 <- 1:round(ntime/2)
+      part2 <- setdiff(1:ntime, part1)
+      BOLD2_ii_mat <- BOLD1_ii_mat[,part2]
+      BOLD1_ii_mat <- BOLD1_ii_mat[,part1]
+    } else {
+      #read in BOLD from retest
+      fname_ii <- nifti_fnames2[ii]
+      if(!file.exists(fname_ii)) {
+        missing_data <- c(missing_data, fname_ii)
+        if(verbose) cat(paste0('\n Data not available'))
+        next
+      }
+      BOLD2_ii <- readNIfTI(fname_ii, reorient = TRUE)
+      if(any(dim(BOLD2_ii)[-4] != dims)) stop('Retest BOLD dims and mask dims do not match')
+      if(dim(BOLD2_ii)[4] != ntime) stop('Retest BOLD data has different duration from first session.')
+      BOLD2_ii_mat <- matrix(NA, V, ntime)
+      for(t in 1:ntime){
+        BOLD2_ii_mat[,t] <- BOLD2_ii[,,,t][mask2==1]
+      }
+      rm(BOLD2_ii)
+      if(nrow(BOLD2_ii_mat) != nrow(GICA_mat)) stop(paste0('The number of data locations in GICA and BOLD retest timeseries data from subject ',ii,' do not match.'))
+    }
+
+    flat_vox <- ((rowVars(BOLD1_ii_mat)==0) | (rowVars(BOLD2_ii_mat)==0))
+    if(sum(flat_vox)>0) {
+      warning(paste0(sum(flat_vox), ' flat voxels detected. Removing these from the mask for this and future subjects. Updated mask will be returned with estimated templates.'))
+      mask2[mask2==1] <- (!flat_vox)
+      GICA_mat <- GICA_mat[!flat_vox,]
+      BOLD1_ii_mat <- BOLD1_ii_mat[!flat_vox,]
+      BOLD2_ii_mat <- BOLD2_ii_mat[!flat_vox,]
+      DR1 <- DR1[,,!flat_vox]
+      DR2 <- DR2[,,!flat_vox]
+      V <- sum(mask2)
+    }
+
+    #perform dual regression on test and retest data
+    DR1_ii <- dual_reg(BOLD1_ii_mat, GICA_mat, scale=scale)$S
+    DR2_ii <- dual_reg(BOLD2_ii_mat, GICA_mat, scale=scale)$S
+    DR1[ii,,] <- DR1_ii[inds,]
+    DR2[ii,,] <- DR2_ii[inds,]
+  }
+
+  cat(paste0('Total number of voxels in updated mask: ', V, '\n'))
+
+  # ESTIMATE MEAN
+
+  if(verbose) cat('\n Estimating Template Mean')
+  mean1 <- apply(DR1, c(2,3), mean, na.rm=TRUE)
+  mean2 <- apply(DR2, c(2,3), mean, na.rm=TRUE)
+  template_mean <- t((mean1 + mean2)/2)
+
+  # ESTIMATE SIGNAL (BETWEEN-SUBJECT) VARIANCE
+
+  # total variance
+  if(verbose) cat('\n Estimating Total Variance')
+  var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
+  var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
+  var_tot <- t((var_tot1 + var_tot2)/2)
+
+  # noise (within-subject) variance
+  if(verbose) cat('\n Estimating Within-Subject Variance')
+  DR_diff = DR1 - DR2;
+  var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
+
+  # signal (between-subject) variance
+  if(verbose) cat('\n Estimating Template (Between-Subject) Variance')
+  template_var <- var_tot - var_noise
+  template_var[template_var < 0] <- 0
+
+  rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
+
+  if(!is.null(out_fname)){
+    out_fname_mean <- paste0(out_fname, '_mean')
+    out_fname_var <- paste0(out_fname, '_var')
+    template_mean_nifti <- template_var_nifti <- GICA #copy over header information from GICA
+    img_tmp <- mask2
+    for(l in 1:L){
+      img_tmp[mask2==1] <- template_mean[,l]
+      template_mean_nifti[,,,l] <- img_tmp
+      img_tmp[mask2==1] <- template_var[,l]
+      template_var_nifti[,,,l] <- img_tmp
+    }
+    writeNIfTI(template_mean_nifti, out_fname_mean)
+    writeNIfTI(template_var_nifti, out_fname_var)
+    writeNIfTI(mask2, 'mask2')
+  }
+
+  result <- list(template_mean=template_mean, template_var=template_var, scale=scale, mask=mask, mask2=mask2)
+  class(result) <- 'template.nifti'
+  return(result)
+}
+
+
 

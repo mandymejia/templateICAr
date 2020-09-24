@@ -143,17 +143,17 @@ EM_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, t
   ### Compute final posterior mean of subject ICs
   if(verbose) cat('Computing final posterior mean of subject ICs \n')
   MAP <- UpdateTheta_diagnosticICA.spatial(template_mean,
-                                                   template_var,
-                                                   meshes,
-                                                   BOLD,
-                                                   theta,
-                                                   C_diag,
-                                                   s0_vec_list,
-                                                   D_list,
-                                                   Dinv_s0_list,
-                                                   verbose=verbose,
-                                                   return_MAP=TRUE,
-                                                   ignore_determinant=TRUE)
+                                           template_var,
+                                           meshes,
+                                           BOLD,
+                                           theta,
+                                           C_diag,
+                                           s0_vec_list,
+                                           D_list,
+                                           Dinv_s0_list,
+                                           verbose=verbose,
+                                           return_MAP=TRUE,
+                                           ignore_determinant=TRUE)
 
 
   result <- list(group_probs = MAP$probs_z,
@@ -499,6 +499,7 @@ UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes
 
   if(update_kappa){
 
+    #1 min for L=16, V=8800
     if(verbose) cat('Updating kappa  \n')
     t00 <- Sys.time()
 
@@ -605,7 +606,7 @@ UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes
     #15 seconds for V=5246, L=16
     Amat <- bdiag(lapply(meshes, function(x) return(x$A)))
     system.time(kappa_opt <- optimize(LL2_kappa_diagnosticICA, lower=0, upper=5, maximum=TRUE,
-                          Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW, u=u_list, v=v_list, Q=L, pr_zy=pr_zy))
+                                      Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW, u=u_list, v=v_list, Q=L, pr_zy=pr_zy))
     LL2 <- kappa_opt$objective
     kappa_opt <- rep(kappa_opt$maximum, L)
 
@@ -903,15 +904,15 @@ LL2_kappa_diagnosticICA <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, 
 #' @return Vector of updated parameter values
 #'
 UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
-                                           template_mean,
-                                           template_var,
-                                           meshes,
-                                           BOLD,
-                                           C_diag,
-                                           s0_vec_list,
-                                           D_list,
-                                           Dinv_s0_list,
-                                           verbose){
+                                             template_mean,
+                                             template_var,
+                                             meshes,
+                                             BOLD,
+                                             C_diag,
+                                             s0_vec_list,
+                                             D_list,
+                                             Dinv_s0_list,
+                                             verbose){
 
   L = ncol(template_mean[[1]])
 
@@ -924,18 +925,18 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
   #update theta parameters
   if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
   theta_new = UpdateTheta_diagnosticICA.spatial(template_mean,
-                                    template_var,
-                                    meshes,
-                                    BOLD,
-                                    theta,
-                                    C_diag,
-                                    s0_vec_list,
-                                    D_list,
-                                    Dinv_s0_list,
-                                    verbose=verbose,
-                                    return_MAP=FALSE,
-                                    update='all',
-                                    ignore_determinant=TRUE)
+                                                template_var,
+                                                meshes,
+                                                BOLD,
+                                                theta,
+                                                C_diag,
+                                                s0_vec_list,
+                                                D_list,
+                                                Dinv_s0_list,
+                                                verbose=verbose,
+                                                return_MAP=FALSE,
+                                                update='all',
+                                                ignore_determinant=TRUE)
   #convert theta_new list to vector format
   #theta_new$A <- as.matrix(theta_new$A)
   theta_new_vec <- unlist(theta_new[1:2]) #everything but LL
@@ -959,15 +960,15 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 #' @return Negative log-likelihood given current values of parameters
 #'
 LL_SQUAREM_diagnosticICA <- function(theta_vec,
-                       template_mean,
-                       template_var,
-                       meshes,
-                       BOLD,
-                       C_diag,
-                       s0_vec_list,
-                       D_list,
-                       Dinv_s0_list,
-                       verbose){
+                                     template_mean,
+                                     template_var,
+                                     meshes,
+                                     BOLD,
+                                     C_diag,
+                                     s0_vec_list,
+                                     D_list,
+                                     Dinv_s0_list,
+                                     verbose){
 
   LL <- names(theta_vec)[1]
   #print(LL)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template.cifti}
 \alias{estimate_template.cifti}
-\title{Estimate Template for Template or Diagnostic ICA}
+\title{Estimate Template for Template or Diagnostic ICA based on CIFTI-format data}
 \usage{
 estimate_template.cifti(
   cifti_fnames,
@@ -49,5 +49,5 @@ template mean maps and "_var.dscalar.nii" for template variance maps.}
 List of two elements: template mean of class xifti and template variance of class xifti
 }
 \description{
-Estimate Template for Template or Diagnostic ICA
+Estimate Template for Template or Diagnostic ICA based on CIFTI-format data
 }
