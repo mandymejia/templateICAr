@@ -191,7 +191,7 @@ diagnosticICA.cifti <- function(cifti_fname,
       meshes[[2]] <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
     }
   } else {
-    mesh <- NULL
+    meshes <- NULL
   }
 
   # FORM DATA MATRIX

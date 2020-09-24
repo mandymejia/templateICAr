@@ -153,7 +153,7 @@ templateICA <- function(template_mean,
   H <- dat_list$H
   Hinv <- dat_list$H_inv
   C_diag <- dat_list$C_diag #in original model formulation nu^2 is separate, later became part of C
-  C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
+  if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
 
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
@@ -163,6 +163,7 @@ templateICA <- function(template_mean,
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
+  if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
 
   # #initialize residual variance
   # theta0$nu0_sq = dat_list$sigma_sq

@@ -199,21 +199,29 @@ estimate_template.cifti <- function(
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance
-  if(verbose) cat('\n Estimating Template (Between-Subject) Variance')
+  if(verbose) cat('\n Estimating Template (Between-Subject) Variance \n')
   template_var <- var_tot - var_noise
   template_var[template_var < 0] <- 0
 
   rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
 
   # Format template as "xifti"s
+
+  if(!("left" %in% brainstructures)) GICA <-ciftiTools:::remove_xifti(GICA, "cortex_left")
+  if(!("right" %in% brainstructures)) GICA <-ciftiTools:::remove_xifti(GICA, "cortex_right")
+  if(!("subcortical" %in% brainstructures))   GICA <-ciftiTools:::remove_xifti(GICA, "subcort")
+  GICA$meta$cifti$names <- GICA$meta$cifti$names[inds]
+
   xifti_mean <- xifti_var <- GICA
   if ("left" %in% brainstructures) {
     xifti_mean$data$cortex_left <- template_mean[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
     xifti_var$data$cortex_left <- template_var[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
+    #xifti_noisevar$data$cortex_left <- var_noise[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
   }
   if ("right" %in% brainstructures) {
     xifti_mean$data$cortex_right <- template_mean[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
     xifti_var$data$cortex_right <- template_var[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
+    #xifti_noisevar$data$cortex_right <- var_noise[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
   }
   if ("subcortical" %in% brainstructures) {
     xifti_mean$data$subcort <- template_mean[flat_bs_labs[flat_bs_mask]=="subcortical",, drop=FALSE]
@@ -227,7 +235,7 @@ estimate_template.cifti <- function(
     write_cifti(xifti_var, out_fname_var, verbose=verbose)
   }
 
-  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale)
+  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
   class(result) <- 'template.cifti'
   return(result)
 }
@@ -410,7 +418,7 @@ estimate_template.nifti <- function(
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance
-  if(verbose) cat('\n Estimating Template (Between-Subject) Variance')
+  if(verbose) cat('\n Estimating Template (Between-Subject) Variance \n')
   template_var <- var_tot - var_noise
   template_var[template_var < 0] <- 0
 
@@ -419,20 +427,22 @@ estimate_template.nifti <- function(
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean')
     out_fname_var <- paste0(out_fname, '_var')
+    GICA@.Data <- GICA@.Data[,,,inds] #remove non-template ICs
+    GICA@dim_[5] <- length(inds)
     template_mean_nifti <- template_var_nifti <- GICA #copy over header information from GICA
     img_tmp <- mask2
     for(l in 1:L){
       img_tmp[mask2==1] <- template_mean[,l]
-      template_mean_nifti[,,,l] <- img_tmp
+      template_mean_nifti@.Data[,,,l] <- img_tmp
       img_tmp[mask2==1] <- template_var[,l]
-      template_var_nifti[,,,l] <- img_tmp
+      template_var_nifti@.Data[,,,l] <- img_tmp
     }
     writeNIfTI(template_mean_nifti, out_fname_mean)
     writeNIfTI(template_var_nifti, out_fname_var)
     writeNIfTI(mask2, 'mask2')
   }
 
-  result <- list(template_mean=template_mean, template_var=template_var, scale=scale, mask=mask, mask2=mask2)
+  result <- list(template_mean=template_mean, template_var=template_var, scale=scale, mask=mask, mask2=mask2, inds=inds)
   class(result) <- 'template.nifti'
   return(result)
 }

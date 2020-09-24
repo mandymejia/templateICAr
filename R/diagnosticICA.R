@@ -30,7 +30,9 @@ diagnosticICA <- function(template_mean,
                         verbose=TRUE,
                         kappa_init=0.5){
 
-  if(!is.null(meshes)){
+  do_spatial <- !is.null(meshes)
+
+  if(do_spatial){
     flag <- inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
     inla.setOption(smtp='pardiso')
@@ -47,13 +49,15 @@ diagnosticICA <- function(template_mean,
   L <- ncol(template_mean[[1]]) #number of ICs
 
   #check dimensionality of mesh projection matrices
-  nmesh <- nvox2 <- 0
-  for(k in 1:length(meshes)){
-    Amat <- meshes[[k]]$A # n_orig x n_mesh matrix
-    nmesh <- nmesh + ncol(Amat)
-    nvox2 <- nvox2 + nrow(Amat)
+  if(do_spatial){
+    nmesh <- nvox2 <- 0
+    for(k in 1:length(meshes)){
+      Amat <- meshes[[k]]$A # n_orig x n_mesh matrix
+      nmesh <- nmesh + ncol(Amat)
+      nvox2 <- nvox2 + nrow(Amat)
+    }
+    if(nvox2 != nvox) stop('Mesh projection matrices (mesh$A) must have a total of nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
   }
-  if(nvox2 != nvox) stop('Mesh projection matrices (mesh$A) must have a total of nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
 
 
   if(verbose) cat(paste0('Length of timeseries: T = ',ntime,'\n'))
@@ -74,7 +78,6 @@ diagnosticICA <- function(template_mean,
   if(L > ntime) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
 
   #check that the supplied mesh object is of type templateICA_mesh
-  do_spatial <- !is.null(meshes)
   if(do_spatial){
     if(verbose) cat('Fitting a spatial model based on the meshes provided.  Note that computation time and memory demands may be high.')
     if(any(sapply(meshes, class) != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
