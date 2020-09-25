@@ -138,7 +138,7 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   }
 
-  # DELETE THIS WITH ciftiTools version 1.5, which will hopefully result in the same medial wall for BOLD and the templates
+  # DELETE THIS WITH ciftiTools version 1.5, which will hopefully result in the same medial wall for BOLD and the templates (only a problem with resampling)
   ntime <- ncol(BOLD_cifti$data$cortex_left)
   #left cortex
   dat_all <- matrix(NA, nrow=length(locs_left), ncol=ntime)
@@ -217,17 +217,17 @@ diagnosticICA.cifti <- function(cifti_fname,
     }
   }
 
-    # CALL DIAGNOSTIC ICA FUNCTION
-    result <- diagnosticICA(template_mean = template_mean_mat,
-                              template_var = template_var_mat,
-                              BOLD = BOLD_mat,
-                              scale = scale,
-                              meshes = meshes,
-                              maxQ = maxQ,
-                              maxiter = maxiter,
-                              epsilon = epsilon,
-                              verbose = verbose,
-                              kappa_init = kappa_init)
+  # CALL DIAGNOSTIC ICA FUNCTION
+  result <- diagnosticICA(template_mean = template_mean_mat,
+                            template_var = template_var_mat,
+                            BOLD = BOLD_mat,
+                            scale = scale,
+                            meshes = meshes,
+                            maxQ = maxQ,
+                            maxiter = maxiter,
+                            epsilon = epsilon,
+                            verbose = verbose,
+                            kappa_init = kappa_init)
 
   #HERE (BELOW IS FOR SINGLE MODEL.  ACTUALLY FOR SPATIAL MODEL NEED TO GENERALIZE ABOVE TO SINGLE MODEL.)
 

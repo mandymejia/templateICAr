@@ -651,7 +651,7 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, BO
 
     #exp_part1 <- L*nvox*log(2*pi)
     exp_part1 <- 0 #irrelevant as long as noninformative prior on z=g
-    exp_part2 <- sum(log(template_var[[g]])) #sum over v,ell
+    exp_part2 <- 0 #sum(log(template_var[[g]])) #sum over v,ell
 
     exp_part3 <- 0
     for(v in 1:nvox){

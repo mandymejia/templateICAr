@@ -195,7 +195,14 @@ diagnosticICA <- function(template_mean,
   #NON-SPATIAL DIAGNOSTIC ICA
 
   if(verbose) cat('INITIATING WITH STANDARD DIAGNOSTIC ICA\n')
-  resultEM <- EM_diagnosticICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
+  resultEM <- EM_diagnosticICA.independent(template_mean,
+                                           template_var,
+                                           BOLD=BOLD4,
+                                           theta0=theta0,
+                                           C_diag=C_diag,
+                                           maxiter=maxiter,
+                                           epsilon=epsilon,
+                                           verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'dICA'
 

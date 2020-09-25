@@ -37,7 +37,7 @@ estimate_template.cifti <- function(
 
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
-  brainstructures <- ciftiTools:::match_input(
+  brainstructures <- match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
