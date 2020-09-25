@@ -3,6 +3,7 @@
 export(activations)
 export(diagnosticICA)
 export(diagnosticICA.cifti)
+export(diagnosticICA.nifti)
 export(dim_reduce)
 export(dual_reg)
 export(estimate_template.cifti)
