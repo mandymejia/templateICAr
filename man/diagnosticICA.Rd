@@ -10,6 +10,7 @@ diagnosticICA(
   BOLD,
   scale = TRUE,
   meshes = NULL,
+  Q2 = NULL,
   maxQ = NULL,
   maxiter = 100,
   epsilon = 0.01,
@@ -28,7 +29,9 @@ diagnosticICA(
 
 \item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 

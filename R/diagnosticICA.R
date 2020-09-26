@@ -5,7 +5,8 @@
 #' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
+#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
@@ -24,6 +25,7 @@ diagnosticICA <- function(template_mean,
                         BOLD,
                         scale=TRUE,
                         meshes=NULL,
+                        Q2 = NULL,
                         maxQ=NULL,
                         maxiter=100,
                         epsilon=0.01,
@@ -144,22 +146,24 @@ diagnosticICA <- function(template_mean,
     #iii. ESTIMATE THE NUMBER OF REMAINING ICS
     #pesel function expects nxp data and will determine asymptotic framework
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
-    if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-    pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homo')
-    Q2_hat <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
-    if(verbose) cat(paste0(Q2_hat,'\n'))
+    if(is.null(Q2)){
+      if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
+      pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homo')
+      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+      if(verbose) cat(paste0(Q2,'\n'))
+    }
 
     #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
-    #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2_hat,' NUISANCE COMPONENTS\n'))
-    #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2_hat, center=TRUE)
+    #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2,' NUISANCE COMPONENTS\n'))
+    #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2, center=TRUE)
     #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
 
     #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
     #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
     #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
-    svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2_hat, nv=0)
-    vmat <- diag(1/svd_BOLD2$d[1:Q2_hat]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
-    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2_hat]) %*% vmat
+    svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2, nv=0)
+    vmat <- diag(1/svd_BOLD2$d[1:Q2]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
+    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
 
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
     BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs

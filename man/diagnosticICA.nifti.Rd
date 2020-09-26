@@ -19,7 +19,7 @@ diagnosticICA.nifti(
 \item{nifti_fname}{File path of NIFTI BOLD timeseries data}
 
 \item{templates}{Set of templates, each the result of call to \code{estimate_template.nifti()}
-(one template for each group). A list of objects of class \code{template.nifti}.}
+(one template for each group). Either a list of objects of class \code{template.nifti}.}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}

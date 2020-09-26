@@ -192,13 +192,26 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
     }
   }
 
+  #make the group template variances equal (to avoid misclassification when one group has much larger variance)
+  template_var_max <- template_var[[1]]
+  for(g in 2:G){
+    template_var_diff <- template_var[[g]] - template_var_max
+    template_var_diff[template_var_diff < 0] <- 0 #places where max is already greater, do not change
+    template_var_max <- template_var_max + template_var_diff #places where max is not greater, add to max
+  }
+  template_var_max[template_var_max < 1e-6] <- 1e-6
+  for(g in 1:G){
+    template_var[[g]] <- template_var_max
+  }
+
+
   err = 1000 #large initial value for difference between iterations
   while(err > epsilon){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
 
     t00 <- Sys.time()
-    theta_new = UpdateTheta_diagnosticICA.independent(template_mean, template_var, BOLD, theta, C_diag, return_MAP=FALSE, verbose=verbose)
+    theta_new = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=verbose)
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
@@ -220,7 +233,7 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
     }
   }
 
-  MAP = UpdateTheta_diagnosticICA.independent(template_mean, template_var, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
+  MAP = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
 
   result <- list(group_probs = MAP$group_probs,
                  subjICmean=MAP$ICmean,
@@ -245,6 +258,7 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
 #'
 #' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G
 #' @param template_var (A list of G matrices, each VxL) template variance estimates for each group 1 to G
+#' @param template_var_max The maximum of the template variance across group
 #' @param BOLD  (VxL matrix) dimension-reduced fMRI data
 #' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)
 #' @param theta (list) current parameter estimates
@@ -623,7 +637,7 @@ UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes
 
 }
 #' @rdname UpdateTheta_diagnosticICA
-UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
+UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
   L <- ncol(BOLD)
   nvox <- nrow(BOLD)
@@ -661,7 +675,8 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, BO
 
       #mean and cov of y(v)|z
       mu_yz_v <- A %*% s0_gv
-      Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
+      #Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
+      Sigma_yz_v <- A %*% diag(template_var_max[v,]) %*% t(A) + C
 
       exp_part3_v <- t(y_v - mu_yz_v) %*% solve(Sigma_yz_v) %*% (y_v - mu_yz_v)
       exp_part3 <- exp_part3 + exp_part3_v

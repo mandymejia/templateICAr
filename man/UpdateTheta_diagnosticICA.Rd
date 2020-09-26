@@ -25,6 +25,7 @@ UpdateTheta_diagnosticICA.spatial(
 UpdateTheta_diagnosticICA.independent(
   template_mean,
   template_var,
+  template_var_max,
   BOLD,
   theta,
   C_diag,
@@ -58,6 +59,8 @@ UpdateTheta_diagnosticICA.independent(
 \item{update}{Which parameters to update. Either "all", "A" or "kappa".}
 
 \item{ignore_determinant}{For spatial model only. If TRUE, ignore the normalizing constant in p(y|z) when computing posterior probabilities of z.}
+
+\item{template_var_max}{The maximum of the template variance across group}
 }
 \value{
 An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields and posterior probabilities of group membership
