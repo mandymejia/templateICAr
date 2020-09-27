@@ -200,9 +200,20 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
     template_var_max <- template_var_max + template_var_diff #places where max is not greater, add to max
   }
   template_var_max[template_var_max < 1e-6] <- 1e-6
-  for(g in 1:G){
-    template_var[[g]] <- template_var_max
-  }
+  # for(g in 1:G){
+  #   template_var[[g]] <- template_var_max
+  # }
+
+  #get initial estimates of S to update pr_z
+  MAP1 = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
+  dist1 <- colSums((MAP1$ICmean - template_mean[[1]])^2/(template_var_max))
+  dist2 <- colSums((MAP1$ICmean - template_mean[[2]])^2/(template_var_max))
+  #for 2 groups only:
+  pr1 <- mean(dist1<dist2)
+  pr2 <- 1-pr1
+  pr_z = c(pr1, pr2)
+  theta$pr_z <- pr_z
+  print(paste0('Updated Initial Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
 
 
   err = 1000 #large initial value for difference between iterations
@@ -218,10 +229,16 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
 
     A_old = theta$A
     A_new = theta_new$A
+    pr_old = theta$pr_z[1]
+    pr_new = theta$pr_z[1]
     #2-norm = largest eigenvalue = sqrt of largest eigenvalue of AA'
     err = norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
+    err2 = (pr_new - pr_old)/pr_old
     change = format(err, digits=3, nsmall=3)
+    change2 = format(err2, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change,' for A\n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change2,' for pr1\n'))
+    err = max(err, err2)
 
     ### Move to next iteration
     theta <- theta_new
@@ -657,39 +674,39 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
   ### POSTERIOR PROBABILITIES OF z
   ##########################################
 
-  if(verbose) cat('Computing posterior probabilities of z (group membership) \n')
-
-  exp_part <- rep(NA, G)
-  pr_zy <- rep(NA, G)
-  for(g in 1:G){
-
-    #exp_part1 <- L*nvox*log(2*pi)
-    exp_part1 <- 0 #irrelevant as long as noninformative prior on z=g
-    exp_part2 <- 0 #sum(log(template_var[[g]])) #sum over v,ell
-
-    exp_part3 <- 0
-    for(v in 1:nvox){
-
-      y_v = BOLD[v,]
-      s0_gv = template_mean[[g]][v,]
-
-      #mean and cov of y(v)|z
-      mu_yz_v <- A %*% s0_gv
-      #Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
-      Sigma_yz_v <- A %*% diag(template_var_max[v,]) %*% t(A) + C
-
-      exp_part3_v <- t(y_v - mu_yz_v) %*% solve(Sigma_yz_v) %*% (y_v - mu_yz_v)
-      exp_part3 <- exp_part3 + exp_part3_v
-
-    }
-
-    exp_part[g] <- -0.5 * (exp_part1 + exp_part2 + exp_part3[1])
-  }
-
-  for(g in 1:G){
-    pr_zy_inv_g <- sum(exp(exp_part-exp_part[g])) # ( (e^M1 + e^M2 + e^M3) / e^M1 ) = e^(M1-M1) + e^(M2-M1) + e^(M3-M1) = 1 + e^(M2-M1) + e^(M3-M1)  <-- If any e^(Mk-Mg) Inf, the inverse will be zero so p(z=g|y)=0
-    pr_zy[g] <- 1/pr_zy_inv_g
-  }
+  # if(verbose) cat('Computing posterior probabilities of z (group membership) \n')
+  #
+  # exp_part <- rep(NA, G)
+  # pr_zy <- rep(NA, G)
+  # for(g in 1:G){
+  #
+  #   #exp_part1 <- L*nvox*log(2*pi)
+  #   exp_part1 <- 0 #irrelevant as long as noninformative prior on z=g
+  #   exp_part2 <- 0 #sum(log(template_var[[g]])) #sum over v,ell
+  #
+  #   exp_part3 <- 0
+  #   for(v in 1:nvox){
+  #
+  #     y_v = BOLD[v,]
+  #     s0_gv = template_mean[[g]][v,]
+  #
+  #     #mean and cov of y(v)|z
+  #     mu_yz_v <- A %*% s0_gv
+  #     #Sigma_yz_v <- A %*% diag(template_var[[g]][v,]) %*% t(A) + C
+  #     Sigma_yz_v <- A %*% diag(template_var_max[v,]) %*% t(A) + C
+  #
+  #     exp_part3_v <- t(y_v - mu_yz_v) %*% solve(Sigma_yz_v) %*% (y_v - mu_yz_v)
+  #     exp_part3 <- exp_part3 + exp_part3_v
+  #
+  #   }
+  #
+  #   exp_part[g] <- -0.5 * (exp_part1 + exp_part2 + exp_part3[1])
+  # }
+  #
+  # for(g in 1:G){
+  #   pr_zy_inv_g <- sum(exp(exp_part-exp_part[g])) # ( (e^M1 + e^M2 + e^M3) / e^M1 ) = e^(M1-M1) + e^(M2-M1) + e^(M3-M1) = 1 + e^(M2-M1) + e^(M3-M1)  <-- If any e^(Mk-Mg) Inf, the inverse will be zero so p(z=g|y)=0
+  #   pr_zy[g] <- 1/pr_zy_inv_g
+  # }
 
 
   # #randomly split locations into buckets to avoid infinite exponentials (this creates pseudo-independent observations)
@@ -740,11 +757,11 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
   # pr_zy <- colMeans(pr_zy_buckets)
   #
   #fix numerical issues with very small values (values very close to 1 are numerically equal to 1, while values very close to zero are not)
-  if(any(pr_zy==1)){
-    pr_zy[pr_zy!=1] <- 0
-  }
+  # if(any(pr_zy==1)){
+  #   pr_zy[pr_zy!=1] <- 0
+  # }
 
-  if(verbose) print(paste(round(pr_zy,3), collapse=','))
+  # if(verbose) print(paste(round(pr_zy,3), collapse=','))
 
   # if(is.infinite(exp(max(exp_part)-min(exp_part)))) {
   #   #this is for two groups, need to generalize for G>2
@@ -762,6 +779,9 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
   ### POSTERIOR MOMENTS OF s
   ##########################################
 
+  #instead of posterior probabilities of z, use MLE of group probabilities
+  pr_zy <- theta$pr_z
+
   if(verbose) cat('Computing posterior moments of s (IC maps) \n')
 
   mu_sy <- array(NA, dim=c(nvox,L))
@@ -773,6 +793,7 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
     mu_mut_sy_v <- Sigma_sy_v <- array(0, dim=c(L,L))
     for(g in 1:G){
 
+      if(pr_zy[g]==0) next
       D_gv_inv <- diag(1/template_var[[g]][v,])
       s0_gv <- template_mean[[g]][v,]
       Sigma_syz_gv <- solve(At_Cinv_A + D_gv_inv) #posterior covariance of s|z=g
@@ -794,7 +815,7 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
   #check whether mu_mut_sy = mu_sy %*% t(mu_sy) + Sigma_sy
 
   if(return_MAP){
-    result <- list(group_probs = pr_zy,
+    result <- list(#group_probs = pr_zy,
                    ICmean = mu_sy,
                    ICvar = var_sy)
     return(result)
@@ -822,10 +843,23 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
 
   A_hat = (A_part1 %*% solve(A_part2))
 
+  ##########################################
+  ### ESTIMATE OF PR_Z
+  ##########################################
+
+  dist1 <- colSums((mu_sy - template_mean[[1]])^2/(template_var_max))
+  dist2 <- colSums((mu_sy - template_mean[[2]])^2/(template_var_max))
+  #for 2 groups only:
+  pr1 <- mean(dist1<dist2)
+  pr2 <- 1-pr1
+  pr_z = c(pr1, pr2)
+  print(paste0('Updated Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
+
 
   # RETURN NEW PARAMETER ESTIMATES
 
   theta_new$A <- A_hat
+  theta_new$pr_z <- pr_z
   return(theta_new)
 }
 

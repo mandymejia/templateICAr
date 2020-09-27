@@ -194,6 +194,53 @@ diagnosticICA <- function(template_mean,
   theta00 <- theta0
   theta00$nu0_sq = dat_list$sigma_sq #required for template ICA
 
+  #temporary
+  S_DR <- t(dat_DR$S)
+  for(g in 1:G) {
+    num_smallvar <- sum(template_var[[g]] < 1e-6)
+    if(num_smallvar>0){
+      #if(verbose) cat(paste0('Setting ',num_smallvar,' (',round(100*num_smallvar/length(template_var[[g]]),1),'%) very small variance values in group ',g,' template to ',1e-6,'.\n'))
+      template_var[[g]][template_var[[g]] < 1e-6] = 1e-6 #to prevent problems when inverting covariance
+    }
+  }
+  template_var_max <- template_var[[1]]
+  for(g in 2:G){
+    template_var_diff <- template_var[[g]] - template_var_max
+    template_var_diff[template_var_diff < 0] <- 0 #places where max is already greater, do not change
+    template_var_max <- template_var_max + template_var_diff #places where max is not greater, add to max
+  }
+  template_var_max[template_var_max < 1e-6] <- 1e-6
+
+
+  #print('Distance using Group Templates')
+  #dist1 <- colSums((S_DR - template_mean[[1]])^2/(template_var[[1]]))
+  #dist2 <- colSums((S_DR - template_mean[[2]])^2/(template_var[[2]]))
+  #print(cbind(dist1, dist2, dist1<dist2))
+  #print(mean(dist1<dist2))
+  #print(sum(dist1) < sum(dist2))
+
+  print('Distance using Max Template Variance')
+  dist1 <- colSums((S_DR - template_mean[[1]])^2/(template_var_max))
+  dist2 <- colSums((S_DR - template_mean[[2]])^2/(template_var_max))
+  #print(cbind(dist1, dist2, dist1<dist2))
+  #print(mean(dist1<dist2))
+  #print(sum(dist1) < sum(dist2))
+  #for 2 groups only:
+  pr1 <- mean(dist1<dist2)
+  pr2 <- 1-pr1
+  pr_z = c(pr1, pr2)
+  print(paste0('Initial Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
+
+
+  #use pr_z as the starting value to get the first set of estimates of s
+  #to do that, could run the Update function with returnMAP=TRUE
+  #once we have a set of s estimates, use those to update the probability in the same way
+  #the probability is one of the parameters, so we should run the model till it and other parameters converge
+
+  theta0$pr_z <- pr_z
+
+  #end temporary code
+
   ### 4. RUN EM ALGORITHM!
 
   #NON-SPATIAL DIAGNOSTIC ICA
