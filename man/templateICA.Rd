@@ -10,6 +10,7 @@ templateICA(
   BOLD,
   scale = TRUE,
   mesh = NULL,
+  Q2 = NULL,
   maxQ = NULL,
   maxiter = 100,
   epsilon = 0.001,
@@ -29,7 +30,9 @@ templateICA(
 
 \item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 

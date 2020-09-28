@@ -219,7 +219,6 @@ diagnosticICA <- function(template_mean,
   #print(mean(dist1<dist2))
   #print(sum(dist1) < sum(dist2))
 
-  print('Distance using Max Template Variance')
   dist1 <- colSums((S_DR - template_mean[[1]])^2/(template_var_max))
   dist2 <- colSums((S_DR - template_mean[[2]])^2/(template_var_max))
   #print(cbind(dist1, dist2, dist1<dist2))
@@ -231,6 +230,7 @@ diagnosticICA <- function(template_mean,
   pr_z = c(pr1, pr2)
   print(paste0('Initial Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
 
+  #pr_z <- c(0.5, 0.5)
 
   #use pr_z as the starting value to get the first set of estimates of s
   #to do that, could run the Update function with returnMAP=TRUE

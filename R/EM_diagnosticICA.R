@@ -233,7 +233,7 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
     pr_new = theta$pr_z[1]
     #2-norm = largest eigenvalue = sqrt of largest eigenvalue of AA'
     err = norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
-    err2 = (pr_new - pr_old)
+    err2 = abs(pr_new - pr_old)
     change = format(err, digits=3, nsmall=3)
     change2 = format(err2, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change,' for A\n'))

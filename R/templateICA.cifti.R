@@ -24,7 +24,8 @@
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial
 #' standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
+#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
@@ -46,6 +47,7 @@ templateICA.cifti <- function(cifti_fname,
                               surfR_fname=NULL,
                               resamp_res=NULL,
                               scale=TRUE,
+                              Q2=NULL,
                               maxQ=NULL,
                               maxiter=100,
                               epsilon=0.001,
@@ -171,6 +173,7 @@ templateICA.cifti <- function(cifti_fname,
                               BOLD = BOLD_mat,
                               scale = scale,
                               mesh = mesh,
+                              Q2 = Q2,
                               maxQ=maxQ,
                               maxiter=maxiter,
                               epsilon=epsilon,
