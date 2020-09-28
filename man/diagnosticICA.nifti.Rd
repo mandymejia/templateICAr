@@ -8,6 +8,7 @@ diagnosticICA.nifti(
   nifti_fname,
   templates,
   scale = TRUE,
+  Q2 = NULL,
   maxQ = 100,
   maxiter = 100,
   epsilon = 0.01,
@@ -24,7 +25,9 @@ diagnosticICA.nifti(
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)}
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 

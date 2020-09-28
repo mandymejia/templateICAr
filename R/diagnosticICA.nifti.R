@@ -5,7 +5,8 @@
 #' (one template for each group). Either a list of objects of class \code{template.nifti}.
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial
 #' standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T)
+#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If TRUE, display progress of algorithm
@@ -21,13 +22,12 @@
 diagnosticICA.nifti <- function(nifti_fname,
                               templates,
                               scale=TRUE,
+                              Q2=NULL,
                               maxQ=100,
                               maxiter=100,
                               epsilon=0.01,
                               verbose=TRUE,
                               out_fname=NULL){
-
-  if (is.null(write_dir)) { write_dir <- getwd() }
 
   G <- length(templates)
   if(G>5) stop(paste0('Length of templates is ',G,' which is a large number of groups. Check that the templates argument is formatted correctly.'))
@@ -80,6 +80,7 @@ diagnosticICA.nifti <- function(nifti_fname,
                             template_var = template_var_mat,
                             BOLD = BOLD_mat,
                             scale = scale,
+                            Q2 = Q2,
                             maxQ = maxQ,
                             maxiter = maxiter,
                             epsilon = epsilon,
