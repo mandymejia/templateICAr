@@ -210,9 +210,10 @@ templateICA.cifti <- function(cifti_fname,
     }
   }
 
-    list(subjICmean_xifti = subjICmean_xifti,
-         subjICvar_xifti = subjICvar_xifti,
-         model_result = models_list)
-
+  list(
+    subjICmean_xifti = subjICmean_xifti,
+    subjICvar_xifti = subjICvar_xifti,
+    model_result = models_list
+  )
 }
 

@@ -387,7 +387,11 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
       active[,q] <- (pvals_adj[,q] < alpha)
     }
 
-    result <- list(active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat, vars = result$subjICvar, u = u, alpha = alpha, method_p = method_p, deviation=deviation)
+    result <- list(
+      active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat, 
+      vars = result$subjICvar, u = u, alpha = alpha, method_p = 
+      method_p, deviation=deviation
+    )
   }
 
   return(result)
