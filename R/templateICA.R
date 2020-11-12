@@ -49,7 +49,7 @@ templateICA <- function(template_mean,
   if(L > ntime) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
 
   #check that all arguments have consistent number of data locations (nvox) and ICs (L)
-  if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations (columns), but they do not.')
+  if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations, but they do not.')
   if(ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
 
   #check that the supplied mesh object is of type templateICA_mesh

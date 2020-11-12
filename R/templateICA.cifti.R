@@ -81,8 +81,7 @@ templateICA.cifti <- function(cifti_fname,
   }
 
   if(!spatial_model){
-    if(!is.null(resamp_res)) warning('Resampling only necessary for spatial modeling.  Setting resamp_res to NULL.')
-    resamp_res <- NULL
+    if(!is.null(resamp_res)) warning('Resampling typically only required for spatial modeling.  Recommend setting resamp_res to NULL.')
   }
 
   # GET TEMPLATE MEAN AND VARIANCE (xifti objects)
