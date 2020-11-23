@@ -69,14 +69,14 @@ templateICA <- function(template_mean,
 
   #check that maxQ makes sense
   if(!is.null(maxQ)){ if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number') }
-  if(is.null(maxQ)) maxQ <- ntime
+  if(is.null(maxQ)) maxQ <- round(ntime/2)
   if(maxQ < L){
     warning('maxQ must be at least L.  Setting maxQ=L.')
     maxQ <- L
   }
   if(maxQ > ntime){
-    warning('maxQ must be no more than T.  Setting maxQ = T.')
-    maxQ <- ntime
+    warning('maxQ must be no more than T.  Setting maxQ to 75% of T.')
+    maxQ <- round(ntime*0.75)
   }
 
   if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
@@ -178,7 +178,9 @@ templateICA <- function(template_mean,
 
   #TEMPLATE ICA
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta0, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
+  theta00 <- theta0
+  theta00$nu0_sq = dat_list$sigma_sq
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta00, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 
@@ -388,8 +390,8 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     }
 
     result <- list(
-      active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat, 
-      vars = result$subjICvar, u = u, alpha = alpha, method_p = 
+      active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat,
+      vars = result$subjICvar, u = u, alpha = alpha, method_p =
       method_p, deviation=deviation
     )
   }
