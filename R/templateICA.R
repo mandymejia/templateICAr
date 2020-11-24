@@ -75,7 +75,7 @@ templateICA <- function(template_mean,
     maxQ <- L
   }
   if(maxQ > ntime){
-    warning('maxQ must be no more than T.  Setting maxQ to 75% of T.')
+    warning('maxQ must be less than T.  Setting maxQ to 75% of T.')
     maxQ <- round(ntime*0.75)
   }
 
@@ -180,7 +180,7 @@ templateICA <- function(template_mean,
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
   theta00 <- theta0
   theta00$nu0_sq = dat_list$sigma_sq
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta00, C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
+  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta00, C_diag=dat_list$C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 

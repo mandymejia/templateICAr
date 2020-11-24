@@ -53,7 +53,7 @@ templateICA.cifti <- function(cifti_fname,
                               epsilon=0.001,
                               verbose=TRUE,
                               common_smoothness=TRUE,
-                              kappa_init=NULL,
+                              kappa_init=0.5,
                               write_dir=NULL){
 
   if (is.null(write_dir)) { write_dir <- getwd() }

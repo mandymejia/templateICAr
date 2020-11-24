@@ -72,8 +72,7 @@ match_input <- function(
 #'
 #' @description Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
 #'
-#' @param log_kappa Log of value of kappa at which to compute log likelihood
-#' @param log_var Log of value of residual variance at which to compute log likelihood
+#' @param par Vector of length two containing values of log kappa and log residual variance at which to compute log likelihood
 #' @param delta Estimate of delta (subject effect or deviation)
 #' @param D_diag Diagonal values of D matrix (template standard deviations)
 #' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)
@@ -83,12 +82,12 @@ match_input <- function(
 #' @return Value of negative log likelihood
 #' @import Matrix
 #'
-loglik_kappa_est <- function(log_kappa, log_var, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
+loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
-  #kappa <- exp(par[1]) #log kappa -> kappa
-  #sigma_sq <- exp(par[2]) #log variance -> variance
-  kappa <- exp(log_kappa)
-  sigma_sq <- exp(log_var)
+  kappa <- exp(par[1]) #log kappa -> kappa
+  sigma_sq <- exp(par[2]) #log variance -> variance
+  #kappa <- exp(log_kappa)
+  #sigma_sq <- exp(log_var)
 
   Dmat = Diagonal(length(D_diag), as.vector(D_diag)) #VxV or QVxQV
   delta = as.vector(delta) #on data locations #length = V
