@@ -35,6 +35,9 @@ estimate_template.cifti <- function(
   verbose=TRUE,
   out_fname=NULL){
 
+  #TO DOs:
+  # Create function to print and check template, template.cifti and template.nifti objects
+
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
   brainstructures <- match_input(
