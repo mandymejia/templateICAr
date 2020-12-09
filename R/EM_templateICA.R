@@ -53,90 +53,90 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   D = Diagonal(nvox*Q, D_vec)
   Dinv_s0 <- inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve')
 
-  ### REFINE STARTING VALUE FOR KAPPA
-
-  if(verbose) cat('Refining starting value for kappa \n')
-
-  # Determine direction of change:
-  # Positive change --> search for kappa_max, set kappa_min to kappa1.
-  # Negative change --> search for kappa_min, set kappa_max to kappa1.
-  kappa_min <- kappa_max <- theta0$kappa[1]
-  theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
-  kappa_diff0 <- theta1$kappa[1] - theta0$kappa[1]
-  theta <- theta0
-
-  kappa_diff <- kappa_diff0
-  if(kappa_diff0 < 0){
-
-    if(verbose) cat('...Kappa decreasing, finding lower bound for kappa search \n ')
-
-    kappa_min <- kappa_min/2
-    while(kappa_diff < 0){
-      if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
-      theta$kappa <- rep(kappa_min, Q)
-      theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
-      kappa_diff <- theta1$kappa[1] - theta$kappa[1]
-      if(kappa_diff > 0) {
-        #set minimum and stop here
-        kappa_min <- theta1$kappa[1]
-        break
-      } else {
-        #set new value for kappa
-        kappa_min <- kappa_min/2
-      }
-    }
-  } else if(kappa_diff0 > 0){
-
-    if(verbose) cat('...Kappa increasing, finding upper bound for kappa search \n ')
-
-    kappa_max <- kappa_max*2
-    while(kappa_diff > 0){
-      if(verbose) cat(paste0('... testing kappa = ',round(kappa_max, 3),'\n '))
-      theta$kappa <- rep(kappa_max, Q)
-      theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
-      kappa_diff <- theta1$kappa[1] - theta$kappa[1]
-      if(kappa_diff < 0) {
-        #set maximum and stop here
-        kappa_max <- theta1$kappa[1]
-        break
-      } else {
-        #set new value for kappa
-        kappa_max <- kappa_max*2
-      }
-    }
-  }
-
-  #use binary search until convergence
-  if(verbose) cat('...Starting binary search for starting value of kappa \n ')
-  kappa_test <- (kappa_min + kappa_max)/2
-  kappa_change <- 1
-  while(kappa_change > epsilon){
-    if(verbose) cat(paste0('... testing kappa = ',round(kappa_test, 3),'\n '))
-    theta$kappa <- rep(kappa_test, Q)
-    theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
-    kappa_diff <- theta1$kappa[1] - theta$kappa[1] #which direction is the estimate of kappa moving in?
-    if(kappa_diff > 0) {
-      kappa_min <- theta1$kappa[1]  #reset minimum to current value
-      kappa_test <- (theta1$kappa[1] + kappa_max)/2 #go halfway to max
-    } else {
-      kappa_max <- theta1$kappa[1]  #reset maximum to current value
-      kappa_test <- (theta1$kappa[1] + kappa_min)/2 #go halfway to min
-    }
-
-    #how much different is the next value of kappa to be tested versus the current one?
-    kappa_change <- abs((kappa_test - theta1$kappa[1])/theta1$kappa[1])
-  }
+  # ### REFINE STARTING VALUE FOR KAPPA
+  #
+  # if(verbose) cat('Refining starting value for kappa \n')
+  #
+  # # Determine direction of change:
+  # # Positive change --> search for kappa_max, set kappa_min to kappa1.
+  # # Negative change --> search for kappa_min, set kappa_max to kappa1.
+  # kappa_min <- kappa_max <- theta0$kappa[1]
+  # theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta0, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
+  # kappa_diff0 <- theta1$kappa[1] - theta0$kappa[1]
+  # theta <- theta0
+  #
+  # kappa_diff <- kappa_diff0
+  # if(kappa_diff0 < 0){
+  #
+  #   if(verbose) cat('...Kappa decreasing, finding lower bound for kappa search \n ')
+  #
+  #   kappa_min <- kappa_min/2
+  #   while(kappa_diff < 0){
+  #     if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
+  #     theta$kappa <- rep(kappa_min, Q)
+  #     theta1 <- templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
+  #     kappa_diff <- theta1$kappa[1] - theta$kappa[1]
+  #     if(kappa_diff > 0) {
+  #       #set minimum and stop here
+  #       kappa_min <- theta1$kappa[1]
+  #       break
+  #     } else {
+  #       #set new value for kappa
+  #       kappa_min <- kappa_min/2
+  #     }
+  #   }
+  # } else if(kappa_diff0 > 0){
+  #
+  #   if(verbose) cat('...Kappa increasing, finding upper bound for kappa search \n ')
+  #
+  #   kappa_max <- kappa_max*2
+  #   while(kappa_diff > 0){
+  #     if(verbose) cat(paste0('... testing kappa = ',round(kappa_max, 3),'\n '))
+  #     theta$kappa <- rep(kappa_max, Q)
+  #     theta1 <-  templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
+  #     kappa_diff <- theta1$kappa[1] - theta$kappa[1]
+  #     if(kappa_diff < 0) {
+  #       #set maximum and stop here
+  #       kappa_max <- theta1$kappa[1]
+  #       break
+  #     } else {
+  #       #set new value for kappa
+  #       kappa_max <- kappa_max*2
+  #     }
+  #   }
+  # }
+  #
+  # #use binary search until convergence
+  # if(verbose) cat('...Starting binary search for starting value of kappa \n ')
+  # kappa_test <- (kappa_min + kappa_max)/2
+  # kappa_change <- 1
+  # while(kappa_change > epsilon){
+  #   if(verbose) cat(paste0('... testing kappa = ',round(kappa_test, 3),'\n '))
+  #   theta$kappa <- rep(kappa_test, Q)
+  #   theta1 <-  templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
+  #   kappa_diff <- theta1$kappa[1] - theta$kappa[1] #which direction is the estimate of kappa moving in?
+  #   if(kappa_diff > 0) {
+  #     kappa_min <- theta1$kappa[1]  #reset minimum to current value
+  #     kappa_test <- (theta1$kappa[1] + kappa_max)/2 #go halfway to max
+  #   } else {
+  #     kappa_max <- theta1$kappa[1]  #reset maximum to current value
+  #     kappa_test <- (theta1$kappa[1] + kappa_min)/2 #go halfway to min
+  #   }
+  #
+  #   #how much different is the next value of kappa to be tested versus the current one?
+  #   kappa_change <- abs((kappa_test - theta1$kappa[1])/theta1$kappa[1])
+  # }
 
 
   ### RUN SQUAREM ALGORITHM UNTIL CONVERGENCE
 
   theta0 <- theta1 #last tested value of kappa0
   theta0$LL <- c(0,0) #log likelihood
-  theta0_vec <- unlist(theta0[1:3]) #everything but LL
+  theta0_vec <- unlist(theta0[1:2]) #everything but LL
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
-  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE)
+  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=templateICAr:::LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE)
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
@@ -856,10 +856,10 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 
   #convert theta vector to list format
   A <- theta_vec[1:(Q^2)]
-  nu0_sq <- theta_vec[(Q^2)+1]
-  kappa <- theta_vec[(Q^2+1)+(1:Q)]
+  #nu0_sq <- theta_vec[(Q^2)+1]
+  kappa <- theta_vec[(Q^2)+(1:Q)]
   theta <- list(A = matrix(A, nrow=Q, ncol=Q),
-                nu0_sq = nu0_sq,
+                #nu0_sq = nu0_sq,
                 kappa = kappa)
 
   #update theta parameters
@@ -868,7 +868,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 
   #convert theta_new list to vector format
   theta_new$A <- as.matrix(theta_new$A)
-  theta_new_vec <- unlist(theta_new[1:3]) #everything but LL
+  theta_new_vec <- unlist(theta_new[1:2]) #everything but LL
   names(theta_new_vec)[1] <- sum(theta_new$LL)
   return(theta_new_vec)
 }

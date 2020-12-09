@@ -199,50 +199,52 @@ templateICA <- function(template_mean,
     #   theta0$A <- dat_DR$A
     # }
 
-    #starting value for kappas
+    #starting value for kappas (use data from one hemisphere for speed)
     if(is.null(kappa_init)){
-      kappa_init <- 0.5
+      #kappa_init <- 0.5
 
       # #This needs to be generalized to multiple meshes
-      # if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
-      # locs <- mesh$mesh$idx$loc[!is.na(mesh$mesh$idx$loc)]
-      #
-      # #organize data and replicates
-      # for(q in 1:L){
-      #   #print(paste0('IC ',q,' of ',L))
-      #   d_q <- resultEM$subjICmean[,q] - template_mean[,q]
-      #   #d_q <- tmp[,q] - template_mean[,q]
-      #   rep_q <- rep(q, length(d_q))
-      #   D_diag_q <- sqrt(template_var[,q])
-      #   if(q==1) {
-      #     dev <- d_q
-      #     rep <- rep_q
-      #     D_diag <- D_diag_q
-      #   } else {
-      #     dev <- c(dev, d_q)
-      #     rep <- c(rep, rep_q)
-      #     D_diag <- c(D_diag, D_diag_q)
-      #   }
-      # }
-      #
-      # #determine MLE of kappa
-      # print(system.time(opt <- optim(par=c(0,-20),
-      #                fn=loglik_kappa_est,
-      #                method='L-BFGS-B',
-      #                lower=c(-5,-20),
-      #                upper=c(1,Inf), #kappa usually less than 1, log(1)=0
-      #                delta=dev,
-      #                D_diag=D_diag,
-      #                mesh=mesh,
-      #                Q=L)))
-      # kappa_init <- exp(opt$par[1])
-      #
-      # # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
-      # # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
-      # # result <- inla(formula, data = data_inla, verbose = FALSE)
-      # # result_spde <- inla.spde.result(result, name='x', spde=mesh$spde)
-      # # kappa_init <- exp(result_spde$summary.log.kappa$mean)
-      # if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
+      if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
+      locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
+      n_mesh1 <- length(locs)
+
+      #organize data and replicates
+      for(q in 1:L){
+        #print(paste0('IC ',q,' of ',L))
+        d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
+        #d_q <- tmp[,q] - template_mean[,q]
+        rep_q <- rep(q, length(d_q))
+        D_diag_q <- sqrt(template_var[1:n_mesh1,q])
+        if(q==1) {
+          dev <- d_q
+          rep <- rep_q
+          D_diag <- D_diag_q
+        } else {
+          dev <- c(dev, d_q)
+          rep <- c(rep, rep_q)
+          D_diag <- c(D_diag, D_diag_q)
+        }
+      }
+
+      #determine MLE of kappa
+      #~50 min with V=5200, L=16
+      print(system.time(opt <- optim(par=c(0,-20),
+                     fn=loglik_kappa_est,
+                     method='L-BFGS-B',
+                     lower=c(-5,-20),
+                     upper=c(1,Inf), #kappa usually less than 1, log(1)=0
+                     delta=dev,
+                     D_diag=D_diag,
+                     mesh=meshes[[1]],
+                     Q=L)))
+      kappa_init <- exp(opt$par[1])
+
+      # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
+      # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
+      # result <- inla(formula, data = data_inla, verbose = FALSE)
+      # result_spde <- inla.spde.result(result, name='x', spde=mesh$spde)
+      # kappa_init <- exp(result_spde$summary.log.kappa$mean)
+      if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
     }
 
     theta0$kappa <- rep(kappa_init, L)

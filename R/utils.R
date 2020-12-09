@@ -108,11 +108,15 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
   GFinvG = spde$param.inla$M2 #this equals G %*% solve(F) %*% G
   Qmat = C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
   Q11 = Qmat[inmesh,inmesh] # = Amat %*% Qmat %*% t(Amat)
-  Q12 = Qmat[inmesh, notinmesh]
-  Q21 = Qmat[notinmesh, inmesh]
-  Q22 = Qmat[notinmesh,notinmesh]
-  Q22_inv <- solve(Q22)
-  Rinv = Q11 - (Q12 %*% Q22_inv %*% Q21)
+  if(length(notinmesh) > 0){
+    Q12 = Qmat[inmesh, notinmesh]
+    Q21 = Qmat[notinmesh, inmesh]
+    Q22 = Qmat[notinmesh,notinmesh]
+    Q22_inv <- solve(Q22)
+    Rinv = Q11 - (Q12 %*% Q22_inv %*% Q21)
+  } else {
+    Rinv = Q11
+  }
   cholR = chol(Rinv) #Rmat = cholR'cholR, log(det(Rmat)) = 2*sum(log(diag(cholR)))
   det_Rinv <- 2*sum(log(diag(cholR))) #log determinant
   if(!is.null(Q)) det_Rinv <- Q*det_Rinv

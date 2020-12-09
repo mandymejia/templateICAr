@@ -16,9 +16,13 @@
 #'  modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
 #'  locations will be ignored.
 #' @param surfL_fname (Required for spatial modeling) File path of GIFTI surface geometry
-#'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.
+#'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"left"}.
 #' @param surfR_fname (Required for spatial modeling) File path of GIFTI surface geometry
-#'  file representing the right cortex. Only required if \code{brainstructures} includes \code{"left"}.
+#'  file representing the right cortex. Only required if \code{brainstructures} includes \code{"right"}.
+#' @param surfL_fname_vis (Optional) File path of GIFTI surface geometry file representing the left cortex
+#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"left"}.
+#' @param surfR_fname_vis (Optional) File path of GIFTI surface geometry file representing the right cortex
+#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"right"}.
 #' @param resamp_res (Only recommended for spatial modeling) Target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
@@ -45,6 +49,8 @@ templateICA.cifti <- function(cifti_fname,
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
+                              surfL_fname_vis=NULL,
+                              surfR_fname_vis=NULL,
                               resamp_res=NULL,
                               scale=TRUE,
                               Q2=NULL,
@@ -94,8 +100,10 @@ templateICA.cifti <- function(cifti_fname,
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
     if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
-    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
-    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
+    if(!is.null(surfL_fname_vis)) surfL_fname_template <- surfL_fname_vis else surfL_fname_template <- surfL_fname
+    if(!is.null(surfR_fname_vis)) surfR_fname_template <- surfR_fname_vis else surfR_fname_template <- surfR_fname
+    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
+    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
   } else {
     stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
   }
@@ -127,7 +135,7 @@ templateICA.cifti <- function(cifti_fname,
     if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
     return(x)
   }
-  subjICmean_xifti <- subjICvar_xifti <- clear_data(BOLD_cifti)
+  subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
 
   #models_list <- vector('list', length=length(models))
   #names(models_list) <- models
@@ -187,6 +195,9 @@ templateICA.cifti <- function(cifti_fname,
                             common_smoothness=common_smoothness,
                             kappa_init=kappa_init)
 
+  # HERE (assuming result computes correctly)
+  # DOES LL INCREASE NOW WITH THE CORRECTION?
+
   # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
   n_left <- n_right <- n_sub <- 0
   if(do_left) {
@@ -204,6 +215,9 @@ templateICA.cifti <- function(cifti_fname,
     subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
     subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
   }
+
+  subjICmean_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
+  subjICvar_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
 
   list(
     subjICmean_xifti = subjICmean_xifti,
