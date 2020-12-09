@@ -42,7 +42,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   if(Q > ntime) stop('Cannot estimate more ICs than time points.')
 
   iter = 1
-  theta = theta0
+  #theta = theta0
   success = 1
 
   template_var[template_var < 1e-6] = 1e-6 #to prevent problems when inverting covariance
@@ -130,7 +130,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
 
   ### RUN SQUAREM ALGORITHM UNTIL CONVERGENCE
 
-  theta0 <- theta1 #last tested value of kappa0
+  #theta0 <- theta1 #last tested value of kappa0
   theta0$LL <- c(0,0) #log likelihood
   theta0_vec <- unlist(theta0[1:2]) #everything but LL
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
