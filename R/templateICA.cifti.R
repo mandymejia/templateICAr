@@ -111,6 +111,7 @@ templateICA.cifti <- function(cifti_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
+  if(verbose) cat('Reading in BOLD timeseries data.\n')
   BOLD_cifti <- read_cifti(cifti_fname,
                      surfL_fname = surfL_fname,
                      surfR_fname = surfR_fname,
@@ -195,8 +196,6 @@ templateICA.cifti <- function(cifti_fname,
                             common_smoothness=common_smoothness,
                             kappa_init=kappa_init)
 
-  # HERE (assuming result computes correctly)
-  # DOES LL INCREASE NOW WITH THE CORRECTION?
 
   # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
   n_left <- n_right <- n_sub <- 0
@@ -222,7 +221,7 @@ templateICA.cifti <- function(cifti_fname,
   list(
     subjICmean_xifti = subjICmean_xifti,
     subjICvar_xifti = subjICvar_xifti,
-    model_result = models_list
+    model_result = result
   )
 }
 
