@@ -171,7 +171,7 @@ templateICA <- function(template_mean,
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
-  if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
+  #if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
 
   # #initialize residual variance
   # theta0$nu0_sq = dat_list$sigma_sq

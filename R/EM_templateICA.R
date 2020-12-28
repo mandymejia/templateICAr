@@ -74,7 +74,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   #   while(kappa_diff < 0){
   #     if(verbose) cat(paste0('... testing kappa = ',round(kappa_min,3),'\n '))
   #     theta$kappa <- rep(kappa_min, Q)
-  #     theta1 <- templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
+  #     theta1 <- UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=verbose, update='kappa')
   #     kappa_diff <- theta1$kappa[1] - theta$kappa[1]
   #     if(kappa_diff > 0) {
   #       #set minimum and stop here
@@ -93,7 +93,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   #   while(kappa_diff > 0){
   #     if(verbose) cat(paste0('... testing kappa = ',round(kappa_max, 3),'\n '))
   #     theta$kappa <- rep(kappa_max, Q)
-  #     theta1 <-  templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
+  #     theta1 <-  UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
   #     kappa_diff <- theta1$kappa[1] - theta$kappa[1]
   #     if(kappa_diff < 0) {
   #       #set maximum and stop here
@@ -113,7 +113,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   # while(kappa_change > epsilon){
   #   if(verbose) cat(paste0('... testing kappa = ',round(kappa_test, 3),'\n '))
   #   theta$kappa <- rep(kappa_test, Q)
-  #   theta1 <-  templateICAr:::UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
+  #   theta1 <-  UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, update='kappa')
   #   kappa_diff <- theta1$kappa[1] - theta$kappa[1] #which direction is the estimate of kappa moving in?
   #   if(kappa_diff > 0) {
   #     kappa_min <- theta1$kappa[1]  #reset minimum to current value
@@ -136,17 +136,17 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
-  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=templateICAr:::LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=FALSE)
+  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=TRUE)
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
-  path_kappa <- result_squarem$p.inter[,(Q^2+1)+(1:Q)]
+  path_kappa <- result_squarem$p.inter[,(Q^2)+(1:Q)]
   path_LL <- result_squarem$p.inter[,ncol(result_squarem$p.inter)]
   theta_path <- list(A=path_A, kappa=path_kappa, LL=path_LL)
 
   theta_MLE <- theta0
   theta_MLE$A <- matrix(result_squarem$par[1:(Q^2)], Q, Q)
-  theta_MLE$kappa <- result_squarem$par[(Q^2+1)+(1:Q)]
+  theta_MLE$kappa <- result_squarem$par[(Q^2)+(1:Q)]
   theta_MLE$LL <- as.numeric(names(result_squarem$par)[1])
 
   #success <- (result_squarem$convergence==0) #0 indicates convergence, 1 indicates failure to converge within maxiter
@@ -154,7 +154,18 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
 
   ### Compute final posterior mean of subject ICs
   if(verbose) cat('Computing final posterior mean of subject ICs \n')
-  mu_cov_s = UpdateTheta_templateICA.spatial(template_mean, template_var, meshes, BOLD, theta_MLE, C_diag, s0_vec, D, Dinv_s0, common_smoothness=common_smoothness, verbose=verbose, return_MAP=TRUE)
+  mu_cov_s = UpdateTheta_templateICA.spatial(template_mean,
+                                             template_var,
+                                             meshes,
+                                             BOLD,
+                                             theta_MLE[1:2],
+                                             C_diag,
+                                             s0_vec,
+                                             D,
+                                             Dinv_s0,
+                                             common_smoothness=common_smoothness,
+                                             verbose=verbose,
+                                             return_MAP=TRUE)
 
   result <- list(subjICmean=mu_cov_s$mu_s,
                  subjICcov=mu_cov_s$cov_s,
@@ -892,10 +903,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 #'
 LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
-  LL <- names(theta_vec)[1]
-  print(LL)
-  LL <- as.numeric(LL)
-  print(LL)
+  LL <- as.numeric(names(theta_vec)[1])
   return(-1*LL)
 
 }
