@@ -4,7 +4,9 @@
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param mesh Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)
+#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
+#' created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component).
+#' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
 #' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
 #' @param maxiter Maximum number of EM iterations
@@ -24,7 +26,7 @@ templateICA <- function(template_mean,
                         template_var,
                         BOLD,
                         scale=TRUE,
-                        mesh=NULL,
+                        meshes=NULL,
                         Q2=NULL,
                         maxQ=NULL,
                         maxiter=100,
@@ -33,7 +35,7 @@ templateICA <- function(template_mean,
                         common_smoothness=TRUE,
                         kappa_init=0.5){
 
-  if(!is.null(mesh)){
+  if(!is.null(meshes)){
     flag <- inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
     inla.setOption(smtp='pardiso')
@@ -53,10 +55,12 @@ templateICA <- function(template_mean,
   if(ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
 
   #check that the supplied mesh object is of type templateICA_mesh
-  do_spatial <- !is.null(mesh)
+  do_spatial <- !is.null(meshes)
   if(do_spatial){
     if(verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.')
-    if(class(mesh) != 'templateICA_mesh') stop('mesh argument should be of class templateICA_mesh. See help(make_templateICA_mesh).')
+    if(!is.list(meshes)) stop('meshes argument must be a list.')
+    mesh_classes <- sapply(meshes, 'class')
+    if(any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_templateICA_mesh).')
     if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
   }
   #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
@@ -156,7 +160,7 @@ templateICA <- function(template_mean,
   BOLD4 <- dat_list$data_reduced
   H <- dat_list$H
   Hinv <- dat_list$H_inv
-  C_diag <- dat_list$C_diag #in original model formulation nu^2 is separate, later became part of C
+  C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
   if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
 
   ### 3. SET INITIAL VALUES FOR PARAMETERS
@@ -167,7 +171,7 @@ templateICA <- function(template_mean,
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
-  if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
+  #if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
 
   # #initialize residual variance
   # theta0$nu0_sq = dat_list$sigma_sq
@@ -195,18 +199,22 @@ templateICA <- function(template_mean,
     #   theta0$A <- dat_DR$A
     # }
 
-    #starting value for kappas
+    #starting value for kappas (use data from one hemisphere for speed)
     if(is.null(kappa_init)){
+      #kappa_init <- 0.5
+
+      # #This needs to be generalized to multiple meshes
       if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
-      locs <- mesh$mesh$idx$loc[!is.na(mesh$mesh$idx$loc)]
+      locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
+      n_mesh1 <- length(locs)
 
       #organize data and replicates
       for(q in 1:L){
         #print(paste0('IC ',q,' of ',L))
-        d_q <- resultEM$subjICmean[,q] - template_mean[,q]
+        d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
         #d_q <- tmp[,q] - template_mean[,q]
         rep_q <- rep(q, length(d_q))
-        D_diag_q <- sqrt(template_var[,q])
+        D_diag_q <- sqrt(template_var[1:n_mesh1,q])
         if(q==1) {
           dev <- d_q
           rep <- rep_q
@@ -219,6 +227,7 @@ templateICA <- function(template_mean,
       }
 
       #determine MLE of kappa
+      #~50 min with V=5200, L=16
       print(system.time(opt <- optim(par=c(0,-20),
                      fn=loglik_kappa_est,
                      method='L-BFGS-B',
@@ -226,7 +235,7 @@ templateICA <- function(template_mean,
                      upper=c(1,Inf), #kappa usually less than 1, log(1)=0
                      delta=dev,
                      D_diag=D_diag,
-                     mesh=mesh,
+                     mesh=meshes[[1]],
                      Q=L)))
       kappa_init <- exp(opt$par[1])
 
@@ -240,16 +249,17 @@ templateICA <- function(template_mean,
 
     theta0$kappa <- rep(kappa_init, L)
 
-    #project BOLD and templates to mesh locations
-    Amat <- mesh$A # n_orig x n_mesh matrix
-    nmesh <- ncol(Amat)
-    if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+    # This would need to be generalized to multiple meshes, but currently data locations and mesh locations are the same when templateICA.cifti used
+    # #project BOLD and templates to mesh locations
+    # Amat <- mesh$A # n_orig x n_mesh matrix
+    # nmesh <- ncol(Amat)
+    # if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
 
     if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
     t000 <- Sys.time()
     resultEM <- EM_templateICA.spatial(template_mean,
                                        template_var,
-                                       mesh,
+                                       meshes,
                                        BOLD=BOLD4,
                                        theta0,
                                        C_diag,

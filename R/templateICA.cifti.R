@@ -16,9 +16,13 @@
 #'  modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
 #'  locations will be ignored.
 #' @param surfL_fname (Required for spatial modeling) File path of GIFTI surface geometry
-#'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.
+#'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"left"}.
 #' @param surfR_fname (Required for spatial modeling) File path of GIFTI surface geometry
-#'  file representing the right cortex. Only required if \code{brainstructures} includes \code{"left"}.
+#'  file representing the right cortex. Only required if \code{brainstructures} includes \code{"right"}.
+#' @param surfL_fname_vis (Optional) File path of GIFTI surface geometry file representing the left cortex
+#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"left"}.
+#' @param surfR_fname_vis (Optional) File path of GIFTI surface geometry file representing the right cortex
+#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"right"}.
 #' @param resamp_res (Only recommended for spatial modeling) Target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
@@ -45,6 +49,8 @@ templateICA.cifti <- function(cifti_fname,
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
+                              surfL_fname_vis=NULL,
+                              surfR_fname_vis=NULL,
                               resamp_res=NULL,
                               scale=TRUE,
                               Q2=NULL,
@@ -94,8 +100,10 @@ templateICA.cifti <- function(cifti_fname,
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
     if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
-    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
-    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname, surfR_fname = surfR_fname)
+    if(!is.null(surfL_fname_vis)) surfL_fname_template <- surfL_fname_vis else surfL_fname_template <- surfL_fname
+    if(!is.null(surfR_fname_vis)) surfR_fname_template <- surfR_fname_vis else surfR_fname_template <- surfR_fname
+    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
+    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
   } else {
     stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
   }
@@ -103,6 +111,7 @@ templateICA.cifti <- function(cifti_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
+  if(verbose) cat('Reading in BOLD timeseries data.\n')
   BOLD_cifti <- read_cifti(cifti_fname,
                      surfL_fname = surfL_fname,
                      surfR_fname = surfR_fname,
@@ -111,14 +120,14 @@ templateICA.cifti <- function(cifti_fname,
 
   #TO DO: SINGLE SPATIAL MODEL
 
-  # IF SPATIAL MODELING, LOOP OVER HEMISPHERES
-  if(spatial_model) {
-    if(do_left & !do_right) models <- c('lh')
-    if(do_right & !do_left) models <- c('rh')
-    if(do_left & do_right) models <- c('lh','rh')
-  } else {
-    models <- 'single'
-  }
+  # # IF SPATIAL MODELING, LOOP OVER HEMISPHERES
+  # if(spatial_model) {
+  #   if(do_left & !do_right) models <- c('lh')
+  #   if(do_right & !do_left) models <- c('rh')
+  #   if(do_left & do_right) models <- c('lh','rh')
+  # } else {
+  #   models <- 'single'
+  # }
 
   #set up xifti objects for IC mean and variance estimates
   clear_data <- function(x){
@@ -127,92 +136,92 @@ templateICA.cifti <- function(cifti_fname,
     if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
     return(x)
   }
-  subjICmean_xifti <- subjICvar_xifti <- clear_data(BOLD_cifti)
+  subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
 
-  models_list <- vector('list', length=length(models))
-  names(models_list) <- models
-  for(mod in models){
+  #models_list <- vector('list', length=length(models))
+  #names(models_list) <- models
+  #for(mod in models){
 
-    # IF SPATIAL MODELING, CONSTRUCT MESH
-    if(spatial_model){
-      if(mod=='lh') {
-        surf <- BOLD_cifti$surf$cortex_left
-        wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
-      }
-      if(mod=='rh') {
-        surf <- BOLD_cifti$surf$cortex_right
-        wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
-      }
+  # IF SPATIAL MODELING, CONSTRUCT MESH
+  if(spatial_model){
+    meshes <- NULL
+    if(do_left) {
+      surf <- BOLD_cifti$surf$cortex_left
+      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
       mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
-    } else {
-      mesh <- NULL
+      meshes <- c(meshes, list(mesh))
     }
-
-    #TO DO: Test spatial model through this function.  Are the medial wall locations dealt with appropriately?
-
-    # FORM DATA MATRIX AND TEMPLATE MATRICES
-    if(mod=='lh') {
-      BOLD_mat <- BOLD_cifti$data$cortex_left
-      template_mean_mat <- template_mean$data$cortex_left
-      template_var_mat <- template_var$data$cortex_left
-    } else if(mod=='rh') {
-      BOLD_mat <- BOLD_cifti$data$cortex_right
-      template_mean_mat <- template_mean$data$cortex_right
-      template_var_mat <- template_var$data$cortex_right
-    } else {
-      BOLD_mat <- rbind(BOLD_cifti$data$cortex_left, BOLD_cifti$data$cortex_right, BOLD_cifti$data$subcort)
-      template_mean_mat <- rbind(template_mean$data$cortex_left, template_mean$data$cortex_right, template_mean$data$subcort)
-      template_var_mat <- rbind(template_var$data$cortex_left, template_var$data$cortex_right, template_var$data$subcort)
+    if(do_right) {
+      surf <- BOLD_cifti$surf$cortex_right
+      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
+      mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      meshes <- c(meshes, list(mesh))
     }
-
-    # CALL TEMPLATE ICA FUNCTION
-
-    result_mod <- templateICA(template_mean = template_mean_mat,
-                              template_var = template_var_mat,
-                              BOLD = BOLD_mat,
-                              scale = scale,
-                              mesh = mesh,
-                              Q2 = Q2,
-                              maxQ=maxQ,
-                              maxiter=maxiter,
-                              epsilon=epsilon,
-                              verbose=verbose,
-                              common_smoothness=common_smoothness,
-                              kappa_init=kappa_init)
-
-    models_list[[which(models==mod)]] <- result_mod
-
-    # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
-    if(mod=='lh') { #left hemisphere spatial model
-      subjICmean_xifti$data$cortex_left <- result_mod$subjICmean
-      subjICvar_xifti$data$cortex_left <- result_mod$subjICvar
-    } else if(mod=='rh') { #right hemisphere spatial model
-      subjICmean_xifti$data$cortex_right <- result_mod$subjICmean
-      subjICvar_xifti$data$cortex_left <- result_mod$subjICvar
-    } else { #single non-spatial model
-      n_left <- n_right <- n_sub <- 0
-      if(do_left) {
-        n_left <- nrow(subjICmean_xifti$data$cortex_left)
-        subjICmean_xifti$data$cortex_left <- result_mod$subjICmean[1:n_left,]
-        subjICvar_xifti$data$cortex_left <- result_mod$subjICvar[1:n_left,]
-      }
-      if(do_right) {
-        n_right <- nrow(subjICmean_xifti$data$cortex_right)
-        subjICmean_xifti$data$cortex_right <- result_mod$subjICmean[n_left+(1:n_right),]
-        subjICvar_xifti$data$cortex_right <- result_mod$subjICvar[n_left+(1:n_right),]
-      }
-      if(do_sub) {
-        n_sub <- nrow(subjICmean_xifti$data$subcort)
-        subjICmean_xifti$data$subcort <- result_mod$subjICmean[n_left + n_right + (1:n_sub),]
-        subjICvar_xifti$data$subcort <- result_mod$subjICvar[n_left + n_right + (1:n_sub),]
-      }
-    }
+  } else {
+    meshes <- NULL
   }
+
+  # FORM DATA MATRIX AND TEMPLATE MATRICES
+  BOLD_mat <- do.call(rbind, BOLD_cifti$data)
+  template_mean_mat <- do.call(rbind, template_mean$data)
+  template_var_mat <- do.call(rbind, template_var$data)
+
+  # if(do_left) {
+  #     BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$cortex_left)
+  #     template_mean_mat <- rbind(template_mean_mat, template_mean$data$cortex_left)
+  #     template_var_mat <- rbind(template_var_mat, template_var$data$cortex_left)
+  #   }
+  # if(mod=='rh') {
+  #     BOLD_mat <- BOLD_cifti$data$cortex_right
+  #     template_mean_mat <- template_mean$data$cortex_right
+  #     template_var_mat <- template_var$data$cortex_right
+  #   } else {
+  #     BOLD_mat <- rbind(BOLD_cifti$data$cortex_left, BOLD_cifti$data$cortex_right, BOLD_cifti$data$subcort)
+  #     template_mean_mat <- rbind(template_mean$data$cortex_left, template_mean$data$cortex_right, template_mean$data$subcort)
+  #     template_var_mat <- rbind(template_var$data$cortex_left, template_var$data$cortex_right, template_var$data$subcort)
+  #   }
+
+  # CALL TEMPLATE ICA FUNCTION
+
+  result <- templateICA(template_mean = template_mean_mat,
+                            template_var = template_var_mat,
+                            BOLD = BOLD_mat,
+                            scale = scale,
+                            meshes = meshes,
+                            Q2 = Q2,
+                            maxQ=maxQ,
+                            maxiter=maxiter,
+                            epsilon=epsilon,
+                            verbose=verbose,
+                            common_smoothness=common_smoothness,
+                            kappa_init=kappa_init)
+
+
+  # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
+  n_left <- n_right <- n_sub <- 0
+  if(do_left) {
+    n_left <- nrow(subjICmean_xifti$data$cortex_left)
+    subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
+    subjICvar_xifti$data$cortex_left <- result$subjICvar[1:n_left,]
+  }
+  if(do_right) {
+    n_right <- nrow(subjICmean_xifti$data$cortex_right)
+    subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
+    subjICvar_xifti$data$cortex_right <- result$subjICvar[n_left+(1:n_right),]
+  }
+  if(do_sub) {
+    n_sub <- nrow(subjICmean_xifti$data$subcort)
+    subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
+    subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
+  }
+
+  subjICmean_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
+  subjICvar_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
 
   list(
     subjICmean_xifti = subjICmean_xifti,
     subjICvar_xifti = subjICvar_xifti,
-    model_result = models_list
+    model_result = result
   )
 }
 
