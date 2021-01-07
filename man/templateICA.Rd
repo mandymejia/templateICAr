@@ -2,7 +2,7 @@
 % Please edit documentation in R/templateICA.R
 \name{templateICA}
 \alias{templateICA}
-\title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
+\title{Template ICA}
 \usage{
 templateICA(
   template_mean,

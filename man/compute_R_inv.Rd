@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{compute_R_inv}
 \alias{compute_R_inv}
-\title{Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S}
+\title{Compute SPDE and prior precision matrices for S}
 \usage{
 compute_R_inv(meshes, kappa, C1 = 1/(4 * pi), rm_extra = FALSE)
 }
@@ -19,5 +19,6 @@ compute_R_inv(meshes, kappa, C1 = 1/(4 * pi), rm_extra = FALSE)
 A list containing R inverse and SPDE matrices
 }
 \description{
-Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S
+Compute SPDE matrices (F, G and GFinvG) and prior precision matrix for S
 }
+\keyword{internal}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_diagnosticICA.R
 \name{LL2_kappa_diagnosticICA}
 \alias{LL2_kappa_diagnosticICA}
-\title{Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
+\title{Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
 \usage{
 LL2_kappa_diagnosticICA(
   kappa,
@@ -45,7 +45,7 @@ LL2_kappa_diagnosticICA(
 Value of log-likelihood at logkappa
 }
 \description{
-Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
+Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 }
 \details{
 This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial

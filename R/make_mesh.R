@@ -1,16 +1,25 @@
+#' Make INLA mesh
+#' 
 #' Create INLA mesh and observation weight matrix based on a surface object
 #'
 #' @param surf Object of class "surface" (see \code{make_surf()} and \code{is.surf}).
 #' @param inds_data Subset of vertices to include in analysis (e.g. non-medial wall locations)
 #' @param inds_mesh Subset of vertices to retain in mesh (e.g. non-medial wall locations). Must be a superset of \code{inds_data}.
 #'
-#' @return List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
+#' @return List containing INLA mesh, observation weight matrix (A) for 
+#'  translating between mesh locations and original data locations, the brain 
+#'  mask used to create the mesh, and the number of original and mesh data 
+#'  locations.
+#' 
 #' @export
+#' 
 #' @importFrom INLA inla.spde2.matern inla.mesh.create
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' @note This function requires the \code{INLA} package, which is not a CRAN 
+#'  package. See \url{http://www.r-inla.org/download} for easy installation 
+#'  instructions.
 make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 
   #if inds_mesh is NULL, keep all current vertices in the mesh
@@ -49,6 +58,8 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 
 }
 
+#' Make 2D INLA mesh
+#' 
 #' Create INLA mesh and observation weight matrix based on a binary brain mask
 #'
 #' @param mask Brain mask (matrix of 0/1 or TRUE/FALSE). Only supply surf OR mask.
@@ -57,11 +68,16 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #' 
-#' @return List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
+#' @return List containing INLA mesh, observation weight matrix (A) for 
+#'  translating between mesh locations and original data locations, the brain 
+#'  mask used to create the mesh, and the number of original and mesh data 
+#'  locations.
 #' 
 #' @export
 #'
-#' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+#' @note This function requires the \code{INLA} package, which is not a CRAN 
+#'  package. See \url{http://www.r-inla.org/download} for easy installation 
+#'  instructions.
 make_mesh_2D <- function(mask){
 
   # Check only 0s and 1s

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{loglik_kappa_est}
 \alias{loglik_kappa_est}
-\title{Computes log-likelihood of kappa given an initial estimate of delta}
+\title{Kappa log-likelihood}
 \usage{
 loglik_kappa_est(par, delta, D_diag, mesh, C1 = 1/(4 * pi), Q = NULL)
 }
@@ -24,5 +24,8 @@ Value of negative log likelihood
 }
 \description{
 Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
+}
+\details{
+Compute log-likelihood of kappa given an initial estimate of delta
 }
 \keyword{internal}

@@ -1,3 +1,5 @@
+#' Diagnostic ICA for NIFTI
+#' 
 #' Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template
 #'
 #' @param nifti_fname File path of NIFTI BOLD timeseries data

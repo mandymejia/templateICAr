@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnosticICA.nifti.R
 \name{diagnosticICA.nifti}
 \alias{diagnosticICA.nifti}
-\title{Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template}
+\title{Diagnostic ICA for NIFTI}
 \usage{
 diagnosticICA.nifti(
   nifti_fname,

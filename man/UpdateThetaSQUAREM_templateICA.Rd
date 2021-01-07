@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{UpdateThetaSQUAREM_templateICA}
 \alias{UpdateThetaSQUAREM_templateICA}
-\title{Helper function for SQUAREM for estimating parameters}
+\title{Update theta SQUAREM}
 \usage{
 UpdateThetaSQUAREM_templateICA(
   theta_vec,

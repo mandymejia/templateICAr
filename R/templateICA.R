@@ -1,3 +1,5 @@
+#' Template ICA
+#' 
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
 #' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
@@ -308,6 +310,8 @@ templateICA <- function(template_mean,
 
 
 
+#' Activations of (s)tICA
+#' 
 #' Identify areas of activation in each independent component map
 #'
 #' @param result Fitted stICA or tICA model object (of class stICA or tICA)

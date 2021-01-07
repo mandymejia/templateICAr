@@ -1,3 +1,5 @@
+#' Diagnostic ICA
+#' 
 #' Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)
 #'
 #' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G

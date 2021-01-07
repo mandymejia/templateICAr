@@ -1,4 +1,6 @@
-#' Estimate Template for Template or Diagnostic ICA based on CIFTI-format data
+#' Estimate CIFTI template
+#' 
+#' Estimate template for Template or Diagnostic ICA based on CIFTI-format data
 #'
 #' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries
 #'  (*.dtseries.nii) for template estimation
@@ -231,7 +233,9 @@ estimate_template.cifti <- function(
   result
 }
 
-#' Estimate Template for Template or Diagnostic ICA based on NIFTI-format data
+#' Estimate NIFTI template
+#' 
+#' Estimate template for Template or Diagnostic ICA based on NIFTI-format data
 #'
 #' @param nifti_fnames Vector of file paths of NIFTI-format fMRI timeseries for template estimation.
 #' @param nifti_fnames2 (Optional) Vector of file paths of "retest" NIFTI-format fMRI

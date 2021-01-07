@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnosticICA.cifti.R
 \name{diagnosticICA.cifti}
 \alias{diagnosticICA.cifti}
-\title{Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template}
+\title{Diagnostic ICA for CIFTI}
 \usage{
 diagnosticICA.cifti(
   cifti_fname,

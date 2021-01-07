@@ -2,7 +2,7 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{Create INLA mesh and observation weight matrix based on a surface object}
+\title{Make INLA mesh}
 \usage{
 make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
@@ -14,11 +14,16 @@ make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 \item{inds_mesh}{Subset of vertices to retain in mesh (e.g. non-medial wall locations). Must be a superset of \code{inds_data}.}
 }
 \value{
-List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
+List containing INLA mesh, observation weight matrix (A) for 
+ translating between mesh locations and original data locations, the brain 
+ mask used to create the mesh, and the number of original and mesh data 
+ locations.
 }
 \description{
 Create INLA mesh and observation weight matrix based on a surface object
 }
 \note{
-This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
+This function requires the \code{INLA} package, which is not a CRAN 
+ package. See \url{http://www.r-inla.org/download} for easy installation 
+ instructions.
 }

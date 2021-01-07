@@ -2,7 +2,7 @@
 % Please edit documentation in R/templateICA.cifti.R
 \name{templateICA.cifti}
 \alias{templateICA.cifti}
-\title{Run template ICA based on CIFTI-format BOLD data and CIFTI-based template}
+\title{Template ICA for CIFTI}
 \usage{
 templateICA.cifti(
   cifti_fname,

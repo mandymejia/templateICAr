@@ -877,7 +877,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   return(theta_new)
 }
 
-#' Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
+#' Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
 #' @param kappa Value of kappa for which to compute log-likelihood
 #' @param Amat Mesh projection matrix

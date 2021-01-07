@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{bdiag_m}
 \alias{bdiag_m}
-\title{Construct block diagonal matrix of many small blocks}
+\title{Block diagonal matrix}
 \usage{
 bdiag_m(lmat)
 }
@@ -14,5 +14,8 @@ A sparse matrix obtained by combining the arguments into a block diagonal matrix
 }
 \description{
 Code for function provided in examples of bdiag function from Matrix package
+}
+\details{
+Construct block diagonal matrix of many small blocks
 }
 \keyword{internal}

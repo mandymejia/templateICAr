@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnosticICA.R
 \name{diagnosticICA}
 \alias{diagnosticICA}
-\title{Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)}
+\title{Diagnostic ICA}
 \usage{
 diagnosticICA(
   template_mean,

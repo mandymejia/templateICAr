@@ -68,7 +68,9 @@ match_input <- function(
 
 
 
-#' Computes log-likelihood of kappa given an initial estimate of delta
+#' Kappa log-likelihood
+#' 
+#' Compute log-likelihood of kappa given an initial estimate of delta
 #'
 #' @description Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
 #'

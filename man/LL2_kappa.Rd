@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{LL2_kappa}
 \alias{LL2_kappa}
-\title{Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization}
+\title{Compute part of appa log-likelihood}
 \usage{
 LL2_kappa(
   kappa,
@@ -42,7 +42,7 @@ LL2_kappa(
 Value of log-likelihood at logkappa
 }
 \description{
-Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
+Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 }
 \details{
 This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial

@@ -676,7 +676,9 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 
 
 
-#' Computes posterior mean and precision matrix of s
+#' Compute posterior mean and precision of s
+#' 
+#' Compute posterior mean and precision matrix of s
 #'
 #' @param y_vec Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.
 #' @param D Sparse diagonal matrix of template standard deviations
@@ -693,6 +695,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #'  \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, 
 #'  where \eqn{\mu = \Omega^{-1}m}.
 #'
+#' @keywords internal
+#' 
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
   ntime <- length(C_diag)
@@ -724,7 +728,9 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 }
 
 
-#' Computes SPDE matrices (F, G and GFinvG) and prior precision matrix for S
+#' Compute SPDE and prior precision matrices for S
+#' 
+#' Compute SPDE matrices (F, G and GFinvG) and prior precision matrix for S
 #'
 #' @param meshes A list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) (one element for each brain structure)
 #' @param kappa Current estimates of SPDE parameter kappa for each latent field
@@ -736,6 +742,8 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #' 
 #' @return A list containing R inverse and SPDE matrices
 #'
+#' @keywords internal
+#' 
 compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
 
   L <- length(kappa)
@@ -799,7 +807,9 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
   return(list(Rinv=Rinv_all, Fmat=Fmat_all, Gmat=Gmat_all, GFinvG=GFinvG_all))
 }
 
-#' Creates permutation matrix P to regroup elements of s by locations instead of by ICs
+#' Make permutation matrix
+#' 
+#' Create permutation matrix P to regroup elements of s by locations instead of by ICs
 #'
 #' @param Q The number of template ICs
 #' @param nvox The number of spatial locations (V)
@@ -821,6 +831,8 @@ make_Pmat <- function(Q, nvox){
 }
 
 
+#' Block diagonal matrix
+#' 
 #' Construct block diagonal matrix of many small blocks
 #'
 #' @description Code for function provided in examples of bdiag function from Matrix package
@@ -853,6 +865,8 @@ bdiag_m <- function(lmat) {
 }
 
 
+#' Update theta SQUAREM
+#' 
 #' Helper function for SQUAREM for estimating parameters
 #'
 #' @param theta_vec Vector of initial parameter values
@@ -895,6 +909,8 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 }
 
 
+#' Log-likelihood SQUAREM
+#' 
 #' Helper function for SQUAREM for extracting log likelihood
 #'
 #' @param theta_vec Vector of current parameter values
@@ -921,7 +937,9 @@ LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_d
 }
 
 
-#' Computes part of log-likelihood involving kappa (or kappa_q) for numerical optimization
+#' Compute part of appa log-likelihood
+#' 
+#' Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
 #' @param kappa Value of kappa for which to compute log-likelihood
 #' @param Amat Mesh projection matrix

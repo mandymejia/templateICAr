@@ -2,7 +2,7 @@
 % Please edit documentation in R/templateICA.R
 \name{activations}
 \alias{activations}
-\title{Identify areas of activation in each independent component map}
+\title{Activations of (s)tICA}
 \usage{
 activations(
   result,

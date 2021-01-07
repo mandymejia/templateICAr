@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{make_Pmat}
 \alias{make_Pmat}
-\title{Creates permutation matrix P to regroup elements of s by locations instead of by ICs}
+\title{Make permutation matrix}
 \usage{
 make_Pmat(Q, nvox)
 }
@@ -15,7 +15,7 @@ make_Pmat(Q, nvox)
 P Permutation matrix size QVxQV
 }
 \description{
-Creates permutation matrix P to regroup elements of s by locations instead of by ICs
+Create permutation matrix P to regroup elements of s by locations instead of by ICs
 }
 \details{
 If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(nvox)) is grouped by locations 1,...,nvox

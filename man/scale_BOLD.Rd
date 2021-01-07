@@ -2,7 +2,7 @@
 % Please edit documentation in R/scale_BOLD.R
 \name{scale_BOLD}
 \alias{scale_BOLD}
-\title{Center BOLD data across space and time and scale (optionally)}
+\title{Scale BOLD}
 \usage{
 scale_BOLD(BOLD, scale = FALSE)
 }

@@ -1,3 +1,5 @@
+#' Template ICA for CIFTI
+#' 
 #' Run template ICA based on CIFTI-format BOLD data and CIFTI-based template
 #'
 #' @param cifti_fname File path of CIFTI-format timeseries data (ending in .dtseries.nii).

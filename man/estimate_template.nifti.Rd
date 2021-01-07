@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template.nifti}
 \alias{estimate_template.nifti}
-\title{Estimate Template for Template or Diagnostic ICA based on NIFTI-format data}
+\title{Estimate NIFTI template}
 \usage{
 estimate_template.nifti(
   nifti_fnames,
@@ -43,5 +43,5 @@ template variance maps.}
 List of two elements: template mean of class nifti and template variance of class nifti
 }
 \description{
-Estimate Template for Template or Diagnostic ICA based on NIFTI-format data
+Estimate template for Template or Diagnostic ICA based on NIFTI-format data
 }

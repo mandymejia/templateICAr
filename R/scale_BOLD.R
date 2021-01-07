@@ -1,3 +1,5 @@
+#' Scale BOLD
+#' 
 #' Center BOLD data across space and time and scale (optionally)
 #'
 #' @param BOLD (VxT matrix) fMRI timeseries data matrix

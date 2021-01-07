@@ -1,6 +1,8 @@
 #' PCA-based Dimension Reduction and Prewhitening for ICA
 #'
-#' @description Performs dimension reduction and prewhitening based on probablistic PCA using SVD. If dimensionality is not specified, it is estimated using the method described in Minka (2008).
+#' Performs dimension reduction and prewhitening based on probablistic PCA using 
+#'  SVD. If dimensionality is not specified, it is estimated using the method 
+#'  described in Minka (2008).
 #'
 #' @param X VxT fMRI timeseries data matrix, centered by columns and rows (columns are actually all that matter, but MATLAB implementation of Minka method also assumes rows have been centered (implicit in use of cov function))
 #' @param Q Number of latent dimensions to estimate. If not specified, estimated using PESEL (Sobczyka et al. 2020).

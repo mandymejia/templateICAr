@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{LL_SQUAREM}
 \alias{LL_SQUAREM}
-\title{Helper function for SQUAREM for extracting log likelihood}
+\title{Log-likelihood SQUAREM}
 \usage{
 LL_SQUAREM(
   theta_vec,

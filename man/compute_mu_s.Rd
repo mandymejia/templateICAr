@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{compute_mu_s}
 \alias{compute_mu_s}
-\title{Computes posterior mean and precision matrix of s}
+\title{Compute posterior mean and precision of s}
 \usage{
 compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 }
@@ -27,5 +27,6 @@ A list containing the posterior mean \eqn{\mu} (mu) and precision
  where \eqn{\mu = \Omega^{-1}m}.
 }
 \description{
-Computes posterior mean and precision matrix of s
+Compute posterior mean and precision matrix of s
 }
+\keyword{internal}
