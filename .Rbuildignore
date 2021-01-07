@@ -3,5 +3,5 @@
 ^R/ignore\.R$
 ^README\.Rmd$
 ^\.travis\.yml$
-^appveyor\.yml$\
+^appveyor\.yml$
 ^vignettes$
