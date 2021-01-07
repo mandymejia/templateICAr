@@ -19,27 +19,27 @@ diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each \eqn{VxL}) template mean 
+\item{template_mean}{(A list of G matrices, each \eqn{VxL}) template mean
 estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{template_var}{(A list of G matrices, each \eqn{VxL}) template variance 
+\item{template_var}{(A list of G matrices, each \eqn{VxL}) template variance
 estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{BOLD}{(\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number 
+\item{BOLD}{(\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
 of volumes (time points) and \eqn{V} is the number of brain locations}
 
-\item{scale}{Should BOLD data be scaled by the spatial standard deviation 
-before model fitting? Default: \code{TRUE}. If done when estimating 
+\item{scale}{Should BOLD data be scaled by the spatial standard deviation
+before model fitting? Default: \code{TRUE}. If done when estimating
 templates, should be done here too.}
 
-\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of objects 
-of type \code{templateICA_mesh} created by \code{make_mesh} (each list element 
+\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of objects
+of type \code{templateICA_mesh} created by \code{make_mesh} (each list element
 corresponds to one brain structure)}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default), 
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default),
 will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify
 (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
@@ -48,12 +48,12 @@ will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{kappa_init}{Starting value for kappa.  If \code{NULL}, starting value 
+\item{kappa_init}{Starting value for kappa.  If \code{NULL}, starting value
 will be determined automatically. Default: 0.4.}
 }
 \value{
-A list containing the posterior probabilities of group membership, 
- the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix 
+A list containing the posterior probabilities of group membership,
+ the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix
  \strong{A} (a \eqn{TxL} matrix), the number of nuisance ICs estimated (Q_nuis)
 }
 \description{

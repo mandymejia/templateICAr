@@ -7,8 +7,8 @@
 compute_R_inv(meshes, kappa, C1 = 1/(4 * pi), rm_extra = FALSE)
 }
 \arguments{
-\item{meshes}{\code{NULL} for spatial independence model, otherwise a list of 
-objects of class "templateICA_mesh" containing the triangular mesh (see 
+\item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
+objects of class "templateICA_mesh" containing the triangular mesh (see
 \eqn{\link{make_mesh}}) for each brain structure.}
 
 \item{kappa}{Current estimates of SPDE parameter kappa for each latent field}

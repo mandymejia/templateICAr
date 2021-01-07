@@ -24,12 +24,12 @@
 #'
 dim_reduce <- function(X, Q=NULL, Q_max=100){
 
-  nvox = nrow(X) #number of brain locations
-  ntime = ncol(X) #number of fMRI volumes (reduce this)
+  nvox <- nrow(X) #number of brain locations
+  ntime <- ncol(X) #number of fMRI volumes (reduce this)
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
   # check that X has been centered both ways
-  tol = 1e-12
+  tol <- 1e-12
   if(max(colMeans(X)^2) > tol) stop('Columns of X must be centered')
   if(max(rowMeans(X)^2) > tol) warning('Rows of X should be centered')
 
@@ -40,26 +40,26 @@ dim_reduce <- function(X, Q=NULL, Q_max=100){
   }
 
   #perform dimension reduction
-  XXt = t(X) %*% X / nvox
-  svd_XXt = svd(XXt, nu=Q, nv=0)
-  U = svd_XXt$u
-  D1 = svd_XXt$d[1:Q]
-  D2 = svd_XXt$d[(Q+1):length(svd_XXt$d)]
+  XXt <- t(X) %*% X / nvox
+  svd_XXt <- svd(XXt, nu=Q, nv=0)
+  U <- svd_XXt$u
+  D1 <- svd_XXt$d[1:Q]
+  D2 <- svd_XXt$d[(Q+1):length(svd_XXt$d)]
 
   #residual variance
-  sigma_sq = mean(D2)
+  sigma_sq <- mean(D2)
 
   #prewhitening matrix
-  H = diag(1/sqrt(D1 - sigma_sq)) %*% t(U)
-  H_inv = U %*% diag(sqrt(D1 - sigma_sq))
+  H <- diag(1/sqrt(D1 - sigma_sq)) %*% t(U)
+  H_inv <- U %*% diag(sqrt(D1 - sigma_sq))
 
   #for residual variance after prewhitening
-  C_diag = diag(H %*% t(H))
+  C_diag <- diag(H %*% t(H))
 
   #prewhitened data (transposed)
   X_new <- X %*% t(H)
 
-  result = list(data_reduced=X_new, H=H, H_inv=H_inv, sigma_sq=sigma_sq, C_diag=C_diag, Q=Q)
+  result <- list(data_reduced=X_new, H=H, H_inv=H_inv, sigma_sq=sigma_sq, C_diag=C_diag, Q=Q)
   return(result)
 
 }

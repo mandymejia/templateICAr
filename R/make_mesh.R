@@ -88,7 +88,7 @@ make_mesh_2D <- function(mask){
   boundary <- inla.nonconvex.hull(xy.in, resolution = 100)
   mesh <- inla.mesh.2d(loc = xy.in, boundary = boundary, max.edge = c(2, 4))
   Amat <- inla.spde.make.A(mesh, loc=xy.in)
-  n.mask = sum(mask)
+  n.mask <- sum(mask)
 
   spde <- inla.spde2.matern(mesh)
 

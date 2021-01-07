@@ -37,7 +37,7 @@ estimate_template.cifti <- function(
   GICA_fname,
   inds=NULL,
   scale=TRUE,
-  brainstructures=c('left','right'),
+  brainstructures=c("left","right"),
   verbose=TRUE,
   out_fname=NULL){
 
@@ -193,7 +193,7 @@ estimate_template.cifti <- function(
 
   # noise (within-subject) variance
   if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff = DR1 - DR2;
+  DR_diff <- DR1 - DR2;
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance
@@ -412,7 +412,7 @@ estimate_template.nifti <- function(
 
   # noise (within-subject) variance
   if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff = DR1 - DR2;
+  DR_diff <- DR1 - DR2;
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance

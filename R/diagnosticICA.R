@@ -1,27 +1,27 @@
 #' Diagnostic ICA
-#' 
+#'
 #' Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)
 #'
-#' @param template_mean (A list of G matrices, each \eqn{VxL}) template mean 
+#' @param template_mean (A list of G matrices, each \eqn{VxL}) template mean
 #'  estimates for each group \eqn{1} to \eqn{G}.
-#' @param template_var (A list of G matrices, each \eqn{VxL}) template variance 
+#' @param template_var (A list of G matrices, each \eqn{VxL}) template variance
 #'  estimates for each group \eqn{1} to \eqn{G}.
-#' @param BOLD (\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number 
+#' @param BOLD (\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
 #'  of volumes (time points) and \eqn{V} is the number of brain locations
-#' @param scale Should BOLD data be scaled by the spatial standard deviation 
-#'  before model fitting? Default: \code{TRUE}. If done when estimating 
+#' @param scale Should BOLD data be scaled by the spatial standard deviation
+#'  before model fitting? Default: \code{TRUE}. If done when estimating
 #'  templates, should be done here too.
-#' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects 
-#'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list element 
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects
+#'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list element
 #'  corresponds to one brain structure)
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default),
 #'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify
 #'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
-#' @param kappa_init Starting value for kappa.  If \code{NULL}, starting value 
+#' @param kappa_init Starting value for kappa.  If \code{NULL}, starting value
 #'  will be determined automatically. Default: 0.4.
 #'
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
@@ -29,11 +29,11 @@
 #' @importFrom stats optim
 #' @importFrom abind abind
 #' @importFrom matrixStats rowVars
-#' 
-#' @return A list containing the posterior probabilities of group membership, 
-#'  the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix 
+#'
+#' @return A list containing the posterior probabilities of group membership,
+#'  the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix
 #'  \strong{A} (a \eqn{TxL} matrix), the number of nuisance ICs estimated (Q_nuis)
-#' 
+#'
 #' @export
 #'
 diagnosticICA <- function(template_mean,
@@ -69,7 +69,7 @@ diagnosticICA <- function(template_mean,
   #check dimensionality of mesh projection matrices
   if(do_spatial){
     nmesh <- nvox2 <- 0
-    for(k in 1:length(meshes)){
+    for(k in seq_len(length(meshes))){
       Amat <- meshes[[k]]$A # n_orig x n_mesh matrix
       nmesh <- nmesh + ncol(Amat)
       nvox2 <- nvox2 + nrow(Amat)
@@ -284,7 +284,7 @@ diagnosticICA <- function(template_mean,
     # class(resultEM) <- 'tICA'
 
     resultEM_dICA <- resultEM
-    which_group <- which.max(resultEM$group_probs)
+    # which_group <- which.max(resultEM$group_probs) # never used
 
     ## TO DO: Delete this or generalize to multiple meshes
 

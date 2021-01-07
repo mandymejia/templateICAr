@@ -1,5 +1,5 @@
 #' Template ICA for CIFTI
-#' 
+#'
 #' Run template ICA based on CIFTI-format BOLD data and CIFTI-based template
 #'
 #' @param cifti_fname File path of CIFTI-format timeseries data (ending in .dtseries.nii).
@@ -43,12 +43,12 @@
 #' @importFrom ciftiTools read_cifti
 #'
 #' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')
-#' 
+#'
 #' @export
 #'
 templateICA.cifti <- function(cifti_fname,
                               template,
-                              brainstructures=c('left','right'),
+                              brainstructures=c("left","right"),
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
@@ -218,8 +218,8 @@ templateICA.cifti <- function(cifti_fname,
     subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
   }
 
-  subjICmean_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
-  subjICvar_xifti$meta$cifti$names <- paste0('IC ', 1:length(subjICmean_xifti$meta$cifti$names))
+  subjICmean_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
+  subjICvar_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
 
   list(
     subjICmean_xifti = subjICmean_xifti,

@@ -31,20 +31,20 @@ EM_diagnosticICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(A list of \eqn{G} matrices, each \eqn{VxL}) template 
-mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is 
+\item{template_mean}{(A list of \eqn{G} matrices, each \eqn{VxL}) template
+mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is
 the number of data or mesh locations.}
 
-\item{template_var}{(A list of \eqn{G} matrices, each \eqn{VxL}) template 
+\item{template_var}{(A list of \eqn{G} matrices, each \eqn{VxL}) template
 variance estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of objects 
-of type \code{templateICA_mesh} created by \code{make_mesh} (each list 
+\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of objects
+of type \code{templateICA_mesh} created by \code{make_mesh} (each list
 element corresponds to one brain structure).}
 
 \item{BOLD}{(\eqn{VxL} matrix) dimension-reduced fMRI data}
 
-\item{theta0}{(list) initial guess at parameter values: \strong{A} (\eqn{LxL} mixing matrix) 
+\item{theta0}{(list) initial guess at parameter values: \strong{A} (\eqn{LxL} mixing matrix)
 and (for spatial model only) kappa (SPDE smoothness parameter)}
 
 \item{C_diag}{(\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction}
@@ -55,8 +55,8 @@ and (for spatial model only) kappa (SPDE smoothness parameter)}
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{ignore_determinant}{For spatial model only. If \code{TRUE} (default), 
-ignore the normalizing constant in \eqn{p(y|z)} when computing posterior 
+\item{ignore_determinant}{For spatial model only. If \code{TRUE} (default),
+ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
 probabilities of \code{z}.}
 }
 \value{
@@ -77,8 +77,8 @@ A list containing:
 EM Algorithms for Diagnostic ICA Models
 }
 \details{
-\code{EM_dignosticICA.spatial} implements the expectation-maximization 
- (EM) algorithm described in Mejia (2020+) for estimating the probabilities 
- of group membership, subject-level ICs and unknown parameters in the 
+\code{EM_dignosticICA.spatial} implements the expectation-maximization
+ (EM) algorithm described in Mejia (2020+) for estimating the probabilities
+ of group membership, subject-level ICs and unknown parameters in the
  diagnostic ICA model with spatial priors on subject effects.
 }

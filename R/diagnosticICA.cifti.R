@@ -55,7 +55,7 @@
 #'
 diagnosticICA.cifti <- function(cifti_fname,
                               templates,
-                              brainstructures=c('left','right'),
+                              brainstructures=c("left","right"),
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
@@ -195,9 +195,9 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   # IF SPATIAL MODELING, CONSTRUCT MESH
   if(spatial_model){
-    num_surfs <- do_left + do_right
+    #num_surfs <- do_left + do_right # never used
     meshes <- vector('list', 2)
-    ind <- 1
+    # ind <- 1 # never used
     if(do_left) {
       surf <- BOLD_cifti$surf$cortex_left;
       wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)

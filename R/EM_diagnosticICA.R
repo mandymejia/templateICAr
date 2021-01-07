@@ -3,23 +3,23 @@
 #'
 #' @title EM Algorithms for Diagnostic ICA Models
 #'
-#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template 
-#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is 
+#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template
+#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is
 #'  the number of data or mesh locations.
-#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template
 #'  variance estimates for each group \eqn{1} to \eqn{G}.
-#' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects 
-#'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list 
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects
+#'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list
 #'  element corresponds to one brain structure).
 #' @param BOLD  (\eqn{VxL} matrix) dimension-reduced fMRI data
-#' @param theta0 (list) initial guess at parameter values: \strong{A} (\eqn{LxL} mixing matrix) 
+#' @param theta0 (list) initial guess at parameter values: \strong{A} (\eqn{LxL} mixing matrix)
 #'  and (for spatial model only) kappa (SPDE smoothness parameter)
 #' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
 #' @param maxiter maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
-#' @param ignore_determinant For spatial model only. If \code{TRUE} (default), 
-#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior 
+#' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
+#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
 #'  probabilities of \code{z}.
 #'
 #' @return  A list containing:
@@ -35,20 +35,20 @@
 #'  squarem (output of SQUAREM function call),
 #'  and the template mean and variance used in model estimation
 #'
-#' @details \code{EM_dignosticICA.spatial} implements the expectation-maximization 
-#'  (EM) algorithm described in Mejia (2020+) for estimating the probabilities 
-#'  of group membership, subject-level ICs and unknown parameters in the 
+#' @details \code{EM_dignosticICA.spatial} implements the expectation-maximization
+#'  (EM) algorithm described in Mejia (2020+) for estimating the probabilities
+#'  of group membership, subject-level ICs and unknown parameters in the
 #'  diagnostic ICA model with spatial priors on subject effects.
-#' 
+#'
 NULL
 
 
 #' @rdname EM_diagnosticICA
-#' 
+#'
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
-#' 
+#'
 #' @export
 #'
 EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
@@ -62,9 +62,9 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
 
   if(any(sapply(meshes, class) != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
 
-  iter = 1
-  theta = theta0
-  success = 1
+  # iter <- 1 # never used
+  theta <- theta0
+  # success <- 1 # never used
   for(g in 1:G) {
     num_smallvar <- sum(template_var[[g]] < 1e-6)
     if(num_smallvar>0){
@@ -186,7 +186,7 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
 #' @rdname EM_diagnosticICA
 #'
 #' @export
-#' 
+#'
 EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
 
   nvox <- nrow(BOLD) #number of brain locations
@@ -195,9 +195,9 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
   if(L > nvox) stop('Cannot estimate more ICs than brain locations.')
   if(L != ncol(BOLD)) stop('Dimension-reduced BOLD data should have number of columns equal to number of ICs in templates')
 
-  iter = 1
-  theta = theta0
-  success = 1
+  iter <- 1
+  theta <- theta0
+  success <- 1
   for(g in 1:G) {
     num_smallvar <- sum(template_var[[g]] < 1e-6)
     if(num_smallvar>0){
@@ -219,44 +219,44 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
   # }
 
   #get initial estimates of S to update pr_z
-  MAP1 = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
+  MAP1 <- UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
   dist1 <- colSums((MAP1$ICmean - template_mean[[1]])^2/(template_var_max))
   dist2 <- colSums((MAP1$ICmean - template_mean[[2]])^2/(template_var_max))
   #for 2 groups only:
   pr1 <- mean(dist1<dist2)
   pr2 <- 1-pr1
-  pr_z = c(pr1, pr2)
+  pr_z <- c(pr1, pr2)
   theta$pr_z <- pr_z
   print(paste0('Updated Initial Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
 
 
-  err = 1000 #large initial value for difference between iterations
+  err <- 1000 #large initial value for difference between iterations
   while(err > epsilon){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
 
     t00 <- Sys.time()
-    theta_new = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=verbose)
+    theta_new <- UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=verbose)
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
 
-    A_old = theta$A
-    A_new = theta_new$A
-    pr_old = theta$pr_z[1]
-    pr_new = theta$pr_z[1]
-    #2-norm = largest eigenvalue = sqrt of largest eigenvalue of AA'
-    err = norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
-    err2 = abs(pr_new - pr_old)
-    change = format(err, digits=3, nsmall=3)
-    change2 = format(err2, digits=3, nsmall=3)
+    A_old <- theta$A
+    A_new <- theta_new$A
+    pr_old <- theta$pr_z[1]
+    pr_new <- theta$pr_z[1]
+    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
+    err <- norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
+    err2 <- abs(pr_new - pr_old)
+    change <- format(err, digits=3, nsmall=3)
+    change2 <- format(err2, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change,' for A\n'))
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change2,' for pr1\n'))
-    err = max(err, err2)
+    err <- max(err, err2)
 
     ### Move to next iteration
     theta <- theta_new
-    iter = iter + 1
+    iter <- iter + 1
     if(iter > maxiter){
       success = 0;
       warning(paste0('Failed to converge within ', maxiter,' iterations'))
@@ -264,7 +264,7 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
     }
   }
 
-  MAP = UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
+  MAP <- UpdateTheta_diagnosticICA.independent(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=TRUE, verbose=verbose)
 
   result <- list(group_probs = MAP$group_probs,
                  subjICmean=MAP$ICmean,
@@ -287,15 +287,15 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 #'
 #' @title Parameter Estimates in EM Algorithm for Diagnostic ICA Model
 #'
-#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template 
-#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is 
+#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template
+#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is
 #'  the number of data or mesh locations.
-#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template
 #'  variance estimates for each group \eqn{1} to \eqn{G}.
 #' @param template_var_max The maximum of the template variance across group.,
 #' @param BOLD  (\eqn{VxL} matrix) dimension-reduced fMRI data.
-#' @param meshes Either \code{NULL} (assume spatial independence) or a list of 
-#'  objects of type \code{templateICA_mesh} created by \code{make_mesh} 
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of
+#'  objects of type \code{templateICA_mesh} created by \code{make_mesh}
 #'  (each list element corresponds to one brain structure).
 #' @param theta (list) current parameter estimates
 #' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
@@ -304,35 +304,35 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 #' @param Dinv_s0_list List of D^{-1} times s0_vec (one for each group \eqn{1} to \eqn{G})
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #' @param return_MAP If \code{TRUE}, return the posterior mean and precision of
-#'  the latent fields and group membership probabilities instead of the 
+#'  the latent fields and group membership probabilities instead of the
 #'  parameter estimates.
 #' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
-#' @param ignore_determinant For spatial model only. If \code{TRUE} (default), 
-#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior 
+#' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
+#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
 #'  probabilities of \code{z}.
 #'
-#' @return An updated list of parameter estimates, theta, OR if \code{return_MAP=TRUE}, 
-#'  the posterior mean and precision of the latent fields and posterior 
+#' @return An updated list of parameter estimates, theta, OR if \code{return_MAP=TRUE},
+#'  the posterior mean and precision of the latent fields and posterior
 #'  probabilities of group membership.
 #'
 NULL
 
 #' @rdname UpdateTheta_diagnosticICA
-#' 
+#'
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix bdiag Diagonal
-#' 
+#'
 #' @export
-#' 
+#'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
-  nvox = nrow(BOLD)
-  L = ncol(BOLD)
-  G = length(template_mean)
+  nvox <- nrow(BOLD)
+  L <- ncol(BOLD)
+  G <- length(template_mean)
 
   #initialize new parameter values
-  theta_new = theta
+  theta_new <- theta
 
   #which parameters to update
   update_A <- (update[1] == 'all' | update[1] =='A')
@@ -356,7 +356,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
   if(verbose) cat('Computing Posterior Moments of S \n')
 
-  y_vec = as.vector(t(BOLD)) #grouped by locations
+  y_vec <- as.vector(t(BOLD)) #grouped by locations
 
   ### TO DO FOR WHOLE BRAIN MODEL: LOOP OVER MESHES, COMPUTE R_INV FOR EACH, AND COMBINE AS A BLOCK DIAGONAL.
   ### NEED TO VERIFY THAT LOCATIONS ARE GROUPED BY BRAIN STRUCTURE
@@ -402,8 +402,8 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
     #direct(ish) computation of determinant part (~20 min for L=16, V=5246)
     if(!ignore_determinant){
-      I_mat <- Diagonal(nvox*L, 1)
       D_inv_g <- solve(D_list[[g]])
+      #I_mat <- Diagonal(nvox*L, 1)
       #bigmat <- I_mat + R_inv %*% D_inv_g %*% Pt_Minv_C_Minvt_P %*% D_inv_g #how to compute determinant? cholesky first?
       bigmat2 <- R_inv + R_inv %*% D_inv_g %*% Pt_Minv_C_Minvt_P %*% D_inv_g %*% R_inv # <- symmetric! (can use Cholesky) det(bigmat) = det(bigmat2)/det(R_inv)
       system.time(chol_big <- chol(bigmat2, pivot=TRUE))
@@ -597,7 +597,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     #augment Omega with additional non-sparse locations
     ind_mat <- 1*(R_inv[1:nvox,1:nvox] != 0)
     attributes(ind_mat)$x <- 0*attributes(ind_mat)$x
-    new_inds <- bdiag(rep(list(ind_mat), L))
+    #new_inds <- bdiag(rep(list(ind_mat), L)) # not used
 
     #Set up vectors needed for computation of only necessary elements of W_hat
 
@@ -686,7 +686,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 #' @rdname UpdateTheta_diagnosticICA
 #'
 #' @export
-#' 
+#'
 UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
   L <- ncol(BOLD)
@@ -694,8 +694,8 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   G <- length(template_mean)
 
   #initialize new objects
-  theta_new = list(A = matrix(NA, L, L))
-  A_part1 = A_part2 = matrix(0, L, L) #two parts of product for A-hat (construct each looping over voxels)
+  theta_new <- list(A = matrix(NA, L, L))
+  A_part1 <- A_part2 = matrix(0, L, L) #two parts of product for A-hat (construct each looping over voxels)
 
   A <- theta$A
   C <- diag(C_diag)
@@ -863,18 +863,18 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   A_part1 <- A_part2 <- matrix(0, L, L)
   for(v in 1:nvox){
 
-    y_v = BOLD[v,]
+    y_v <- BOLD[v,]
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
     ##########################################
 
-    A_part1 = A_part1 + y_v %*% t(mu_sy[v,]) #LxL
-    A_part2 = A_part2 + mu_mut_sy[v,,] #LxL
+    A_part1 <- A_part1 + y_v %*% t(mu_sy[v,]) #LxL
+    A_part2 <- A_part2 + mu_mut_sy[v,,] #LxL
 
   }
 
-  A_hat = (A_part1 %*% solve(A_part2))
+  A_hat <- (A_part1 %*% solve(A_part2))
 
   ##########################################
   ### ESTIMATE OF PR_Z
@@ -885,7 +885,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   #for 2 groups only:
   pr1 <- mean(dist1<dist2)
   pr2 <- 1-pr1
-  pr_z = c(pr1, pr2)
+  pr_z <- c(pr1, pr2)
   print(paste0('Updated Group Probabilities: ',paste(round(pr_z,3), collapse=', ')))
 
 
@@ -911,11 +911,11 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
 #' @param pr_zy Current posterior probabilities of group membership z
 #'
 #' @importFrom Matrix bdiag
-#' 
+#'
 #' @return Value of log-likelihood at logkappa
 #'
 #' @export
-#' 
+#'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
 #' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
@@ -925,22 +925,22 @@ LL2_kappa_diagnosticICA <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, 
   G <- length(u)
 
   #get data and nodata indices of mesh vertices
-  nmesh = ncol(Amat) #number of mesh locations
-  inds_data = which(colSums(Amat) > 0)
-  inds_nodata = setdiff(1:nmesh, inds_data)
+  nmesh <- ncol(Amat) #number of mesh locations
+  inds_data <- which(colSums(Amat) > 0)
+  inds_nodata <- setdiff(1:nmesh, inds_data)
 
   #COMPUTE R_q_inv FOR CURRENT VALUE OF kappa
 
-  Qmat = C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
-  Q11 = Qmat[inds_data,inds_data] # = Amat %*% Qmat %*% t(Amat)
+  Qmat <- C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
+  Q11 <- Qmat[inds_data,inds_data] # <- Amat %*% Qmat %*% t(Amat)
   if(length(inds_nodata)>0){ #marginalize out non-data locations in mesh
-    Q12 = Qmat[inds_data, inds_nodata]
-    Q21 = Qmat[inds_nodata, inds_data]
-    Q22 = Qmat[inds_nodata,inds_nodata]
+    Q12 <- Qmat[inds_data, inds_nodata]
+    Q21 <- Qmat[inds_nodata, inds_data]
+    Q22 <- Qmat[inds_nodata,inds_nodata]
     Q22_inv <- solve(Q22)
-    R_inv = Q11 - (Q12 %*% Q22_inv %*% Q21)
+    R_inv <- Q11 - (Q12 %*% Q22_inv %*% Q21)
   } else { #no non-data locations in mesh
-    R_inv = Q11
+    R_inv <- Q11
   }
 
 
@@ -987,9 +987,9 @@ LL2_kappa_diagnosticICA <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, 
 #' @param verbose Passed to UpdateTheta_diagnosticICA function
 #'
 #' @return Vector of updated parameter values
-#' 
+#'
 #' @keywords internal
-#' 
+#'
 #' @export
 #'
 UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
@@ -1003,7 +1003,7 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
                                              Dinv_s0_list,
                                              verbose){
 
-  L = ncol(template_mean[[1]])
+  L <- ncol(template_mean[[1]])
 
   #convert theta vector to list format
   A <- theta_vec[1:(L^2)]
@@ -1013,7 +1013,7 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 
   #update theta parameters
   if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
-  theta_new = UpdateTheta_diagnosticICA.spatial(template_mean,
+  theta_new <- UpdateTheta_diagnosticICA.spatial(template_mean,
                                                 template_var,
                                                 meshes,
                                                 BOLD,
@@ -1049,9 +1049,9 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 #' @return Negative log-likelihood given current values of parameters
 #'
 #' @keywords internal
-#' 
+#'
 #' @export
-#' 
+#'
 LL_SQUAREM_diagnosticICA <- function(theta_vec,
                                      template_mean,
                                      template_var,
