@@ -53,22 +53,24 @@ EM_diagnosticICA.independent(
 }
 \value{
 A list containing:
-group_probs (posterior probabilities of group membership),
-subICmean (estimates of subject-level ICs),
-subICvar (variance of subject-level ICs) for non-spatial model only OR
-subICcov (covariance of subject-level ICs, only computed for neighboring locations) and subICprec (precision of subject-level ICs) for spatial model only,
-theta_MLE (list of final parameter estimates),
-theta_path (path of parameter updates in SQUAREM, spatial model only),
-success_flag (flag indicating convergence (\code{TRUE}) or not (\code{FALSE})),
-error (change in parameter estimates at final iteration),
-numiter (number of parameter update steps, approximately 3x the number of accelerated SQUAREM iterations),
-squarem (output of SQUAREM function call),
-and the template mean and variance used in model estimation
+ group_probs (posterior probabilities of group membership),
+ subICmean (estimates of subject-level ICs),
+ subICvar (variance of subject-level ICs) for non-spatial model only OR
+ subICcov (covariance of subject-level ICs, only computed for neighboring locations) and subICprec (precision of subject-level ICs) for spatial model only,
+ theta_MLE (list of final parameter estimates),
+ theta_path (path of parameter updates in SQUAREM, spatial model only),
+ success_flag (flag indicating convergence (\code{TRUE}) or not (\code{FALSE})),
+ error (change in parameter estimates at final iteration),
+ numiter (number of parameter update steps, approximately 3x the number of accelerated SQUAREM iterations),
+ squarem (output of SQUAREM function call),
+ and the template mean and variance used in model estimation
 }
 \description{
 EM Algorithms for Diagnostic ICA Models
 }
 \details{
-\code{EM_dignosticICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia (2020+) for estimating
-the probabilities of group membership, subject-level ICs and unknown parameters in the diagnostic ICA model with spatial priors on subject effects.
+\code{EM_dignosticICA.spatial} implements the expectation-maximization 
+ (EM) algorithm described in Mejia (2020+) for estimating the probabilities 
+ of group membership, subject-level ICs and unknown parameters in the 
+ diagnostic ICA model with spatial priors on subject effects.
 }

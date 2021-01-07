@@ -25,3 +25,4 @@ Value of negative log likelihood
 \description{
 Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
 }
+\keyword{internal}

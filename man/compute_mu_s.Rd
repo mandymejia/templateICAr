@@ -22,7 +22,9 @@ compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 \item{C_diag}{Diagonals of residual covariance of the first level model. A vector of length Q.}
 }
 \value{
-A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
+A list containing the posterior mean \eqn{\mu} (mu) and precision 
+ \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, 
+ where \eqn{\mu = \Omega^{-1}m}.
 }
 \description{
 Computes posterior mean and precision matrix of s

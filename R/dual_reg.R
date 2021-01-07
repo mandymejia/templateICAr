@@ -4,9 +4,11 @@
 #' @param GICA Group-level independent components (VxQ)
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #'
-#' @return A list containing the subject-level independent components S (VxQ), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (VxT)
-#' @export
 #' @importFrom matrixStats colVars
+#' 
+#' @return A list containing the subject-level independent components S (VxQ), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (VxT)
+#' 
+#' @export
 #'
 dual_reg <- function(dat, GICA, scale=FALSE){
 

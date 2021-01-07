@@ -15,3 +15,4 @@ A sparse matrix obtained by combining the arguments into a block diagonal matrix
 \description{
 Code for function provided in examples of bdiag function from Matrix package
 }
+\keyword{internal}

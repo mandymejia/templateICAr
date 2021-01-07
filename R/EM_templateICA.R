@@ -15,7 +15,7 @@
 #' @param verbose If TRUE, display progress of algorithm
 #'
 #' @return  A list: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs, for non-spatial model) or subjICcov (covariance matrix of subject-level ICs, for spatial model -- note that only diagonal and values for neighbors are computed), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
-#'
+#' 
 #' @details \code{EM_templateICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA model with spatial priors on subject effects.
 #'
 #' In both models, if original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
@@ -28,7 +28,7 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
+EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -180,7 +180,7 @@ EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, the
 }
 
 #' @rdname EM_templateICA
-EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose){
+EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -281,14 +281,15 @@ EM_templateICA.independent = function(template_mean, template_var, BOLD, theta0,
 #' @param update Which parameters to update. Either "all", "A" or "kappa".
 #'
 #' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
-#'
+#' 
 NULL
 
 #' @rdname UpdateTheta_templateICA
+#' 
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix Matrix sparseMatrix
-UpdateTheta_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
+UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
   Q = ncol(template_mean)
   nvox = nrow(BOLD)
@@ -589,8 +590,9 @@ UpdateTheta_templateICA.spatial = function(template_mean, template_var, meshes, 
   return(theta_new)
 
 }
+
 #' @rdname UpdateTheta_templateICA
-UpdateTheta_templateICA.independent = function(template_mean, template_var, BOLD, theta, C_diag, verbose){
+UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
   Q = ncol(BOLD)
   nvox = nrow(BOLD)
@@ -684,10 +686,12 @@ UpdateTheta_templateICA.independent = function(template_mean, template_var, BOLD
 #' @param P Permutation matrix for regrouping by locations (instead of by ICs.)
 #' @param C_diag Diagonals of residual covariance of the first level model. A vector of length Q.
 #'
-#' @return A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
-#'
 #' @importFrom Matrix Diagonal
 #' @importFrom INLA inla.qsolve
+#' 
+#' @return A list containing the posterior mean \eqn{\mu} (mu) and precision 
+#'  \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, 
+#'  where \eqn{\mu = \Omega^{-1}m}.
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
@@ -727,10 +731,10 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #' @param C1 Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2
 #' @param rm_extra If TRUE, remove extra (non-data) vertices from the mesh for greater computational efficiency
 #'
-#' @return A list containing R inverse and SPDE matrices
-#'
 #' @importFrom Matrix bdiag
 #' @importFrom stats var
+#' 
+#' @return A list containing R inverse and SPDE matrices
 #'
 compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
 
@@ -800,12 +804,14 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
 #' @param Q The number of template ICs
 #' @param nvox The number of spatial locations (V)
 #'
-#' @return P Permutation matrix size QVxQV
-#'
 #' @details If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(nvox)) is grouped by locations 1,...,nvox
 #'
 #' @importFrom Matrix sparseMatrix
 #'
+#' @return P Permutation matrix size QVxQV
+#' 
+#' @keywords internal
+#' 
 make_Pmat <- function(Q, nvox){
   cols = 1:(Q*nvox)
   rows_P1 = seq(1, (Q-1)*nvox+1, by=nvox)
@@ -826,6 +832,8 @@ make_Pmat <- function(Q, nvox){
 #'
 #' @return A sparse matrix obtained by combining the arguments into a block diagonal matrix
 #'
+#' @keywords internal
+#' 
 bdiag_m <- function(lmat) {
   ## Copyright (C) 2016 Martin Maechler, ETH Zurich
   if(!length(lmat)) return(new("dgCMatrix"))
@@ -861,6 +869,8 @@ bdiag_m <- function(lmat) {
 #'
 #' @return Vector of updated parameter values
 #'
+#' @keywords internal
+#' 
 UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
   Q = ncol(template_mean)
@@ -901,6 +911,8 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
+#' @keywords internal
+#' 
 LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
 
   LL <- as.numeric(names(theta_vec)[1])
@@ -923,8 +935,11 @@ LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_d
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
 #' @importFrom Matrix bdiag
+#' 
 #' @return Value of log-likelihood at logkappa
 #'
+#' @keywords internal
+#' 
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
 #' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.

@@ -47,3 +47,4 @@ Vector of updated parameter values
 \description{
 Helper function for SQUAREM for estimating parameters
 }
+\keyword{internal}

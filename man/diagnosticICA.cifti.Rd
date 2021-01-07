@@ -69,7 +69,9 @@ standard deviation before model fitting. If done when estimating templates, shou
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
 }
 \value{
-A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{diagnosticICA} (class 'dICA')
+A list containing the subject IC estimates (class 'xifti'), the 
+ subject IC variance estimates (class 'xifti'), and the result of the model 
+ call to \code{diagnosticICA} (class 'dICA')
 }
 \description{
 Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template

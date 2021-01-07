@@ -12,13 +12,17 @@
 #' @param verbose If TRUE, display progress of algorithm
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
 #'
-#' @return A list containing the posterior probabilities of group membership, the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
-#' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom abind abind
 #' @importFrom matrixStats rowVars
+#' 
+#' @return A list containing the posterior probabilities of group membership, 
+#'  the estimated independent components S (a VxL matrix), their mixing matrix 
+#'  A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
+#' 
+#' @export
 #'
 diagnosticICA <- function(template_mean,
                         template_var,

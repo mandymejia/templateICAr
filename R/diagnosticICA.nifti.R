@@ -16,7 +16,10 @@
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #'
-#' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{diagnosticICA} (class 'dICA')
+#' @return A list containing the subject IC estimates (class 'xifti'), the 
+#'  subject IC variance estimates (class 'xifti'), and the result of the model
+#'  call to \code{diagnosticICA} (class 'dICA')
+#' 
 #' @export
 #'
 diagnosticICA.nifti <- function(nifti_fname,

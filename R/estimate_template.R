@@ -22,9 +22,13 @@
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
-#' @return List of two elements: template mean of class xifti and template variance of class xifti
-#' @export
 #' @importFrom ciftiTools read_cifti write_cifti
+#' 
+#' @return List of two elements: template mean of class xifti and template 
+#'  variance of class xifti
+#' 
+#' @export
+#' 
 estimate_template.cifti <- function(
   cifti_fnames,
   cifti_fnames2=NULL,
@@ -246,9 +250,12 @@ estimate_template.cifti <- function(
 #' template variance maps.
 #'
 #' @return List of two elements: template mean of class nifti and template variance of class nifti
-#' @export
+#' 
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #' @importFrom matrixStats rowVars
+#' 
+#' @export
+#' 
 estimate_template.nifti <- function(
   nifti_fnames,
   nifti_fnames2=NULL,

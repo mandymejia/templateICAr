@@ -40,7 +40,9 @@ Will be appended with "_subjICmean.nii" for IC mean maps and "_subjICvar.nii" fo
 IC variance maps.}
 }
 \value{
-A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{diagnosticICA} (class 'dICA')
+A list containing the subject IC estimates (class 'xifti'), the 
+ subject IC variance estimates (class 'xifti'), and the result of the model
+ call to \code{diagnosticICA} (class 'dICA')
 }
 \description{
 Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template

@@ -20,3 +20,4 @@ Creates permutation matrix P to regroup elements of s by locations instead of by
 \details{
 If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(nvox)) is grouped by locations 1,...,nvox
 }
+\keyword{internal}

@@ -6,11 +6,13 @@
 #' @param Q Number of latent dimensions to estimate. If not specified, estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic dimensionality selection with PESEL
 #'
-#' @return A list containing the dimension-reduced data (data_reduced, a VxQ matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
-#' @export
 #' @importFrom pesel pesel
+#' 
+#' @return A list containing the dimension-reduced data (data_reduced, a VxQ matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
+#' 
+#' @export
 #'
-dim_reduce = function(X, Q=NULL, Q_max=100){
+dim_reduce <- function(X, Q=NULL, Q_max=100){
 
   nvox = nrow(X) #number of brain locations
   ntime = ncol(X) #number of fMRI volumes (reduce this)

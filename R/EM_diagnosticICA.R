@@ -15,31 +15,35 @@
 #' @param ignore_determinant For spatial model only. If TRUE, ignore the normalizing constant in p(y|z) when computing posterior probabilities of z.
 #'
 #' @return  A list containing:
-#' group_probs (posterior probabilities of group membership),
-#' subICmean (estimates of subject-level ICs),
-#' subICvar (variance of subject-level ICs) for non-spatial model only OR
-#' subICcov (covariance of subject-level ICs, only computed for neighboring locations) and subICprec (precision of subject-level ICs) for spatial model only,
-#' theta_MLE (list of final parameter estimates),
-#' theta_path (path of parameter updates in SQUAREM, spatial model only),
-#' success_flag (flag indicating convergence (\code{TRUE}) or not (\code{FALSE})),
-#' error (change in parameter estimates at final iteration),
-#' numiter (number of parameter update steps, approximately 3x the number of accelerated SQUAREM iterations),
-#' squarem (output of SQUAREM function call),
-#' and the template mean and variance used in model estimation
+#'  group_probs (posterior probabilities of group membership),
+#'  subICmean (estimates of subject-level ICs),
+#'  subICvar (variance of subject-level ICs) for non-spatial model only OR
+#'  subICcov (covariance of subject-level ICs, only computed for neighboring locations) and subICprec (precision of subject-level ICs) for spatial model only,
+#'  theta_MLE (list of final parameter estimates),
+#'  theta_path (path of parameter updates in SQUAREM, spatial model only),
+#'  success_flag (flag indicating convergence (\code{TRUE}) or not (\code{FALSE})),
+#'  error (change in parameter estimates at final iteration),
+#'  numiter (number of parameter update steps, approximately 3x the number of accelerated SQUAREM iterations),
+#'  squarem (output of SQUAREM function call),
+#'  and the template mean and variance used in model estimation
 #'
-#' @details \code{EM_dignosticICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia (2020+) for estimating
-#' the probabilities of group membership, subject-level ICs and unknown parameters in the diagnostic ICA model with spatial priors on subject effects.
-#'
-#'
+#' @details \code{EM_dignosticICA.spatial} implements the expectation-maximization 
+#'  (EM) algorithm described in Mejia (2020+) for estimating the probabilities 
+#'  of group membership, subject-level ICs and unknown parameters in the 
+#'  diagnostic ICA model with spatial priors on subject effects.
+#' 
 NULL
 
 
 #' @rdname EM_diagnosticICA
+#' 
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
+#' 
+#' @export
 #'
-EM_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
+EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
 
   nvox <- nrow(BOLD) #number of brain locations
   if(ncol(BOLD) > nvox) warning('More time points than data locations. Are you sure the data is oriented properly?')
@@ -173,7 +177,9 @@ EM_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, t
 
 #' @rdname EM_diagnosticICA
 #'
-EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
+#' @export
+#' 
+EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
 
   nvox <- nrow(BOLD) #number of brain locations
   L <- ncol(template_mean[[1]]) #number of ICs
@@ -293,10 +299,14 @@ EM_diagnosticICA.independent = function(template_mean, template_var, BOLD, theta
 NULL
 
 #' @rdname UpdateTheta_diagnosticICA
+#' 
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix bdiag Diagonal
-UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
+#' 
+#' @export
+#' 
+UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
   nvox = nrow(BOLD)
   L = ncol(BOLD)
@@ -653,8 +663,12 @@ UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes
   return(theta_new)
 
 }
+
 #' @rdname UpdateTheta_diagnosticICA
-UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
+#'
+#' @export
+#' 
+UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
   L <- ncol(BOLD)
   nvox <- nrow(BOLD)
@@ -878,8 +892,11 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
 #' @param pr_zy Current posterior probabilities of group membership z
 #'
 #' @importFrom Matrix bdiag
+#' 
 #' @return Value of log-likelihood at logkappa
 #'
+#' @export
+#' 
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
 #' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
@@ -951,6 +968,10 @@ LL2_kappa_diagnosticICA <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, 
 #' @param verbose Passed to UpdateTheta_diagnosticICA function
 #'
 #' @return Vector of updated parameter values
+#' 
+#' @keywords internal
+#' 
+#' @export
 #'
 UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
                                              template_mean,
@@ -1008,6 +1029,10 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
+#' @keywords internal
+#' 
+#' @export
+#' 
 LL_SQUAREM_diagnosticICA <- function(theta_vec,
                                      template_mean,
                                      template_var,

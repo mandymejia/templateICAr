@@ -56,7 +56,7 @@ match_input <- function(
       if (length(matched) != length(user)) { stop() }
       return(matched)
     },
-    error = function(e) {
+    error <- function(e) {
       unrecognized_FUN(msg)
     },
     finally = {
@@ -80,7 +80,10 @@ match_input <- function(
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
 #' @return Value of negative log likelihood
+#' 
 #' @importFrom Matrix bdiag
+#' 
+#' @keywords internal
 #'
 loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 

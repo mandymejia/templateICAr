@@ -4,6 +4,7 @@
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
 #'
 #' @return Centered and scaled BOLD data (VxT matrix)
+#' 
 #' @export
 #'
 #' @details The BOLD data is centered across time, which removes the mean image by subtracting the mean of each voxel timeseries, and across space,

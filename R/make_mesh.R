@@ -53,11 +53,13 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #'
 #' @param mask Brain mask (matrix of 0/1 or TRUE/FALSE). Only supply surf OR mask.
 #'
-#' @return List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
-#' @export
 #' @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A inla.spde2.matern
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
+#' 
+#' @return List containing INLA mesh, observation weight matrix (A) for translating between mesh locations and original data locations, the brain mask used to create the mesh, and the number of original and mesh data locations
+#' 
+#' @export
 #'
 #' @note This function requires the \code{INLA} package, which is not a CRAN package. See \url{http://www.r-inla.org/download} for easy installation instructions.
 make_mesh_2D <- function(mask){

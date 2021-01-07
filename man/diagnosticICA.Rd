@@ -42,7 +42,9 @@ diagnosticICA(
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 }
 \value{
-A list containing the posterior probabilities of group membership, the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
+A list containing the posterior probabilities of group membership, 
+ the estimated independent components S (a VxL matrix), their mixing matrix 
+ A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
 Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)

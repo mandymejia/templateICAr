@@ -41,6 +41,7 @@
 #' @importFrom ciftiTools read_cifti
 #'
 #' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')
+#' 
 #' @export
 #'
 templateICA.cifti <- function(cifti_fname,

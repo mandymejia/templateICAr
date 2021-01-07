@@ -47,3 +47,4 @@ Negative log-likelihood given current values of parameters
 \description{
 Helper function for SQUAREM for extracting log likelihood
 }
+\keyword{internal}

@@ -7,7 +7,7 @@
 #' #'
 #' #' @details Y is orthonormal if $YY'=Y'Y=I$. Orthonormalization of X is given by $X (X'X)^(-.5)$.
 #' #'
-#' orthonorm = function(X){
+#' orthonorm <- function(X){
 #'
 #'   X <- as.matrix(X)
 #'
@@ -38,7 +38,7 @@
 #' #' @return A matrix equalling the (inverse) matrix square root of X'X
 #' #' @export
 #' #'
-#' sqrt_XtX = function(X, inverse=FALSE){
+#' sqrt_XtX <- function(X, inverse=FALSE){
 #'
 #'   XtX = t(X) %*% X # X'X = V D^2 V'
 #'   e = eigen(XtX)
