@@ -80,7 +80,7 @@ match_input <- function(
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
 #' @return Value of negative log likelihood
-#' @import Matrix
+#' @importFrom Matrix bdiag
 #'
 loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 

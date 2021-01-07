@@ -8,7 +8,7 @@ UpdateThetaSQUAREM_templateICA(
   theta_vec,
   template_mean,
   template_var,
-  mesh,
+  meshes,
   BOLD,
   C_diag,
   s0_vec,
@@ -25,7 +25,7 @@ UpdateThetaSQUAREM_templateICA(
 
 \item{template_var}{Passed to UpdateTheta_templateICA function}
 
-\item{mesh}{Passed to UpdateTheta_templateICA function}
+\item{meshes}{Passed to UpdateTheta_templateICA function}
 
 \item{BOLD}{Passed to UpdateTheta_templateICA function}
 

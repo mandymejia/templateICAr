@@ -287,7 +287,7 @@ NULL
 #' @rdname UpdateTheta_templateICA
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
-#' @import Matrix
+#' @importFrom Matrix Matrix sparseMatrix
 UpdateTheta_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
   Q = ncol(template_mean)
@@ -686,7 +686,7 @@ UpdateTheta_templateICA.independent = function(template_mean, template_var, BOLD
 #'
 #' @return A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
 #'
-#' @import Matrix
+#' @importFrom Matrix Diagonal
 #' @importFrom INLA inla.qsolve
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
@@ -729,7 +729,7 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #'
 #' @return A list containing R inverse and SPDE matrices
 #'
-#' @import Matrix
+#' @importFrom Matrix bdiag
 #' @importFrom stats var
 #'
 compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
@@ -922,7 +922,7 @@ LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_d
 #' @param C1 For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
-#' @import Matrix
+#' @importFrom Matrix bdiag
 #' @return Value of log-likelihood at logkappa
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial

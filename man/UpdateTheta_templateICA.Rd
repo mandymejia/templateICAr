@@ -9,7 +9,7 @@
 UpdateTheta_templateICA.spatial(
   template_mean,
   template_var,
-  mesh,
+  meshes,
   BOLD,
   theta,
   C_diag,
@@ -36,7 +36,7 @@ UpdateTheta_templateICA.independent(
 
 \item{template_var}{(VxQ matrix) between-subject variance maps for each IC in template}
 
-\item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
+\item{meshes}{NULL for spatial independence model, otherwise a list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) for each brain structure}
 
 \item{BOLD}{dimension-reduced fMRI data}
 

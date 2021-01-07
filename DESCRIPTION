@@ -29,7 +29,6 @@ Imports:
   pesel,
   SQUAREM,
   stats
-LazyData: true
 RoxygenNote: 7.1.1
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues

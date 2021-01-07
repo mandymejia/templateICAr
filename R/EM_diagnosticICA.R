@@ -295,7 +295,7 @@ NULL
 #' @rdname UpdateTheta_diagnosticICA
 #' @importFrom stats optimize
 #' @importFrom INLA inla.qsolve inla.qinv inla.setOption
-#' @import Matrix
+#' @importFrom Matrix bdiag Diagonal
 UpdateTheta_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
   nvox = nrow(BOLD)
@@ -877,7 +877,7 @@ UpdateTheta_diagnosticICA.independent = function(template_mean, template_var, te
 #' @param Q Equal to the number of ICs
 #' @param pr_zy Current posterior probabilities of group membership z
 #'
-#' @import Matrix
+#' @importFrom Matrix bdiag
 #' @return Value of log-likelihood at logkappa
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial

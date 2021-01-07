@@ -11,6 +11,8 @@ templateICA.cifti(
   spatial_model = FALSE,
   surfL_fname = NULL,
   surfR_fname = NULL,
+  surfL_fname_vis = NULL,
+  surfR_fname_vis = NULL,
   resamp_res = NULL,
   scale = TRUE,
   Q2 = NULL,
@@ -19,7 +21,7 @@ templateICA.cifti(
   epsilon = 0.001,
   verbose = TRUE,
   common_smoothness = TRUE,
-  kappa_init = NULL,
+  kappa_init = 0.5,
   write_dir = NULL
 )
 }
@@ -36,7 +38,7 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).  For spatial
-modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), subcortical
+modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
 locations will be ignored.}
 
 \item{spatial_model}{Should spatial modeling be performed? (Default FALSE) If TRUE, surface
@@ -44,10 +46,16 @@ geometries will be used to fit a spatial Bayesian model. Computational demands (
 are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.}
 
 \item{surfL_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
-file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.}
+file representing the left cortex. Only required if \code{brainstructures} includes \code{"left"}.}
 
 \item{surfR_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
-file representing the right cortex. Only required if \code{brainstructures} includes \code{"left"}.}
+file representing the right cortex. Only required if \code{brainstructures} includes \code{"right"}.}
+
+\item{surfL_fname_vis}{(Optional) File path of GIFTI surface geometry file representing the left cortex
+to be used for visualization. Only provide if \code{brainstructures} includes \code{"left"}.}
+
+\item{surfR_fname_vis}{(Optional) File path of GIFTI surface geometry file representing the right cortex
+to be used for visualization. Only provide if \code{brainstructures} includes \code{"right"}.}
 
 \item{resamp_res}{(Only recommended for spatial modeling) Target resolution for resampling (number of
 cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational

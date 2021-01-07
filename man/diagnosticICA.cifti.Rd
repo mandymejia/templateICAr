@@ -34,7 +34,7 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).  For spatial
-modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), subcortical
+modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
 locations will be ignored.}
 
 \item{spatial_model}{Should spatial modeling be performed? (Default FALSE) If TRUE, surface
