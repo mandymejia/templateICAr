@@ -28,9 +28,9 @@ templateICA.cifti(
 \arguments{
 \item{cifti_fname}{File path of CIFTI-format timeseries data (ending in .dtseries.nii).}
 
-\item{template}{Result of call to \code{estimate_template.cifti()}, either (1) an object of class
+\item{template}{Result of call to \code{estimate_template.cifti}, either (1) an object of class
 \code{template.cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
-and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti()}. For
+and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti}. For
 spatial template ICA (\code{spatial_model=TRUE}), must be the latter.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
@@ -38,10 +38,10 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).  For spatial
-modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
+modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), subcortical
 locations will be ignored.}
 
-\item{spatial_model}{Should spatial modeling be performed? (Default FALSE) If TRUE, surface
+\item{spatial_model}{Should spatial modeling be performed? (Default \eqn{FALSE}) If \code{TRUE}. surface
 geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
 are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.}
 
@@ -64,19 +64,19 @@ feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxiter}{Maximum number of EM iterations}
+\item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
-\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
+\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.}
 
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
 }

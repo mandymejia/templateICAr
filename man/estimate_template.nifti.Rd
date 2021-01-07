@@ -33,7 +33,7 @@ use all Q original group ICs.}
 \item{scale}{Logical indicating whether BOLD data should be scaled by the
 spatial standard deviation before template estimation.}
 
-\item{verbose}{If TRUE, display progress updates}
+\item{verbose}{If \code{TRUE}. display progress updates}
 
 \item{out_fname}{The path and base name prefix of the NIFTI files to write.
 Will be appended with "_mean.nii" for template mean maps and "_var.nii" for

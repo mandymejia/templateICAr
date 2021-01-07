@@ -4,13 +4,21 @@
 #'  SVD. If dimensionality is not specified, it is estimated using the method 
 #'  described in Minka (2008).
 #'
-#' @param X VxT fMRI timeseries data matrix, centered by columns and rows (columns are actually all that matter, but MATLAB implementation of Minka method also assumes rows have been centered (implicit in use of cov function))
-#' @param Q Number of latent dimensions to estimate. If not specified, estimated using PESEL (Sobczyka et al. 2020).
-#' @param Q_max Maximal number of principal components for automatic dimensionality selection with PESEL
+#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns and rows 
+#'  (columns are actually all that matter, but MATLAB implementation of Minka 
+#'  method also assumes rows have been centered (implicit in use of cov function))
+#' @param Q Number of latent dimensions to estimate. If not specified, 
+#'  estimated using PESEL (Sobczyka et al. 2020).
+#' @param Q_max Maximal number of principal components for automatic 
+#'  dimensionality selection with PESEL
 #'
 #' @importFrom pesel pesel
 #' 
-#' @return A list containing the dimension-reduced data (data_reduced, a VxQ matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
+#' @return A list containing the dimension-reduced data (data_reduced, a 
+#'  \eqn{VxQ} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
+#'  matrix) and its (pseudo-)inverse (Hinv, a \eqn{TxQ} matrix), the noise variance 
+#'  (sigma_sq), the correlation matrix of the dimension-reduced data 
+#'  (C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
 #' 
 #' @export
 #'

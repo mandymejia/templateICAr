@@ -7,10 +7,10 @@
 make_mesh_2D(mask)
 }
 \arguments{
-\item{mask}{Brain mask (matrix of 0/1 or TRUE/FALSE). Only supply surf OR mask.}
+\item{mask}{Brain mask (matrix of 0/1 or \code{TRUE}/\code{FALSE}). Only supply surf OR mask.}
 }
 \value{
-List containing INLA mesh, observation weight matrix (A) for 
+List containing INLA mesh, observation weight matrix (\strong{A}) for 
  translating between mesh locations and original data locations, the brain 
  mask used to create the mesh, and the number of original and mesh data 
  locations.

@@ -9,10 +9,10 @@ make_Pmat(Q, nvox)
 \arguments{
 \item{Q}{The number of template ICs}
 
-\item{nvox}{The number of spatial locations (V)}
+\item{nvox}{The number of spatial locations (\eqn{V})}
 }
 \value{
-P Permutation matrix size QVxQV
+P Permutation matrix size \eqn{QVxQV}
 }
 \description{
 Create permutation matrix P to regroup elements of s by locations instead of by ICs

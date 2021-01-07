@@ -7,7 +7,7 @@
 #'  brainstructure labels ("left", "right", or "subcortical").
 #'
 #' @param user Character vector of user input. These will be matched to
-#'  \code{expected} using \code{match.arg()}.
+#'  \code{expected} using \code{\link{match.arg}}.
 #' @param expected Character vector of expected/allowed values.
 #' @param fail_action If any value in \code{user} could not be
 #'  matched, or repeated matches occured, what should happen? Possible values
@@ -77,7 +77,7 @@ match_input <- function(
 #' @param par Vector of length two containing values of log kappa and log residual variance at which to compute log likelihood
 #' @param delta Estimate of delta (subject effect or deviation)
 #' @param D_diag Diagonal values of D matrix (template standard deviations)
-#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)
+#' @param mesh Object of class "templateICA_mesh" containing the triangular mesh (see \code{\link{make_mesh}})
 #' @param C1 For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'

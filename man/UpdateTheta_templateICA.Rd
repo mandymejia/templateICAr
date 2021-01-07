@@ -32,17 +32,19 @@ UpdateTheta_templateICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(VxQ matrix) mean maps for each IC in template}
+\item{template_mean}{(\eqn{VxQ} matrix) mean maps for each IC in template}
 
-\item{template_var}{(VxQ matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(\eqn{VxQ} matrix) between-subject variance maps for each IC in template}
 
-\item{meshes}{NULL for spatial independence model, otherwise a list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) for each brain structure}
+\item{meshes}{\code{NULL} for spatial independence model, otherwise a list of 
+objects of class "templateICA_mesh" containing the triangular mesh (see 
+\eqn{\link{make_mesh}}) for each brain structure.}
 
-\item{BOLD}{dimension-reduced fMRI data}
+\item{BOLD}{(\eqn{VxQ} matrix) dimension-reduced fMRI data}
 
 \item{theta}{(list) current parameter estimates}
 
-\item{C_diag}{(Qx1) diagonal elements of residual covariance after dimension reduction}
+\item{C_diag}{\eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction}
 
 \item{s0_vec}{Vectorized template means}
 
@@ -50,13 +52,14 @@ UpdateTheta_templateICA.independent(
 
 \item{Dinv_s0}{The inverse of D times s0_vec}
 
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 
-\item{return_MAP}{If TRUE, return the posterior mean and precision of the latent fields instead of the parameter estimates}
+\item{return_MAP}{If \code{TRUE}. return the posterior mean and precision of
+the latent fields instead of the parameter estimates. Default: \code{FALSE}.}
 
-\item{update}{Which parameters to update. Either "all", "A" or "kappa".}
+\item{update}{Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.}
 }
 \value{
 An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields

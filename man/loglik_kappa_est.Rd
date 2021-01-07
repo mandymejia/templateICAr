@@ -13,7 +13,7 @@ loglik_kappa_est(par, delta, D_diag, mesh, C1 = 1/(4 * pi), Q = NULL)
 
 \item{D_diag}{Diagonal values of D matrix (template standard deviations)}
 
-\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see `help(make_templateICA_mesh)`)}
+\item{mesh}{Object of class "templateICA_mesh" containing the triangular mesh (see \code{\link{make_mesh}})}
 
 \item{C1}{For the unit variance case, \eqn{\tau^2 = C1/\kappa^2}, where \eqn{C1 = 1/(4\pi)} when \eqn{\alpha=2}, \eqn{\nu=1}, \eqn{d=2}}
 

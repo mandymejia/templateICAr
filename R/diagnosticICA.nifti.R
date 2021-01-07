@@ -3,18 +3,23 @@
 #' Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template
 #'
 #' @param nifti_fname File path of NIFTI BOLD timeseries data
-#' @param templates Set of templates, each the result of call to \code{estimate_template.nifti()}
-#' (one template for each group). Either a list of objects of class \code{template.nifti}.
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial
-#' standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
-#' @param maxiter Maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations (e.g. .01)
-#' @param verbose If TRUE, display progress of algorithm
+#' @param templates Set of templates, each the result of call to 
+#'  \code{\link{estimate_template.nifti}}.
+#' (one template for each group). Either a list of objects of class 
+#'  \code{"template.nifti"}.
+#' @param scale Should BOLD data be scaled by the spatial standard deviation 
+#'  before model fitting? Default: \code{TRUE}. If done when estimating 
+#'  templates, should be done here too.
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
+#'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
+#' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
-#' Will be appended with "_subjICmean.nii" for IC mean maps and "_subjICvar.nii" for
-#' IC variance maps.
+#'  Will be appended with "_subjICmean.nii" for IC mean maps and 
+#'  "_subjICvar.nii" for IC variance maps.
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #'

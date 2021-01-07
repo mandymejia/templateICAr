@@ -13,7 +13,7 @@ match_input(
 }
 \arguments{
 \item{user}{Character vector of user input. These will be matched to
-\code{expected} using \code{match.arg()}.}
+\code{expected} using \code{\link{match.arg}}.}
 
 \item{expected}{Character vector of expected/allowed values.}
 

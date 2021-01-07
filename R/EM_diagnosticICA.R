@@ -3,16 +3,24 @@
 #'
 #' @title EM Algorithms for Diagnostic ICA Models
 #'
-#' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G, where L is the number of ICs, V is the number of data or mesh locations.
-#' @param template_var (A list of G matrices, each VxL) template variance estimates for each group 1 to G
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)
-#' @param BOLD  (VxL matrix) dimension-reduced fMRI data
-#' @param theta0 (list) initial guess at parameter values: A (LxL mixing matrix) and (for spatial model only) kappa (SPDE smoothness parameter)
-#' @param C_diag (Lx1) diagonal elements of residual covariance after dimension reduction
+#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is 
+#'  the number of data or mesh locations.
+#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#'  variance estimates for each group \eqn{1} to \eqn{G}.
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects 
+#'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list 
+#'  element corresponds to one brain structure).
+#' @param BOLD  (\eqn{VxL} matrix) dimension-reduced fMRI data
+#' @param theta0 (list) initial guess at parameter values: \strong{A} (\eqn{LxL} mixing matrix) 
+#'  and (for spatial model only) kappa (SPDE smoothness parameter)
+#' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
 #' @param maxiter maximum number of EM iterations
-#' @param epsilon smallest proportion change between iterations (e.g. .001)
-#' @param verbose If TRUE, display progress of algorithm
-#' @param ignore_determinant For spatial model only. If TRUE, ignore the normalizing constant in p(y|z) when computing posterior probabilities of z.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param verbose If \code{TRUE} (default), display progress of algorithm.
+#' @param ignore_determinant For spatial model only. If \code{TRUE} (default), 
+#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior 
+#'  probabilities of \code{z}.
 #'
 #' @return  A list containing:
 #'  group_probs (posterior probabilities of group membership),
@@ -279,22 +287,33 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 #'
 #' @title Parameter Estimates in EM Algorithm for Diagnostic ICA Model
 #'
-#' @param template_mean (A list of G matrices, each VxL) template mean estimates for each group 1 to G
-#' @param template_var (A list of G matrices, each VxL) template variance estimates for each group 1 to G
-#' @param template_var_max The maximum of the template variance across group
-#' @param BOLD  (VxL matrix) dimension-reduced fMRI data
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)
+#' @param template_mean (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#'  mean estimates for each group \eqn{1} to \eqn{G}, where \eqn{L} is the number of ICs, \eqn{V} is 
+#'  the number of data or mesh locations.
+#' @param template_var (A list of \eqn{G} matrices, each \eqn{VxL}) template 
+#'  variance estimates for each group \eqn{1} to \eqn{G}.
+#' @param template_var_max The maximum of the template variance across group.,
+#' @param BOLD  (\eqn{VxL} matrix) dimension-reduced fMRI data.
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of 
+#'  objects of type \code{templateICA_mesh} created by \code{make_mesh} 
+#'  (each list element corresponds to one brain structure).
 #' @param theta (list) current parameter estimates
-#' @param C_diag (Lx1) diagonal elements of residual covariance after dimension reduction
-#' @param s0_vec_list List of vectorized template means (one for each group 1 to G)
-#' @param D_list List of sparse diagonal matrices of template standard deviations (one for each group 1 to G)
-#' @param Dinv_s0_list List of D^{-1} times s0_vec (one for each group 1 to G)
-#' @param verbose If TRUE, display progress of algorithm
-#' @param return_MAP If TRUE, return the posterior mean and precision of the latent fields and group membership probabilities instead of the parameter estimates
-#' @param update Which parameters to update. Either "all", "A" or "kappa".
-#' @param ignore_determinant For spatial model only. If TRUE, ignore the normalizing constant in p(y|z) when computing posterior probabilities of z.
+#' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
+#' @param s0_vec_list List of vectorized template means (one for each group \eqn{1} to \eqn{G})
+#' @param D_list List of sparse diagonal matrices of template standard deviations (one for each group \eqn{1} to \eqn{G})
+#' @param Dinv_s0_list List of D^{-1} times s0_vec (one for each group \eqn{1} to \eqn{G})
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param return_MAP If \code{TRUE}, return the posterior mean and precision of
+#'  the latent fields and group membership probabilities instead of the 
+#'  parameter estimates.
+#' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
+#' @param ignore_determinant For spatial model only. If \code{TRUE} (default), 
+#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior 
+#'  probabilities of \code{z}.
 #'
-#' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields and posterior probabilities of group membership
+#' @return An updated list of parameter estimates, theta, OR if \code{return_MAP=TRUE}, 
+#'  the posterior mean and precision of the latent fields and posterior 
+#'  probabilities of group membership.
 #'
 NULL
 

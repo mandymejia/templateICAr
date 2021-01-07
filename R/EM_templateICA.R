@@ -3,22 +3,41 @@
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
-#' @param template_mean (VxQ matrix) mean maps for each IC in template, where Q is the number of ICs, V=nvox is the number of data locations.
-#' @param template_var  (VxQ matrix) between-subject variance maps for each IC in template
-#' @param meshes NULL for spatial independence model, otherwise a list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) for each brain structure
-#' @param BOLD  (VxQ matrix) dimension-reduced fMRI data
-#' @param theta0 (list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)
-#' @param C_diag (Qx1) diagonal elements of matrix proportional to residual variance.
-#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
-#' @param maxiter maximum number of EM iterations
-#' @param epsilon smallest proportion change between iterations (e.g. .001)
-#' @param verbose If TRUE, display progress of algorithm
+#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template, 
+#'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
+#' @param template_var  (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param meshes \code{NULL} for spatial independence model, otherwise a list of 
+#'  objects of class "templateICA_mesh" containing the triangular mesh (see 
+#'  \eqn{\link{make_mesh}}) for each brain structure.
+#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
+#' @param theta0 (list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix), 
+#'  nu0_sq (residual variance from first level) and (for spatial model only) 
+#'  kappa (SPDE smoothness parameter for each IC map)
+#' @param C_diag (\eqn{Qx1}) diagonal elements of matrix proportional to 
+#'  residual variance.
+#' @param common_smoothness If \code{TRUE}, use the common smoothness version 
+#'  of the spatial template ICA model, which assumes that all IC's have the 
+#'  same smoothness parameter, \eqn{\kappa}
+#' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
-#' @return  A list: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs, for non-spatial model) or subjICcov (covariance matrix of subject-level ICs, for spatial model -- note that only diagonal and values for neighbors are computed), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+#' @return  A list: theta (list of final parameter estimates), subICmean 
+#'  (estimates of subject-level ICs), subICvar (variance of subject-level ICs,
+#'  for non-spatial model) or subjICcov (covariance matrix of subject-level ICs,
+#'  for spatial model -- note that only diagonal and values for neighbors are 
+#'  computed), and success (flag indicating convergence (\code{TRUE}) or not 
+#'  (\code{FALSE}))
 #' 
-#' @details \code{EM_templateICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA model with spatial priors on subject effects.
+#' @details \code{EM_templateICA.spatial} implements the expectation-maximization 
+#'  (EM) algorithm described in Mejia et al. (2019+) for estimating the 
+#'  subject-level ICs and unknown parameters in the template ICA model with 
+#'  spatial priors on subject effects.
 #'
-#' In both models, if original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
+#'  In both models, if original fMRI timeseries has covariance 
+#'  \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying 
+#'  by (\eqn{QxT}) matrix \eqn{H} from PCA has diagonal covariance 
+#'  \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 #'
 #'
 NULL
@@ -266,19 +285,22 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 #'
 #' @title Parameter Estimates in EM Algorithm for Template ICA Model
 #'
-#' @param template_mean (VxQ matrix) mean maps for each IC in template
-#' @param template_var (VxQ matrix) between-subject variance maps for each IC in template
-#' @param BOLD dimension-reduced fMRI data
-#' @param meshes NULL for spatial independence model, otherwise a list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) for each brain structure
+#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template
+#' @param template_var (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param meshes \code{NULL} for spatial independence model, otherwise a list of 
+#'  objects of class "templateICA_mesh" containing the triangular mesh (see 
+#'  \eqn{\link{make_mesh}}) for each brain structure.
+#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
 #' @param theta (list) current parameter estimates
-#' @param C_diag (Qx1) diagonal elements of residual covariance after dimension reduction
+#' @param C_diag \eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction
 #' @param s0_vec Vectorized template means
 #' @param D Sparse diagonal matrix of template standard deviations
 #' @param Dinv_s0 The inverse of D times s0_vec
-#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
-#' @param verbose If TRUE, display progress of algorithm
-#' @param return_MAP If TRUE, return the posterior mean and precision of the latent fields instead of the parameter estimates
-#' @param update Which parameters to update. Either "all", "A" or "kappa".
+#' @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param return_MAP If \code{TRUE}. return the posterior mean and precision of
+#'  the latent fields instead of the parameter estimates. Default: \code{FALSE}.
+#' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
 #'
 #' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
 #' 
@@ -680,13 +702,13 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #' 
 #' Compute posterior mean and precision matrix of s
 #'
-#' @param y_vec Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.
+#' @param y_vec Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length \eqn{QV}.
 #' @param D Sparse diagonal matrix of template standard deviations
 #' @param Dinv_s0 The inverse of D times s0_vec
 #' @param R_inv Estimate of inverse spatial correlation matrix (sparse)
 #' @param theta List of current parameter estimates
 #' @param P Permutation matrix for regrouping by locations (instead of by ICs.)
-#' @param C_diag Diagonals of residual covariance of the first level model. A vector of length Q.
+#' @param C_diag Diagonals of residual covariance of the first level model. A vector of length \eqn{Q}.
 #'
 #' @importFrom Matrix Diagonal
 #' @importFrom INLA inla.qsolve
@@ -732,10 +754,12 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #' 
 #' Compute SPDE matrices (F, G and GFinvG) and prior precision matrix for S
 #'
-#' @param meshes A list of objects of class "templateICA_mesh" containing the triangular mesh (see `help(make_mesh)`) (one element for each brain structure)
+#' @param meshes \code{NULL} for spatial independence model, otherwise a list of 
+#'  objects of class "templateICA_mesh" containing the triangular mesh (see 
+#'  \eqn{\link{make_mesh}}) for each brain structure.
 #' @param kappa Current estimates of SPDE parameter kappa for each latent field
 #' @param C1 Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2
-#' @param rm_extra If TRUE, remove extra (non-data) vertices from the mesh for greater computational efficiency
+#' @param rm_extra If \code{TRUE}. remove extra (non-data) vertices from the mesh for greater computational efficiency
 #'
 #' @importFrom Matrix bdiag
 #' @importFrom stats var
@@ -812,13 +836,13 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
 #' Create permutation matrix P to regroup elements of s by locations instead of by ICs
 #'
 #' @param Q The number of template ICs
-#' @param nvox The number of spatial locations (V)
+#' @param nvox The number of spatial locations (\eqn{V})
 #'
 #' @details If s=(s1,...,sQ) is grouped by ICs 1,...Q, then Ps=(s(1),...,s(nvox)) is grouped by locations 1,...,nvox
 #'
 #' @importFrom Matrix sparseMatrix
 #'
-#' @return P Permutation matrix size QVxQV
+#' @return P Permutation matrix size \eqn{QVxQV}
 #' 
 #' @keywords internal
 #' 

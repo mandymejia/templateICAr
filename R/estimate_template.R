@@ -18,7 +18,7 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param verbose If TRUE, display progress updates
+#' @param verbose If \code{TRUE}. display progress updates
 #' @param out_fname (Required if templates are to be resampled to a lower spatial
 #' resolution, usually necessary for spatial template ICA.) The path and base name
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
@@ -248,7 +248,7 @@ estimate_template.cifti <- function(
 #'  use all Q original group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
-#' @param verbose If TRUE, display progress updates
+#' @param verbose If \code{TRUE}. display progress updates
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
 #' Will be appended with "_mean.nii" for template mean maps and "_var.nii" for
 #' template variance maps.

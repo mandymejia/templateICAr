@@ -3,11 +3,11 @@
 #' Run template ICA based on CIFTI-format BOLD data and CIFTI-based template
 #'
 #' @param cifti_fname File path of CIFTI-format timeseries data (ending in .dtseries.nii).
-#' @param template Result of call to \code{estimate_template.cifti()}, either (1) an object of class
+#' @param template Result of call to \code{estimate_template.cifti}, either (1) an object of class
 #' \code{template.cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
-#' and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti()}. For
+#' and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti}. For
 #' spatial template ICA (\code{spatial_model=TRUE}), must be the latter.
-#' @param spatial_model Should spatial modeling be performed? (Default FALSE) If TRUE, surface
+#' @param spatial_model Should spatial modeling be performed? (Default \eqn{FALSE}) If \code{TRUE}. surface
 #' geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
 #' are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.
 #' @param brainstructures Character vector indicating which brain structure(s)
@@ -15,7 +15,7 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).  For spatial
-#'  modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
+#'  modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), subcortical
 #'  locations will be ignored.
 #' @param surfL_fname (Required for spatial modeling) File path of GIFTI surface geometry
 #'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"left"}.
@@ -30,13 +30,13 @@
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial
 #' standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
-#' @param maxiter Maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations (e.g. .01)
-#' @param verbose If TRUE, display progress of algorithm
-#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
-#' @param common_smoothness If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param verbose If \code{TRUE} (default), display progress of algorithm.
+#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.
+#' @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
 #'
 #' @importFrom INLA inla.pardiso.check inla.setOption

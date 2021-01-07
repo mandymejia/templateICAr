@@ -19,32 +19,42 @@ diagnosticICA(
 )
 }
 \arguments{
-\item{template_mean}{(A list of G matrices, each VxL) template mean estimates for each group 1 to G}
+\item{template_mean}{(A list of G matrices, each \eqn{VxL}) template mean 
+estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{template_var}{(A list of G matrices, each VxL) template variance estimates for each group 1 to G}
+\item{template_var}{(A list of G matrices, each \eqn{VxL}) template variance 
+estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
+\item{BOLD}{(\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number 
+of volumes (time points) and \eqn{V} is the number of brain locations}
 
-\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+\item{scale}{Should BOLD data be scaled by the spatial standard deviation 
+before model fitting? Default: \code{TRUE}. If done when estimating 
+templates, should be done here too.}
 
-\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh} created by \code{make_mesh()} (each list element corresponds to one brain structure)}
+\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of objects 
+of type \code{templateICA_mesh} created by \code{make_mesh} (each list element 
+corresponds to one brain structure)}
 
-\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default), 
+will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
+(\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxiter}{Maximum number of EM iterations}
+\item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
+\item{kappa_init}{Starting value for kappa.  If \code{NULL}, starting value 
+will be determined automatically. Default: 0.4.}
 }
 \value{
 A list containing the posterior probabilities of group membership, 
- the estimated independent components S (a VxL matrix), their mixing matrix 
- A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
+ the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix 
+ \strong{A} (a \eqn{TxL} matrix), the number of nuisance ICs estimated (Q_nuis)
 }
 \description{
 Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)

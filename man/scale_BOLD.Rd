@@ -7,12 +7,12 @@
 scale_BOLD(BOLD, scale = FALSE)
 }
 \arguments{
-\item{BOLD}{(VxT matrix) fMRI timeseries data matrix}
+\item{BOLD}{(\eqn{VxT} matrix) fMRI timeseries data matrix}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
 }
 \value{
-Centered and scaled BOLD data (VxT matrix)
+Centered and scaled BOLD data (\eqn{VxT} matrix)
 }
 \description{
 Center BOLD data across space and time and scale (optionally)

@@ -26,11 +26,11 @@ activations(
 
 \item{method_p}{If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 
 \item{which.ICs}{Indices of ICs for which to identify activations.  If NULL, use all ICs.}
 
-\item{deviation}{If TRUE, identify significant deviations from the template mean}
+\item{deviation}{If \code{TRUE}. identify significant deviations from the template mean}
 }
 \value{
 A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
