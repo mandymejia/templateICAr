@@ -8,7 +8,7 @@
 #'
 #' @return A list containing the dimension-reduced data (data_reduced, a VxQ matrix), prewhitening/dimension reduction matrix (H, a QxT matrix) and its (pseudo-)inverse (Hinv, a TxQ matrix), the noise variance (sigma_sq), the correlation matrix of the dimension-reduced data (C_diag, a QxQ matrix), and the dimensionality (Q)
 #' @export
-#' @import pesel
+#' @importFrom pesel pesel
 #'
 dim_reduce = function(X, Q=NULL, Q_max=100){
 

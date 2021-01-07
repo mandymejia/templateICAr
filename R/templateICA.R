@@ -18,7 +18,7 @@
 #' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @import pesel
+#' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -319,7 +319,7 @@ templateICA <- function(template_mean,
 #'
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #' @export
-#' @import excursions
+#' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
 #'
 activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){

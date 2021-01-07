@@ -15,7 +15,7 @@
 #' @return A list containing the posterior probabilities of group membership, the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), the number of nuisance ICs estimated (Q_nuis)
 #' @export
 #' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @import pesel
+#' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom abind abind
 #' @importFrom matrixStats rowVars

@@ -37,7 +37,7 @@ NULL
 #' @rdname EM_diagnosticICA
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
-#' @import SQUAREM
+#' @importFrom SQUAREM squarem
 #'
 EM_diagnosticICA.spatial = function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
 

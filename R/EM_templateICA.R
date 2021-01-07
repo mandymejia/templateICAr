@@ -26,7 +26,7 @@ NULL
 #' @rdname EM_templateICA
 #' @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
-#' @import SQUAREM
+#' @importFrom SQUAREM squarem
 #'
 EM_templateICA.spatial = function(template_mean, template_var, meshes, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
 
