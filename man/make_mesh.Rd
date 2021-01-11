@@ -7,14 +7,14 @@
 make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
 \arguments{
-\item{surf}{Object of class \code{"surface"} (see 
-\code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}).}
+\item{surf}{Object of class \code{"surface"}. See
+\code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.}
 
-\item{inds_data}{Subset of vertices to include in analysis (e.g. non-medial 
-wall locations)}
+\item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial 
+wall locations.}
 
-\item{inds_mesh}{Subset of vertices to retain in mesh (e.g. non-medial wall 
-locations). Must be a superset of \code{inds_data}.}
+\item{inds_mesh}{Subset of vertices to retain in mesh, e.g. non-medial wall 
+locations. Must be a superset of \code{inds_data}.}
 }
 \value{
 List containing INLA mesh, observation weight matrix \strong{A} for 

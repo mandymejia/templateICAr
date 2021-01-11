@@ -2,12 +2,12 @@
 #' 
 #' Create INLA mesh and observation weight matrix based on a surface object
 #'
-#' @param surf Object of class \code{"surface"} (see 
-#'  \code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}).
-#' @param inds_data Subset of vertices to include in analysis (e.g. non-medial 
-#'  wall locations)
-#' @param inds_mesh Subset of vertices to retain in mesh (e.g. non-medial wall 
-#'  locations). Must be a superset of \code{inds_data}.
+#' @param surf Object of class \code{"surface"}. See
+#'  \code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.
+#' @param inds_data Subset of vertices to include in analysis, e.g. non-medial 
+#'  wall locations.
+#' @param inds_mesh Subset of vertices to retain in mesh, e.g. non-medial wall 
+#'  locations. Must be a superset of \code{inds_data}.
 #'
 #' @return List containing INLA mesh, observation weight matrix \strong{A} for 
 #'  translating between mesh locations and original data locations, the brain 
@@ -74,7 +74,8 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' 
 #' Create INLA mesh and observation weight matrix based on a binary brain mask
 #'
-#' @param mask Brain mask (matrix of 0/1 or \code{TRUE}/\code{FALSE}). Only supply surf OR mask.
+#' @param mask Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
+#'  Only supply surf OR mask.
 #'
 # @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A inla.spde2.matern
 #' @importFrom excursions submesh.mesh

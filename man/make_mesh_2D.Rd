@@ -7,7 +7,8 @@
 make_mesh_2D(mask)
 }
 \arguments{
-\item{mask}{Brain mask (matrix of 0/1 or \code{TRUE}/\code{FALSE}). Only supply surf OR mask.}
+\item{mask}{Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
+Only supply surf OR mask.}
 }
 \value{
 List containing INLA mesh, observation weight matrix (\strong{A}) for 
