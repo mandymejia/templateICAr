@@ -8,7 +8,7 @@ make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
 \arguments{
 \item{surf}{Object of class \code{"surface"}. See
-\code{make_surf} and \code{is.surf} from the \code{ciftiTools} package.}
+\code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.}
 
 \item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial 
 wall locations.}
@@ -23,10 +23,5 @@ List containing INLA mesh, observation weight matrix \strong{A} for
  locations.
 }
 \description{
-Create INLA mesh and observation weight matrix based on a surface object.
-}
-\details{
-This function requires the \code{INLA} package, which is not a CRAN 
- package. See \url{http://www.r-inla.org/download} for easy installation 
- instructions.
+Create INLA mesh and observation weight matrix based on a surface object
 }

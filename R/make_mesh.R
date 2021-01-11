@@ -16,6 +16,7 @@
 #' 
 #' @export
 #' 
+# @importFrom INLA inla.spde2.matern inla.mesh.create
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #'
@@ -76,6 +77,7 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' 
 #' @param mask Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
 #'
+# @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A inla.spde2.matern
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #' 

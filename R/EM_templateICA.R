@@ -8,7 +8,7 @@
 #' @param template_var  (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
-#'  \eqn{\link{make_mesh}}) for each brain structure.
+#'  \code{\link{make_mesh}}) for each brain structure.
 #' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix),
 #'  nu0_sq (residual variance from first level) and (for spatial model only)
@@ -298,7 +298,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 #' @param template_var (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
-#'  \eqn{\link{make_mesh}}) for each brain structure.
+#'  \code{\link{make_mesh}}) for each brain structure.
 #' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
 #' @param theta (list) current parameter estimates
 #' @param C_diag \eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction
@@ -784,7 +784,7 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #'
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
-#'  \eqn{\link{make_mesh}}) for each brain structure.
+#'  \code{\link{make_mesh}}) for each brain structure.
 #' @param kappa Current estimates of SPDE parameter kappa for each latent field
 #' @param C1 Constant, equal to \eqn{1/(4*pi)} for a 2-dimensional field with alpha=2
 #' @param rm_extra If \code{TRUE}. remove extra (non-data) vertices from the mesh for greater computational efficiency

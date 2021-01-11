@@ -38,7 +38,7 @@ where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations
 
 \item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
 objects of class "templateICA_mesh" containing the triangular mesh (see
-\eqn{\link{make_mesh}}) for each brain structure.}
+\code{\link{make_mesh}}) for each brain structure.}
 
 \item{BOLD}{(\eqn{VxQ} matrix) dimension-reduced fMRI data}
 
