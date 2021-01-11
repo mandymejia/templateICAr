@@ -20,8 +20,6 @@ Imports:
   abind,
   ciftiTools,
   excursions,
-  ica,
-  INLA,
   Matrix,
   matrixStats,
   methods,
