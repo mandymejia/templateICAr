@@ -23,9 +23,9 @@ List containing INLA mesh, observation weight matrix \strong{A} for
  locations.
 }
 \description{
-Create INLA mesh and observation weight matrix based on a surface object
+Create INLA mesh and observation weight matrix based on a surface object.
 }
-\note{
+\details{
 This function requires the \code{INLA} package, which is not a CRAN 
  package. See \url{http://www.r-inla.org/download} for easy installation 
  instructions.

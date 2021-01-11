@@ -8,7 +8,11 @@ make_mesh_2D(mask)
 }
 \arguments{
 \item{mask}{Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
-Only supply surf OR mask.}
+ Only supply surf OR mask.
+
+This function requires the \code{INLA} package, which is not a CRAN 
+ package. See \url{http://www.r-inla.org/download} for easy installation 
+ instructions.}
 }
 \value{
 List containing INLA mesh, observation weight matrix (\strong{A}) for 
@@ -18,9 +22,4 @@ List containing INLA mesh, observation weight matrix (\strong{A}) for
 }
 \description{
 Create INLA mesh and observation weight matrix based on a binary brain mask
-}
-\note{
-This function requires the \code{INLA} package, which is not a CRAN 
- package. See \url{http://www.r-inla.org/download} for easy installation 
- instructions.
 }
