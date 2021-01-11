@@ -348,8 +348,8 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
   if(is.null(which.ICs)) which.ICs <- 1:L
   if(min((which.ICs) %in% (1:L))==0) stop('Invalid entries in which.ICs')
 
-  template_var <- result$template$var
-  template_mean <- result$template$mean
+  template_mean <- result$template_mean
+  template_var <- result$template_var
 
   if(class(result) == 'stICA'){
 
