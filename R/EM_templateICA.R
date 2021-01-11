@@ -749,7 +749,7 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
     ) 
   }
 
-  ntime <- length(C_diag)
+  # ntime <- length(C_diag) # not used
   Q <- ncol(theta$A)
   nvox <- nrow(P)/Q
 

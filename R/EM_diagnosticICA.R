@@ -716,7 +716,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   A_part1 <- A_part2 <- matrix(0, L, L) #two parts of product for A-hat (construct each looping over voxels)
 
   A <- theta$A
-  C <- diag(C_diag)
+  # C <- diag(C_diag) # not used
   C_inv <- diag(1/(C_diag))
   At_Cinv <- t(A) %*% C_inv
   At_Cinv_A <- At_Cinv %*% A
