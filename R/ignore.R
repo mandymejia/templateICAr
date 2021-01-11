@@ -99,7 +99,7 @@
 #
 #   #compute exponential part of log-likelihood
 #   D_delta <- t(mesh$A) %*% D %*% delta
-#   Winv_D_delta <- inla.qsolve(Q = W, B=matrix(D_delta, ncol=1), method='solve')
+#   Winv_D_delta <- INLA::inla.qsolve(Q = W, B=matrix(D_delta, ncol=1), method='solve')
 #   exp_part1 <- 1/sigma_sq * sum(delta^2)
 #   exp_part2 <- 1/(sigma_sq^2) * t(D_delta) %*% Winv_D_delta
 #   exp_part <- -1+as.numeric(exp_part1) + as.numeric(exp_part2)

@@ -44,7 +44,7 @@
 #' @param write_dir Where should any output files be written? \code{NULL} 
 #'  (default) will write them to the current working directory.
 #'
-#' @importFrom INLA inla.pardiso.check inla.setOption
+# @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom ciftiTools read_cifti
 #'
 #' @return A list containing the subject IC estimates (class \code{"xifti"}), the 
@@ -85,11 +85,12 @@ diagnosticICA.cifti <- function(cifti_fname,
   if('subcortical' %in% brainstructures) do_sub <- TRUE
 
   if(spatial_model){
+    if (!requireNamespace("INLA", quietly = TRUE)) { stop("Package \"INLA\" needed to for spatial modeling. Please install it at http://www.r-inla.org/download.", call. = FALSE) }
     if(do_sub) stop('If spatial_model=TRUE, only applicable to "left" and/or "right" brainstructures. Check brainstructures argument and try again.')
     if(!is.character(templates[[1]])) stop('If spatial_model=TRUE, template argument must be file path prefix to cifti files written by estimate_template.cifti().')
-    flag <- inla.pardiso.check()
+    flag <- INLA::inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
-    inla.setOption(smtp='pardiso')
+    INLA::inla.setOption(smtp='pardiso')
   }
 
   if(!spatial_model){

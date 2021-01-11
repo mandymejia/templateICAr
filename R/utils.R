@@ -141,9 +141,9 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
   #compute exponential part of log-likelihood
   D_delta <- Dmat %*% delta
-  Winv_D_delta <- inla.qsolve(Q = W, B=matrix(D_delta, ncol=1), method='solve')
+  Winv_D_delta <- INLA::inla.qsolve(Q = W, B=matrix(D_delta, ncol=1), method='solve')
   # mu_post <- 1/sigma_sq * (Dmat %*% Winv_D_delta)
-  # Dinv_mupost <- inla.qsolve(Q = Dmat, B = matrix(mu_post, ncol=1))
+  # Dinv_mupost <- INLA::inla.qsolve(Q = Dmat, B = matrix(mu_post, ncol=1))
   # exp_part1 <- as.numeric(t(Dinv_mupost) %*% Rinv %*% Dinv_mupost)
   # diff <- delta - mu_post
   # exp_part2 <- 1/sigma_sq * sum(diff^2)

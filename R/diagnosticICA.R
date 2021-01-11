@@ -24,7 +24,7 @@
 #' @param kappa_init Starting value for kappa.  If \code{NULL}, starting value
 #'  will be determined automatically. Default: 0.4.
 #'
-#' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
+# @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom abind abind
@@ -51,9 +51,17 @@ diagnosticICA <- function(template_mean,
   do_spatial <- !is.null(meshes)
 
   if(do_spatial){
-    flag <- inla.pardiso.check()
+    if (!requireNamespace("INLA", quietly = TRUE)) { 
+      stop(
+        paste0(
+          "Package \"INLA\" needed to for spatial modeling.",
+          "Please install it at http://www.r-inla.org/download.", 
+        ), call. = FALSE
+      ) 
+    }
+    flag <- INLA::inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
-    inla.setOption(smtp='pardiso')
+    INLA::inla.setOption(smtp='pardiso')
   }
 
   if(!is.list(template_mean)) stop('template_mean must be a list')

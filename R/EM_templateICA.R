@@ -43,11 +43,20 @@
 NULL
 
 #' @rdname EM_templateICA
-#' @importFrom INLA inla.spde2.matern inla.qsolve
+# @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
 EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) { 
+    stop(
+      paste0(
+        "Package \"INLA\" needed to for spatial modeling.",
+        "Please install it at http://www.r-inla.org/download.", 
+      ), call. = FALSE
+    ) 
+  }
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -70,7 +79,7 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
   s0_vec <- as.vector(template_mean) #grouped by IC
   D_vec <- as.vector(sqrt(template_var)) #grouped by IC
   D <- Diagonal(nvox*Q, D_vec)
-  Dinv_s0 <- inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve')
+  Dinv_s0 <- INLA::inla.qsolve(Q = D, B=matrix(s0_vec, ncol=1), method='solve')
 
   # ### REFINE STARTING VALUE FOR KAPPA
   #
@@ -309,9 +318,18 @@ NULL
 #' @rdname UpdateTheta_templateICA
 #'
 #' @importFrom stats optimize
-#' @importFrom INLA inla.qsolve inla.qinv inla.setOption
+# @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix Matrix sparseMatrix
 UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) { 
+    stop(
+      paste0(
+        "Package \"INLA\" needed to for spatial modeling.",
+        "Please install it at http://www.r-inla.org/download.", 
+      ), call. = FALSE
+    ) 
+  }
 
   Q <- ncol(template_mean)
   nvox <- nrow(BOLD)
@@ -363,7 +381,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
   if(verbose) print(summary(as.vector(mu_s)))
 
   if(return_MAP){
-    cov_s = (D %*% inla.qinv(Omega) %*% D) #only computes diagonal elements and elements that are non-zero in precision of s (corresponding to neighboring locations in mesh)
+    cov_s = (D %*% INLA::inla.qinv(Omega) %*% D) #only computes diagonal elements and elements that are non-zero in precision of s (corresponding to neighboring locations in mesh)
     return(list(mu_s = mu_s, cov_s = cov_s, Omega_s = Omega))
     stop()
   }
@@ -397,7 +415,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #augment Omega_PP with additional non-sparse locations
     attributes(ind_mat)$x <- 0*attributes(ind_mat)$x
     Omega_PP_aug <- Omega_PP + ind_mat
-    Omega_PP_inv <- inla.qinv(Omega_PP_aug)
+    Omega_PP_inv <- INLA::inla.qinv(Omega_PP_aug)
 
     T_mat <- matrix(0, Q, Q)
     for(v in 1:nvox){
@@ -463,7 +481,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #             u_q = Dinv * s0
     #             v_q = 2 Omega_inv * m - Dinv * s0
 
-    # Tr(R_q_inv * Omega_inv_q) --> Use inla.inv to compute necessary elements (non-zeros in R_q_inv) of Omega_inv_q for q=1,...,Q
+    # Tr(R_q_inv * Omega_inv_q) --> Use INLA::inla.inv to compute necessary elements (non-zeros in R_q_inv) of Omega_inv_q for q=1,...,Q
     # Tr(R_q_inv * W_hat_q) --> W_hat_q = outer(Omega_inv*m,Omega_inv*m)_qq, where Omega_inv*m is known. Just calculate necessary elements (non-zeros in R_q_inv) of W_hat_q for q=1,...,Q
 
     if(verbose) cat('..Computing trace terms in log-likelihood of kappa \n')
@@ -475,7 +493,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     # if(verbose) cat(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation \n'))
     #
     # nsamp <- 5000 #number of samples
-    # musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
+    # musamp <- INLA::inla.qsample(nsamp, Q = Omega, b=rep(0, V*Q), mu=rep(0, V*Q), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
     #9 sec for 500 samples with V*Q = 2530*3 = 12,642
 
     #2. Determine non-zero terms of R_q_inv
@@ -493,7 +511,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #Omega_aug <- Omega + bdiag(rep(list(ind_mat), Q)) #augmentation not needed here
 
     #compute elements of Omega_inv that are non-sparse in Omega and in R^{-1}
-    Omega_inv <- inla.qinv(Omega)  #don't need any additional elements since Omega includes all non-zero elements of R_inv
+    Omega_inv <- INLA::inla.qinv(Omega)  #don't need any additional elements since Omega includes all non-zero elements of R_inv
     #~1 min for V=10000, L=16
 
     #if(verbose) cat('....setting up helper objects for trace computation \n') #15 sec (Q=16, nvox=5500)
@@ -621,7 +639,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 
   #initialize new objects
   theta_new <- list(A = matrix(NA, Q, Q), nu0_sq = NA)
-  A_part1 <- A_part2 = matrix(0, Q, Q) #two parts of product for A-hat (construct each looping over voxels)
+  A_part1 <- A_part2 <- matrix(0, Q, Q) #two parts of product for A-hat (construct each looping over voxels)
+
 
   A <- theta$A
   nu0_sq <- theta$nu0_sq
@@ -711,7 +730,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #' @param C_diag Diagonals of residual covariance of the first level model. A vector of length \eqn{Q}.
 #'
 #' @importFrom Matrix Diagonal
-#' @importFrom INLA inla.qsolve
+# @importFrom INLA inla.qsolve
 #'
 #' @return A list containing the posterior mean \eqn{\mu} (mu) and precision
 #'  \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m,
@@ -720,6 +739,15 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #' @keywords internal
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) { 
+    stop(
+      paste0(
+        "Package \"INLA\" needed to for spatial modeling.",
+        "Please install it at http://www.r-inla.org/download.", 
+      ), call. = FALSE
+    ) 
+  }
 
   ntime <- length(C_diag)
   Q <- ncol(theta$A)
@@ -743,7 +771,7 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
   Omega <- R_inv + D %*% Pt_Bt_nu0C_inv %*% B %*% P %*% D
 
   # Compute mu_s|y by solving for x in the system of equations Omega*x = m
-  Omega_inv_m <- inla.qsolve(Q = Omega, B=m_vec, method='solve') # <-- slowest part (up to 1 hour for Q=16, nvox=5500), but with inla.setOption(smtp='pardiso') goes down to 20 seconds!
+  Omega_inv_m <- INLA::inla.qsolve(Q = Omega, B=m_vec, method='solve') # <-- slowest part (up to 1 hour for Q=16, nvox=5500), but with inla.setOption(smtp='pardiso') goes down to 20 seconds!
   mu_s <- D %*% Omega_inv_m
 
   return(list(mu=mu_s, m=m_vec, Omega=Omega, Omega_inv_m=Omega_inv_m))

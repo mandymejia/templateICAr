@@ -21,7 +21,7 @@
 #' 
 #' @export
 #' 
-#' @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
+# @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
@@ -40,9 +40,17 @@ templateICA <- function(template_mean,
                         kappa_init=0.5){
 
   if(!is.null(meshes)){
-    flag <- inla.pardiso.check()
+    if (!requireNamespace("INLA", quietly = TRUE)) { 
+      stop(
+        paste0(
+          "Package \"INLA\" needed to for spatial modeling.",
+          "Please install it at http://www.r-inla.org/download.", 
+        ), call. = FALSE
+      ) 
+    }
+    flag <- INLA::inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
-    inla.setOption(smtp='pardiso')
+    INLA::inla.setOption(smtp='pardiso')
   }
 
   ntime <- ncol(BOLD) #length of timeseries
@@ -245,8 +253,8 @@ templateICA <- function(template_mean,
 
       # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
       # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
-      # result <- inla(formula, data = data_inla, verbose = FALSE)
-      # result_spde <- inla.spde.result(result, name='x', spde=mesh$spde)
+      # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
+      # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
       # kappa_init <- exp(result_spde$summary.log.kappa$mean)
       if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
     }

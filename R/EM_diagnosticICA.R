@@ -45,13 +45,22 @@ NULL
 
 #' @rdname EM_diagnosticICA
 #'
-#' @importFrom INLA inla.spde2.matern inla.qsolve
+# @importFrom INLA inla.spde2.matern inla.qsolve
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
 #' @export
 #'
 EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) { 
+    stop(
+      paste0(
+        "Package \"INLA\" needed to for spatial modeling.",
+        "Please install it at http://www.r-inla.org/download.", 
+      ), call. = FALSE
+    ) 
+  }
 
   nvox <- nrow(BOLD) #number of brain locations
   if(ncol(BOLD) > nvox) warning('More time points than data locations. Are you sure the data is oriented properly?')
@@ -81,7 +90,7 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
     s0_vec_list[[g]] = as.vector(template_mean[[g]]) #grouped by IC
     D_vec <- as.vector(sqrt(template_var[[g]])) #grouped by IC
     D_list[[g]] = Diagonal(nvox*L, D_vec)
-    Dinv_s0_list[[g]] <- inla.qsolve(Q = D_list[[g]], B=matrix(s0_vec_list[[g]], ncol=1), method='solve')
+    Dinv_s0_list[[g]] <- INLA::inla.qsolve(Q = D_list[[g]], B=matrix(s0_vec_list[[g]], ncol=1), method='solve')
   }
 
   #theta0 <- theta1 #last tested value of kappa0
@@ -320,12 +329,21 @@ NULL
 #' @rdname UpdateTheta_diagnosticICA
 #'
 #' @importFrom stats optimize
-#' @importFrom INLA inla.qsolve inla.qinv inla.setOption
+# @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix bdiag Diagonal
 #'
 #' @export
 #'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
+
+  if (!requireNamespace("INLA", quietly = TRUE)) { 
+    stop(
+      paste0(
+        "Package \"INLA\" needed to for spatial modeling.",
+        "Please install it at http://www.r-inla.org/download.", 
+      ), call. = FALSE
+    ) 
+  }
 
   nvox <- nrow(BOLD)
   L <- ncol(BOLD)
@@ -397,7 +415,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     B_g <- bigM %*% P %*% D_list[[g]]
     E_g <- R_inv + t(B_g) %*% bigC_inv %*% B_g
     firstpart <- t(d_g) %*% bigC_inv %*% B_g
-    lastpart <- inla.qsolve(Q = E_g, B=t(firstpart), method='solve')
+    lastpart <- INLA::inla.qsolve(Q = E_g, B=t(firstpart), method='solve')
     exppart_g <- t(d_g) %*% bigC_inv %*% d_g - firstpart %*% lastpart #gives same answer as direct computation
 
     #direct(ish) computation of determinant part (~20 min for L=16, V=5246)
@@ -458,7 +476,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     for(g in 1:G){
       if(pr_zy[g]==0) next
       #sparsity structure of Omega_g is common across g, because D_g is only difference
-      cov_sg <- (D_list[[g]] %*% inla.qinv(Omega_list[[g]]) %*% D_list[[g]])*pr_zy[g] #only calculates diagonal elements and non-zero elements of precision (correspond to neighboring locations in mesh)
+      cov_sg <- (D_list[[g]] %*% INLA::inla.qinv(Omega_list[[g]]) %*% D_list[[g]])*pr_zy[g] #only calculates diagonal elements and non-zero elements of precision (correspond to neighboring locations in mesh)
       if(first_group) {
         mu_s <- mu_s_list[[g]]*pr_zy[g]
         cov_s <- cov_sg
@@ -514,7 +532,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
       #augment Omega_PP with additional non-sparse locations needed for A_part2
       Omega_PP_g_aug <- Omega_PP_g + ind_mat
-      system.time(Omega_PP_g_inv <- inla.qinv(Omega_PP_g_aug))
+      system.time(Omega_PP_g_inv <- INLA::inla.qinv(Omega_PP_g_aug))
 
       T_mat_g <- matrix(0, L, L)
       for(v in 1:nvox){
@@ -570,7 +588,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     # LL2_part3_g = sum_ell [ s0_ell_g' * Dinv_g * R_inv * v_hat_ell_g ]
     #             v_g = 2 Omega_inv_g * m_g - Dinv_g * s0_g
 
-    # Tr(R_ell_inv * Omega_inv_ell) --> Use inla.inv to compute necessary elements (non-zeros in R_ell_inv) of Omega_inv_ell for ell=1,...,L
+    # Tr(R_ell_inv * Omega_inv_ell) --> Use INLA::inla.inv to compute necessary elements (non-zeros in R_ell_inv) of Omega_inv_ell for ell=1,...,L
     # Tr(R_ell_inv * W_hat_ell) --> W_hat_ell = outer(Omega_inv*m,Omega_inv*m)_ll, where Omega_inv*m is known. Just calculate necessary elements (non-zeros in R_ell_inv) of W_hat_ell for ell=1,...,L
 
     if(verbose) cat('..Computing trace terms in log-likelihood of kappa \n')
@@ -582,7 +600,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     # if(verbose) cat(paste0('....drawing ',nsamp,' Monte Carlo samples for covariance estimation \n'))
     #
     # nsamp <- 5000 #number of samples
-    # musamp <- inla.qsample(nsamp, Q = Omega, b=rep(0, V*L), mu=rep(0, V*L), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
+    # musamp <- INLA::inla.qsample(nsamp, Q = Omega, b=rep(0, V*L), mu=rep(0, V*L), num.threads=8) #sample from N(0, Omega^(-1)) to estimate Omega^(-1) (diagonal blocks only)
     #9 sec for 500 samples with V*L = 2530*3 = 12,642
 
     #2. Determine non-zero terms of R_ell_inv
@@ -613,7 +631,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
       #Omega_aug_g <- Omega_list[[g]] +  new_inds
       #compute elements of Omega_inv that are non-sparse in Omega and in R^{-1}
-      Omega_inv_g <- inla.qinv(Omega_list[[g]]) #don't need any additional elements since Omega and R_inv have same sparsity structure
+      Omega_inv_g <- INLA::inla.qinv(Omega_list[[g]]) #don't need any additional elements since Omega and R_inv have same sparsity structure
 
       if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
       #15 sec for L=16, nvox=5500
@@ -695,7 +713,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
 
   #initialize new objects
   theta_new <- list(A = matrix(NA, L, L))
-  A_part1 <- A_part2 = matrix(0, L, L) #two parts of product for A-hat (construct each looping over voxels)
+  A_part1 <- A_part2 <- matrix(0, L, L) #two parts of product for A-hat (construct each looping over voxels)
 
   A <- theta$A
   C <- diag(C_diag)
@@ -823,7 +841,8 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   for(v in 1:nvox){
 
     mu_sy_v <- rep(0, L)
-    mu_mut_sy_v <- Sigma_sy_v <- array(0, dim=c(L,L))
+    mu_mut_sy_v <- array(0, dim=c(L,L)) 
+    Sigma_sy_v <- array(0, dim=c(L,L))
     for(g in 1:G){
 
       if(pr_zy[g]==0) next
