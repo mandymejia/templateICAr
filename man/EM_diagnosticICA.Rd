@@ -56,7 +56,7 @@ and (for spatial model only) kappa (SPDE smoothness parameter)}
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
 \item{ignore_determinant}{For spatial model only. If \code{TRUE} (default),
-ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
+ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
 probabilities of \code{z}.}
 }
 \value{

@@ -66,7 +66,7 @@ parameter estimates.}
 \item{update}{Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.}
 
 \item{ignore_determinant}{For spatial model only. If \code{TRUE} (default),
-ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
+ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
 probabilities of \code{z}.}
 
 \item{template_var_max}{The maximum of the template variance across group.,}

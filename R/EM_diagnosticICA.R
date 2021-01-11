@@ -19,7 +19,7 @@
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
-#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
+#'  ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
 #'  probabilities of \code{z}.
 #'
 #' @return  A list containing:
@@ -317,7 +317,7 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 #'  parameter estimates.
 #' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
 #' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
-#'  ignore the normalizing constant in \eqn{p(y|z)} when computing posterior
+#'  ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
 #'  probabilities of \code{z}.
 #'
 #' @return An updated list of parameter estimates, theta, OR if \code{return_MAP=TRUE},

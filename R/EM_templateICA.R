@@ -786,7 +786,7 @@ compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \eqn{\link{make_mesh}}) for each brain structure.
 #' @param kappa Current estimates of SPDE parameter kappa for each latent field
-#' @param C1 Constant, equal to 1/(4*pi) for a 2-dimensional field with alpha=2
+#' @param C1 Constant, equal to \eqn{1/(4*pi)} for a 2-dimensional field with alpha=2
 #' @param rm_extra If \code{TRUE}. remove extra (non-data) vertices from the mesh for greater computational efficiency
 #'
 #' @importFrom Matrix bdiag
