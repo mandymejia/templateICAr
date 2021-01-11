@@ -8,7 +8,7 @@ make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
 \arguments{
 \item{surf}{Object of class \code{"surface"}. See
-\code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.}
+\code{make_surf} and \code{is.surf} from the \code{ciftiTools} package.}
 
 \item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial 
 wall locations.}

@@ -7,7 +7,7 @@
 #'  instructions.
 #' 
 #' @param surf Object of class \code{"surface"}. See
-#'  \code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.
+#'  \code{make_surf} and \code{is.surf} from the \code{ciftiTools} package.
 #' @param inds_data Subset of vertices to include in analysis, e.g. non-medial 
 #'  wall locations.
 #' @param inds_mesh Subset of vertices to retain in mesh, e.g. non-medial wall 
