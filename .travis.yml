@@ -4,7 +4,7 @@ language: R
 
 install:
 - Rscript -e 'install.packages("devtools")'
-- R -e 'devtools::install_deps(dep = T)'
+- Rscript -e 'devtools::install_deps(dep = T)'
 - Rscript -e 'install.packages("remotes")'
 - Rscript -e 'remotes::install_github("hrue/r-inla/rinla", build = FALSE)'
 
