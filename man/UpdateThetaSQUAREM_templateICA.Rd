@@ -2,13 +2,13 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{UpdateThetaSQUAREM_templateICA}
 \alias{UpdateThetaSQUAREM_templateICA}
-\title{Helper function for SQUAREM for estimating parameters}
+\title{Update theta SQUAREM}
 \usage{
 UpdateThetaSQUAREM_templateICA(
   theta_vec,
   template_mean,
   template_var,
-  mesh,
+  meshes,
   BOLD,
   C_diag,
   s0_vec,
@@ -25,7 +25,7 @@ UpdateThetaSQUAREM_templateICA(
 
 \item{template_var}{Passed to UpdateTheta_templateICA function}
 
-\item{mesh}{Passed to UpdateTheta_templateICA function}
+\item{meshes}{Passed to UpdateTheta_templateICA function}
 
 \item{BOLD}{Passed to UpdateTheta_templateICA function}
 
@@ -47,3 +47,4 @@ Vector of updated parameter values
 \description{
 Helper function for SQUAREM for estimating parameters
 }
+\keyword{internal}

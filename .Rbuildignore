@@ -1,3 +1,9 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^R/ignore\.R$
+^README\.Rmd$
+^NEWS\.md$
+^\.travis\.yml$
+^appveyor\.yml$
+^vignettes$
+^cran-comments.md

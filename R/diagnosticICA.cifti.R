@@ -1,19 +1,27 @@
+#' Diagnostic ICA for CIFTI
+#' 
 #' Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template
 #'
-#' @param cifti_fname File path of CIFTI-format timeseries data (ending in .dtseries.nii).
-#' @param templates Set of templates, each the result of call to \code{estimate_template.cifti()} (one template for each group).
-#' Either a LIST of objects of class \code{template.cifti} OR a VECTOR of file path prefixes (the part before "_mean.dscalar.nii"
-#' and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti()}.
-#' @param spatial_model Should spatial modeling be performed? (Default FALSE) If TRUE, surface
-#' geometries will be used to fit a spatial Bayesian model. Computational demands (time and memory)
-#' are much higher with spatial_model=TRUE than spatial_model=FALSE, but results are more accurate.
+#' @param cifti_fname File path of CIFTI-format timeseries data (ending in 
+#'  ".dtseries.nii").
+#' @param templates Set of templates, each the result of call to 
+#'  \code{\link{estimate_template.cifti}} (one template for each group).
+#' Either a list of objects of class \code{"template.cifti"}, OR a vector of 
+#'  file path prefixes (the part before "_mean.dscalar.nii"
+#'  and "_var.dscalar.nii") of cifti files written out by 
+#'  \code{\link{estimate_template.cifti}}.
+#' @param spatial_model Should spatial modeling be performed? Default: 
+#'  \code{FALSE}. If \code{TRUE}, surface geometries will be used to fit a 
+#'  spatial Bayesian model. Computational demands (time and memory) are much 
+#'  higher with \code{spatial_model=TRUE} than \code{spatial_model=FALSE}, but 
+#'  results are more accurate.
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).  For spatial
-#'  modeling (performed if `surfL_fname` and/or `surfR_fname` provided), subcortical
-#'  locations will be ignored.
+#'  modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), 
+#'  subcortical locations will be ignored.
 #' @param surfL_fname (Required for spatial modeling) File path of GIFTI surface geometry
 #'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"right"}.
 #' @param surfR_fname (Required for spatial modeling) File path of GIFTI surface geometry
@@ -21,25 +29,33 @@
 #' @param resamp_res (Only recommended for spatial modeling) Target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial
-#' standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.
-#' @param maxiter Maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations (e.g. .01)
-#' @param verbose If TRUE, display progress of algorithm
-#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
-#' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
+#' @param scale Should BOLD data be scaled by the spatial standard deviation 
+#'  before model fitting? Default: \code{TRUE}. If done when estimating 
+#'  templates, should be done here too.
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
+#'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
+#' @param verbose If \code{TRUE} (default), display progress of algorithm.
+#' @param kappa_init Starting value for kappa.  If \code{NULL}, starting value 
+#'  will be determined automatically. Default: 0.4.
+#' @param write_dir Where should any output files be written? \code{NULL} 
+#'  (default) will write them to the current working directory.
 #'
-#' @importFrom INLA inla.pardiso.check inla.setOption
+# @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom ciftiTools read_cifti
 #'
-#' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{diagnosticICA} (class 'dICA')
+#' @return A list containing the subject IC estimates (class \code{"xifti"}), the 
+#'  subject IC variance estimates (class \code{"xifti"}), and the result of the model 
+#'  call to \code{diagnosticICA} (class \code{"dICA"}).
+#' 
 #' @export
 #'
 diagnosticICA.cifti <- function(cifti_fname,
                               templates,
-                              brainstructures=c('left','right'),
+                              brainstructures=c("left","right"),
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
@@ -69,11 +85,12 @@ diagnosticICA.cifti <- function(cifti_fname,
   if('subcortical' %in% brainstructures) do_sub <- TRUE
 
   if(spatial_model){
+    if (!requireNamespace("INLA", quietly = TRUE)) { stop("Package \"INLA\" needed to for spatial modeling. Please install it at http://www.r-inla.org/download.", call. = FALSE) }
     if(do_sub) stop('If spatial_model=TRUE, only applicable to "left" and/or "right" brainstructures. Check brainstructures argument and try again.')
     if(!is.character(templates[[1]])) stop('If spatial_model=TRUE, template argument must be file path prefix to cifti files written by estimate_template.cifti().')
-    flag <- inla.pardiso.check()
+    flag <- INLA::inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
-    inla.setOption(smtp='pardiso')
+    INLA::inla.setOption(smtp='pardiso')
   }
 
   if(!spatial_model){
@@ -179,9 +196,9 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   # IF SPATIAL MODELING, CONSTRUCT MESH
   if(spatial_model){
-    num_surfs <- do_left + do_right
+    #num_surfs <- do_left + do_right # never used
     meshes <- vector('list', 2)
-    ind <- 1
+    # ind <- 1 # never used
     if(do_left) {
       surf <- BOLD_cifti$surf$cortex_left;
       wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)

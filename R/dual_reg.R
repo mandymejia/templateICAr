@@ -1,12 +1,17 @@
 #' Dual Regression
 #'
-#' @param dat Subject-level fMRI data (VxT)
-#' @param GICA Group-level independent components (VxQ)
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
+#' @param dat Subject-level fMRI data (\eqn{VxT})
+#' @param GICA Group-level independent components (\eqn{VxQ})
+#' @param scale A logical value indicating whether the fMRI timeseries should 
+#'  be scaled by the image standard deviation.
 #'
-#' @return A list containing the subject-level independent components S (VxQ), subject-level mixing matrix A (TxQ), and the row- and column- centered fMRI data (VxT)
-#' @export
 #' @importFrom matrixStats colVars
+#' 
+#' @return A list containing the subject-level independent components \strong{S} (\eqn{VxQ}), 
+#'  subject-level mixing matrix \strong{A} (\eqn{TxQ}), and the row- and column- centered fMRI 
+#'  data (\eqn{VxT}).
+#' 
+#' @export
 #'
 dual_reg <- function(dat, GICA, scale=FALSE){
 

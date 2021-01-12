@@ -1,4 +1,6 @@
-#' Estimate Template for Template or Diagnostic ICA based on CIFTI-format data
+#' Estimate CIFTI template
+#' 
+#' Estimate template for Template or Diagnostic ICA based on CIFTI-format data
 #'
 #' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries
 #'  (*.dtseries.nii) for template estimation
@@ -16,22 +18,26 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param verbose If TRUE, display progress updates
+#' @param verbose If \code{TRUE}. display progress updates
 #' @param out_fname (Required if templates are to be resampled to a lower spatial
 #' resolution, usually necessary for spatial template ICA.) The path and base name
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
-#' @return List of two elements: template mean of class xifti and template variance of class xifti
-#' @export
 #' @importFrom ciftiTools read_cifti write_cifti
+#' 
+#' @return List of two elements: template mean of class xifti and template 
+#'  variance of class xifti
+#' 
+#' @export
+#' 
 estimate_template.cifti <- function(
   cifti_fnames,
   cifti_fnames2=NULL,
   GICA_fname,
   inds=NULL,
   scale=TRUE,
-  brainstructures=c('left','right'),
+  brainstructures=c("left","right"),
   verbose=TRUE,
   out_fname=NULL){
 
@@ -47,51 +53,11 @@ estimate_template.cifti <- function(
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
+  
   # Read GICA result
   if(verbose) { cat('\n Reading in GICA result') }
-  GICA <- read_cifti(
-    GICA_fname,
-    brainstructures="all" #need this for reading in BOLD data with flat=TRUE
-  )
-  ## A blank mwall mask will be deleted so both a blank mwall, and no mwall at all, will be indicated by a NULL mwall entry
-  no_left_mwall <- is.null(GICA$meta$cortex$medial_wall_mask$left)
-  no_right_mwall <- is.null(GICA$meta$cortex$medial_wall_mask$right)
-  ### Warn the user if all vertices are being used.
-  if (no_left_mwall || no_right_mwall) {
-    warning(paste(
-      "No medial wall vertices were detected in the",
-      c("left cortex", "right cortex", "cortex")[no_left_mwall*1 + no_right_mwall*2],
-      "component of the GICA CIFTI. Using all vertices.\n"
-    ))
-  }
-  ### Replace the empty medial wall mask(s).
-  if (no_left_mwall) {
-    GICA$meta$cortex$medial_wall_mask$left <- rep(TRUE, nrow(GICA$data$cortex_left))
-  }
-  if (no_right_mwall) {
-    GICA$meta$cortex$medial_wall_mask$right <- rep(TRUE, nrow(GICA$data$cortex_right))
-  }
-  if (length(GICA$meta$cortex$medial_wall_mask$left) != length(GICA$meta$cortex$medial_wall_mask$right)) {
-    stop("Left and right vertex counts did not match.")
-  }
-  # Obtain the brainstructure mask for the flattened CIFTIs.
-  #   It will remove any newly-detected medial wall vertices.
-  flat_bs_labs <- c(
-    ifelse(GICA$meta$cortex$medial_wall_mask$left, "left", "mwall"),
-    ifelse(GICA$meta$cortex$medial_wall_mask$right, "right", "mwall"),
-    rep("subcortical", length(GICA$meta$subcort$labels))
-  )
-  flat_bs_mask <- flat_bs_labs %in% brainstructures
-  flat_bs_mask2 <- flat_bs_mask[flat_bs_labs != "mwall"]
-  # Flatten. GICA_flat will have the subcortical voxels in alphabetical order
-  # because cifti_read_flat() returns them in alphabetical order.
-  GICA_flat <- GICA
-  if ("subcortical" %in% brainstructures) {
-    alpha_order <- order(GICA_flat$meta$subcort$labels)
-    GICA_flat$data$subcort <- GICA_flat$data$subcort[alpha_order,, drop=FALSE]
-  }
-  GICA_flat <- do.call(rbind, GICA_flat$data)
-  GICA_flat <- GICA_flat[flat_bs_mask2,, drop=FALSE]
+  GICA <- read_cifti(GICA_fname, brainstructures=brainstructures)
+  GICA_flat <- do.call(rbind, GICA$data)
   V <- nrow(GICA_flat); Q <- ncol(GICA_flat)
   # Center each IC map.
   GICA_flat <- scale(GICA_flat, scale=FALSE)
@@ -115,6 +81,26 @@ estimate_template.cifti <- function(
     cat(paste0('\n Number of training subjects: ',N))
   }
 
+  # Obtain the brainstructure mask for the flattened CIFTIs.
+  flat_bs_mask <- vector("logical", 0)
+  if ("left" %in% brainstructures) {
+    left_mwall <- GICA$meta$cortex$medial_wall_mask$left
+    if (is.null(left_mwall)) {
+      left_mwall <- rep(TRUE, nrow(GICA$data$cortex_left))
+    }
+    flat_bs_mask <- c(flat_bs_mask, ifelse(left_mwall, "left", "mwall"))
+  }
+  if ("right" %in% brainstructures) {
+    right_mwall <- GICA$meta$cortex$medial_wall_mask$right
+    if (is.null(right_mwall)) {
+      right_mwall <- rep(TRUE, nrow(GICA$data$cortex_right))
+    }
+    flat_bs_mask <- c(flat_bs_mask, ifelse(right_mwall, "right", "mwall"))
+  }
+  if ("subcortical" %in% brainstructures) {
+    flat_bs_mask <- c(flat_bs_mask, rep("subcortical", nrow(GICA$data$subcort)))
+  }  
+  
   retest <- !is.null(cifti_fnames2)
   if(retest){
     if(length(cifti_fnames) != length(cifti_fnames2)) stop('If provided, cifti_fnames2 must have same length as cifti_fnames and be in the same subject order.')
@@ -131,12 +117,17 @@ estimate_template.cifti <- function(
     fname_ii <- cifti_fnames[ii]
     if(!file.exists(fname_ii)) {
       missing_data <- c(missing_data, fname_ii)
-      if(verbose) cat(paste0('\n Data not available'))
+      if(verbose) cat(paste0('\n Data not available for file:', fname_ii))
       next
     }
 
-    BOLD1_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask2,, drop=FALSE]
-    if(nrow(BOLD1_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and BOLD data from subject ',ii,' do not match.'))
+    BOLD1_ii <- do.call(rbind, read_cifti(fname_ii, brainstructures=brainstructures)$data)
+    if(nrow(BOLD1_ii) != nrow(GICA_flat)) {
+      stop(paste0(
+        'The number of data locations in GICA and',
+        'BOLD data from subject ', ii,' do not match.'
+      ))
+    }
     ntime <- ncol(BOLD1_ii)
 
     #read in BOLD retest data OR create pseudo test-retest data
@@ -150,12 +141,16 @@ estimate_template.cifti <- function(
       fname_ii <- cifti_fnames2[ii]
       if(!file.exists(fname_ii)) {
         missing_data <- c(missing_data, fname_ii)
-        if(verbose) cat(paste0('\n Data not available'))
+        if(verbose) cat(paste0('\n Data not available for this file:', fname_ii))
         next
       }
-      #BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask[!(flat_bs_labs %in% c("mwall","mwallL","mwallR"))],, drop=FALSE]
-      BOLD2_ii <- read_cifti(fname_ii, flat=TRUE)[flat_bs_mask2,, drop=FALSE]
-      if(nrow(BOLD2_ii) != nrow(GICA_flat)) stop(paste0('The number of data locations in GICA and BOLD retest data from subject ',ii,' do not match.'))
+      BOLD2_ii <- do.call(rbind, read_cifti(fname_ii, brainstructures=brainstructures)$data)
+      if (nrow(BOLD2_ii) != nrow(GICA_flat)) {
+        stop(paste0(
+          'The number of data locations in GICA and',
+          'BOLD data from subject ', ii,' do not match.'
+        ))
+      }
     }
 
     #perform dual regression on test and retest data
@@ -198,7 +193,7 @@ estimate_template.cifti <- function(
 
   # noise (within-subject) variance
   if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff = DR1 - DR2;
+  DR_diff <- DR1 - DR2;
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance
@@ -210,25 +205,20 @@ estimate_template.cifti <- function(
 
   # Format template as "xifti"s
 
-  if(!("left" %in% brainstructures)) GICA <-ciftiTools:::remove_xifti(GICA, "cortex_left")
-  if(!("right" %in% brainstructures)) GICA <-ciftiTools:::remove_xifti(GICA, "cortex_right")
-  if(!("subcortical" %in% brainstructures))   GICA <-ciftiTools:::remove_xifti(GICA, "subcort")
-  GICA$meta$cifti$names <- GICA$meta$cifti$names[inds]
-
   xifti_mean <- xifti_var <- GICA
   if ("left" %in% brainstructures) {
-    xifti_mean$data$cortex_left <- template_mean[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
-    xifti_var$data$cortex_left <- template_var[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
-    #xifti_noisevar$data$cortex_left <- var_noise[flat_bs_labs[flat_bs_mask]=="left",, drop=FALSE]
+    xifti_mean$data$cortex_left <- template_mean[flat_bs_mask == "left",, drop=FALSE]
+    xifti_var$data$cortex_left <- template_var[flat_bs_mask == "left",, drop=FALSE]
+    #xifti_noisevar$data$cortex_left <- var_noise[flat_bs_mask == "left",, drop=FALSE]
   }
   if ("right" %in% brainstructures) {
-    xifti_mean$data$cortex_right <- template_mean[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
-    xifti_var$data$cortex_right <- template_var[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
-    #xifti_noisevar$data$cortex_right <- var_noise[flat_bs_labs[flat_bs_mask]=="right",, drop=FALSE]
+    xifti_mean$data$cortex_right <- template_mean[flat_bs_mask == "right",, drop=FALSE]
+    xifti_var$data$cortex_right <- template_var[flat_bs_mask == "right",, drop=FALSE]
+    #xifti_noisevar$data$cortex_right <- var_noise[flat_bs_mask == "right",, drop=FALSE]
   }
   if ("subcortical" %in% brainstructures) {
-    xifti_mean$data$subcort <- template_mean[flat_bs_labs[flat_bs_mask]=="subcortical",, drop=FALSE]
-    xifti_var$data$subcort <- template_var[flat_bs_labs[flat_bs_mask]=="subcortical",, drop=FALSE]
+    xifti_mean$data$subcort <- template_mean[flat_bs_mask == "subcortical",, drop=FALSE]
+    xifti_var$data$subcort <- template_var[flat_bs_mask == "subcortical",, drop=FALSE]
   }
 
   if(!is.null(out_fname)){
@@ -240,10 +230,12 @@ estimate_template.cifti <- function(
 
   result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
   class(result) <- 'template.cifti'
-  return(result)
+  result
 }
 
-#' Estimate Template for Template or Diagnostic ICA based on NIFTI-format data
+#' Estimate NIFTI template
+#' 
+#' Estimate template for Template or Diagnostic ICA based on NIFTI-format data
 #'
 #' @param nifti_fnames Vector of file paths of NIFTI-format fMRI timeseries for template estimation.
 #' @param nifti_fnames2 (Optional) Vector of file paths of "retest" NIFTI-format fMRI
@@ -256,15 +248,18 @@ estimate_template.cifti <- function(
 #'  use all Q original group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
-#' @param verbose If TRUE, display progress updates
+#' @param verbose If \code{TRUE}. display progress updates
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
 #' Will be appended with "_mean.nii" for template mean maps and "_var.nii" for
 #' template variance maps.
 #'
 #' @return List of two elements: template mean of class nifti and template variance of class nifti
-#' @export
+#' 
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #' @importFrom matrixStats rowVars
+#' 
+#' @export
+#' 
 estimate_template.nifti <- function(
   nifti_fnames,
   nifti_fnames2=NULL,
@@ -417,7 +412,7 @@ estimate_template.nifti <- function(
 
   # noise (within-subject) variance
   if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff = DR1 - DR2;
+  DR_diff <- DR1 - DR2;
   var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
 
   # signal (between-subject) variance

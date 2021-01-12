@@ -2,13 +2,13 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{LL_SQUAREM}
 \alias{LL_SQUAREM}
-\title{Helper function for SQUAREM for extracting log likelihood}
+\title{Log-likelihood SQUAREM}
 \usage{
 LL_SQUAREM(
   theta_vec,
   template_mean,
   template_var,
-  mesh,
+  meshes,
   BOLD,
   C_diag,
   s0_vec,
@@ -25,7 +25,7 @@ LL_SQUAREM(
 
 \item{template_var}{Not used, but squarem will return error without}
 
-\item{mesh}{Not used, but squarem will return error without}
+\item{meshes}{Not used, but squarem will return error without}
 
 \item{BOLD}{Not used, but squarem will return error without}
 
@@ -47,3 +47,4 @@ Negative log-likelihood given current values of parameters
 \description{
 Helper function for SQUAREM for extracting log likelihood
 }
+\keyword{internal}

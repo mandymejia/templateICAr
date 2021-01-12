@@ -1,0 +1,23 @@
+citHeader("To cite {templateICAr} in publications use:")
+
+templateICAr_citations <- c(
+	bibentry(
+		bibtype      = "Article",
+		title        = " Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors",
+		author       = personList(
+			as.person("Amanda F Mejia"),
+			as.person("Mary Beth Nebel"),
+			as.person("Yikai Wang"),
+			as.person("Brian S Caffo"),
+			as.person("Ying Guo")
+		),
+		journal      = "Journal of the American Statistical Association",
+		year         = "2019",
+		volume       = "115",
+		number       = "531",
+		pages        = "1151--1177",
+		publisher    = "American Statistical Association",
+		doi          = "10.1080/01621459.2019.1679638",
+		key          = "mejiaTemplateIndependentComponent2019a"
+	)
+)

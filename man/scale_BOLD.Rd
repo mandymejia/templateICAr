@@ -2,17 +2,17 @@
 % Please edit documentation in R/scale_BOLD.R
 \name{scale_BOLD}
 \alias{scale_BOLD}
-\title{Center BOLD data across space and time and scale (optionally)}
+\title{Scale BOLD}
 \usage{
 scale_BOLD(BOLD, scale = FALSE)
 }
 \arguments{
-\item{BOLD}{(VxT matrix) fMRI timeseries data matrix}
+\item{BOLD}{(\eqn{VxT} matrix) fMRI timeseries data matrix}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
 }
 \value{
-Centered and scaled BOLD data (VxT matrix)
+Centered and scaled BOLD data (\eqn{VxT} matrix)
 }
 \description{
 Center BOLD data across space and time and scale (optionally)

@@ -1,0 +1,12 @@
+# R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
+
+language: R
+
+before_install:
+- Rscript -e 'install.packages("remotes")'
+- Rscript -e 'remotes::install_github("hrue/r-inla/rinla", build = FALSE)'
+
+cache: packages
+warnings_are_errors: true
+after_success:
+  - R script -e 'covr::coveralls(type = "all")'

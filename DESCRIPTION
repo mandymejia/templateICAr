@@ -7,6 +7,7 @@ Authors@R:
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
            role = c("aut", "cre"))
+Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: This package contains functions implementing the template ICA model proposed in Mejia et al. (2019) 
     and the spatial template ICA model proposed in proposed in Mejia et al. (2020+). For both models, subject-level
     brain networks are estimated as deviations from known population-level networks, which can be estimated using
@@ -15,12 +16,11 @@ Description: This package contains functions implementing the template ICA model
 Depends: R (>= 3.6.0)
 License: GPL-3
 Encoding: UTF-8
+LazyData: true
 Imports:
   abind,
   ciftiTools,
   excursions,
-  ica,
-  INLA,
   Matrix,
   matrixStats,
   methods,
@@ -28,8 +28,10 @@ Imports:
   pesel,
   SQUAREM,
   stats
-LazyData: true
-Roxygen: list(markdown = TRUE)
+Suggests:
+    knitr,
+    rmarkdown,
+    INLA (>= 0.0-1468840039)
 RoxygenNote: 7.1.1
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues

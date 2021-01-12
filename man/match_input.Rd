@@ -13,7 +13,7 @@ match_input(
 }
 \arguments{
 \item{user}{Character vector of user input. These will be matched to
-\code{expected} using \code{match.arg()}.}
+\code{expected} using \code{\link{match.arg}}.}
 
 \item{expected}{Character vector of expected/allowed values.}
 
@@ -30,9 +30,9 @@ The matched user inputs.
 }
 \description{
 Match each user input to an expected/allowed value. Raise a warning if either
-several user inputs match the same expected value, or at least one could not
-be matched to any expected value. \code{ciftiTools} uses this function to
-match keyword arguments for a function call. Another use is to match
-brainstructure labels ("left", "right", or "subcortical").
+ several user inputs match the same expected value, or at least one could not
+ be matched to any expected value. \code{ciftiTools} uses this function to
+ match keyword arguments for a function call. Another use is to match
+ brainstructure labels ("left", "right", or "subcortical").
 }
 \keyword{internal}

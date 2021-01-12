@@ -2,14 +2,14 @@
 % Please edit documentation in R/templateICA.R
 \name{templateICA}
 \alias{templateICA}
-\title{Perform template independent component analysis (ICA) using expectation-maximization (EM)}
+\title{Template ICA}
 \usage{
 templateICA(
   template_mean,
   template_var,
   BOLD,
   scale = TRUE,
-  mesh = NULL,
+  meshes = NULL,
   Q2 = NULL,
   maxQ = NULL,
   maxiter = 100,
@@ -28,19 +28,21 @@ templateICA(
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{mesh}{Either NULL (assume spatial independence) or an object of type \code{templateICA_mesh} created by \code{make_templateICA_mesh()} (spatial priors are assumed on each independent component)}
+\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
+created by \code{make_mesh} (spatial priors are assumed on each independent component).
+Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)}
 
-\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide Q2 or maxQ but not both.}
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide Q2 or maxQ but not both.}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE}. display progress of algorithm}
 
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 }

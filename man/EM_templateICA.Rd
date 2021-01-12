@@ -9,7 +9,7 @@
 EM_templateICA.spatial(
   template_mean,
   template_var,
-  mesh,
+  meshes,
   BOLD,
   theta0,
   C_diag,
@@ -31,34 +31,53 @@ EM_templateICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(VxQ matrix) mean maps for each IC in template, where Q is the number of ICs, V=nvox is the number of data locations.}
+\item{template_mean}{(\eqn{VxQ} matrix) mean maps for each IC in template,
+where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.}
 
-\item{template_var}{(VxQ matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(\eqn{VxQ} matrix) between-subject variance maps for each IC in template}
 
-\item{mesh}{NULL for spatial independence model, otherwise an object of class "templateICA_mesh" containing the triangular mesh (see \code{help(make_mesh)})}
+\item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
+objects of class "templateICA_mesh" containing the triangular mesh (see
+\code{\link{make_mesh}}) for each brain structure.}
 
-\item{BOLD}{(VxQ matrix) dimension-reduced fMRI data}
+\item{BOLD}{(\eqn{VxQ} matrix) dimension-reduced fMRI data}
 
-\item{theta0}{(list) initial guess at parameter values: A (QxQ mixing matrix), nu0_sq (residual variance from first level) and (for spatial model only) kappa (SPDE smoothness parameter for each IC map)}
+\item{theta0}{(list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix),
+nu0_sq (residual variance from first level) and (for spatial model only)
+kappa (SPDE smoothness parameter for each IC map)}
 
-\item{C_diag}{(Qx1) diagonal elements of matrix proportional to residual variance.}
+\item{C_diag}{(\eqn{Qx1}) diagonal elements of matrix proportional to
+residual variance.}
 
-\item{common_smoothness}{If TRUE, use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
+\item{common_smoothness}{If \code{TRUE}, use the common smoothness version
+of the spatial template ICA model, which assumes that all IC's have the
+same smoothness parameter, \eqn{\kappa}}
 
-\item{maxiter}{maximum number of EM iterations}
+\item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{epsilon}{smallest proportion change between iterations (e.g. .001)}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
-\item{verbose}{If TRUE, display progress of algorithm}
+\item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
 \value{
-A list: theta (list of final parameter estimates), subICmean (estimates of subject-level ICs), subICvar (variance of subject-level ICs, for non-spatial model) or subjICcov (covariance matrix of subject-level ICs, for spatial model -- note that only diagonal and values for neighbors are computed), and success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+A list: theta (list of final parameter estimates), subICmean
+ (estimates of subject-level ICs), subICvar (variance of subject-level ICs,
+ for non-spatial model) or subjICcov (covariance matrix of subject-level ICs,
+ for spatial model -- note that only diagonal and values for neighbors are
+ computed), and success (flag indicating convergence (\code{TRUE}) or not
+ (\code{FALSE}))
 }
 \description{
 EM Algorithms for Template ICA Models
 }
 \details{
-\code{EM_templateICA.spatial} implements the expectation-maximization (EM) algorithm described in Mejia et al. (2019+) for estimating the subject-level ICs and unknown parameters in the template ICA model with spatial priors on subject effects.
+\code{EM_templateICA.spatial} implements the expectation-maximization
+ (EM) algorithm described in Mejia et al. (2019+) for estimating the
+ subject-level ICs and unknown parameters in the template ICA model with
+ spatial priors on subject effects.
 
-In both models, if original fMRI timeseries has covariance \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying by (QxT) matrix \eqn{H} from PCA has diagonal covariance \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
+ In both models, if original fMRI timeseries has covariance
+ \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying
+ by (\eqn{QxT}) matrix \eqn{H} from PCA has diagonal covariance
+ \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 }

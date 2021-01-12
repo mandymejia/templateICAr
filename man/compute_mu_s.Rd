@@ -2,12 +2,12 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{compute_mu_s}
 \alias{compute_mu_s}
-\title{Computes posterior mean and precision matrix of s}
+\title{Compute posterior mean and precision of s}
 \usage{
 compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 }
 \arguments{
-\item{y_vec}{Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length QV.}
+\item{y_vec}{Vectorized, dimension-reduced fMRI data, grouped by locations. A vector of length \eqn{QV}.}
 
 \item{D}{Sparse diagonal matrix of template standard deviations}
 
@@ -19,11 +19,14 @@ compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 
 \item{P}{Permutation matrix for regrouping by locations (instead of by ICs.)}
 
-\item{C_diag}{Diagonals of residual covariance of the first level model. A vector of length Q.}
+\item{C_diag}{Diagonals of residual covariance of the first level model. A vector of length \eqn{Q}.}
 }
 \value{
-A list containing the posterior mean \eqn{\mu} (mu) and precision \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m, where \eqn{\mu = \Omega^{-1}m}.
+A list containing the posterior mean \eqn{\mu} (mu) and precision
+ \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m,
+ where \eqn{\mu = \Omega^{-1}m}.
 }
 \description{
-Computes posterior mean and precision matrix of s
+Compute posterior mean and precision matrix of s
 }
+\keyword{internal}

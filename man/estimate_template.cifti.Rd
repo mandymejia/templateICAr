@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template.cifti}
 \alias{estimate_template.cifti}
-\title{Estimate Template for Template or Diagnostic ICA based on CIFTI-format data}
+\title{Estimate CIFTI template}
 \usage{
 estimate_template.cifti(
   cifti_fnames,
@@ -38,7 +38,7 @@ cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{verbose}{If TRUE, display progress updates}
+\item{verbose}{If \code{TRUE}. display progress updates}
 
 \item{out_fname}{(Required if templates are to be resampled to a lower spatial
 resolution, usually necessary for spatial template ICA.) The path and base name
@@ -46,8 +46,9 @@ prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" fo
 template mean maps and "_var.dscalar.nii" for template variance maps.}
 }
 \value{
-List of two elements: template mean of class xifti and template variance of class xifti
+List of two elements: template mean of class xifti and template 
+ variance of class xifti
 }
 \description{
-Estimate Template for Template or Diagnostic ICA based on CIFTI-format data
+Estimate template for Template or Diagnostic ICA based on CIFTI-format data
 }
