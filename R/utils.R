@@ -60,6 +60,7 @@ match_input <- function(
       unrecognized_FUN(msg)
     },
     finally = {
+      NULL
     }
   )
 
