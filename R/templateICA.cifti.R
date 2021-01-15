@@ -68,10 +68,10 @@ templateICA.cifti <- function(cifti_fname,
   if (is.null(write_dir)) { write_dir <- getwd() }
 
   # TEMPORARY 
-  # brainstructures <- match_input(
-  #   brainstructures, c("left","right","subcortical","all"),
-  #   user_value_label="brainstructures"
-  # )
+  brainstructures <- match_input(
+    brainstructures, c("left","right","subcortical","all"),
+    user_value_label="brainstructures"
+  )
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
