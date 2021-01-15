@@ -56,10 +56,11 @@ match_input <- function(
       if (length(matched) != length(user)) { stop() }
       return(matched)
     },
-    error <- function(e) {
+    error = function(e) {
       unrecognized_FUN(msg)
     },
     finally = {
+      NULL
     }
   )
 
