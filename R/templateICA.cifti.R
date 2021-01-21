@@ -36,7 +36,7 @@
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.
-#' @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
@@ -61,7 +61,7 @@ templateICA.cifti <- function(cifti_fname,
                               maxiter=100,
                               epsilon=0.001,
                               verbose=TRUE,
-                              common_smoothness=TRUE,
+                              #common_smoothness=TRUE,
                               kappa_init=0.5,
                               write_dir=NULL){
 
@@ -82,13 +82,13 @@ templateICA.cifti <- function(cifti_fname,
   if('subcortical' %in% brainstructures) do_sub <- TRUE
 
   if(spatial_model){
-    if (!requireNamespace("INLA", quietly = TRUE)) { 
+    if (!requireNamespace("INLA", quietly = TRUE)) {
       stop(
         paste0(
           "Package \"INLA\" needed to for spatial modeling.",
-          "Please install it at http://www.r-inla.org/download.", 
+          "Please install it at http://www.r-inla.org/download.",
         ), call. = FALSE
-      ) 
+      )
     }
     if(do_sub) stop('If spatial_model=TRUE, only applicable to "left" and/or "right" brainstructures. Check brainstructures argument and try again.')
     if(!is.character(template)) stop('If spatial_model=TRUE, template argument must be file path prefix to cifti files written by estimate_template.cifti().')
@@ -129,22 +129,12 @@ templateICA.cifti <- function(cifti_fname,
                      brainstructures = brainstructures,
                      resamp_res=resamp_res)
 
-  #TO DO: SINGLE SPATIAL MODEL
-
-  # # IF SPATIAL MODELING, LOOP OVER HEMISPHERES
-  # if(spatial_model) {
-  #   if(do_left & !do_right) models <- c('lh')
-  #   if(do_right & !do_left) models <- c('rh')
-  #   if(do_left & do_right) models <- c('lh','rh')
-  # } else {
-  #   models <- 'single'
-  # }
-
   #set up xifti objects for IC mean and variance estimates
   clear_data <- function(x){
     if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
     if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
     if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
+    x$meta$cifti$names <- '1'
     return(x)
   }
   subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
@@ -204,7 +194,7 @@ templateICA.cifti <- function(cifti_fname,
                             maxiter=maxiter,
                             epsilon=epsilon,
                             verbose=verbose,
-                            common_smoothness=common_smoothness,
+                            #common_smoothness=common_smoothness,
                             kappa_init=kappa_init)
 
 

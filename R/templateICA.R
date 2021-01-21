@@ -1,5 +1,5 @@
 #' Template ICA
-#' 
+#'
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
 #' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
@@ -14,13 +14,13 @@
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If \code{TRUE}. display progress of algorithm
-#' @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
 #'
 #' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
-#' 
+#'
 #' @export
-#' 
+#'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @importFrom pesel pesel
 #' @importFrom stats optim
@@ -36,17 +36,17 @@ templateICA <- function(template_mean,
                         maxiter=100,
                         epsilon=0.001,
                         verbose=TRUE,
-                        common_smoothness=TRUE,
+                        #common_smoothness=TRUE,
                         kappa_init=0.5){
 
   if(!is.null(meshes)){
-    if (!requireNamespace("INLA", quietly = TRUE)) { 
+    if (!requireNamespace("INLA", quietly = TRUE)) {
       stop(
         paste0(
           "Package \"INLA\" needed to for spatial modeling.",
-          "Please install it at http://www.r-inla.org/download.", 
+          "Please install it at http://www.r-inla.org/download.",
         ), call. = FALSE
-      ) 
+      )
     }
     flag <- INLA::inla.pardiso.check()
     if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
@@ -73,7 +73,7 @@ templateICA <- function(template_mean,
     if(!is.list(meshes)) stop('meshes argument must be a list.')
     mesh_classes <- sapply(meshes, 'class')
     if(any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
-    if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
+    #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
   }
   #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
 
@@ -278,7 +278,7 @@ templateICA <- function(template_mean,
                                        maxiter=maxiter,
                                        epsilon=epsilon,
                                        verbose=verbose,
-                                       common_smoothness=common_smoothness)
+                                       #common_smoothness=common_smoothness)
     print(Sys.time() - t000)
 
     #organize estimates and variances in matrix form
@@ -319,7 +319,7 @@ templateICA <- function(template_mean,
 
 
 #' Activations of (s)tICA
-#' 
+#'
 #' Identify areas of activation in each independent component map
 #'
 #' @param result Fitted stICA or tICA model object (of class stICA or tICA)
@@ -332,9 +332,9 @@ templateICA <- function(template_mean,
 #' @param deviation If \code{TRUE}. identify significant deviations from the template mean
 #'
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
 #'

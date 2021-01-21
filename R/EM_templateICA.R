@@ -15,7 +15,7 @@
 #'  kappa (SPDE smoothness parameter for each IC map)
 #' @param C_diag (\eqn{Qx1}) diagonal elements of matrix proportional to
 #'  residual variance.
-#' @param common_smoothness If \code{TRUE}, use the common smoothness version
+# @param common_smoothness If \code{TRUE}, use the common smoothness version
 #'  of the spatial template ICA model, which assumes that all IC's have the
 #'  same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations. Default: 100.
@@ -47,15 +47,15 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, common_smoothness=TRUE, maxiter=100, epsilon=0.001, verbose=FALSE){
+EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -68,10 +68,6 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
   Q <- ncol(template_mean) #number of ICs
   if(Q > nvox) stop('Cannot estimate more ICs than data locations.')
   if(Q > ntime) stop('Cannot estimate more ICs than time points.')
-
-  #iter <- 1
-  #theta <- theta0
-  #success <- 1
 
   template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance
 
@@ -164,7 +160,7 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
-  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose=TRUE)
+  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE)
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
@@ -191,7 +187,7 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
                                              s0_vec,
                                              D,
                                              Dinv_s0,
-                                             common_smoothness=common_smoothness,
+                                             #common_smoothness=common_smoothness,
                                              verbose=verbose,
                                              return_MAP=TRUE)
 
@@ -305,7 +301,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 #' @param s0_vec Vectorized template means
 #' @param D Sparse diagonal matrix of template standard deviations
 #' @param Dinv_s0 The inverse of D times s0_vec
-#' @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #' @param return_MAP If \code{TRUE}. return the posterior mean and precision of
 #'  the latent fields instead of the parameter estimates. Default: \code{FALSE}.
@@ -320,15 +316,15 @@ NULL
 #' @importFrom stats optimize
 # @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix Matrix sparseMatrix
-UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, common_smoothness=TRUE, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
+UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   Q <- ncol(template_mean)
@@ -362,10 +358,11 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
   if(verbose) cat('...posterior precision \n') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
   stuff <- compute_R_inv(meshes, kappa=theta$kappa, C1=1/(4*pi))
-  R_inv <- bdiag(stuff$Rinv)
-  Fmat <- bdiag(stuff$Fmat)
-  Gmat <- bdiag(stuff$Gmat)
-  GFinvG <- bdiag(stuff$GFinvG)
+  R_inv <- bdiag(rep(list(bdiag(stuff$Rinv)), Q)) #block diagonal over components
+  Fmat <- bdiag(rep(list(bdiag(stuff$Fmat)), Q)) #block diagonal over components
+  Gmat <- bdiag(rep(list(bdiag(stuff$Gmat)), Q)) #block diagonal over components
+  GFinvG <- bdiag(rep(list(stuff$GFinvG), Q))  #block diagonal over components
+  Amat <- stuff$Amat
 
   #set up P as a sparse matrix (see OneNote for illustration of this)
   P <- make_Pmat(Q, nvox)
@@ -456,8 +453,8 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     LL1_part2 <- sum(diag( t(A_hat) %*% diag((1/C_diag)) %*% A_hat %*% T_mat ))
     #
     theta_new$LL[1] <- LL1_part1 - LL1_part2
-    print(LL1_part1)
-    print(LL1_part2*2)
+    #print(LL1_part1)
+    #print(LL1_part2*2)
 
   }
 
@@ -535,7 +532,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
     #15 sec for Q=16, nvox=5500
 
-    if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
+    #if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
 
     for(q in 1:Q){
       #if(verbose) cat(paste('......block ',q,' of ',Q,' \n'))
@@ -576,11 +573,11 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
       # COMBINE OMEGA_INV[q,q] AND W_hat[q,q] --> two trace terms involving R_q_inv can be combined
 
       OplusW_qq <- Omega_inv_qq + W_hat_qq
-      if(common_smoothness){
+      #if(common_smoothness){
         if(q==1) OplusW <- OplusW_qq else OplusW <- OplusW + OplusW_qq
-      } else {
-        OplusW[[q]] <- OplusW_qq
-      }
+      #} else {
+      #  OplusW[[q]] <- OplusW_qq
+      #}
     }
 
 
@@ -595,30 +592,36 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #~8 seconds for nvox=5500, Q=3 (comon smoothness)
     #~30 seconds for nvox=10000, Q=16
 
-    nmeshes <- length(meshes)
-    Amat_list <- vector('list', length=nmeshes)
-    for(m in 1:nmeshes){
-      Amat_list[[m]] <- meshes[[m]]$A
-    }
-    Amat <- bdiag(Amat_list)
+    # nmeshes <- length(meshes)
+    # Amat_list <- vector('list', length=nmeshes)
+    # for(m in 1:nmeshes){
+    #   Amat_list[[m]] <- meshes[[m]]$A
+    # }
+    # Amat <- bdiag(Amat_list)
 
-    if(common_smoothness){
+    # kappa_vals <- seq(0.2,0.7,0.05)
+    # LL_vals <- matrix(NA, 3, length(kappa_vals))
+    # for(ii in 1:length(kappa_vals)){
+    #   LL_vals[,ii] <- LL2_kappa(kappa_vals[ii], Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW, u=u, v=v, Q=Q)
+    # }
+
+    #if(common_smoothness){
       kappa_opt <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
                             Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW, u=u, v=v, Q=Q) #Q=Q to indicate common smoothness model to the LL2_kappa function
       LL2 <- kappa_opt$objective
       kappa_opt <- rep(kappa_opt$maximum, Q)
-    } else {
-      kappa_opt <- LL2 <- rep(NA, Q)
-      for(q in 1:Q){
-        if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
-        inds_q <- (1:nvox) + (q-1)*nvox
-        kappa_opt_q <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
-                                Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
-        LL2[q] <- kappa_opt_q$objective
-        kappa_opt[q] <- (kappa_opt_q$maximum)
-      }
-      LL2 <- sum(LL2)
-    }
+    # } else {
+    #   kappa_opt <- LL2 <- rep(NA, Q)
+    #   for(q in 1:Q){
+    #     if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
+    #     inds_q <- (1:nvox) + (q-1)*nvox
+    #     kappa_opt_q <- optimize(templateICAr::LL2_kappa, lower=0, upper=5, maximum=TRUE,
+    #                             Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
+    #     LL2[q] <- kappa_opt_q$objective
+    #     kappa_opt[q] <- (kappa_opt_q$maximum)
+    #   }
+    #   LL2 <- sum(LL2)
+    # }
 
     theta_new$kappa <- kappa_opt
     theta_new$LL[2] <- LL2
@@ -740,13 +743,13 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   # ntime <- length(C_diag) # not used
@@ -807,7 +810,7 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
 
   #SPDE matrices, needed to construct R_l_inv
   nmeshes <- length(meshes)
-  Fmat_all <- Gmat_all <- GFinvG_all <- Rinv_all <- vector('list', length=nmeshes)
+  Fmat_all <- Gmat_all <- GFinvG_all <- Rinv_all <- Amat_all <- vector('list', length=nmeshes)
   for(m in 1:nmeshes){
     mesh <- meshes[[m]]
     spde <- mesh$spde
@@ -824,8 +827,9 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
     #check if there are no non-data locations in mesh
     if(length(inds_nodata)==0) rm_extra <- TRUE #no need to marginalize out non-data locations since there are none
 
-    #set up R^{-1} (LVxLV) as a sparse block diagonal matrix
-    if(onekappa){ #just compute Rinv once
+    #set up R^{-1} (VxV) as a sparse matrix
+
+    #if(onekappa) #just compute Rinv once
       Qmat <- C1*(kappa^2 * Fmat + 2 * Gmat + kappa^(-2) * GFinvG)
       Q11 <- Qmat[inds_data,inds_data] # <- Amat %*% Qmat %*% t(Amat)
       if(rm_extra==FALSE){
@@ -838,8 +842,9 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
       } else {
         R_l_inv <- Q11
       }
-      Rinv_list <- rep(list(R_l_inv), L)
-    } else { # compute Rinv block-wise
+      Rinv <- R_l_inv
+      #Rinv_list <- list(R_l_inv) #rep(list(R_l_inv), L)
+    #} else { # compute Rinv block-wise
       ## TO DO: FIX THIS OR REMOVE NON-COMMON SMOOTHNESS OPTION
       # Rinv_list <- vector('list', L)
       # for(l in 1:L){
@@ -847,16 +852,22 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
       #   R_l_inv <- C1 * (kappa_l^2 * Fmat + 2 * Gmat + kappa_l^(-2) * GFinvG)
       #   Rinv_list[[l]] <- R_l_inv
       # }
-    }
-    Rinv <- bdiag(Rinv_list)
+    #}
+    #Rinv <- bdiag(Rinv_list) #block diagonal over components
 
     Fmat_all[[m]] <- Fmat
     Gmat_all[[m]] <- Gmat
     GFinvG_all[[m]] <- GFinvG
     Rinv_all[[m]] <- Rinv
+    Amat_all[[m]] <- Amat
+  } #end loop over hemispheres
 
-  }
-  return(list(Rinv=Rinv_all, Fmat=Fmat_all, Gmat=Gmat_all, GFinvG=GFinvG_all))
+  # block diagonal over hemispheres
+  return(list(Rinv=bdiag(Rinv_all),
+              Fmat=bdiag(Fmat_all),
+              Gmat=bdiag(Gmat_all),
+              GFinvG=bdiag(GFinvG_all),
+              Amat=bdiag(Amat_all)))
 }
 
 #' Make permutation matrix
@@ -930,14 +941,14 @@ bdiag_m <- function(lmat) {
 #' @param s0_vec Passed to UpdateTheta_templateICA function
 #' @param D Passed to UpdateTheta_templateICA function
 #' @param Dinv_s0 Passed to UpdateTheta_templateICA function
-#' @param common_smoothness Passed to UpdateTheta_templateICA function
+# @param common_smoothness Passed to UpdateTheta_templateICA function
 #' @param verbose Passed to UpdateTheta_templateICA function
 #'
 #' @return Vector of updated parameter values
 #'
 #' @keywords internal
 #'
-UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
+UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose){
 
   Q <- ncol(template_mean)
 
@@ -952,8 +963,17 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
   #update theta parameters
   if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
   theta_new <- UpdateTheta_templateICA.spatial(
-    template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, 
-    Dinv_s0, common_smoothness=common_smoothness, verbose=verbose
+    template_mean,
+    template_var,
+    meshes,
+    BOLD,
+    theta,
+    C_diag,
+    s0_vec,
+    D,
+    Dinv_s0,
+    #common_smoothness=common_smoothness,
+    verbose=verbose
   )
 
   #convert theta_new list to vector format
@@ -977,14 +997,14 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 #' @param s0_vec  Not used, but squarem will return error without
 #' @param D  Not used, but squarem will return error without
 #' @param Dinv_s0  Not used, but squarem will return error without
-#' @param common_smoothness  Not used, but squarem will return error without
+# @param common_smoothness  Not used, but squarem will return error without
 #' @param verbose  Not used, but squarem will return error without
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
 #' @keywords internal
 #'
-LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, common_smoothness, verbose){
+LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose){
 
   LL <- as.numeric(names(theta_vec)[1])
   return(-1*LL)
@@ -1056,12 +1076,11 @@ LL2_kappa <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, v, C1 = 1/(4*p
   ### PART 3: u_q' * R_q_inv * v_hat_q (sum over q for common smoothness case)
 
   if(!is.null(Q)) {
-    LL2_part3 <- t(u) %*% bdiag(rep(list(R_q_inv), Q)) %*% v
+    LL2_part3 <- t(u) %*% bdiag(rep(list(R_q_inv), Q)) %*% v #for common smoothness model
   } else {
     LL2_part3 <- t(u) %*% R_q_inv %*% v
   }
 
   result <- LL2_part1 - LL2_part2 + LL2_part3
   return(as.numeric(result))
-
 }
