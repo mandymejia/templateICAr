@@ -14,7 +14,6 @@ LL_SQUAREM(
   s0_vec,
   D,
   Dinv_s0,
-  common_smoothness,
   verbose
 )
 }
@@ -36,8 +35,6 @@ LL_SQUAREM(
 \item{D}{Not used, but squarem will return error without}
 
 \item{Dinv_s0}{Not used, but squarem will return error without}
-
-\item{common_smoothness}{Not used, but squarem will return error without}
 
 \item{verbose}{Not used, but squarem will return error without}
 }

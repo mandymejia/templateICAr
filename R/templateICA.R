@@ -277,7 +277,7 @@ templateICA <- function(template_mean,
                                        C_diag,
                                        maxiter=maxiter,
                                        epsilon=epsilon,
-                                       verbose=verbose,
+                                       verbose=verbose)
                                        #common_smoothness=common_smoothness)
     print(Sys.time() - t000)
 

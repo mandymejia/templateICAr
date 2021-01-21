@@ -16,7 +16,6 @@ UpdateTheta_templateICA.spatial(
   s0_vec,
   D,
   Dinv_s0,
-  common_smoothness = TRUE,
   verbose = FALSE,
   return_MAP = FALSE,
   update = c("all", "kappa", "A")
@@ -51,8 +50,6 @@ objects of class "templateICA_mesh" containing the triangular mesh (see
 \item{D}{Sparse diagonal matrix of template standard deviations}
 
 \item{Dinv_s0}{The inverse of D times s0_vec}
-
-\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 

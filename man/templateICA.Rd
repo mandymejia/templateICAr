@@ -15,7 +15,6 @@ templateICA(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  common_smoothness = TRUE,
   kappa_init = 0.5
 )
 }
@@ -41,8 +40,6 @@ Each list element represents a brain structure, between which spatial independen
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If \code{TRUE}. display progress of algorithm}
-
-\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
 }

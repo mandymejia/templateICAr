@@ -14,7 +14,6 @@ UpdateThetaSQUAREM_templateICA(
   s0_vec,
   D,
   Dinv_s0,
-  common_smoothness,
   verbose
 )
 }
@@ -36,8 +35,6 @@ UpdateThetaSQUAREM_templateICA(
 \item{D}{Passed to UpdateTheta_templateICA function}
 
 \item{Dinv_s0}{Passed to UpdateTheta_templateICA function}
-
-\item{common_smoothness}{Passed to UpdateTheta_templateICA function}
 
 \item{verbose}{Passed to UpdateTheta_templateICA function}
 }

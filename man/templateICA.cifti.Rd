@@ -20,7 +20,6 @@ templateICA.cifti(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  common_smoothness = TRUE,
   kappa_init = 0.5,
   write_dir = NULL
 )
@@ -73,8 +72,6 @@ standard deviation before model fitting. If done when estimating templates, shou
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
-
-\item{common_smoothness}{If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}}
 
 \item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.}
 

@@ -13,7 +13,6 @@ EM_templateICA.spatial(
   BOLD,
   theta0,
   C_diag,
-  common_smoothness = TRUE,
   maxiter = 100,
   epsilon = 0.001,
   verbose = FALSE
@@ -47,9 +46,7 @@ nu0_sq (residual variance from first level) and (for spatial model only)
 kappa (SPDE smoothness parameter for each IC map)}
 
 \item{C_diag}{(\eqn{Qx1}) diagonal elements of matrix proportional to
-residual variance.}
-
-\item{common_smoothness}{If \code{TRUE}, use the common smoothness version
+residual variance.
 of the spatial template ICA model, which assumes that all IC's have the
 same smoothness parameter, \eqn{\kappa}}
 
