@@ -20,8 +20,9 @@ templateICA.cifti(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  kappa_init = 0.5,
-  write_dir = NULL
+  kappa_init = 0.2,
+  write_dir = NULL,
+  rm_mwall = TRUE
 )
 }
 \arguments{
@@ -73,9 +74,11 @@ standard deviation before model fitting. If done when estimating templates, shou
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.}
+\item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
 
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
+
+\item{rm_mwall}{Should medial wall (missing data) locations be removed from mesh?  If TRUE, faster estimation but less accurate estimates on boundary of wall.}
 }
 \value{
 A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')

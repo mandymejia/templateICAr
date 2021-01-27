@@ -15,7 +15,7 @@ templateICA(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
-  kappa_init = 0.5
+  kappa_init = 0.2
 )
 }
 \arguments{
@@ -41,7 +41,7 @@ Each list element represents a brain structure, between which spatial independen
 
 \item{verbose}{If \code{TRUE}. display progress of algorithm}
 
-\item{kappa_init}{Starting value for kappa.  If NULL, starting value will be determined automatically.}
+\item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
 }
 \value{
 A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)

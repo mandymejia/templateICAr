@@ -15,7 +15,7 @@
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If \code{TRUE}. display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
-#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically.
+#' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 #'
 #' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
 #'
@@ -37,7 +37,7 @@ templateICA <- function(template_mean,
                         epsilon=0.001,
                         verbose=TRUE,
                         #common_smoothness=TRUE,
-                        kappa_init=0.5){
+                        kappa_init=0.2){
 
   if(!is.null(meshes)){
     if (!requireNamespace("INLA", quietly = TRUE)) {
@@ -69,7 +69,7 @@ templateICA <- function(template_mean,
   #check that the supplied mesh object is of type templateICA_mesh
   do_spatial <- !is.null(meshes)
   if(do_spatial){
-    if(verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.')
+    if(verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.\n')
     if(!is.list(meshes)) stop('meshes argument must be a list.')
     mesh_classes <- sapply(meshes, 'class')
     if(any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
@@ -90,8 +90,9 @@ templateICA <- function(template_mean,
     warning('maxQ must be at least L.  Setting maxQ=L.')
     maxQ <- L
   }
-  if(maxQ > ntime){
-    warning('maxQ must be less than T.  Setting maxQ to 75% of T.')
+  #this is to avoid the area of the pesel objective function that spikes close to rank(X), which often leads to nPC close to rank(X)
+  if(maxQ > 0.75*ntime){
+    warning('maxQ too high, setting to 75% of T.')
     maxQ <- round(ntime*0.75)
   }
 
@@ -110,13 +111,15 @@ templateICA <- function(template_mean,
   keep[rowVars(BOLD) == 0] <- FALSE
 
   if(sum(!keep) > 0){
-    template_mean_orig <- template_mean
-    template_var_orig <- template_var
-    nvox <- sum(keep)
-    if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
-    template_mean <- template_mean[keep,]
-    template_var <- template_var[keep,]
-    BOLD <- BOLD[keep,]
+    stop('flat or NA voxels detected in data or templates')
+    # For this part, would need to also update "A" matrix (projection from mesh to data locations)
+    # template_mean_orig <- template_mean
+    # template_var_orig <- template_var
+    # nvox <- sum(keep)
+    # if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
+    # template_mean <- template_mean[keep,]
+    # template_var <- template_var[keep,]
+    # BOLD <- BOLD[keep,]
   }
 
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
@@ -211,53 +214,53 @@ templateICA <- function(template_mean,
     #   theta0$A <- dat_DR$A
     # }
 
-    #starting value for kappas (use data from one hemisphere for speed)
-    if(is.null(kappa_init)){
-      #kappa_init <- 0.5
-
-      # #This needs to be generalized to multiple meshes
-      if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
-      locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
-      n_mesh1 <- length(locs)
-
-      #organize data and replicates
-      for(q in 1:L){
-        #print(paste0('IC ',q,' of ',L))
-        d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
-        #d_q <- tmp[,q] - template_mean[,q]
-        rep_q <- rep(q, length(d_q))
-        D_diag_q <- sqrt(template_var[1:n_mesh1,q])
-        if(q==1) {
-          dev <- d_q
-          rep <- rep_q
-          D_diag <- D_diag_q
-        } else {
-          dev <- c(dev, d_q)
-          rep <- c(rep, rep_q)
-          D_diag <- c(D_diag, D_diag_q)
-        }
-      }
-
-      #determine MLE of kappa
-      #~50 min with V=5200, L=16
-      print(system.time(opt <- optim(par=c(0,-20),
-                     fn=loglik_kappa_est,
-                     method='L-BFGS-B',
-                     lower=c(-5,-20),
-                     upper=c(1,Inf), #kappa usually less than 1, log(1)=0
-                     delta=dev,
-                     D_diag=D_diag,
-                     mesh=meshes[[1]],
-                     Q=L)))
-      kappa_init <- exp(opt$par[1])
-
-      # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
-      # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
-      # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
-      # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
-      # kappa_init <- exp(result_spde$summary.log.kappa$mean)
-      if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
-    }
+    # #starting value for kappas (use data from one hemisphere for speed)
+    # if(is.null(kappa_init)){
+    #   #kappa_init <- 0.5
+    #
+    #   # #This needs to be generalized to multiple meshes
+    #   if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
+    #   locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
+    #   n_mesh1 <- length(locs)
+    #
+    #   #organize data and replicates
+    #   for(q in 1:L){
+    #     #print(paste0('IC ',q,' of ',L))
+    #     d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
+    #     #d_q <- tmp[,q] - template_mean[,q]
+    #     rep_q <- rep(q, length(d_q))
+    #     D_diag_q <- sqrt(template_var[1:n_mesh1,q])
+    #     if(q==1) {
+    #       dev <- d_q
+    #       rep <- rep_q
+    #       D_diag <- D_diag_q
+    #     } else {
+    #       dev <- c(dev, d_q)
+    #       rep <- c(rep, rep_q)
+    #       D_diag <- c(D_diag, D_diag_q)
+    #     }
+    #   }
+    #
+    #   #determine MLE of kappa
+    #   #~50 min with V=5200, L=16
+    #   print(system.time(opt <- optim(par=c(0,-20),
+    #                  fn=loglik_kappa_est,
+    #                  method='L-BFGS-B',
+    #                  lower=c(-5,-20),
+    #                  upper=c(1,Inf), #kappa usually less than 1, log(1)=0
+    #                  delta=dev,
+    #                  D_diag=D_diag,
+    #                  mesh=meshes[[1]],
+    #                  Q=L)))
+    #   kappa_init <- exp(opt$par[1])
+    #
+    #   # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
+    #   # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
+    #   # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
+    #   # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
+    #   # kappa_init <- exp(result_spde$summary.log.kappa$mean)
+    #   if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
+    # }
 
     theta0$kappa <- rep(kappa_init, L)
 
@@ -298,18 +301,18 @@ templateICA <- function(template_mean,
 
   resultEM$keep <- keep
 
-  #map estimates & templates back to original locations
-  if(sum(!keep)>0){
-    #estimates
-    subjICmean <- subjICvar <- matrix(nrow=length(keep), ncol=L)
-    subjICmean[keep,] <- resultEM$subjICmean
-    subjICvar[keep,] <- resultEM$subjICvar
-    resultEM$subjICmean <- subjICmean
-    resultEM$subjICvar <- subjICvar
-    #templates
-    resultEM$template_mean <- template_mean_orig
-    resultEM$template_var <- template_var_orig
-  }
+  # #map estimates & templates back to original locations
+  # if(sum(!keep)>0){
+  #   #estimates
+  #   subjICmean <- subjICvar <- matrix(nrow=length(keep), ncol=L)
+  #   subjICmean[keep,] <- resultEM$subjICmean
+  #   subjICvar[keep,] <- resultEM$subjICvar
+  #   resultEM$subjICmean <- subjICmean
+  #   resultEM$subjICvar <- subjICvar
+  #   #templates
+  #   resultEM$template_mean <- template_mean_orig
+  #   resultEM$template_var <- template_var_orig
+  # }
 
   return(resultEM)
 
@@ -329,7 +332,7 @@ templateICA <- function(template_mean,
 #' @param method_p If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-#' @param deviation If \code{TRUE}. identify significant deviations from the template mean
+#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
 #'
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
@@ -373,6 +376,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
       if(q==which.ICs[1]) {
         #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
         #we subtract u first since rescaling by D^(-1) would affect u too
+        #save rho from first time running excursions, pass into excursions for other ICs
         tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q))
         if(verbose) print(tmp)
         rho <- res_q$rho

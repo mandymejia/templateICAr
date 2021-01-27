@@ -53,13 +53,13 @@ NULL
 #'
 EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   nvox <- nrow(BOLD) #number of brain locations
@@ -336,13 +336,13 @@ NULL
 #'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   nvox <- nrow(BOLD)
@@ -465,7 +465,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
     m_vec_list[[g]] <- stuff$m
     Omega_list[[g]] <- stuff$Omega
     Omega_inv_m_list[[g]] <- stuff$Omega_inv_m
-    if(verbose) print(summary(as.vector(stuff$mu)))
+    #if(verbose) print(summary(as.vector(stuff$mu)))
   }
 
 
@@ -841,7 +841,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
   for(v in 1:nvox){
 
     mu_sy_v <- rep(0, L)
-    mu_mut_sy_v <- array(0, dim=c(L,L)) 
+    mu_mut_sy_v <- array(0, dim=c(L,L))
     Sigma_sy_v <- array(0, dim=c(L,L))
     for(g in 1:G){
 

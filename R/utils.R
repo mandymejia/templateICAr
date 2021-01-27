@@ -70,7 +70,7 @@ match_input <- function(
 
 
 #' Kappa log-likelihood
-#' 
+#'
 #' Compute log-likelihood of kappa given an initial estimate of delta
 #'
 #' @description Applicable to a single latent field, or multiple latent fields if common smoothness is assumed
@@ -83,20 +83,20 @@ match_input <- function(
 #' @param Q Equal to the number of ICs for the common smoothness model, or NULL for the IC-specific smoothness model
 #'
 #' @return Value of negative log likelihood
-#' 
+#'
 #' @importFrom Matrix bdiag
-#' 
+#'
 #' @keywords internal
 #'
 loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
+  if (!requireNamespace("INLA", quietly = TRUE)) {
     stop(
       paste0(
         "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
+        "Please install it at http://www.r-inla.org/download.",
       ), call. = FALSE
-    ) 
+    )
   }
 
   kappa <- exp(par[1]) #log kappa -> kappa
@@ -170,6 +170,42 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
 }
 
+#TRY TO REPLACE USE OF THIS WITH REPLACE_XIFTI_DATA
+clear_data <- function(x){
+  if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
+  if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
+  if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
+  return(x)
+}
 
+replace_xifti_data <- function(xifti, datamat, new_names=NULL){
+  xifti_new <- xifti
+  nleft <- nrow(xifti$data$cortex_left)
+  nright <- nrow(xifti$data$cortex_right)
+  if(nrow(datamat) != nleft+nright) stop('datamat must have same number of rows as original xifti data')
+  if(is.null(new_names)) new_names <- xifti$meta$cifti$names
+  if(length(new_names) != ncol(datamat)) stop('number of columns in datamat does not match original xifti or new_names')
+  xifti_new$data$cortex_left <- datamat[1:nleft,]
+  xifti_new$data$cortex_right <- datamat[nleft+(1:nright),]
+  xifti_new$meta$cifti$names <- as.character(new_names)
+  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
+  return(xifti_new)
+}
+
+subtract_xifti <- function(xifti1, xifti2){
+  xifti_new <- xifti1
+  xifti_new$data$cortex_left <- xifti1$data$cortex_left - xifti2$data$cortex_left
+  xifti_new$data$cortex_right <- xifti1$data$cortex_right - xifti2$data$cortex_right
+  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
+  return(xifti_new)
+}
+
+sqrt_xifti <- function(xifti){
+  xifti_new <- xifti
+  xifti_new$data$cortex_left <- sqrt(xifti$data$cortex_left)
+  xifti_new$data$cortex_right <- sqrt(xifti$data$cortex_right)
+  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
+  return(xifti_new)
+}
 
 

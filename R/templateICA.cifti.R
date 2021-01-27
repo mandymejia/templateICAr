@@ -35,9 +35,10 @@
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
-#' @param kappa_init Starting value for kappa.  If NULL, starting value will be determined automatically. Default: \code{0.5}.
+#' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 # @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
+#' @param rm_mwall Should medial wall (missing data) locations be removed from mesh?  If TRUE, faster estimation but less accurate estimates on boundary of wall.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom ciftiTools read_cifti
@@ -62,8 +63,9 @@ templateICA.cifti <- function(cifti_fname,
                               epsilon=0.001,
                               verbose=TRUE,
                               #common_smoothness=TRUE,
-                              kappa_init=0.5,
-                              write_dir=NULL){
+                              kappa_init=0.2,
+                              write_dir=NULL,
+                              rm_mwall=TRUE){
 
   if (is.null(write_dir)) { write_dir <- getwd() }
 
@@ -106,6 +108,7 @@ templateICA.cifti <- function(cifti_fname,
     template_mean <- template$template_mean
     template_var <- template$template_var
   } else if(is.character(template)){
+    if(verbose) cat('Reading in templates.\n')
     fname_mean <- paste0(template,'_mean.dscalar.nii')
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
@@ -129,13 +132,6 @@ templateICA.cifti <- function(cifti_fname,
                      resamp_res=resamp_res)
 
   #set up xifti objects for IC mean and variance estimates
-  clear_data <- function(x){
-    if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
-    if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
-    if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
-    x$meta$cifti$names <- '1'
-    return(x)
-  }
   subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
 
   #models_list <- vector('list', length=length(models))
@@ -148,13 +144,15 @@ templateICA.cifti <- function(cifti_fname,
     if(do_left) {
       surf <- BOLD_cifti$surf$cortex_left
       wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
-      mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      if(rm_mwall) mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      if(!rm_mwall) mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
       meshes <- c(meshes, list(mesh))
     }
     if(do_right) {
       surf <- BOLD_cifti$surf$cortex_right
       wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
-      mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      if(rm_mwall) mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      if(!rm_mwall) mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
       meshes <- c(meshes, list(mesh))
     }
   } else {
@@ -218,10 +216,69 @@ templateICA.cifti <- function(cifti_fname,
   subjICmean_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
   subjICvar_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
 
-  list(
+  RESULT <- list(
     subjICmean_xifti = subjICmean_xifti,
     subjICvar_xifti = subjICvar_xifti,
     model_result = result
   )
+  class(RESULT) <- 'templateICA.cifti'
+  return(RESULT)
 }
+
+
+#' Activations of (s)tICA
+#'
+#' Identify areas of activation in each independent component map
+#'
+#' @param result Result of templateICA.cifti model call
+#' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
+#' @param u Activation threshold, default = 0
+#' @param alpha Significance level for joint PPM, default = 0.1
+#' @param type Type of region.  Default is '>' (positive excursion region).
+#' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
+#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
+#'
+#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+#'
+#' @export
+#'
+#'
+activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+
+  if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
+
+  model_result <- result$model_result
+  active_xifti <- clear_data(result$subjICmean_xifti)
+  nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
+  nright <- nrow(result$subjICmean_xifti$data$cortex_right)
+
+  if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
+  if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
+  if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
+    warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
+    spatial_model <- FALSE
+  }
+
+  #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
+  if(class(model_result)=='stICA' & spatial_model==FALSE){
+    model_result <- model_result$result_tICA
+  }
+
+  #run activations function
+  activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
+
+  #construct xifti object for activation maps
+  act_viz <- activations_result$active*1
+  act_viz[act_viz==0] <- NA
+  active_xifti$data$cortex_left <- act_viz[1:nleft,]
+  active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
+
+  #include convert_to_dlabel function
+
+  return(list(activations = activations_result,
+                 active_xifti = active_xifti))
+}
+
 
