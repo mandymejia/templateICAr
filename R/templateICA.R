@@ -293,13 +293,17 @@ templateICA <- function(template_mean,
     resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   #}
 
+
   #for stICA, return tICA estimates also
   if(do_spatial){
     resultEM$result_tICA <- resultEM_tICA
     class(resultEM) <- 'stICA'
   }
 
-  resultEM$keep <- keep
+  #return DR estimates
+  resultEM$result_DR <- dat_DR
+
+  #resultEM$keep <- keep
 
   # #map estimates & templates back to original locations
   # if(sum(!keep)>0){

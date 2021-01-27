@@ -178,34 +178,3 @@ clear_data <- function(x){
   return(x)
 }
 
-replace_xifti_data <- function(xifti, datamat, new_names=NULL){
-  xifti_new <- xifti
-  nleft <- nrow(xifti$data$cortex_left)
-  nright <- nrow(xifti$data$cortex_right)
-  if(nrow(datamat) != nleft+nright) stop('datamat must have same number of rows as original xifti data')
-  if(is.null(new_names)) new_names <- xifti$meta$cifti$names
-  if(length(new_names) != ncol(datamat)) stop('number of columns in datamat does not match original xifti or new_names')
-  xifti_new$data$cortex_left <- datamat[1:nleft,]
-  xifti_new$data$cortex_right <- datamat[nleft+(1:nright),]
-  xifti_new$meta$cifti$names <- as.character(new_names)
-  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
-  return(xifti_new)
-}
-
-subtract_xifti <- function(xifti1, xifti2){
-  xifti_new <- xifti1
-  xifti_new$data$cortex_left <- xifti1$data$cortex_left - xifti2$data$cortex_left
-  xifti_new$data$cortex_right <- xifti1$data$cortex_right - xifti2$data$cortex_right
-  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
-  return(xifti_new)
-}
-
-sqrt_xifti <- function(xifti){
-  xifti_new <- xifti
-  xifti_new$data$cortex_left <- sqrt(xifti$data$cortex_left)
-  xifti_new$data$cortex_right <- sqrt(xifti$data$cortex_right)
-  if(!is.xifti(xifti_new)) stop('xifti_new is not a valid xifti object')
-  return(xifti_new)
-}
-
-
