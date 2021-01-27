@@ -46,7 +46,7 @@ prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" fo
 template mean maps and "_var.dscalar.nii" for template variance maps.}
 }
 \value{
-List of two elements: template mean of class xifti and template 
+List of two elements: template mean of class xifti and template
  variance of class xifti
 }
 \description{

@@ -1,5 +1,5 @@
 #' Estimate CIFTI template
-#' 
+#'
 #' Estimate template for Template or Diagnostic ICA based on CIFTI-format data
 #'
 #' @param cifti_fnames Vector of file paths of CIFTI-format fMRI timeseries
@@ -25,12 +25,12 @@
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
 #' @importFrom ciftiTools read_cifti write_cifti
-#' 
-#' @return List of two elements: template mean of class xifti and template 
+#'
+#' @return List of two elements: template mean of class xifti and template
 #'  variance of class xifti
-#' 
+#'
 #' @export
-#' 
+#'
 estimate_template.cifti <- function(
   cifti_fnames,
   cifti_fnames2=NULL,
@@ -44,6 +44,24 @@ estimate_template.cifti <- function(
   #TO DOs:
   # Create function to print and check template, template.cifti and template.nifti objects
 
+  if(!is.null(out_fname)){
+    if(!dir.exists(dirname(out_fname))) stop('directory part of out_fname does not exist')
+  }
+
+  retest <- !is.null(cifti_fnames2)
+  if(retest){
+    if(length(cifti_fnames) != length(cifti_fnames2)) stop('If provided, cifti_fnames2 must have same length as cifti_fnames and be in the same subject order.')
+  }
+
+  notthere <- sum(!file.exists(cifti_fnames))
+  if(notthere == length(cifti_fnames)) stop('The files in cifti_fnames do not exist.')
+  if(notthere > 0) warning(paste0('There are ', notthere, ' files in cifti_fnames that do not exist. These scans will be excluded from template estimation.'))
+  if(retest) {
+    notthere2 <- sum(!file.exists(cifti_fnames2))
+    if(notthere2 == length(cifti_fnames2)) stop('The files in cifti_fnames2 do not exist.')
+    if(notthere2 > 0) warning(paste0('There are ', notthere2, ' files in cifti_fnames2 that do not exist. These scans will be excluded from template estimation.'))
+  }
+
   # Check arguments.
   if (!is.logical(scale) || length(scale) != 1) { stop('scale must be a logical value') }
   brainstructures <- match_input(
@@ -53,7 +71,7 @@ estimate_template.cifti <- function(
   if ("all" %in% brainstructures) {
     brainstructures <- c("left","right","subcortical")
   }
-  
+
   # Read GICA result
   if(verbose) { cat('\n Reading in GICA result') }
   GICA <- read_cifti(GICA_fname, brainstructures=brainstructures)
@@ -81,37 +99,33 @@ estimate_template.cifti <- function(
     cat(paste0('\n Number of training subjects: ',N))
   }
 
-  # Obtain the brainstructure mask for the flattened CIFTIs.
-  flat_bs_mask <- vector("logical", 0)
-  if ("left" %in% brainstructures) {
-    left_mwall <- GICA$meta$cortex$medial_wall_mask$left
-    if (is.null(left_mwall)) {
-      left_mwall <- rep(TRUE, nrow(GICA$data$cortex_left))
-    }
-    flat_bs_mask <- c(flat_bs_mask, ifelse(left_mwall, "left", "mwall"))
-  }
-  if ("right" %in% brainstructures) {
-    right_mwall <- GICA$meta$cortex$medial_wall_mask$right
-    if (is.null(right_mwall)) {
-      right_mwall <- rep(TRUE, nrow(GICA$data$cortex_right))
-    }
-    flat_bs_mask <- c(flat_bs_mask, ifelse(right_mwall, "right", "mwall"))
-  }
-  if ("subcortical" %in% brainstructures) {
-    flat_bs_mask <- c(flat_bs_mask, rep("subcortical", nrow(GICA$data$subcort)))
-  }  
-  
-  retest <- !is.null(cifti_fnames2)
-  if(retest){
-    if(length(cifti_fnames) != length(cifti_fnames2)) stop('If provided, cifti_fnames2 must have same length as cifti_fnames and be in the same subject order.')
-  }
+  # # Obtain the brainstructure mask for the flattened CIFTIs.
+  # flat_bs_mask <- vector("logical", 0)
+  # if ("left" %in% brainstructures) {
+  #   left_mwall <- GICA$meta$cortex$medial_wall_mask$left
+  #   if (is.null(left_mwall)) {
+  #     left_mwall <- rep(TRUE, nrow(GICA$data$cortex_left))
+  #   }
+  #   flat_bs_mask <- c(flat_bs_mask, ifelse(left_mwall, "left", "mwall"))
+  # }
+  # if ("right" %in% brainstructures) {
+  #   right_mwall <- GICA$meta$cortex$medial_wall_mask$right
+  #   if (is.null(right_mwall)) {
+  #     right_mwall <- rep(TRUE, nrow(GICA$data$cortex_right))
+  #   }
+  #   flat_bs_mask <- c(flat_bs_mask, ifelse(right_mwall, "right", "mwall"))
+  # }
+  # if ("subcortical" %in% brainstructures) {
+  #   flat_bs_mask <- c(flat_bs_mask, rep("subcortical", nrow(GICA$data$subcort)))
+  # }
+
 
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
   missing_data <- NULL
   for(ii in 1:N){
 
-    if(verbose) cat(paste0('\n Reading in data for subject ',ii,' of ',N))
+    if(verbose) cat(paste0('\n Reading and analyzing data for subject ',ii,' of ',N))
 
     #read in BOLD
     fname_ii <- cifti_fnames[ii]
@@ -206,20 +220,26 @@ estimate_template.cifti <- function(
   # Format template as "xifti"s
 
   xifti_mean <- xifti_var <- GICA
+  nleft <- nrow(GICA$data$cortex_left)
+  nright <- nrow(GICA$data$cortex_right)
+  nsub <- nrow(GICA$data$subcort)
   if ("left" %in% brainstructures) {
-    xifti_mean$data$cortex_left <- template_mean[flat_bs_mask == "left",, drop=FALSE]
-    xifti_var$data$cortex_left <- template_var[flat_bs_mask == "left",, drop=FALSE]
+    xifti_mean$data$cortex_left <- template_mean[1:nleft,]  #[flat_bs_mask == "left",, drop=FALSE]
+    xifti_var$data$cortex_left <- template_var[1:nleft,] #[flat_bs_mask == "left",, drop=FALSE]
     #xifti_noisevar$data$cortex_left <- var_noise[flat_bs_mask == "left",, drop=FALSE]
   }
   if ("right" %in% brainstructures) {
-    xifti_mean$data$cortex_right <- template_mean[flat_bs_mask == "right",, drop=FALSE]
-    xifti_var$data$cortex_right <- template_var[flat_bs_mask == "right",, drop=FALSE]
+    xifti_mean$data$cortex_right <- template_mean[nleft+(1:nright),] #[flat_bs_mask == "right",, drop=FALSE]
+    xifti_var$data$cortex_right <- template_var[nleft+(1:nright),] #[flat_bs_mask == "right",, drop=FALSE]
     #xifti_noisevar$data$cortex_right <- var_noise[flat_bs_mask == "right",, drop=FALSE]
   }
   if ("subcortical" %in% brainstructures) {
-    xifti_mean$data$subcort <- template_mean[flat_bs_mask == "subcortical",, drop=FALSE]
-    xifti_var$data$subcort <- template_var[flat_bs_mask == "subcortical",, drop=FALSE]
+    xifti_mean$data$subcort <- template_mean[nleft+nright+(1:nsub),] #[flat_bs_mask == "subcortical",, drop=FALSE]
+    xifti_var$data$subcort <- template_var[nleft+nright+(1:nsub),] #[flat_bs_mask == "subcortical",, drop=FALSE]
   }
+
+  xifti_mean$meta$cifti$names <- paste0('IC ',inds)
+  xifti_var$meta$cifti$names <- paste0('IC ',inds)
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean.dscalar.nii')
@@ -234,7 +254,7 @@ estimate_template.cifti <- function(
 }
 
 #' Estimate NIFTI template
-#' 
+#'
 #' Estimate template for Template or Diagnostic ICA based on NIFTI-format data
 #'
 #' @param nifti_fnames Vector of file paths of NIFTI-format fMRI timeseries for template estimation.
@@ -254,12 +274,12 @@ estimate_template.cifti <- function(
 #' template variance maps.
 #'
 #' @return List of two elements: template mean of class nifti and template variance of class nifti
-#' 
+#'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #' @importFrom matrixStats rowVars
-#' 
+#'
 #' @export
-#' 
+#'
 estimate_template.nifti <- function(
   nifti_fnames,
   nifti_fnames2=NULL,
