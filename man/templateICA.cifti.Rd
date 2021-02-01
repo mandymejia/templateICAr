@@ -22,7 +22,8 @@ templateICA.cifti(
   verbose = TRUE,
   kappa_init = 0.2,
   write_dir = NULL,
-  rm_mwall = TRUE
+  rm_mwall = TRUE,
+  time_inds = NULL
 )
 }
 \arguments{
@@ -79,6 +80,8 @@ standard deviation before model fitting. If done when estimating templates, shou
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
 
 \item{rm_mwall}{Should medial wall (missing data) locations be removed from mesh?  If TRUE, faster estimation but less accurate estimates on boundary of wall.}
+
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis. If NULL (default), use all volumes.}
 }
 \value{
 A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')
