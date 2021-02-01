@@ -39,6 +39,7 @@
 # @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
 #' @param rm_mwall Should medial wall (missing data) locations be removed from mesh?  If TRUE, faster estimation but less accurate estimates on boundary of wall.
+#' @param time_inds Subset of fMRI BOLD volumes to include in analysis. If NULL (default), use all volumes.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
 #' @importFrom ciftiTools read_cifti
@@ -65,7 +66,8 @@ templateICA.cifti <- function(cifti_fname,
                               #common_smoothness=TRUE,
                               kappa_init=0.2,
                               write_dir=NULL,
-                              rm_mwall=TRUE){
+                              rm_mwall=TRUE,
+                              time_inds=NULL){
 
   if (is.null(write_dir)) { write_dir <- getwd() }
 
@@ -131,8 +133,9 @@ templateICA.cifti <- function(cifti_fname,
                      brainstructures = brainstructures,
                      resamp_res=resamp_res)
 
-  #set up xifti objects for IC mean and variance estimates
-  subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
+
+  # #set up xifti objects for IC mean and variance estimates
+  # subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
 
   #models_list <- vector('list', length=length(models))
   #names(models_list) <- models
@@ -163,6 +166,13 @@ templateICA.cifti <- function(cifti_fname,
   BOLD_mat <- do.call(rbind, BOLD_cifti$data)
   template_mean_mat <- do.call(rbind, template_mean$data)
   template_var_mat <- do.call(rbind, template_var$data)
+
+  if(is.null(time_inds)){
+    all_inds <- 1:ncol(BOLD_mat)
+    if(any(!(time_inds %in% all_inds))) stop(paste0('time_inds contains indices outside of the range of 1 to ', max(all_inds)))
+    BOLD_mat <- BOLD_mat[,time_inds]
+  }
+
 
   # if(do_left) {
   #     BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$cortex_left)
@@ -196,6 +206,13 @@ templateICA.cifti <- function(cifti_fname,
 
 
   # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
+
+  #reformat column names to IC 1, IC 2, etc.
+  if(!grepl('IC',template_mean$meta$cifti$names[1])){
+    template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
+  }
+
+  subjICmean_xifti <- subjICvar <- template_mean
   n_left <- n_right <- n_sub <- 0
   if(do_left) {
     n_left <- nrow(subjICmean_xifti$data$cortex_left)
@@ -213,8 +230,6 @@ templateICA.cifti <- function(cifti_fname,
     subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
   }
 
-  subjICmean_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
-  subjICvar_xifti$meta$cifti$names <- paste0('IC ', seq_len(length(subjICmean_xifti$meta$cifti$names)))
 
   RESULT <- list(
     subjICmean_xifti = subjICmean_xifti,

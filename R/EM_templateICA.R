@@ -355,7 +355,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 
   y_vec = as.vector(t(BOLD)) #grouped by locations
 
-  if(verbose) cat('...posterior precision \n') # less than 1 sec
+  #if(verbose) cat('...posterior precision \n') # less than 1 sec
   #Compute SPDE matrices (F, G, GFinvG) and Sigma_inv (QVxQV), a sparse block diagonal matrix
   stuff <- compute_R_inv(meshes, kappa=theta$kappa, C1=1/(4*pi))
   R_inv <- bdiag(rep(list(bdiag(stuff$Rinv)), Q)) #block diagonal over components
@@ -368,14 +368,14 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
   P <- make_Pmat(Q, nvox)
 
   #1. Compute mu_s
-  if(verbose) cat('...posterior mean \n') #20 seconds with pardiso! (1 hour without)
+  #if(verbose) cat('...posterior mean \n') #20 seconds with pardiso! (1 hour without)
   stuff <- compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
   mu_s <- stuff$mu
   #m_vec <- stuff$m
   Omega <- stuff$Omega
   Omega_inv_m <- stuff$Omega_inv_m
 
-  if(verbose) print(summary(as.vector(mu_s)))
+  #if(verbose) print(summary(as.vector(mu_s)))
 
   if(return_MAP){
     cov_s = (D %*% INLA::inla.qinv(Omega) %*% D) #only computes diagonal elements and elements that are non-zero in precision of s (corresponding to neighboring locations in mesh)
@@ -403,7 +403,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     Omega_PP <- P %*% Omega %*% t(P)
     D_PP <- P %*% D %*% t(P)
 
-    if(verbose) cat('..Calculating only non-sparse covariance terms \n')
+    #if(verbose) cat('..Calculating only non-sparse covariance terms \n')
 
     #set up sparse indicator matrix for needed elements of Omega_PP^{-1}
     oneblock <- matrix(1, nrow=Q, ncol=Q)
@@ -495,7 +495,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 
     #2. Determine non-zero terms of R_q_inv
 
-    if(verbose) cat('....calculating only non-sparse covariance terms \n')
+    #if(verbose) cat('....calculating only non-sparse covariance terms \n')
 
     #set up estimation of only terms necessary for trace computation
     nonzero_Rinv <- as.matrix(1*(R_inv[1:nvox,1:nvox] != 0))
@@ -529,7 +529,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #inds_left_x <- which(diag(1, nvox) != 0, arr.ind=TRUE) #1,1 2,2 3,3 etc. (bigx_left = I_V) <- just used to make a diagonal matrix below, don't actually need this
     inds_right_x <- which(nonzero_Rinv != 0, arr.ind=TRUE) #which(bigx_right != 0, arr.ind=TRUE)
 
-    if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
+    #if(verbose) cat('....computing necessary elements of RHS matrices in trace terms \n')
     #15 sec for Q=16, nvox=5500
 
     #if(!common_smoothness) OplusW <- vector('list', length=Q) #Omega_inv_qq + W_hat_qq
