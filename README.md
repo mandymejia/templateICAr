@@ -21,12 +21,30 @@ population-level networks, which can be estimated using standard ICA
 algorithms. Both models employ an expectation-maximization algorithm for
 estimation of the latent brain networks and unknown model parameters.
 
+Template ICA consists of three steps. The main functions associated with each step are listed below.  Functions ending in `.cifti` or `.nifti` are designed to work directly with CIFTI or NIFTI-format fMRI data.
+1. Template estimation (functions: `estimate_template.cifti` and `estimate_template.nifti`)
+2. Template ICA model estimation (single-subject) (functions: `templateICA`, `templateICA.cifti` and `templateICA.nifti`)
+3. Identification of areas of engagement in each IC (or deviation from the template mean) (functions: `activations`, `activations.cifti`)
+
+
+
 ## Installation
 
-You can install the development version of `templaceICAr` from Github
-with:
+You can install the development version of `templaceICAr` from Github with:
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("templaceICAr")
 ```
+
+
+## Important Notes on Dependencies:
+
+To analyze or visualize CIFTI-format data, `templateICAr` depends on the `ciftiTools` package, which requires an installation of Connectome Workbench.  It can be installed from the [HCP website](https://www.humanconnectome.org/software/get-connectome-workbench).
+
+For fitting *spatial* template ICA model, INLA is required, along with an INLA-PARDISO license.  INLA is NOT required for running standard template ICA.  Due to a CRAN policy, INLA cannot be installed automatically. You can obtain it by running `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=FALSE)`.  The default R-INLA binaries are built on Ubuntu1604. Instructions on how to obtain binaries for other Linux builds are available at http://www.r-inla.org/events/alternativelinuxbuilds.  To obtain an INLA-PARDISO license, run `inla.pardiso()` in R after running `library(INLA)`. Once you obtain a license, point to it using `INLA::inla.setOption(pardiso.license = "pardiso.lic")` followed by `INLA::inla.pardiso.check()` to ensure that PARDISO is successfully installed and running.
+ 
+ 
+
+
+
