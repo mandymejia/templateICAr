@@ -167,7 +167,7 @@ templateICA.cifti <- function(cifti_fname,
   template_mean_mat <- do.call(rbind, template_mean$data)
   template_var_mat <- do.call(rbind, template_var$data)
 
-  if(is.null(time_inds)){
+  if(!is.null(time_inds)){
     all_inds <- 1:ncol(BOLD_mat)
     if(any(!(time_inds %in% all_inds))) stop(paste0('time_inds contains indices outside of the range of 1 to ', max(all_inds)))
     BOLD_mat <- BOLD_mat[,time_inds]
