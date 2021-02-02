@@ -212,7 +212,7 @@ templateICA.cifti <- function(cifti_fname,
     template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
   }
 
-  subjICmean_xifti <- subjICvar <- template_mean
+  subjICmean_xifti <- subjICvar_xifti <- template_mean
   n_left <- n_right <- n_sub <- 0
   if(do_left) {
     n_left <- nrow(subjICmean_xifti$data$cortex_left)
