@@ -25,7 +25,7 @@ A list containing the dimension-reduced data (data_reduced, a
  (C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
 }
 \description{
-Performs dimension reduction and prewhitening based on probablistic PCA using 
+Performs dimension reduction and prewhitening based on probabilistic PCA using 
  SVD. If dimensionality is not specified, it is estimated using the method 
  described in Minka (2008).
 }

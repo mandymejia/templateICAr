@@ -1,6 +1,6 @@
 #' PCA-based Dimension Reduction and Prewhitening for ICA
 #'
-#' Performs dimension reduction and prewhitening based on probablistic PCA using 
+#' Performs dimension reduction and prewhitening based on probabilistic PCA using 
 #'  SVD. If dimensionality is not specified, it is estimated using the method 
 #'  described in Minka (2008).
 #'
