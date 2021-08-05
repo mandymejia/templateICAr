@@ -33,13 +33,13 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 
 	#estimate A (IC timeseries)
 	A <- dat_ctr_t %*% GICA %*% solve(t(GICA) %*% GICA)
-	#fix scale of timeseries (sd=1)
-	sd_A <- sqrt(colVars(A))
-	D <- diag(1/sd_A)
-  A <- A %*% D
-
 	#estimate S (IC maps)
 	S <- solve(a=(t(A) %*% A), b=(t(A) %*% dat_ctr_t))
+
+	#fix scale of spatial maps (sd=1)
+	#sd_S <- sqrt(rowVars(S))
+	#A <- A %*% diag(sd_S)
+	#S <- diag(1/sd_S) %*% S
 
 	#return result
 	result <- list(S = S, A = A, dat_ctr = dat_ctr)
