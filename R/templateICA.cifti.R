@@ -190,7 +190,7 @@ templateICA.cifti <- function(cifti_fname,
     #common_smoothness=common_smoothness,
     kappa_init=kappa_init
   )
-  rm(template, BOLD)
+  rm(BOLD)
 
   result$subjICmean <- newdata_xifti(template$mean, result$subjICmean)
   result$subjICvar <- newdata_xifti(template$var, result$subjICvar)
