@@ -22,19 +22,15 @@
 #' compatibility of scale.
 #'
 scale_BOLD <- function(BOLD, scale=FALSE){
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of data locations
+  if (ntime > nvox) warning('More time points than voxels. Are you sure?')
 
-  dat <- BOLD
-  ntime <- ncol(dat) #length of timeseries
-  nvox <- nrow(dat) #number of data locations
-  if(ntime > nvox) warning('More time points than voxels. Are you sure?')
-
+  if (scale) { sig <- sqrt(mean(rowVars(BOLD))) } #variance across image, averaged across time, square root to get SD
   #center timeseries data across space and time and standardize scale
-  dat_t <- scale(t(dat), scale=FALSE) #center each voxel time series (remove mean image)
-  sig <- sqrt(mean(rowVars(dat))) #variance across image, averaged across time, square root to get SD
-  dat <- scale(t(dat_t), scale=FALSE) #center each image (centering across space)
-  if(scale) dat <- dat/sig #standardize by global SD
-  dat_ctr <- dat
-
-  return(dat_ctr)
-
+  BOLD <- scale(t(BOLD), scale=FALSE) #center each voxel time series (remove mean image)
+  BOLD <- scale(t(BOLD), scale=FALSE) #center each image (centering across space)
+  if (scale) { BOLD <- BOLD/sig } #standardize by global SD
+  
+  BOLD
 }
