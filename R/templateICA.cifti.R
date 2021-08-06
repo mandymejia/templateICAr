@@ -200,7 +200,6 @@ templateICA.cifti <- function(cifti_fname,
     result$result_tICA$subjICvar <- newdata_xifti(template$var, result$result_tICA$subjICvar)
   }
 
-  class(result) <- 'templateICA.cifti'
   return(result)
 }
 
@@ -227,9 +226,7 @@ templateICA.cifti <- function(cifti_fname,
 #'
 activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  if (!inherits(result, 'templateICA.cifti')) {
-    stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
-  }
+  if( (!inherits(result, "tICA")) && (!inherits(result, "stICA")) ) stop("result must be of class stICA or tICA")
 
   # Select stICA or tICA
   if (is.null(spatial_model)) { spatial_model <- inherits(result, "stICA") }
