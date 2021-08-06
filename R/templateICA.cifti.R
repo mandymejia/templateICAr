@@ -248,9 +248,9 @@ activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=
     verbose=verbose, which.ICs=which.ICs, deviation=deviation
   )
 
-  activations_result$active <- newdata_xifti(result$subjICmean, activations_result$active)
+  activations_result$active <- newdata_xifti(result$subjICmean, activations_result$active*1)
   activations_result$active <- transform_xifti(
-    activations_result$active, function(x){ x <- x*1; x[x==0] <- NA }
+    activations_result$active, function(x){ x[x==0] <- NA; x }
   )
 
   activations_result

@@ -364,7 +364,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
   template_mean <- result$template_mean
   template_var <- result$template_var
 
-  if(class(result) == 'stICA'){
+  if (inherits(result, "stICA")) {
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
 
@@ -403,7 +403,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     result <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, vars=vars, u = u, alpha = alpha, type = type, deviation=deviation)
   }
 
-  if(class(result) == 'tICA'){
+  if (inherits(result, "tICA")) {
 
     if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
 
