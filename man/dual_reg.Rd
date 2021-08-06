@@ -16,8 +16,7 @@ be scaled by the image standard deviation.}
 }
 \value{
 A list containing the subject-level independent components \strong{S} (\eqn{VxQ}), 
- subject-level mixing matrix \strong{A} (\eqn{TxQ}), and the row- and column- centered fMRI 
- data (\eqn{VxT}).
+ and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 }
 \description{
 Dual Regression
