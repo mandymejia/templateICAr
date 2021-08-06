@@ -42,7 +42,7 @@
 #' @param time_inds Subset of fMRI BOLD volumes to include in analysis. If NULL (default), use all volumes.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
-#' @importFrom ciftiTools read_cifti
+#' @importFrom ciftiTools read_cifti newdata_xifti
 #'
 #' @return A list containing the subject IC estimates (class 'xifti'), the subject IC variance estimates (class 'xifti'), and the result of the model call to \code{templateICA} (class 'dICA')
 #'
@@ -104,38 +104,43 @@ templateICA.cifti <- function(cifti_fname,
     if(!is.null(resamp_res)) warning('Resampling typically only required for spatial modeling.  Recommend setting resamp_res to NULL.')
   }
 
+  # READ IN BOLD TIMESERIES DATA
+  if (!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
+  if (verbose) cat('Reading in BOLD timeseries data.\n')
+  BOLD <- read_cifti(
+    cifti_fname, surfL_fname = surfL_fname, surfR_fname = surfR_fname,
+    brainstructures = brainstructures, resamp_res=resamp_res
+  )
+  # Separate data and metadata
+  BOLD_meta <- BOLD; BOLD_meta["data"] <- list(NULL)
+  BOLD <- as.matrix(BOLD)
+
   # GET TEMPLATE MEAN AND VARIANCE (xifti objects)
   template_class <- class(template)
-  if(template_class=='template.cifti'){
-    template_mean <- template$template_mean
-    template_var <- template$template_var
-  } else if(is.character(template)){
-    if(verbose) cat('Reading in templates.\n')
+  if (template_class != 'template.cifti') {
+    if (verbose) cat('Reading in templates.\n')
     fname_mean <- paste0(template,'_mean.dscalar.nii')
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
     if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
     if(!is.null(surfL_fname_vis)) surfL_fname_template <- surfL_fname_vis else surfL_fname_template <- surfL_fname
     if(!is.null(surfR_fname_vis)) surfR_fname_template <- surfR_fname_vis else surfR_fname_template <- surfR_fname
-    template_mean <- read_cifti(fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
-    template_var <- read_cifti(fname_var, brainstructures=brainstructures, resamp_res=resamp_res, surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template)
+    template <- list(mean=NULL, var=NULL)
+    template$mean <- read_cifti(
+      fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, 
+      surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template
+    )
+    template$var <- read_cifti(
+      fname_var, brainstructures=brainstructures, resamp_res=resamp_res, 
+      surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template
+    )
   } else {
-    stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
+    stop(
+      'template argument must be an object of class template.cifti or file path',
+      'prefix to result of estimate_template.cifti() (same as out_fname argument',
+      'passed to estimate_template.cifti().'
+    )
   }
-
-
-  # READ IN BOLD TIMESERIES DATA
-  if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
-  if(verbose) cat('Reading in BOLD timeseries data.\n')
-  BOLD_cifti <- read_cifti(cifti_fname,
-                     surfL_fname = surfL_fname,
-                     surfR_fname = surfR_fname,
-                     brainstructures = brainstructures,
-                     resamp_res=resamp_res)
-
-
-  # #set up xifti objects for IC mean and variance estimates
-  # subjICmean_xifti <- subjICvar_xifti <- clear_data(template_mean)
 
   #models_list <- vector('list', length=length(models))
   #names(models_list) <- models
@@ -145,15 +150,15 @@ templateICA.cifti <- function(cifti_fname,
   if(spatial_model){
     meshes <- NULL
     if(do_left) {
-      surf <- BOLD_cifti$surf$cortex_left
-      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
-      if(rm_mwall) mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+      surf <- BOLD_meta$surf$cortex_left
+      wall_mask <- which(BOLD_meta$meta$cortex$medial_wall_mask$left)
+      if (rm_mwall) mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
       if(!rm_mwall) mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
       meshes <- c(meshes, list(mesh))
     }
     if(do_right) {
-      surf <- BOLD_cifti$surf$cortex_right
-      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
+      surf <- BOLD_meta$surf$cortex_right
+      wall_mask <- which(BOLD_meta$meta$cortex$medial_wall_mask$right)
       if(rm_mwall) mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
       if(!rm_mwall) mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
       meshes <- c(meshes, list(mesh))
@@ -162,82 +167,41 @@ templateICA.cifti <- function(cifti_fname,
     meshes <- NULL
   }
 
-  # FORM DATA MATRIX AND TEMPLATE MATRICES
-  BOLD_mat <- do.call(rbind, BOLD_cifti$data)
-  template_mean_mat <- do.call(rbind, template_mean$data)
-  template_var_mat <- do.call(rbind, template_var$data)
-
   if(!is.null(time_inds)){
-    all_inds <- 1:ncol(BOLD_mat)
-    if(any(!(time_inds %in% all_inds))) stop(paste0('time_inds contains indices outside of the range of 1 to ', max(all_inds)))
-    BOLD_mat <- BOLD_mat[,time_inds]
+    all_inds <- seq(ncol(BOLD))
+    if (any(!(time_inds %in% all_inds))) {
+      stop(paste0('time_inds contains indices outside of the range of 1 to ', max(all_inds)))
+    }
+    BOLD <- BOLD[,time_inds,drop=FALSE]
   }
-
-
-  # if(do_left) {
-  #     BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$cortex_left)
-  #     template_mean_mat <- rbind(template_mean_mat, template_mean$data$cortex_left)
-  #     template_var_mat <- rbind(template_var_mat, template_var$data$cortex_left)
-  #   }
-  # if(mod=='rh') {
-  #     BOLD_mat <- BOLD_cifti$data$cortex_right
-  #     template_mean_mat <- template_mean$data$cortex_right
-  #     template_var_mat <- template_var$data$cortex_right
-  #   } else {
-  #     BOLD_mat <- rbind(BOLD_cifti$data$cortex_left, BOLD_cifti$data$cortex_right, BOLD_cifti$data$subcort)
-  #     template_mean_mat <- rbind(template_mean$data$cortex_left, template_mean$data$cortex_right, template_mean$data$subcort)
-  #     template_var_mat <- rbind(template_var$data$cortex_left, template_var$data$cortex_right, template_var$data$subcort)
-  #   }
 
   # CALL TEMPLATE ICA FUNCTION
-
-  result <- templateICA(template_mean = template_mean_mat,
-                            template_var = template_var_mat,
-                            BOLD = BOLD_mat,
-                            scale = scale,
-                            meshes = meshes,
-                            Q2 = Q2,
-                            maxQ=maxQ,
-                            maxiter=maxiter,
-                            epsilon=epsilon,
-                            verbose=verbose,
-                            #common_smoothness=common_smoothness,
-                            kappa_init=kappa_init)
-
-
-  # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
-
-  #reformat column names to IC 1, IC 2, etc.
-  if(!grepl('IC',template_mean$meta$cifti$names[1])){
-    template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
-  }
-
-  subjICmean_xifti <- subjICvar_xifti <- template_mean
-  n_left <- n_right <- n_sub <- 0
-  if(do_left) {
-    n_left <- nrow(subjICmean_xifti$data$cortex_left)
-    subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
-    subjICvar_xifti$data$cortex_left <- result$subjICvar[1:n_left,]
-  }
-  if(do_right) {
-    n_right <- nrow(subjICmean_xifti$data$cortex_right)
-    subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
-    subjICvar_xifti$data$cortex_right <- result$subjICvar[n_left+(1:n_right),]
-  }
-  if(do_sub) {
-    n_sub <- nrow(subjICmean_xifti$data$subcort)
-    subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
-    subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
-  }
-
-
-  RESULT <- list(
-    subjICmean_xifti = subjICmean_xifti,
-    subjICvar_xifti = subjICvar_xifti,
-    model_result = result
+  result <- templateICA(
+    template_mean = as.matrix(template$mean), 
+    template_var = as.matrix(template$var),
+    BOLD = BOLD,
+    scale = scale,
+    meshes = meshes,
+    Q2 = Q2,
+    maxQ=maxQ,
+    maxiter=maxiter,
+    epsilon=epsilon,
+    verbose=verbose,
+    #common_smoothness=common_smoothness,
+    kappa_init=kappa_init
   )
-  class(RESULT) <- 'templateICA.cifti'
-  return(RESULT)
+  rm(template, BOLD)
+
+  result$subjICmean <- newdata_xifti(template$mean, result$subjICmean)
+  result$subjICvar <- newdata_xifti(template$var, result$subjICvar)
+
+  if (spatial_model) {
+    result$result_tICA$subjICmean <- newdata_xifti(template$mean, result$result_tICA$subjICmean)
+    result$result_tICA$subjICvar <- newdata_xifti(template$var, result$result_tICA$subjICvar)
+  }
+
+  class(result) <- 'templateICA.cifti'
+  return(result)
 }
 
 
@@ -257,43 +221,42 @@ templateICA.cifti <- function(cifti_fname,
 #'
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
+#' @importFrom ciftiTools newdata_xifti transform_xifti
 #' @export
 #'
 #'
 activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
+  if (!inherits(result, 'templateICA.cifti')) {
+    stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
+  }
 
-  model_result <- result$model_result
-  active_xifti <- clear_data(result$subjICmean_xifti)
-  nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
-  nright <- nrow(result$subjICmean_xifti$data$cortex_right)
-
-  if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
-  if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
-  if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
-    warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
+  # Select stICA or tICA
+  if (is.null(spatial_model)) { spatial_model <- inherits(result, "stICA") }
+  if (isTRUE(spatial_model) && inherits(result, "tICA")) {
+    warning(
+      'spatial_model set to TRUE but class of model result is tICA. ', 
+      'Setting spatial_model = FALSE, performing inference using standard ', 
+      'template ICA.'
+    )
     spatial_model <- FALSE
   }
-
-  #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
-  if(class(model_result)=='stICA' & spatial_model==FALSE){
-    model_result <- model_result$result_tICA
-  }
+  if (isFALSE(spatial_model) && inherits(result, "stICA")) {
+    result <- result$result_tICA
+  } 
 
   #run activations function
-  activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
+  activations_result <- activations(
+    result, u=u, alpha=alpha, type=type, method_p=method_p, 
+    verbose=verbose, which.ICs=which.ICs, deviation=deviation
+  )
 
-  #construct xifti object for activation maps
-  act_viz <- activations_result$active*1
-  act_viz[act_viz==0] <- NA
-  active_xifti$data$cortex_left <- act_viz[1:nleft,]
-  active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
+  activations_result$active <- newdata_xifti(result$subjICmean, activations_result$active)
+  activations_result$active <- transform_xifti(
+    activations_result$active, function(x){ x <- x*1; x[x==0] <- NA }
+  )
 
-  #include convert_to_dlabel function
-
-  return(list(activations = activations_result,
-                 active_xifti = active_xifti))
+  activations_result
 }
 
 

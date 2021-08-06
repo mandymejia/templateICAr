@@ -45,7 +45,7 @@
 #'  (default) will write them to the current working directory.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
-#' @importFrom ciftiTools read_cifti
+#' @importFrom ciftiTools read_cifti select_xifti
 #'
 #' @return A list containing the subject IC estimates (class \code{"xifti"}), the 
 #'  subject IC variance estimates (class \code{"xifti"}), and the result of the model 
@@ -105,15 +105,16 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
-  BOLD_cifti <- read_cifti(cifti_fname,
-                           surfL_fname = surfL_fname,
-                           surfR_fname = surfR_fname,
-                           brainstructures = brainstructures,
-                           resamp_res=resamp_res)
+  BOLD <- read_cifti(cifti_fname,
+                    surfL_fname = surfL_fname,
+                    surfR_fname = surfR_fname,
+                    brainstructures = brainstructures,
+                    resamp_res=resamp_res)
   locs_left <- BOLD_cifti$meta$cortex$medial_wall_mask$left
   locs_right <- BOLD_cifti$meta$cortex$medial_wall_mask$right
-
-  #BOLD_mat <- rbind(BOLD_cifti$data$cortex_left, BOLD_cifti$data$cortex_right, BOLD_cifti$data$subcort)
+  # Separate data and metadata
+  BOLD_meta <- BOLD; BOLD_meta["data"] <- list(NULL)
+  BOLD <- as.matrix(BOLD)
 
   # GET TEMPLATE MEAN AND VARIANCE FOR EACH GROUP
   template_class <- sapply(templates, class)
@@ -123,17 +124,16 @@ diagnosticICA.cifti <- function(cifti_fname,
   for(g in 1:G){
 
     #Obtain template_mean_g and template_var_g
-    if(template_class[1]=='template.cifti'){
+    if (template_class[1]=='template.cifti') {
       template_mean_cifti[[g]] <- templates[[g]]$template_mean #class xifti
       template_var_cifti[[g]] <- templates[[g]]$template_var #class xifti
-    } else if(template_class[1]=='character'){
+    } else if (template_class[1]=='character') {
       fname_mean <- paste0(templates[[g]],'_mean.dscalar.nii')
       fname_var <- paste0(templates[[g]],'_var.dscalar.nii')
       if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
       if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
       template_mean_cifti[[g]] <- read_cifti(fname_mean, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
       template_var_cifti[[g]] <- read_cifti(fname_var, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
-
     } else {
       stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
     }
@@ -158,16 +158,16 @@ diagnosticICA.cifti <- function(cifti_fname,
   }
 
   # DELETE THIS WITH ciftiTools version 1.5, which will hopefully result in the same medial wall for BOLD and the templates (only a problem with resampling)
-  ntime <- ncol(BOLD_cifti$data$cortex_left)
+  ntime <- ncol(BOLD)
   #left cortex
   dat_all <- matrix(NA, nrow=length(locs_left), ncol=ntime)
-  dat_all[BOLD_cifti$meta$cortex$medial_wall_mask$left,] <- BOLD_cifti$data$cortex_left
-  BOLD_cifti$data$cortex_left <- dat_all[locs_left,]
+  dat_all[BOLD_meta$meta$cortex$medial_wall_mask$left,] <- BOLD$data$cortex_left
+  BOLD$data$cortex_left <- dat_all[locs_left,,drop=FALSE]
   BOLD_cifti$meta$cortex$medial_wall_mask$left <- locs_left
   #right cortex
   dat_all <- matrix(NA, nrow=length(locs_right), ncol=ntime)
-  dat_all[BOLD_cifti$meta$cortex$medial_wall_mask$right,] <- BOLD_cifti$data$cortex_right
-  BOLD_cifti$data$cortex_right <- dat_all[locs_right,]
+  dat_all[BOLD_cifti$meta$cortex$medial_wall_mask$right,] <- BOLD$data$cortex_right
+  BOLD$data$cortex_right <- dat_all[locs_right,,drop=FALSE]
   BOLD_cifti$meta$cortex$medial_wall_mask$right <- locs_right
 
   #TO DO: SINGLE SPATIAL MODEL
@@ -181,15 +181,6 @@ diagnosticICA.cifti <- function(cifti_fname,
   #   models <- 'single'
   # }
 
-  #set up xifti objects for IC mean and variance estimates
-  clear_data <- function(x){
-    if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
-    if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
-    if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
-    return(x)
-  }
-  subjICmean_xifti <- subjICvar_xifti <- clear_data(BOLD_cifti)
-
   #models_list <- vector('list', length=length(models))
   #names(models_list) <- models
   #for(mod in models){
@@ -200,46 +191,23 @@ diagnosticICA.cifti <- function(cifti_fname,
     meshes <- vector('list', 2)
     # ind <- 1 # never used
     if(do_left) {
-      surf <- BOLD_cifti$surf$cortex_left;
-      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$left)
+      surf <- BOLD_meta$surf$cortex_left;
+      wall_mask <- which(BOLD_meta$meta$cortex$medial_wall_mask$left)
       meshes[[1]] <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
     }
     if(do_right) {
-      surf <- BOLD_cifti$surf$cortex_right;
-      wall_mask <- which(BOLD_cifti$meta$cortex$medial_wall_mask$right)
+      surf <- BOLD_meta$surf$cortex_right;
+      wall_mask <- which(BOLD_meta$meta$cortex$medial_wall_mask$right)
       meshes[[2]] <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
     }
   } else {
     meshes <- NULL
   }
 
-  # FORM DATA MATRIX
-  BOLD_mat <- NULL
-  if(do_left) BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$cortex_left)
-  if(do_right) BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$cortex_right)
-  if(do_sub) BOLD_mat <- rbind(BOLD_mat, BOLD_cifti$data$subcort)
-
-  # FORM DATA MATRIX AND TEMPLATE MATRICES
-  template_mean_mat <- template_var_mat <- vector('list', length=G)
-  for(g in 1:G){
-    if(do_left) {
-      template_mean_mat[[g]] <- rbind(template_mean_mat[[g]], template_mean_cifti[[g]]$data$cortex_left)
-      template_var_mat[[g]] <- rbind(template_var_mat[[g]], template_var_cifti[[g]]$data$cortex_left)
-    }
-    if(do_right){
-      template_mean_mat[[g]] <- rbind(template_mean_mat[[g]], template_mean_cifti[[g]]$data$cortex_right)
-      template_var_mat[[g]] <- rbind(template_var_mat[[g]], template_var_cifti[[g]]$data$cortex_right)
-    }
-    if(do_sub){
-      template_mean_mat[[g]] <- rbind(template_mean_mat[[g]], template_mean_cifti[[g]]$data$subcort)
-      template_var_mat[[g]] <- rbind(template_var_mat[[g]], template_var_cifti[[g]]$data$subcort)
-    }
-  }
-
   # CALL DIAGNOSTIC ICA FUNCTION
-  result <- diagnosticICA(template_mean = template_mean_mat,
-                            template_var = template_var_mat,
-                            BOLD = BOLD_mat,
+  result <- diagnosticICA(template_mean = lapply(template_mean_cifti, as.matrix),
+                            template_var = lapply(template_var_cifti, as.matrix),
+                            BOLD = BOLD,
                             scale = scale,
                             meshes = meshes,
                             Q2 = Q2,
@@ -251,28 +219,16 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   #HERE (BELOW IS FOR SINGLE MODEL.  ACTUALLY FOR SPATIAL MODEL NEED TO GENERALIZE ABOVE TO SINGLE MODEL.)
 
-  # MAP ESTIMATES AND VARIANCE TO XIFTI FORMAT
-  n_left <- n_right <- n_sub <- 0
-  if(do_left) {
-    n_left <- nrow(subjICmean_xifti$data$cortex_left)
-    subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
-    subjICvar_xifti$data$cortex_left <- result$subjICvar[1:n_left,]
-  }
-  if(do_right) {
-    n_right <- nrow(subjICmean_xifti$data$cortex_right)
-    subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
-    subjICvar_xifti$data$cortex_right <- result$subjICvar[n_left+(1:n_right),]
-  }
-  if(do_sub) {
-    n_sub <- nrow(subjICmean_xifti$data$subcort)
-    subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
-    subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
-  }
+  result$subjICmean <- newdata_xifti(
+    select_xifti(template_mean_cifti[[1]], rep(1, ncol(result$subjICmean))),
+    result$subjICmean
+  )
+  result$subjICvar <- newdata_xifti(
+    select_xifti(template_var_cifti[[1]], rep(1, ncol(result$subjICvar))),
+    result$subjICvar
+  )
 
   # RETURN XIFTI RESULTS AND MODEL RESULT
-  list(subjICmean_xifti = subjICmean_xifti,
-       subjICvar_xifti = subjICvar_xifti,
-       model_result = result)
-
+  result
 }
 

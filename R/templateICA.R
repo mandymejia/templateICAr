@@ -53,6 +53,10 @@ templateICA <- function(template_mean,
     INLA::inla.setOption(smtp='pardiso')
   }
 
+  # Handle if the inputs are xiftis
+  template_mean <- as.matrix(template_mean)
+  template_var <- as.matrix(template_var)
+
   ntime <- ncol(BOLD) #length of timeseries
   nvox <- nrow(BOLD) #number of data locations
   L <- ncol(template_mean) #number of ICs
@@ -155,14 +159,16 @@ templateICA <- function(template_mean,
     svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2, nv=0)
     vmat <- diag(1/svd_BOLD2$d[1:Q2]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
     fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
+    rm(BOLD2)
 
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
     BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs
+    rm(BOLD1)
 
   } else {
 
-  # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-   BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
+    # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
+    BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
 
   }
 

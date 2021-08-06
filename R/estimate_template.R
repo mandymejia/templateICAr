@@ -24,7 +24,7 @@
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
 #'
-#' @importFrom ciftiTools read_cifti write_cifti
+#' @importFrom ciftiTools read_cifti write_cifti newdata_xifti
 #'
 #' @return List of two elements: template mean of class xifti and template
 #'  variance of class xifti
@@ -75,10 +75,9 @@ estimate_template.cifti <- function(
   # Read GICA result
   if(verbose) { cat('\n Reading in GICA result') }
   GICA <- read_cifti(GICA_fname, brainstructures=brainstructures)
-  GICA_flat <- do.call(rbind, GICA$data)
-  V <- nrow(GICA_flat); Q <- ncol(GICA_flat)
+  GICA <- newdata_xifti(GICA, scale(as.matrix(GICA), scale=FALSE))
+  V <- nrow(GICA); Q <- ncol(GICA)
   # Center each IC map.
-  GICA_flat <- scale(GICA_flat, scale=FALSE)
   if(verbose) {
     cat(paste0('\n Number of data locations: ',V))
     cat(paste0('\n Number of original group ICs: ',Q))
@@ -99,27 +98,6 @@ estimate_template.cifti <- function(
     cat(paste0('\n Number of training subjects: ',N))
   }
 
-  # # Obtain the brainstructure mask for the flattened CIFTIs.
-  # flat_bs_mask <- vector("logical", 0)
-  # if ("left" %in% brainstructures) {
-  #   left_mwall <- GICA$meta$cortex$medial_wall_mask$left
-  #   if (is.null(left_mwall)) {
-  #     left_mwall <- rep(TRUE, nrow(GICA$data$cortex_left))
-  #   }
-  #   flat_bs_mask <- c(flat_bs_mask, ifelse(left_mwall, "left", "mwall"))
-  # }
-  # if ("right" %in% brainstructures) {
-  #   right_mwall <- GICA$meta$cortex$medial_wall_mask$right
-  #   if (is.null(right_mwall)) {
-  #     right_mwall <- rep(TRUE, nrow(GICA$data$cortex_right))
-  #   }
-  #   flat_bs_mask <- c(flat_bs_mask, ifelse(right_mwall, "right", "mwall"))
-  # }
-  # if ("subcortical" %in% brainstructures) {
-  #   flat_bs_mask <- c(flat_bs_mask, rep("subcortical", nrow(GICA$data$subcort)))
-  # }
-
-
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
   missing_data <- NULL
@@ -135,8 +113,8 @@ estimate_template.cifti <- function(
       next
     }
 
-    BOLD1_ii <- do.call(rbind, read_cifti(fname_ii, brainstructures=brainstructures)$data)
-    if(nrow(BOLD1_ii) != nrow(GICA_flat)) {
+    BOLD1_ii <- as.matrix(read_cifti(fname_ii, brainstructures=brainstructures))
+    if(nrow(BOLD1_ii) != V) {
       stop(paste0(
         'The number of data locations in GICA and',
         'BOLD data from subject ', ii,' do not match.'
@@ -148,8 +126,8 @@ estimate_template.cifti <- function(
     if(!retest){
       part1 <- 1:round(ntime/2)
       part2 <- setdiff(1:ntime, part1)
-      BOLD2_ii <- BOLD1_ii[,part2]
-      BOLD1_ii <- BOLD1_ii[,part1]
+      BOLD2_ii <- BOLD1_ii[,part2,drop=FALSE]
+      BOLD1_ii <- BOLD1_ii[,part1,drop=FALSE]
     } else {
       #read in BOLD from retest
       fname_ii <- cifti_fnames2[ii]
@@ -158,8 +136,8 @@ estimate_template.cifti <- function(
         if(verbose) cat(paste0('\n Data not available for this file:', fname_ii))
         next
       }
-      BOLD2_ii <- do.call(rbind, read_cifti(fname_ii, brainstructures=brainstructures)$data)
-      if (nrow(BOLD2_ii) != nrow(GICA_flat)) {
+      BOLD2_ii <- as.matrix(read_cifti(fname_ii, brainstructures=brainstructures))
+      if (nrow(BOLD2_ii) != V) {
         stop(paste0(
           'The number of data locations in GICA and',
           'BOLD data from subject ', ii,' do not match.'
@@ -168,8 +146,8 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale)$S
-    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale)$S
+    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)$S
+    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)$S
     DR1[ii,,] <- DR1_ii[inds,]
     DR2[ii,,] <- DR2_ii[inds,]
   }
@@ -218,34 +196,15 @@ estimate_template.cifti <- function(
   rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
 
   # Format template as "xifti"s
-
-  xifti_mean <- xifti_var <- GICA
-  nleft <- nrow(GICA$data$cortex_left)
-  nright <- nrow(GICA$data$cortex_right)
-  nsub <- nrow(GICA$data$subcort)
-  if ("left" %in% brainstructures) {
-    xifti_mean$data$cortex_left <- template_mean[1:nleft,]  #[flat_bs_mask == "left",, drop=FALSE]
-    xifti_var$data$cortex_left <- template_var[1:nleft,] #[flat_bs_mask == "left",, drop=FALSE]
-    #xifti_noisevar$data$cortex_left <- var_noise[flat_bs_mask == "left",, drop=FALSE]
-  }
-  if ("right" %in% brainstructures) {
-    xifti_mean$data$cortex_right <- template_mean[nleft+(1:nright),] #[flat_bs_mask == "right",, drop=FALSE]
-    xifti_var$data$cortex_right <- template_var[nleft+(1:nright),] #[flat_bs_mask == "right",, drop=FALSE]
-    #xifti_noisevar$data$cortex_right <- var_noise[flat_bs_mask == "right",, drop=FALSE]
-  }
-  if ("subcortical" %in% brainstructures) {
-    xifti_mean$data$subcort <- template_mean[nleft+nright+(1:nsub),] #[flat_bs_mask == "subcortical",, drop=FALSE]
-    xifti_var$data$subcort <- template_var[nleft+nright+(1:nsub),] #[flat_bs_mask == "subcortical",, drop=FALSE]
-  }
-
-  xifti_mean$meta$cifti$names <- paste0('IC ',inds)
-  xifti_var$meta$cifti$names <- paste0('IC ',inds)
+  GICA$meta$cifti$names <- paste0("IC ", inds)
+  xifti_mean <- newdata_xifti(GICA, template_mean)
+  xifti_mean$meta$cifti$misc <- list(template="mean")
+  xifti_var <- newdata_xifti(GICA, template_var)
+  xifti_var$meta$cifti$misc <- list(template="var")
 
   if(!is.null(out_fname)){
-    out_fname_mean <- paste0(out_fname, '_mean.dscalar.nii')
-    out_fname_var <- paste0(out_fname, '_var.dscalar.nii')
-    write_cifti(xifti_mean, out_fname_mean, verbose=verbose)
-    write_cifti(xifti_var, out_fname_var, verbose=verbose)
+    write_cifti(xifti_mean, paste0(out_fname, '_mean.dscalar.nii'), verbose=verbose)
+    write_cifti(xifti_var, paste0(out_fname, '_var.dscalar.nii'), verbose=verbose)
   }
 
   result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
