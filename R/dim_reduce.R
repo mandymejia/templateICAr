@@ -40,8 +40,8 @@ dim_reduce <- function(X, Q=NULL, Q_max=100){
   }
 
   #perform dimension reduction
-  XXt <- t(X) %*% X / nvox
-  svd_XXt <- svd(XXt, nu=Q, nv=0)
+  # XXt <- t(X) %*% X / nvox
+  svd_XXt <- svd(t(X) %*% X / nvox, nu=Q, nv=0)
   U <- svd_XXt$u
   D1 <- svd_XXt$d[1:Q]
   D2 <- svd_XXt$d[(Q+1):length(svd_XXt$d)]

@@ -1,3 +1,7 @@
+# 1.2
+
+Update functions that work with `"xifti"` objects
+
 # 1.0
 
 * Package maintenance:

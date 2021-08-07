@@ -7,3 +7,5 @@
 ^appveyor\.yml$
 ^vignettes$
 ^cran-comments.md
+^CRAN-RELEASE$
+^\.github$
