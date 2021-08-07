@@ -90,15 +90,7 @@ match_input <- function(
 #'
 loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
-
+  INLA_check()
   kappa <- exp(par[1]) #log kappa -> kappa
   sigma_sq <- exp(par[2]) #log variance -> variance
   #kappa <- exp(log_kappa)

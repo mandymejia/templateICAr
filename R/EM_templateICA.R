@@ -49,14 +49,7 @@ NULL
 #'
 EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -318,14 +311,7 @@ NULL
 #' @importFrom Matrix Matrix sparseMatrix
 UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   Q <- ncol(template_mean)
   nvox <- nrow(BOLD)
@@ -743,14 +729,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   # ntime <- length(C_diag) # not used
   Q <- ncol(theta$A)

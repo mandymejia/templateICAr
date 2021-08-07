@@ -22,14 +22,7 @@
 #'
 make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
-      ), call. = FALSE
-    ) 
-  }
+  INLA_check()
 
   #if inds_mesh is NULL, keep all current vertices in the mesh
   nmesh_orig <- nrow(surf$vertices)
@@ -89,14 +82,7 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' @export
 make_mesh_2D <- function(mask){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) { 
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.", 
-      ), call. = FALSE
-    ) 
-  }
+  INLA_check()
 
   # Check only 0s and 1s
   values <- sort(unique(as.numeric(mask)))

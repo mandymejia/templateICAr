@@ -85,14 +85,7 @@ templateICA.cifti <- function(cifti_fname,
   if('subcortical' %in% brainstructures) do_sub <- TRUE
 
   if(spatial_model){
-    if (!requireNamespace("INLA", quietly = TRUE)) {
-      stop(
-        paste0(
-          "Package \"INLA\" needed to for spatial modeling.",
-          "Please install it at http://www.r-inla.org/download.",
-        ), call. = FALSE
-      )
-    }
+    INLA_check()
     if(do_sub) stop('If spatial_model=TRUE, only applicable to "left" and/or "right" brainstructures. Check brainstructures argument and try again.')
     if(!is.character(template)) stop('If spatial_model=TRUE, template argument must be file path prefix to cifti files written by estimate_template.cifti().')
     flag <- INLA::inla.pardiso.check()

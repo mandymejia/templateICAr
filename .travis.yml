@@ -3,8 +3,7 @@
 language: R
 
 before_install:
-- Rscript -e 'install.packages("remotes")'
-- Rscript -e 'remotes::install_github("hrue/r-inla/rinla", build = FALSE)'
+- Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)'
 
 cache: packages
 warnings_are_errors: true

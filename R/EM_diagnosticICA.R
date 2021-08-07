@@ -53,14 +53,7 @@ NULL
 #'
 EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   nvox <- nrow(BOLD) #number of brain locations
   if(ncol(BOLD) > nvox) warning('More time points than data locations. Are you sure the data is oriented properly?')
@@ -336,14 +329,7 @@ NULL
 #'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   nvox <- nrow(BOLD)
   L <- ncol(BOLD)
