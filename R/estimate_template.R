@@ -196,6 +196,7 @@ estimate_template.cifti <- function(
   rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
 
   # Format template as "xifti"s
+  GICA <- select_xifti(GICA, inds)
   GICA$meta$cifti$names <- paste0("IC ", inds)
   xifti_mean <- newdata_xifti(GICA, template_mean)
   xifti_mean$meta$cifti$misc <- list(template="mean")
