@@ -236,7 +236,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
     nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
 
     change <- c(A_change, nu0_sq_change)
-    # err <- max(change) # not used
+    err <- max(change)
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
 

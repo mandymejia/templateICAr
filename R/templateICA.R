@@ -152,7 +152,7 @@ templateICA <- function(template_mean,
     vmat <- tcrossprod(diag(1/svd_BOLD2$d[1:Q2]), svd_BOLD2$u) %*% t(BOLD2)
     rm(BOLD2)
     BOLD3 <- BOLD1 - t(svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat) #original data without nuisance ICs
-    rm(BOLD1); rm(DR1); rm(svd_BOLD2); rm(vmat); rm(fit)
+    rm(BOLD1); rm(DR1); rm(svd_BOLD2); rm(vmat)
 
   } else {
 
