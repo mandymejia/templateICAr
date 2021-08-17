@@ -28,7 +28,7 @@ dual_reg <- function(dat, GICA, scale=FALSE){
   dat_ctr <- t(scale_BOLD(dat, scale=scale))
 
   #center each group IC over voxels
-  GICA - rep(colMeans(GICA), rep.int(nvox, ntime))
+  GICA - rep(colMeans(GICA), rep.int(nvox, Q))
 
 	#estimate A (IC timeseries)
 	A <- dat_ctr %*% GICA %*% solve(crossprod(GICA))
