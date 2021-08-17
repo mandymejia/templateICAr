@@ -28,12 +28,12 @@ dual_reg <- function(dat, GICA, scale=FALSE){
   dat_ctr <- t(scale_BOLD(dat, scale=scale))
 
   #center each group IC over voxels
-  GICA <- scale(GICA, scale=FALSE)
+  GICA - rep(colMeans(GICA), rep.int(nvox, ntime))
 
 	#estimate A (IC timeseries)
-	A <- dat_ctr %*% GICA %*% solve(t(GICA) %*% GICA)
+	A <- dat_ctr %*% GICA %*% solve(crossprod(GICA))
 	#estimate S (IC maps)
-	S <- solve(a=(t(A) %*% A), b=(t(A) %*% dat_ctr))
+	S <- solve(a=crossprod(A), b=crossprod(A, dat_ctr))
 
 	#fix scale of spatial maps (sd=1)
 	#sd_S <- sqrt(rowVars(S))

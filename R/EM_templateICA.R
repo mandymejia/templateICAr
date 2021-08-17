@@ -226,17 +226,17 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 
     ### Compute change in parameters
 
-    A_old <- theta$A
-    A_new <- theta_new$A
+    # A_old <- theta$A
+    # A_new <- theta_new$A
     #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    A_change <- norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
+    A_change <- norm(as.vector(theta_new$A - theta$A), type="2") / norm(as.vector(theta$A), type="2")
 
-    nu0_sq_old <- theta$nu0_sq
-    nu0_sq_new <- theta_new$nu0_sq
-    nu0_sq_change <- abs(nu0_sq_new - nu0_sq_old)/nu0_sq_old
+    # nu0_sq_old <- theta$nu0_sq
+    # nu0_sq_new <- theta_new$nu0_sq
+    nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
 
     change <- c(A_change, nu0_sq_change)
-    err <- max(change)
+    # err <- max(change) # not used
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
 
@@ -253,7 +253,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
   ### Compute final posterior mean of subject ICs
 
   #A = theta$A
-  At_nu0Cinv <- t(theta$A) %*% diag(1/(C_diag*theta$nu0_sq))
+  At_nu0Cinv <- crossprod(theta$A, diag(1/(C_diag*theta$nu0_sq)))
   At_nu0Cinv_A <- At_nu0Cinv %*% theta$A
   miu_s <- matrix(NA, nrow=nvox, ncol=Q)
   var_s <- matrix(NA, nrow=nvox, ncol=Q)
@@ -634,7 +634,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   A <- theta$A
   nu0_sq <- theta$nu0_sq
   nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code
-  At_nu0Cinv <- t(A) %*% nu0C_inv
+  At_nu0Cinv <- crossprod(A, nu0C_inv)
   At_nu0Cinv_A <- At_nu0Cinv %*% A
 
   if(verbose) cat('Updating A \n')
@@ -655,7 +655,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     E_v_inv <- diag(1/template_var[v,])
     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-    miu_ssT_v <- (miu_s_v %*% t(miu_s_v)) + Sigma_s_v #QxQ
+    miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
     # miu_s[v,] <- miu_s_v #save for M-step of nu0_sq
     # miu_ssT[v,,] <- miu_ssT_v #save for M-step of nu0_sq
 
@@ -663,7 +663,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
     ##########################################
 
-    A_part1 <- A_part1 + y_v %*% t(miu_s_v) #QxQ
+    A_part1 <- A_part1 + tcrossprod(y_v, miu_s_v) #QxQ
     A_part2 <- A_part2 + miu_ssT_v #QxQ
 
   }

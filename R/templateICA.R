@@ -148,10 +148,9 @@ templateICA <- function(template_mean,
     #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
     #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
     #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
-    svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2, nv=0)
-    vmat <- diag(1/svd_BOLD2$d[1:Q2]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
+    svd_BOLD2 <- svd(crossprod(BOLD2), nu=Q2, nv=0)
+    vmat <- tcrossprod(diag(1/svd_BOLD2$d[1:Q2]), svd_BOLD2$u) %*% t(BOLD2)
     rm(BOLD2)
-    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
     BOLD3 <- BOLD1 - t(svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat) #original data without nuisance ICs
     rm(BOLD1); rm(DR1); rm(svd_BOLD2); rm(vmat); rm(fit)
 

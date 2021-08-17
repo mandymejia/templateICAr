@@ -28,8 +28,8 @@ scale_BOLD <- function(BOLD, scale=FALSE){
 
   if (scale) { sig <- sqrt(mean(rowVars(BOLD))) } #variance across image, averaged across time, square root to get SD
   #center timeseries data across space and time and standardize scale
-  BOLD <- scale(t(BOLD), scale=FALSE) #center each voxel time series (remove mean image)
-  BOLD <- scale(t(BOLD), scale=FALSE) #center each image (centering across space)
+  BOLD <- t(BOLD - rowMeans(BOLD)) #center each voxel time series (remove mean image)
+  BOLD <- t(BOLD - rowMeans(BOLD)) #center each image (centering across space)
   if (scale) { BOLD <- BOLD/sig } #standardize by global SD
   
   BOLD
