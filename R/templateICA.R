@@ -128,16 +128,14 @@ templateICA <- function(template_mean,
     DR1 <- dual_reg(BOLD1, template_mean)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    fit <- t(DR1$S) %*% t(DR1$A)
-    BOLD2 <- BOLD1 - fit #data without template ICs
+    BOLD2 <- BOLD1 - t(DR1$A %*% DR1$S) #data without template ICs
 
     #iii. ESTIMATE THE NUMBER OF REMAINING ICS
     #pesel function expects nxp data and will determine asymptotic framework
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
     if(is.null(Q2)){
       if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')
-      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+      Q2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')$nPCs #estimated number of nuisance ICs
       if(verbose) cat(paste0(Q2,'\n'))
     }
 
@@ -147,16 +145,15 @@ templateICA <- function(template_mean,
     #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
 
     #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
+    #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
     #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
     #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
     svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2, nv=0)
     vmat <- diag(1/svd_BOLD2$d[1:Q2]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
-    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
     rm(BOLD2)
-
-    #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
-    BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs
-    rm(BOLD1)
+    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
+    BOLD3 <- BOLD1 - t(svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat) #original data without nuisance ICs
+    rm(BOLD1); rm(DR1); rm(svd_BOLD2); rm(vmat); rm(fit)
 
   } else {
 
@@ -164,6 +161,7 @@ templateICA <- function(template_mean,
     BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
 
   }
+  rm(BOLD)
 
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
 
@@ -181,6 +179,7 @@ templateICA <- function(template_mean,
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   dat_DR <- dual_reg(BOLD3, template_mean)
+  rm(BOLD3)
   HA <- H %*% dat_DR$A #apply dimension reduction
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
@@ -198,7 +197,11 @@ templateICA <- function(template_mean,
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
   theta00 <- theta0
   theta00$nu0_sq = dat_list$sigma_sq
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta00, C_diag=dat_list$C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
+  resultEM <- EM_templateICA.independent(
+    template_mean, template_var, 
+    BOLD4, theta00, C_diag=dat_list$C_diag, 
+    maxiter=maxiter, epsilon=epsilon, verbose=verbose
+  )
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 

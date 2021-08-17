@@ -640,8 +640,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
-  miu_s <- matrix(NA, nrow=nvox, ncol=Q)
-  miu_ssT <- array(NA, dim=c(nvox, Q, Q))
+  # miu_s <- matrix(NA, nrow=nvox, ncol=Q) # not used anymore
+  # miu_ssT <- array(NA, dim=c(nvox, Q, Q)) # not used anymore
 
   for(v in 1:nvox){
 
@@ -656,8 +656,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
     miu_ssT_v <- (miu_s_v %*% t(miu_s_v)) + Sigma_s_v #QxQ
-    miu_s[v,] <- miu_s_v #save for M-step of nu0_sq
-    miu_ssT[v,,] <- miu_ssT_v #save for M-step of nu0_sq
+    # miu_s[v,] <- miu_s_v #save for M-step of nu0_sq
+    # miu_ssT[v,,] <- miu_ssT_v #save for M-step of nu0_sq
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
