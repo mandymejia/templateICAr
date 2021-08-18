@@ -152,48 +152,16 @@ estimate_template.cifti <- function(
     DR2[ii,,] <- DR2_ii[inds,]
   }
 
-  # ESTIMATE MEAN
-
-  if(verbose) cat('\n Estimating Template Mean')
-  mean1 <- apply(DR1, c(2,3), mean, na.rm=TRUE)
-  mean2 <- apply(DR2, c(2,3), mean, na.rm=TRUE)
-  template_mean <- t((mean1 + mean2)/2)
-
-  # ESTIMATE SIGNAL (BETWEEN-SUBJECT) VARIANCE
-
-  # mean_lmer <- var_noise_lmer <- var_signal_lmer <- matrix(NA, V, L)
-  #
-  # ids <- c(1:N, 1:N)
-  # for(v in 1:V){
-  #   print(v)
-  #   for(l in 1:L){
-  #     #fit an lmer
-  #     DR_vl <- c(DR1[,l,v], DR2[,l,v])
-  #     #bad <- is.na(DR1[,l,v]) | is.na(DR2[,l,v]) #exclude any subjects with any missing data
-  #     lmer_vl <- lmer(DR_vl ~ (1|ids))#, subset = c(!bad, !bad))
-  #     mean_lmer[v,l] <- summary(lmer_vl)$coefficients[1,1]
-  #     var_noise_lmer[v,l] <- (summary(lmer_vl)$sigma)^2
-  #     var_signal_lmer[v,l] <- VarCorr(lmer_vl)$ids[1]
-  #   }
-  # }
-
-  # total variance
-  if(verbose) cat('\n Estimating Total Variance')
-  var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
-  var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
-  var_tot <- t((var_tot1 + var_tot2)/2)
-
-  # noise (within-subject) variance
-  if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff <- DR1 - DR2;
-  var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
-
-  # signal (between-subject) variance
-  if(verbose) cat('\n Estimating Template (Between-Subject) Variance \n')
-  template_var <- var_tot - var_noise
-  template_var[template_var < 0] <- 0
-
-  rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
+  # Estimate template
+  if (verbose) { cat("Estimating template.\n") }
+  sub_mean <- (DR1 + DR2)/2
+  grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
+  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(x))
+  SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
+  MSB <- SSB / ((2-1)*(N-1))
+  template_mean <- t(grand_mean)
+  template_var <- t(MSB)
+  rm(DR1, DR2, sub_mean, grand_mean, grand_mean2, SSB, MSB)
 
   # Format template as "xifti"s
   GICA <- select_xifti(GICA, inds)
@@ -375,32 +343,16 @@ estimate_template.nifti <- function(
 
   cat(paste0('Total number of voxels in updated mask: ', V, '\n'))
 
-  # ESTIMATE MEAN
-
-  if(verbose) cat('\n Estimating Template Mean')
-  mean1 <- apply(DR1, c(2,3), mean, na.rm=TRUE)
-  mean2 <- apply(DR2, c(2,3), mean, na.rm=TRUE)
-  template_mean <- t((mean1 + mean2)/2)
-
-  # ESTIMATE SIGNAL (BETWEEN-SUBJECT) VARIANCE
-
-  # total variance
-  if(verbose) cat('\n Estimating Total Variance')
-  var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
-  var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
-  var_tot <- t((var_tot1 + var_tot2)/2)
-
-  # noise (within-subject) variance
-  if(verbose) cat('\n Estimating Within-Subject Variance')
-  DR_diff <- DR1 - DR2;
-  var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
-
-  # signal (between-subject) variance
-  if(verbose) cat('\n Estimating Template (Between-Subject) Variance \n')
-  template_var <- var_tot - var_noise
-  template_var[template_var < 0] <- 0
-
-  rm(DR1, DR2, mean1, mean2, var_tot1, var_tot2, var_tot, DR_diff)
+  # Estimate template
+  cat("Estimating template.\n")
+  sub_mean <- (DR1 + DR2)/2
+  grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
+  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(x))
+  SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
+  MSB <- SSB / ((2-1)*(N-1))
+  template_mean <- t(grand_mean)
+  template_var <- t(MSB)
+  rm(DR1, DR2, sub_mean, grand_mean, grand_mean2, SSB, MSB)
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean')
