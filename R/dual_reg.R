@@ -31,7 +31,7 @@ dual_reg <- function(dat, GICA, scale=FALSE){
   GICA - rep(colMeans(GICA), rep.int(nvox, Q))
 
 	#estimate A (IC timeseries)
-	A <- dat_ctr %*% GICA %*% solve(crossprod(GICA))
+	A <- (dat_ctr %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
 	#estimate S (IC maps)
 	S <- solve(a=crossprod(A), b=crossprod(A, dat_ctr))
 

@@ -156,12 +156,11 @@ estimate_template.cifti <- function(
   if (verbose) { cat("\nEstimating template.\n") }
   sub_mean <- (DR1 + DR2)/2
   grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(sub_mean))
-  SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
+  SSB <- 2 * apply((sub_mean - rep(grand_mean, each=N))^2, seq(2,3), sum, na.rm=TRUE)
   MSB <- SSB / ((2-1)*(N-1))
   template_mean <- t(grand_mean)
   template_var <- t(MSB)
-  rm(DR1, DR2, sub_mean, grand_mean, grand_mean2, SSB, MSB)
+  rm(DR1, DR2, sub_mean, grand_mean, SSB, MSB)
 
   # Format template as "xifti"s
   GICA <- select_xifti(GICA, inds)
@@ -344,15 +343,14 @@ estimate_template.nifti <- function(
   cat(paste0('Total number of voxels in updated mask: ', V, '\n'))
 
   # Estimate template
-  cat("Estimating template.\n")
+  if (verbose) { cat("\nEstimating template.\n") }
   sub_mean <- (DR1 + DR2)/2
   grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(sub_mean))
-  SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
+  SSB <- 2 * apply((sub_mean - rep(grand_mean, each=N))^2, seq(2,3), sum, na.rm=TRUE)
   MSB <- SSB / ((2-1)*(N-1))
   template_mean <- t(grand_mean)
   template_var <- t(MSB)
-  rm(DR1, DR2, sub_mean, grand_mean, grand_mean2, SSB, MSB)
+  rm(DR1, DR2, sub_mean, grand_mean, SSB, MSB)
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean')
