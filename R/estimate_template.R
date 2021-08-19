@@ -161,7 +161,7 @@ estimate_template.cifti <- function(
   if (verbose) { cat("\nEstimating template.\n") }
   sub_mean <- (DR1 + DR2)/2
   grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(x))
+  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(sub_mean))
   SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
   MSB <- SSB / ((2-1)*(N-1))
   template_mean <- t(grand_mean)
@@ -353,7 +353,7 @@ estimate_template.nifti <- function(
   cat("Estimating template.\n")
   sub_mean <- (DR1 + DR2)/2
   grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(x))
+  grand_mean2 <- array(rep(grand_mean, each=N), dim=dim(sub_mean))
   SSB <- 2 * apply((sub_mean - grand_mean2)^2, seq(2,3), sum, na.rm=TRUE) # BETWEEN
   MSB <- SSB / ((2-1)*(N-1))
   template_mean <- t(grand_mean)
