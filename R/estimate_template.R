@@ -75,13 +75,17 @@ estimate_template.cifti <- function(
   # Read GICA result
   if(verbose) { cat('\n Reading in GICA result') }
   GICA <- read_cifti(GICA_fname, brainstructures=brainstructures)
-  GICA <- newdata_xifti(GICA, scale(as.matrix(GICA), scale=FALSE))
+  xii_template <- select_xifti(GICA, 1) * 0
+  GICA <- as.matrix(GICA)
   V <- nrow(GICA); Q <- ncol(GICA)
-  # Center each IC map.
   if(verbose) {
     cat(paste0('\n Number of data locations: ',V))
     cat(paste0('\n Number of original group ICs: ',Q))
   }
+  # Center each IC map.
+  GICA <- GICA - rep(colMeans(GICA), rep.int(V, Q))
+  # Pre-compute GICA term
+  GICA <- GICA %*% solve(crossprod(GICA))
 
   L <- Q
   if(!is.null(inds)){
@@ -146,11 +150,12 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)$S
-    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)$S
+    DR1_ii <- dual_reg_fast(BOLD1_ii, GICA, scale=scale)$S
+    DR2_ii <- dual_reg_fast(BOLD2_ii, GICA, scale=scale)$S
     DR1[ii,,] <- DR1_ii[inds,]
     DR2[ii,,] <- DR2_ii[inds,]
   }
+  rm(GICA)
 
   # Estimate template
   if (verbose) { cat("Estimating template.\n") }
@@ -164,12 +169,13 @@ estimate_template.cifti <- function(
   rm(DR1, DR2, sub_mean, grand_mean, grand_mean2, SSB, MSB)
 
   # Format template as "xifti"s
-  GICA <- select_xifti(GICA, inds)
-  GICA$meta$cifti$names <- paste0("IC ", inds)
-  xifti_mean <- newdata_xifti(GICA, template_mean)
+  xii_template <- select_xifti(xii_template, rep(1, length(inds)))
+  xii_template$meta$cifti$names <- paste0("IC ", inds)
+  xifti_mean <- newdata_xifti(xii_template, template_mean)
   xifti_mean$meta$cifti$misc <- list(template="mean")
-  xifti_var <- newdata_xifti(GICA, template_var)
+  xifti_var <- newdata_xifti(xii_template, template_var)
   xifti_var$meta$cifti$misc <- list(template="var")
+  rm(xii_template)
 
   if(!is.null(out_fname)){
     write_cifti(xifti_mean, paste0(out_fname, '_mean.dscalar.nii'), verbose=verbose)
