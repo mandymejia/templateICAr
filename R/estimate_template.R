@@ -154,13 +154,23 @@ estimate_template.cifti <- function(
 
   # Estimate template
   if (verbose) { cat("\nEstimating template.\n") }
-  sub_mean <- (DR1 + DR2)/2
-  grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  SSB <- 2 * apply((sub_mean - rep(grand_mean, each=N))^2, seq(2,3), sum, na.rm=TRUE)
-  MSB <- SSB / ((2-1)*(N-1))
-  template_mean <- t(grand_mean)
-  template_var <- t(MSB)
-  rm(DR1, DR2, sub_mean, grand_mean, SSB, MSB)
+  template_mean <- t(apply(DR1 + DR2, seq(2,3), mean, na.rm=TRUE) / 2)
+  template_var <- t(apply(
+    abind::abind(DR1, DR2, along=1),
+    seq(2, D),
+    function(q){ cov(q[seq(n)], q[seq(n+1, 2*n)], use="complete.obs") }
+  ))
+  # # Previous calculation of `template_var`: this is equivalent.
+  # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
+  # var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
+  # var_tot <- t((var_tot1 + var_tot2)/2)
+  # # noise (within-subject) variance
+  # DR_diff <- DR1 - DR2;
+  # var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
+  # # signal (between-subject) variance
+  # template_var <- var_tot - var_noise
+  template_var[template_var < 0] <- 0
+  rm(DR1, DR2)
 
   # Format template as "xifti"s
   GICA <- select_xifti(GICA, inds)
@@ -344,13 +354,14 @@ estimate_template.nifti <- function(
 
   # Estimate template
   if (verbose) { cat("\nEstimating template.\n") }
-  sub_mean <- (DR1 + DR2)/2
-  grand_mean <- apply(sub_mean, seq(2,3), mean, na.rm=TRUE)
-  SSB <- 2 * apply((sub_mean - rep(grand_mean, each=N))^2, seq(2,3), sum, na.rm=TRUE)
-  MSB <- SSB / ((2-1)*(N-1))
-  template_mean <- t(grand_mean)
-  template_var <- t(MSB)
-  rm(DR1, DR2, sub_mean, grand_mean, SSB, MSB)
+  template_mean <- t(apply(DR1 + DR2, seq(2,3), mean, na.rm=TRUE) / 2)
+  template_var <- t(apply(
+    abind::abind(DR1, DR2, along=1),
+    seq(2, D),
+    function(q){ cov(q[seq(n)], q[seq(n+1, 2*n)], use="complete.obs") }
+  ))
+  template_var[template_var < 0] <- 0
+  rm(DR1, DR2)
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean')
