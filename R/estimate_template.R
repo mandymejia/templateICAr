@@ -357,7 +357,7 @@ estimate_template.nifti <- function(
   template_mean <- t(apply(DR1 + DR2, seq(2,3), mean, na.rm=TRUE) / 2)
   template_var <- t(apply(
     abind::abind(DR1, DR2, along=1),
-    seq(2, D),
+    seq(2, 3),
     function(q){ cov(q[seq(n)], q[seq(n+1, 2*n)], use="complete.obs") }
   ))
   template_var[template_var < 0] <- 0
