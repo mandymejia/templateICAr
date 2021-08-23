@@ -158,7 +158,7 @@ estimate_template.cifti <- function(
   template_var <- t(apply(
     abind::abind(DR1, DR2, along=1),
     seq(2, 3),
-    function(q){ cov(q[seq(V)], q[seq(V+1, 2*V)], use="complete.obs") }
+    function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
   ))
   # # Previous calculation of `template_var`: this is equivalent.
   # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
@@ -358,7 +358,7 @@ estimate_template.nifti <- function(
   template_var <- t(apply(
     abind::abind(DR1, DR2, along=1),
     seq(2, 3),
-    function(q){ cov(q[seq(V)], q[seq(V+1, 2*V)], use="complete.obs") }
+    function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
   ))
   template_var[template_var < 0] <- 0
   rm(DR1, DR2)
