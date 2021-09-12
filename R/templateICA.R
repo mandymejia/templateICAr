@@ -4,7 +4,7 @@
 #'
 #' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
+#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices. 
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
 #' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
 #' created by \code{make_mesh} (spatial priors are assumed on each independent component).
@@ -50,8 +50,24 @@ templateICA <- function(template_mean,
   template_mean <- as.matrix(template_mean)
   template_var <- as.matrix(template_var)
 
-  ntime <- ncol(BOLD) #length of timeseries
-  nvox <- nrow(BOLD) #number of data locations
+  # If `BOLD` is a list, ensure that all dimensions are the same.
+  if (is.list(BOLD)) {
+    if (length(BOLD) == 1) {
+      BOLD <- BOLD[[1]]
+    } else {
+      stopifnot(all(vapply(BOLD, is.matrix, FALSE)))
+      dims <- do.call(rbind, lapply(BOLD, dim))
+      stopifnot(all(apply(dims, 2, function(x){length(unique(x))}) == 1))
+    }
+  }
+  multi_scans <- is.list(BOLD)
+
+  # Get data dimensions and the number of ICs
+  if (multi_scans) {
+    ntime <- ncol(BOLD[[1]]); nvox <- nrow(BOLD[[1]])
+  } else {
+    ntime <- ncol(BOLD); nvox <- nrow(BOLD)
+  }
   L <- ncol(template_mean) #number of ICs
 
   #check that the number of data locations (nvox), time points (ntime) and ICs (L) makes sense
@@ -119,56 +135,35 @@ templateICA <- function(template_mean,
     # BOLD <- BOLD[keep,]
   }
 
+  if (multi_scans) {
+    BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
+  } else {
+    BOLD <- scale_BOLD(BOLD, scale=scale)
+  }
+
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
 
   if(maxQ > L){
-
-    #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    BOLD1 <- scale_BOLD(BOLD, scale=scale)
-    DR1 <- dual_reg(BOLD1, template_mean)
-
-    #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    BOLD2 <- BOLD1 - t(DR1$A %*% DR1$S) #data without template ICs
-
-    #iii. ESTIMATE THE NUMBER OF REMAINING ICS
-    #pesel function expects nxp data and will determine asymptotic framework
-    #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
-    if(is.null(Q2)){
-      if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      Q2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')$nPCs #estimated number of nuisance ICs
-      if(verbose) cat(paste0(Q2,'\n'))
+    if (multi_scans) {
+      BOLD <- lapply(BOLD, nuisIC_nreg, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+    } else {
+      BOLD <- nuisIC_nreg(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
     }
+  } 
 
-    #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
-    #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2,' NUISANCE COMPONENTS\n'))
-    #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2, center=TRUE)
-    #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
-
-    #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
-    #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
-    #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
-    #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
-    svd_BOLD2 <- svd(crossprod(BOLD2), nu=Q2, nv=0)
-    vmat <- tcrossprod(diag(1/svd_BOLD2$d[1:Q2]), svd_BOLD2$u) %*% t(BOLD2)
-    rm(BOLD2)
-    BOLD3 <- BOLD1 - t(svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat) #original data without nuisance ICs
-    rm(BOLD1); rm(DR1); rm(svd_BOLD2); rm(vmat)
-
-  } else {
-
-    # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
-
-  }
-  rm(BOLD)
-
-  ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
+  ### 2. PERFORM DIMENSION REDUCTION --> BOLD2
 
   if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
 
-  dat_list <- dim_reduce(BOLD3, L)
+  if (multi_scans) {
+    BOLD <- lapply(BOLD, dim_reduce, L)
+    BOLD <- do.call(cbind, BOLD)
+    # More dim reduction?
+  } else {
+    BOLD <- dim_reduce(BOLD, L)
+  }
 
-  BOLD4 <- dat_list$data_reduced
+  BOLD2 <- dat_list$data_reduced
   H <- dat_list$H
   Hinv <- dat_list$H_inv
   C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
@@ -177,8 +172,8 @@ templateICA <- function(template_mean,
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD3, template_mean)
-  rm(BOLD3)
+  dat_DR <- dual_reg(BOLD, template_mean)
+  rm(BOLD)
   HA <- H %*% dat_DR$A #apply dimension reduction
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
@@ -198,7 +193,7 @@ templateICA <- function(template_mean,
   theta00$nu0_sq = dat_list$sigma_sq
   resultEM <- EM_templateICA.independent(
     template_mean, template_var, 
-    BOLD4, theta00, C_diag=dat_list$C_diag, 
+    BOLD2, theta00, C_diag=dat_list$C_diag, 
     maxiter=maxiter, epsilon=epsilon, verbose=verbose
   )
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
@@ -210,7 +205,7 @@ templateICA <- function(template_mean,
     resultEM_tICA <- resultEM
 
     # if(dim_reduce_flag == FALSE){
-    #   BOLD4 <- BOLD3
+    #   BOLD2 <- BOLD3
     #   C_diag <- rep(1, ntime)
     #   theta0$A <- dat_DR$A
     # }
@@ -276,7 +271,7 @@ templateICA <- function(template_mean,
     resultEM <- EM_templateICA.spatial(template_mean,
                                        template_var,
                                        meshes,
-                                       BOLD=BOLD4,
+                                       BOLD=BOLD2,
                                        theta0,
                                        C_diag,
                                        maxiter=maxiter,

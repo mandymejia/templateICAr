@@ -18,7 +18,7 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param verbose If \code{TRUE}. display progress updates
+#' @param verbose If \code{TRUE}, display progress updates
 #' @param out_fname (Required if templates are to be resampled to a lower spatial
 #' resolution, usually necessary for spatial template ICA.) The path and base name
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
@@ -101,55 +101,24 @@ estimate_template.cifti <- function(
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
   missing_data <- NULL
+  
   for(ii in 1:N){
-
     if(verbose) cat(paste0('\n Reading and analyzing data for subject ',ii,' of ',N))
+    if (retest) { BOLD2 <- cifti_fnames2[ii] } else { BOLD2 <- NULL }
 
-    #read in BOLD
-    fname_ii <- cifti_fnames[ii]
-    if(!file.exists(fname_ii)) {
-      missing_data <- c(missing_data, fname_ii)
-      if(verbose) cat(paste0('\n Data not available for file:', fname_ii))
+    DR_ii <- dual_reg2(
+      cifti_fnames[ii], BOLD2=BOLD2, GICA=as.matrix(GICA), 
+      scale=scale, format="CIFTI", dim_expect=V, 
+      brainstructures=brainstructures, verbose=verbose
+    )
+
+    if (!isFALSE(DR_ii$missing)) {
+      missing_data <- c(missing_data, DR_ii$missing)
       next
     }
 
-    BOLD1_ii <- as.matrix(read_cifti(fname_ii, brainstructures=brainstructures))
-    if(nrow(BOLD1_ii) != V) {
-      stop(paste0(
-        'The number of data locations in GICA and',
-        'BOLD data from subject ', ii,' do not match.'
-      ))
-    }
-    ntime <- ncol(BOLD1_ii)
-
-    #read in BOLD retest data OR create pseudo test-retest data
-    if(!retest){
-      part1 <- 1:round(ntime/2)
-      part2 <- setdiff(1:ntime, part1)
-      BOLD2_ii <- BOLD1_ii[,part2,drop=FALSE]
-      BOLD1_ii <- BOLD1_ii[,part1,drop=FALSE]
-    } else {
-      #read in BOLD from retest
-      fname_ii <- cifti_fnames2[ii]
-      if(!file.exists(fname_ii)) {
-        missing_data <- c(missing_data, fname_ii)
-        if(verbose) cat(paste0('\n Data not available for this file:', fname_ii))
-        next
-      }
-      BOLD2_ii <- as.matrix(read_cifti(fname_ii, brainstructures=brainstructures))
-      if (nrow(BOLD2_ii) != V) {
-        stop(paste0(
-          'The number of data locations in GICA and',
-          'BOLD data from subject ', ii,' do not match.'
-        ))
-      }
-    }
-
-    #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)$S
-    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)$S
-    DR1[ii,,] <- DR1_ii[inds,]
-    DR2[ii,,] <- DR2_ii[inds,]
+    DR1[ii,,] <- DR_ii$test[inds,]
+    DR2[ii,,] <- DR_ii$retest[inds,]
   }
 
   # Estimate template

@@ -14,14 +14,14 @@
 #'
 dual_reg <- function(dat, GICA, scale=FALSE){
 
-  ntime <- ncol(dat) #length of timeseries
+  nT <- ncol(dat) #length of timeseries
   nvox <- nrow(dat) #number of data locations
-  if(ntime > nvox) warning('More time points than voxels. Are you sure?')
+  if(nT > nvox) warning('More time points than voxels. Are you sure?')
   if(nvox != nrow(GICA)) stop('The number of voxels in dat and GICA must match')
 
   Q <- ncol(GICA) #number of ICs
   if(Q > nvox) warning('More ICs than voxels. Are you sure?')
-  if(Q > ntime) warning('More ICs than time points. Are you sure?')
+  if(Q > nT) warning('More ICs than time points. Are you sure?')
 
   # center timeseries data across space and time (and standardize scale if scale=TRUE)
   # transpose it
@@ -42,4 +42,127 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 
 	#return result
 	list(S = S, A = A)
+}
+
+#' Dual Regression wrapper
+#' 
+#' Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input; halves the data in absense of retest data.
+#' 
+#' @param BOLD,BOLD2 subject-level BOLD data: a CIFTI file, NIFTI file, or data matrix.
+#'  Cannot be a \code{"xifti"} object, \code{"nifti"} object, etc. If \code{BOLD2} is provided 
+#'  it must be in the same format as \code{BOLD}; \code{BOLD} will be the test data and
+#'  \code{BOLD2} will be the retest data. If \code{BOLD2} is not provided,
+#'  \code{BOLD} will be split in half; the first half will be the test data and
+#'  the second half will be the retest data.
+#' 
+#'  NIFTI implementation is not complete yet (will return error).
+#' @param scale Logical indicating whether BOLD data should be scaled by the
+#'  spatial standard deviation before template estimation.
+#' @param GICA Group ICA data matrix. Cannot be a \code{"xifti"} object, \code{"nifti"} object, file, etc.
+#' @param format Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
+#'  \code{"infer"} (default), a \code{"data"} matrix, \code{"CIFTI"} file, or \code{"NIFTI"} file.
+#' @param dim_expect If \code{!(format == "NIFTI")}, this is the number of rows to expect in the data.
+#'  Otherwise, ... 
+#' @param brainstructures Only applies if \code{format} is \code{"CIFTI"}. 
+#'  Character vector indicating which brain structure(s)
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
+#'  Default: \code{c("left","right")} (cortical surface only).
+#' @param verbose If \code{TRUE}, display progress updates
+#' 
+#' @keywords internal
+dual_reg2 <- function(
+  BOLD, BOLD2=NULL, GICA, scale=FALSE, format=c("infer", "data", "CIFTI", "NIFTI"), 
+  dim_expect=NULL, brainstructures=brainstructures, verbose=FALSE){
+
+  # TO DO: add removal of nuisance ICs.
+  # If !retest, must be careful about the number of ICs since nT is halved.
+
+  # Initialize the return value
+  out <- list(
+    missing = NULL,
+    test = NULL,
+    retest = NULL
+  )
+
+  # Retest or pseudo retest?
+  retest <- !is.null(BOLD2)
+
+  # Determine the format of `BOLD` and `BOLD2`
+  format <- match.arg(format, c("infer", "data", "CIFTI", "NIFTI"))
+  if (format == "infer") {
+    if (is.character(BOLD)) {
+      stopifnot(length(BOLD) == 1)
+      format <- ifelse(
+        endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"),
+        "CIFTI", "NIFTI"
+      )
+    } else {
+      format <- "data"
+    }
+    if (verbose) { cat("Inferred input format: ", format, ".\n") }
+  }
+
+  if (format == "NIFTI") { stop("Not completed yet.") }
+
+  # If BOLD (and BOLD2) is a CIFTI or NIFTI, check that it exists.
+  if (format %in% c("CIFTI", "NIFTI")) {
+    if (retest) { 
+      stopifnot(is.character(BOLD2))
+      stopifnot(length(BOLD2) == 1)
+    }
+    BOLD_exists <- file.exists(c(BOLD, BOLD2))
+    if (!any(BOLD_exists)) {
+      out$missing <- c(BOLD, BOLD2)[BOLD_exists]
+      return(out)
+    }
+  }
+
+  # If BOLD (and BOLD2) is a CIFTI or NIFTI, read it in.
+  #   CIFTI
+  if (format == "CIFTI") {
+    BOLD <- as.matrix(read_cifti(BOLD, brainstructures=brainstructures))
+    if (retest) {
+      BOLD2 <- as.matrix(read_cifti(BOLD2, brainstructures=brainstructures))
+    }
+  #   NIFTI
+  } else if (format == "NIFTI") {
+    BOLD <- readNIfTI(BOLD, reorient=FALSE)
+    if (retest) {
+      BOLD2 <- readNIfTI(BOLD2, reorient=FALSE)
+    }
+  }
+
+  # Check dim
+  dBOLD <- dim(BOLD)
+  if (!is.null(dim_expect)) {
+    dim_expect <- as.numeric(dim_expect)
+    if (format == "NIFTI") {
+      stop()
+    } else {
+      if (length(dim_expect) > 1) {
+        warning("`dim_expect` should only give the number of expected rows. Using the first entry only.\n")
+        dim_expect <- dim_expect[1]
+      }
+      if (dBOLD[1] != dim_expect) {
+        stop("nrow(BOLD) is ", dBOLD[1], ", but `dim_expect` is ", dim_expect, ".")
+      }
+    }
+  }
+
+  # If no retest data, halve the test data
+  if (!retest) {
+    nT <- dBOLD[length(dBOLD)]
+    part1 <- seq(round(nT/2))
+    part2 <- setdiff(seq(nT), part1)
+    BOLD2 <- BOLD[, part2, drop=FALSE]
+    BOLD <- BOLD[, part1, drop=FALSE]
+  }
+
+  #perform dual regression on test and retest data
+  out$test <- dual_reg(BOLD, as.matrix(GICA), scale=scale)$S
+  out$retest <- dual_reg(BOLD2, as.matrix(GICA), scale=scale)$S
+  out$missing <- FALSE
+  out
 }
