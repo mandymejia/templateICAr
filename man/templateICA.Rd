@@ -23,7 +23,7 @@ templateICA(
 
 \item{template_var}{(VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
 
-\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
+\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices.}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 

@@ -11,6 +11,8 @@ estimate_template.cifti(
   inds = NULL,
   scale = TRUE,
   brainstructures = c("left", "right"),
+  var_method = c("unbiased", "non-negative"),
+  keep_DR = FALSE,
   verbose = TRUE,
   out_fname = NULL
 )
@@ -26,7 +28,7 @@ create pseudo test-retest data from single session.}
 
 \item{GICA_fname}{File path of CIFTI-format group ICA maps (ending in .d*.nii)}
 
-\item{inds}{Indicators of which group ICs to include in template. If NULL,
+\item{inds}{Numeric indices of the group ICs to include in template. If NULL,
 use all group ICs.}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the
@@ -38,12 +40,21 @@ cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{verbose}{If \code{TRUE}. display progress updates}
+\item{var_method}{\code{"unbiased"} (default) or \code{"non-negative"}}
+
+\item{keep_DR}{Keep the DR estimates? If \code{TRUE}, the DR estimates are
+returned too. If a single file path, save the DR estimates as an .rds file to
+that location. If \code{FALSE} (default), do not save the DR estimates and
+only return the templates.}
+
+\item{verbose}{If \code{TRUE}, display progress updates}
 
 \item{out_fname}{(Required if templates are to be resampled to a lower spatial
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
+
+\item{out_fnames}{Save the DR results used for template estimation?}
 }
 \value{
 List of two elements: template mean of class xifti and template

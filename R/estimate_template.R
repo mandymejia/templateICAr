@@ -9,7 +9,8 @@
 #'  subjects and in the same order as cifti_fnames.  If none specified, will
 #'  create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
-#' @param inds Indicators of which group ICs to include in template. If NULL,
+#' @param out_fnames Save the DR results used for template estimation?
+#' @param inds Numeric indices of the group ICs to include in template. If NULL,
 #'  use all group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
@@ -18,6 +19,14 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
+#' @param keep_DR Keep the DR estimates? If \code{TRUE}, the DR estimates are
+#'  returned too. If a single file path, save the DR estimates as an .rds file to
+#'  that location. If \code{FALSE} (default), do not save the DR estimates and
+#'  only return the templates.
+#   If a list of two vectors of file paths, each of which the
+#   length of \code{cifti_fnames(2)}, save the DR estimates as individual .rds
+#   files at these locations.
+#' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
 #' @param verbose If \code{TRUE}, display progress updates
 #' @param out_fname (Required if templates are to be resampled to a lower spatial
 #' resolution, usually necessary for spatial template ICA.) The path and base name
@@ -38,6 +47,8 @@ estimate_template.cifti <- function(
   inds=NULL,
   scale=TRUE,
   brainstructures=c("left","right"),
+  var_method=c("unbiased", "non-negative"),
+  keep_DR=FALSE,
   verbose=TRUE,
   out_fname=NULL){
 
@@ -101,14 +112,14 @@ estimate_template.cifti <- function(
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
   missing_data <- NULL
-  
+
   for(ii in 1:N){
     if(verbose) cat(paste0('\n Reading and analyzing data for subject ',ii,' of ',N))
     if (retest) { BOLD2 <- cifti_fnames2[ii] } else { BOLD2 <- NULL }
 
     DR_ii <- dual_reg2(
-      cifti_fnames[ii], BOLD2=BOLD2, GICA=as.matrix(GICA), 
-      scale=scale, format="CIFTI", dim_expect=V, 
+      cifti_fnames[ii], BOLD2=BOLD2, GICA=as.matrix(GICA),
+      scale=scale, format="CIFTI", dim_expect=V,
       brainstructures=brainstructures, verbose=verbose
     )
 
@@ -123,30 +134,31 @@ estimate_template.cifti <- function(
 
   # Estimate template
   if (verbose) { cat("\nEstimating template.\n") }
-  template_mean <- t(apply(DR1 + DR2, seq(2,3), mean, na.rm=TRUE) / 2)
-  template_var <- t(apply(
-    abind::abind(DR1, DR2, along=1),
-    seq(2, 3),
-    function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
-  ))
-  # # Previous calculation of `template_var`: this is equivalent.
-  # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
-  # var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
-  # var_tot <- t((var_tot1 + var_tot2)/2)
-  # # noise (within-subject) variance
-  # DR_diff <- DR1 - DR2;
-  # var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
-  # # signal (between-subject) variance
-  # template_var <- var_tot - var_noise
-  template_var[template_var < 0] <- 0
-  rm(DR1, DR2)
+  template <- estimate_template_from_DR(DR1, DR2, var_method=var_method)
+
+  # Keep DR
+  if (!isFALSE(keep_DR)) {
+    if (is.character(keep_DR)) {
+      if (length(keep_DR) > 1) {
+        warning("Using first entry of `keep_DR`.")
+        keep_DR <- keep_DR[1]
+      }
+      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
+      saveRDS(list(DR1=DR1, DR2=DR2), keep_DR)
+      keep_DR <- FALSE # no longer need it.
+    } else if (!isTRUE(keep_DR)) {
+      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+      keep_DR <- FALSE
+    }
+  }
+  if (!keep_DR) { rm(DR1, DR2) }
 
   # Format template as "xifti"s
   GICA <- select_xifti(GICA, inds)
   GICA$meta$cifti$names <- paste0("IC ", inds)
-  xifti_mean <- newdata_xifti(GICA, template_mean)
+  xifti_mean <- newdata_xifti(GICA, template$mean)
   xifti_mean$meta$cifti$misc <- list(template="mean")
-  xifti_var <- newdata_xifti(GICA, template_var)
+  xifti_var <- newdata_xifti(GICA, template$var)
   xifti_var$meta$cifti$misc <- list(template="var")
 
   if(!is.null(out_fname)){
@@ -156,7 +168,69 @@ estimate_template.cifti <- function(
 
   result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
   class(result) <- 'template.cifti'
+
+  if (keep_DR) { result <- list(DR=list(DR1=DR1, DR2=DR2), template=result) }
+
   result
+}
+
+#' Estimate template from DR estimates
+#'
+#' @param DR1,DR2 the test and retest lists of dual regression estimates
+#' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
+#'
+#' @return List of two elements: the mean and variance templates
+#' @keywords internal
+#' @importFrom abind abind
+estimate_template_from_DR <- function(
+  DR1, DR2, var_method=c("unbiased", "non-negative")){
+
+  # Check arguments.
+  stopifnot(length(dim(DR1)) == length(dim(DR2)))
+  stopifnot(all(dim(DR1) == dim(DR2)))
+  N <- dim(DR1)[1]
+  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
+
+  template <- list(mean=NULL, var=NULL)
+
+  # Mean.
+  template$mean <- t(colMeans(DR1 + DR2, na.rm=TRUE) / 2)
+
+  # Variance.
+  # Unbiased: hat(sigmasq_btwn)
+  # Non-negative: MSB_div2 === hat(sigmasq_btwn) + hat(sigmasq_noise) / k
+  SSB <- 2 * colSums(((DR1 + DR2)/2 - rep(t(template$mean), each=N))^2, na.rm=TRUE)
+  MSB_div2 <- t(SSB / (N-1)) / 2
+  if (var_method == "unbiased") {
+    # Fastest method.
+    var_noise <- t( (1/2) * apply(DR1 - DR2, c(2,3), var, na.rm=TRUE) )
+    template$var <- MSB_div2 - var_noise/2
+
+    # # Previous, equivalent calculation.
+    # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
+    # var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
+    # var_tot <- t((var_tot1 + var_tot2)/2)
+    # # noise (within-subject) variance
+    # DR_diff <- DR1 - DR2;
+    # var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
+    # # signal (between-subject) variance
+    # template$var <- var_tot - var_noise
+
+    # # Another equivalent calculation.
+    # template$var <- t(apply(
+    #   abind::abind(DR1, DR2, along=1),
+    #   seq(2, 3),
+    #   function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
+    # ))
+
+    # Make negative estimates equal to zero.
+    template$var[template$var < 0] <- 0
+
+  } else {
+    template$var <- MSB_div2
+  }
+
+  template
 }
 
 #' Estimate NIFTI template
