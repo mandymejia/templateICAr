@@ -13,7 +13,7 @@ dual_reg2(
   Q2 = NULL,
   maxQ = NULL,
   dim_expect = NULL,
-  brainstructures = brainstructures,
+  brainstructures = c("left", "right"),
   verbose = FALSE
 )
 }

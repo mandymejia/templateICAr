@@ -80,7 +80,7 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 #' @keywords internal
 dual_reg2 <- function(
   BOLD, BOLD2=NULL, GICA, scale=FALSE, format=c("infer", "data", "CIFTI", "NIFTI"), 
-  Q2=NULL, maxQ=NULL, dim_expect=NULL, brainstructures=brainstructures, verbose=FALSE){
+  Q2=NULL, maxQ=NULL, dim_expect=NULL, brainstructures=c("left", "right"), verbose=FALSE){
 
   # TO DO: add removal of nuisance ICs.
   # If !retest, must be careful about the number of ICs since nT is halved.
@@ -107,7 +107,7 @@ dual_reg2 <- function(
     } else {
       format <- "data"
     }
-    if (verbose) { cat("Inferred input format: ", format, ".\n") }
+    if (verbose) { cat("Inferred input format:", format, "\n") }
   }
 
   if (format == "NIFTI") { stop("Not completed yet.") }
@@ -128,12 +128,14 @@ dual_reg2 <- function(
   # If BOLD (and BOLD2) is a CIFTI or NIFTI, read it in.
   #   CIFTI
   if (format == "CIFTI") {
+    # [TO DO]: check for ciftiTools
     BOLD <- as.matrix(read_cifti(BOLD, brainstructures=brainstructures))
     if (retest) {
       BOLD2 <- as.matrix(read_cifti(BOLD2, brainstructures=brainstructures))
     }
   #   NIFTI
   } else if (format == "NIFTI") {
+    # [TO DO]: check for RNifti
     BOLD <- readNIfTI(BOLD, reorient=FALSE)
     if (retest) {
       BOLD2 <- readNIfTI(BOLD2, reorient=FALSE)
@@ -207,13 +209,15 @@ dual_reg2 <- function(
 
     # Estimate and deal with nuisance ICs
     if (maxQ > L) {
-      BOLD <- nuisIC_nreg(
-        BOLD, DR=out$test, Q2=Q2, Q2_max=maxQ-L, verbose=verbose
-      )
-      BOLD2 <- nuisIC_nreg(
-        BOLD2, DR=out$retest, Q2=Q2, Q2_max=maxQ-L, verbose=verbose
-      )
-    } 
+      BOLD <- nuisIC_nreg(BOLD, DR=out$test, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD2 <- nuisIC_nreg(BOLD2, DR=out$retest, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+    }
+
+    # Do DR again.
+    out$test_preclean <- out$test$S # [TO DO]: Rename?
+    out$test <- dual_reg(BOLD, as.matrix(GICA), scale=scale)
+    out$retest_preclean <- out$retest$S
+    out$retest <- dual_reg(BOLD2, as.matrix(GICA), scale=scale)
   }
 
   out$test <- out$test$S
