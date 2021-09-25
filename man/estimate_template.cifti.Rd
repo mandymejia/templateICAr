@@ -13,6 +13,8 @@ estimate_template.cifti(
   brainstructures = c("left", "right"),
   var_method = c("unbiased", "non-negative"),
   keep_DR = FALSE,
+  Q2 = NULL,
+  maxQ = NULL,
   verbose = TRUE,
   out_fname = NULL
 )
@@ -46,6 +48,10 @@ Default: \code{c("left","right")} (cortical surface only).}
 returned too. If a single file path, save the DR estimates as an .rds file to
 that location. If \code{FALSE} (default), do not save the DR estimates and
 only return the templates.}
+
+\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{verbose}{If \code{TRUE}, display progress updates}
 

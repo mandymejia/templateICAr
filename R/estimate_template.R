@@ -25,6 +25,8 @@
 #   If a list of two vectors of file paths, each of which the
 #   length of \code{cifti_fnames(2)}, save the DR estimates as individual .rds
 #   files at these locations.
+#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
 #' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
 #' @param verbose If \code{TRUE}, display progress updates
 #' @param out_fname (Required if templates are to be resampled to a lower spatial
@@ -48,6 +50,7 @@ estimate_template.cifti <- function(
   brainstructures=c("left","right"),
   var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
+  Q2=NULL, maxQ=NULL,
   verbose=TRUE,
   out_fname=NULL){
 
@@ -113,13 +116,14 @@ estimate_template.cifti <- function(
   missing_data <- NULL
 
   for(ii in 1:N){
-    if(verbose) cat(paste0('\n Reading and analyzing data for subject ',ii,' of ',N))
+    if(verbose) cat(paste0('\n Reading and analyzing data for subject ',ii,' of ',N, ".\n"))
     if (retest) { BOLD2 <- cifti_fnames2[ii] } else { BOLD2 <- NULL }
 
     DR_ii <- dual_reg2(
       cifti_fnames[ii], BOLD2=BOLD2, GICA=as.matrix(GICA),
       scale=scale, format="CIFTI", dim_expect=V,
-      brainstructures=brainstructures, verbose=verbose
+      brainstructures=brainstructures, 
+      Q2=Q2, maxQ=maxQ, verbose=verbose
     )
 
     if (!isFALSE(DR_ii$missing)) {
@@ -132,7 +136,7 @@ estimate_template.cifti <- function(
   }
 
   # Estimate template
-  if (verbose) { cat("\nEstimating template.\n") }
+  if (verbose) { cat("Estimating template.\n") }
   template <- estimate_template_from_DR(DR1, DR2, var_method=var_method)
 
   # Keep DR
