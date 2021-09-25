@@ -25,7 +25,7 @@ been calculated, or \code{template_mean} if it hasn't. One is required.}
 \item{Q2_max}{If \code{Q2} is \code{NULL}, PESEL's estimate will be less than or equal to \code{Q2_max}.
 If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate.}
 
-\item{verbose}{}
+\item{verbose}{If \code{TRUE}, display progress updates}
 }
 \value{
 The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it

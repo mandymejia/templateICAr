@@ -10,6 +10,8 @@ dual_reg2(
   GICA,
   scale = FALSE,
   format = c("infer", "data", "CIFTI", "NIFTI"),
+  Q2 = NULL,
+  maxQ = NULL,
   dim_expect = NULL,
   brainstructures = brainstructures,
   verbose = FALSE
@@ -33,6 +35,13 @@ spatial standard deviation before template estimation.}
 \item{format}{Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
 \code{"infer"} (default), a \code{"data"} matrix, \code{"CIFTI"} file, or \code{"NIFTI"} file.}
 
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
+Only provide \code{Q2} or \code{maxQ} but not both.}
+
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
+(L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
+Only provide \code{Q2} or \code{maxQ} but not both.}
+
 \item{dim_expect}{If \code{!(format == "NIFTI")}, this is the number of rows to expect in the data.
 Otherwise, ...}
 
@@ -46,6 +55,7 @@ Default: \code{c("left","right")} (cortical surface only).}
 \item{verbose}{If \code{TRUE}, display progress updates}
 }
 \description{
-Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input; halves the data in absense of retest data.
+Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input, halves the 
+data in absense of retest data, and may remove nuisance regressors.
 }
 \keyword{internal}

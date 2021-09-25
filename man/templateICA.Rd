@@ -27,13 +27,17 @@ templateICA(
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
 
-\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
+\item{meshes}{Either \code{NULL} (assume spatial independence) or a list of 
+ objects of type \code{templateICA_mesh}
 created by \code{make_mesh} (spatial priors are assumed on each independent component).
 Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)}
 
-\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
+Only provide \code{Q2} or \code{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
+(L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
+Only provide \code{Q2} or \code{maxQ} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 

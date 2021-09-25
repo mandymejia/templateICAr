@@ -6,11 +6,15 @@
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices. 
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of 
+#'  objects of type \code{templateICA_mesh}
 #' created by \code{make_mesh} (spatial priors are assumed on each independent component).
 #' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
-#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
+#'  Only provide \code{Q2} or \code{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
+#'  Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If \code{TRUE}. display progress of algorithm
@@ -97,14 +101,18 @@ templateICA <- function(template_mean,
   }
 
   #check that maxQ makes sense
-  if(!is.null(maxQ)){ if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number') }
-  if(is.null(maxQ)) maxQ <- round(ntime/2)
-  if(maxQ < L){
+  if (!is.null(maxQ)) { 
+    if(round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a round positive number.')
+  } else {
+    maxQ <- round(ntime/2)
+  }
+  if (maxQ < L) {
     warning('maxQ must be at least L.  Setting maxQ=L.')
     maxQ <- L
   }
-  #this is to avoid the area of the pesel objective function that spikes close to rank(X), which often leads to nPC close to rank(X)
-  if(maxQ > 0.75*ntime){
+  # This is to avoid the area of the pesel objective function that spikes close 
+  #   to rank(X), which often leads to nPC close to rank(X)
+  if (maxQ > ntime*0.75) {
     warning('maxQ too high, setting to 75% of T.')
     maxQ <- round(ntime*0.75)
   }

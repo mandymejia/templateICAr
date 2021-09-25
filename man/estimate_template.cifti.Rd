@@ -53,8 +53,6 @@ only return the templates.}
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
-
-\item{out_fnames}{Save the DR results used for template estimation?}
 }
 \value{
 List of two elements: template mean of class xifti and template

@@ -46,7 +46,8 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 
 #' Dual Regression wrapper
 #' 
-#' Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input; halves the data in absense of retest data.
+#' Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input, halves the 
+#' data in absense of retest data, and may remove nuisance regressors.
 #' 
 #' @param BOLD,BOLD2 subject-level BOLD data: a CIFTI file, NIFTI file, or data matrix.
 #'  Cannot be a \code{"xifti"} object, \code{"nifti"} object, etc. If \code{BOLD2} is provided 
@@ -63,6 +64,11 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 #'  \code{"infer"} (default), a \code{"data"} matrix, \code{"CIFTI"} file, or \code{"NIFTI"} file.
 #' @param dim_expect If \code{!(format == "NIFTI")}, this is the number of rows to expect in the data.
 #'  Otherwise, ... 
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
+#'  Only provide \code{Q2} or \code{maxQ} but not both.
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
+#'  Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param brainstructures Only applies if \code{format} is \code{"CIFTI"}. 
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -74,7 +80,7 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 #' @keywords internal
 dual_reg2 <- function(
   BOLD, BOLD2=NULL, GICA, scale=FALSE, format=c("infer", "data", "CIFTI", "NIFTI"), 
-  dim_expect=NULL, brainstructures=brainstructures, verbose=FALSE){
+  Q2=NULL, maxQ=NULL, dim_expect=NULL, brainstructures=brainstructures, verbose=FALSE){
 
   # TO DO: add removal of nuisance ICs.
   # If !retest, must be careful about the number of ICs since nT is halved.
@@ -156,13 +162,61 @@ dual_reg2 <- function(
     nT <- dBOLD[length(dBOLD)]
     part1 <- seq(round(nT/2))
     part2 <- setdiff(seq(nT), part1)
-    BOLD2 <- BOLD[, part2, drop=FALSE]
-    BOLD <- BOLD[, part1, drop=FALSE]
+    if (format=="CIFTI") {
+      BOLD2 <- BOLD[, part2, drop=FALSE]
+      BOLD <- BOLD[, part1, drop=FALSE]
+    } else if (format=="NIFTI") {
+      BOLD2 <- BOLD[,,, part2, drop=FALSE]
+      BOLD <- BOLD[,,, part1, drop=FALSE]
+    }
   }
 
-  #perform dual regression on test and retest data
-  out$test <- dual_reg(BOLD, as.matrix(GICA), scale=scale)$S
-  out$retest <- dual_reg(BOLD2, as.matrix(GICA), scale=scale)$S
+  # [TO DO]: Remove NA values?
+
+  # Perform dual regression on test and retest data
+  out$test <- dual_reg(BOLD, as.matrix(GICA), scale=scale)
+  out$retest <- dual_reg(BOLD2, as.matrix(GICA), scale=scale)
   out$missing <- FALSE
+
+  nT <- min(dim(BOLD)[length(dim(BOLD))], dim(BOLD2)[length(dim(BOLD2))])
+  skip_nuisIC_nreg <- (!is.null(Q2) && Q2 <= 0) || (!is.null(maxQ) && maxQ <=0)
+  if (!skip_nuisIC_nreg) {
+
+    L <- ncol(GICA)
+
+    # Check `maxQ`
+    if (!is.null(maxQ)) { 
+      if(round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a round positive number.')
+    } else {
+      maxQ <- round(nT/2)
+    }
+    if (maxQ < L) {
+      warning('maxQ must be at least L.  Setting maxQ=L.')
+      maxQ <- L
+    }
+    # This is to avoid the area of the pesel objective function that spikes close 
+    #   to rank(X), which often leads to nPC close to rank(X)
+    if (maxQ > nT*0.75) {
+      warning('maxQ too high, setting to 75% of T.')
+      maxQ <- round(nT*0.75)
+    }
+
+    # Scale
+    BOLD <- scale_BOLD(BOLD, scale=scale)
+    BOLD2 <- scale_BOLD(BOLD2, scale=scale)
+
+    # Estimate and deal with nuisance ICs
+    if (maxQ > L) {
+      BOLD <- nuisIC_nreg(
+        BOLD, DR=out$test, Q2=Q2, Q2_max=maxQ-L, verbose=verbose
+      )
+      BOLD2 <- nuisIC_nreg(
+        BOLD2, DR=out$retest, Q2=Q2, Q2_max=maxQ-L, verbose=verbose
+      )
+    } 
+  }
+
+  out$test <- out$test$S
+  out$retest <- out$retest$S
   out
 }

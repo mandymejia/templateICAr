@@ -170,3 +170,16 @@ clear_data <- function(x){
   return(x)
 }
 
+#' Sign matching
+#' 
+#' Standardize sign of vector by flipping it if the skew is negative.
+#' 
+#' @param x the vector
+#' @return \code{x} if the skew of \code{x} is negative, and \code{-x} if
+#'  the skew of \code{x} is positive
+#' @keywords internal
+#' 
+#' @importFrom stats median
+sign_match <- function(x){
+  ifelse(median(x, na.rm=TRUE) < mean(x, na.rm=TRUE), x, -x)
+}

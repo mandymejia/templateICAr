@@ -9,7 +9,6 @@
 #'  subjects and in the same order as cifti_fnames.  If none specified, will
 #'  create pseudo test-retest data from single session.
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
-#' @param out_fnames Save the DR results used for template estimation?
 #' @param inds Numeric indices of the group ICs to include in template. If NULL,
 #'  use all group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
@@ -397,13 +396,7 @@ estimate_template.nifti <- function(
 
   # Estimate template
   if (verbose) { cat("\nEstimating template.\n") }
-  template_mean <- t(apply(DR1 + DR2, seq(2,3), mean, na.rm=TRUE) / 2)
-  template_var <- t(apply(
-    abind::abind(DR1, DR2, along=1),
-    seq(2, 3),
-    function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
-  ))
-  template_var[template_var < 0] <- 0
+  template <- estimate_template_from_DR(DR1, DR2, var_method="unbiased")
   rm(DR1, DR2)
 
   if(!is.null(out_fname)){
