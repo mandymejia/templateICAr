@@ -24,20 +24,23 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports:
-  abind,
-  ciftiTools,
-  excursions,
-  Matrix,
-  matrixStats,
-  methods,
-  oro.nifti,
-  pesel,
-  SQUAREM,
-  stats
+    abind,
+    ciftiTools,
+    excursions,
+    Matrix,
+    matrixStats,
+    methods,
+    oro.nifti,
+    pesel,
+    SQUAREM,
+    stats
 Suggests:
+    covr,
     knitr,
     rmarkdown,
-    INLA (>= 0.0-1468840039)
+    INLA (>= 0.0-1468840039),
+    testthat (>= 3.0.0)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
+Config/testthat/edition: 3

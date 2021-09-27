@@ -1,11 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^R/ignore\.R$
 ^README\.Rmd$
-^NEWS\.md$
-^\.travis\.yml$
+^\.github$
 ^appveyor\.yml$
 ^vignettes$
-^cran-comments.md
+^LICENSE\.md$
 ^CRAN-RELEASE$
-^\.github$
+^cran-comments\.md
+^R/ignore\.R$
