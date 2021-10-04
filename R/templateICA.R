@@ -165,17 +165,21 @@ templateICA <- function(template_mean,
 
   if (multi_scans) {
     BOLD <- lapply(BOLD, dim_reduce, L)
-    BOLD <- do.call(cbind, BOLD)
+    BOLD2 <- do.call(cbind, BOLD$data_reduced)
+    # [TO DO] proper treatment of multiple H, Hinv, C_diag
+    H <- BOLD[[1]]$H
+    Hinv <- BOLD[[1]]$H_inv
+    C_diag <- BOLD[[1]]$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
+    if(do_spatial) C_diag <- C_diag * (BOLD[[1]]$sigma_sq) #(nu^2)HH' in paper
     # More dim reduction?
   } else {
     BOLD <- dim_reduce(BOLD, L)
+    BOLD2 <- BOLD$data_reduced
+    H <- BOLD$H
+    Hinv <- BOLD$H_inv
+    C_diag <- BOLD$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
+    if(do_spatial) C_diag <- C_diag * (BOLD$sigma_sq) #(nu^2)HH' in paper
   }
-
-  BOLD2 <- dat_list$data_reduced
-  H <- dat_list$H
-  Hinv <- dat_list$H_inv
-  C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-  if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
 
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 
@@ -186,10 +190,10 @@ templateICA <- function(template_mean,
   # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
   # HA <- HA %*% diag(1/sd_A) #standardize scale of A
   theta0 <- list(A = HA)
-  #if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
+  #if(!do_spatial) theta0$nu0_sq = BOLD$sigma_sq
 
   # #initialize residual variance
-  # theta0$nu0_sq = dat_list$sigma_sq
+  # theta0$nu0_sq = BOLD$sigma_sq
   # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
 
 
@@ -198,10 +202,10 @@ templateICA <- function(template_mean,
   #TEMPLATE ICA
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
   theta00 <- theta0
-  theta00$nu0_sq = dat_list$sigma_sq
+  theta00$nu0_sq = BOLD$sigma_sq
   resultEM <- EM_templateICA.independent(
     template_mean, template_var, 
-    BOLD2, theta00, C_diag=dat_list$C_diag, 
+    BOLD2, theta00, C_diag=BOLD$C_diag, 
     maxiter=maxiter, epsilon=epsilon, verbose=verbose
   )
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
