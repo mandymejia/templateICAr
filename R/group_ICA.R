@@ -169,10 +169,10 @@ groupICA.cifti <- function(
   rm(bigYYt)
   U_bigY <- bigY_svd$u
   D_bigY <- sqrt(bigY_svd$d[seq(num_ICs)])
-  V_bigY <- diag(1/D_bigY) %*% t(U_bigY) %*% bigY
+  Vt_bigY <- diag(1/D_bigY) %*% t(U_bigY) %*% bigY
 
   # PERFORM GROUP-LEVEL ICA
-  #GICA <- icaimax(t(V_bigY), nc=num_ICs, center=TRUE)
+  #GICA <- icaimax(t(Vt_bigY), nc=num_ICs, center=TRUE)
 
   #fix the mean of each component to be positive 
   #sign_flip <- which(colMeans(GICA$S) < 0)
@@ -182,8 +182,8 @@ groupICA.cifti <- function(
   
   for (nRun in 1:numRun){
     print(nRun)
-    GICA <- icaimax(t(V_bigY), nc=num_ICs, center=TRUE)
-    #GICA = fastICA(t(V_bigY), n.comp = num_ICs)
+    GICA <- icaimax(t(Vt_bigY), nc=num_ICs, center=TRUE)
+    #GICA = fastICA(t(Vt_bigY), n.comp = num_ICs)
     icasig = GICA$S 
     M = GICA$M # A in GIFT
     #M = GICA$A # for fastICA    
