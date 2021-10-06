@@ -60,24 +60,23 @@ templateICA <- function(template_mean,
       BOLD <- BOLD[[1]]
     } else {
       stopifnot(all(vapply(BOLD, is.matrix, FALSE)))
-      dims <- do.call(rbind, lapply(BOLD, dim))
-      stopifnot(all(apply(dims, 2, function(x){length(unique(x))}) == 1))
+      stopifnot(length(unique(vapply(BOLD, nrow, 0))) == 1)
     }
   }
   multi_scans <- is.list(BOLD)
 
   # Get data dimensions and the number of ICs
   if (multi_scans) {
-    ntime <- ncol(BOLD[[1]]); nvox <- nrow(BOLD[[1]])
+    ntime <- vapply(BOLD, ncol, 0); nvox <- nrow(BOLD[[1]])
   } else {
     ntime <- ncol(BOLD); nvox <- nrow(BOLD)
   }
   L <- ncol(template_mean) #number of ICs
 
   #check that the number of data locations (nvox), time points (ntime) and ICs (L) makes sense
-  if(ntime > nvox) warning('More time points than voxels. Are you sure?')
+  if(sum(ntime) > nvox) warning('More time points than voxels. Are you sure?')
   if(L > nvox) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of template_mean, template_var and BOLD.')
-  if(L > ntime) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
+  if(L > sum(ntime)) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
 
   #check that all arguments have consistent number of data locations (nvox) and ICs (L)
   if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations, but they do not.')
@@ -104,7 +103,7 @@ templateICA <- function(template_mean,
   if (!is.null(maxQ)) { 
     if(round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a round positive number.')
   } else {
-    maxQ <- round(ntime/2)
+    maxQ <- round(sum(ntime)/2)
   }
   if (maxQ < L) {
     warning('maxQ must be at least L.  Setting maxQ=L.')
@@ -112,9 +111,9 @@ templateICA <- function(template_mean,
   }
   # This is to avoid the area of the pesel objective function that spikes close 
   #   to rank(X), which often leads to nPC close to rank(X)
-  if (maxQ > ntime*0.75) {
+  if (maxQ > sum(ntime)*0.75) {
     warning('maxQ too high, setting to 75% of T.')
-    maxQ <- round(ntime*0.75)
+    maxQ <- round(sum(ntime)*0.75)
   }
 
   if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
@@ -154,32 +153,26 @@ templateICA <- function(template_mean,
   if(maxQ > L){
     if (multi_scans) {
       BOLD <- lapply(BOLD, nuisIC_nreg, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD <- do.call(cbind, BOLD)
     } else {
       BOLD <- nuisIC_nreg(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
     }
   } 
 
+  # Concatenate if multiple sessions exist.
+  if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
+  ntime <- sum(ntime)
+
   ### 2. PERFORM DIMENSION REDUCTION --> BOLD2
 
   if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
 
-  if (multi_scans) {
-    BOLD <- lapply(BOLD, dim_reduce, L)
-    BOLD2 <- do.call(cbind, BOLD$data_reduced)
-    # [TO DO] proper treatment of multiple H, Hinv, C_diag
-    H <- BOLD[[1]]$H
-    Hinv <- BOLD[[1]]$H_inv
-    C_diag <- BOLD[[1]]$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-    if(do_spatial) C_diag <- C_diag * (BOLD[[1]]$sigma_sq) #(nu^2)HH' in paper
-    # More dim reduction?
-  } else {
-    BOLD <- dim_reduce(BOLD, L)
-    BOLD2 <- BOLD$data_reduced
-    H <- BOLD$H
-    Hinv <- BOLD$H_inv
-    C_diag <- BOLD$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-    if(do_spatial) C_diag <- C_diag * (BOLD$sigma_sq) #(nu^2)HH' in paper
-  }
+  BOLD <- dim_reduce(BOLD, L)
+  BOLD2 <- BOLD$data_reduced
+  H <- BOLD$H
+  Hinv <- BOLD$H_inv
+  C_diag <- BOLD$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
+  if(do_spatial) C_diag <- C_diag * (BOLD$sigma_sq) #(nu^2)HH' in paper
 
   ### 3. SET INITIAL VALUES FOR PARAMETERS
 

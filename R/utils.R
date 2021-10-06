@@ -170,16 +170,34 @@ clear_data <- function(x){
   return(x)
 }
 
-#' Sign matching
+#' Positive skew?
 #' 
-#' Standardize sign of vector by flipping it if the skew is negative.
+#' Does the vector have a positive skew? 
 #' 
-#' @param x the vector
-#' @return \code{x} if the skew of \code{x} is negative, and \code{-x} if
-#'  the skew of \code{x} is positive
+#' @param x The numeric vector for which to calculate the skew. Can also be a matrix,
+#'  in which case the skew of each column will be calculated.
+#' @return \code{TRUE} if the skew is positive or zero. \code{FALSE} if the skew is negative.
 #' @keywords internal
 #' 
 #' @importFrom stats median
-sign_match <- function(x){
-  ifelse(median(x, na.rm=TRUE) < mean(x, na.rm=TRUE), x, -x)
+skew_pos <- function(x){
+  x <- as.matrix(x)
+  apply(x, 2, median, na.rm=TRUE) <= colMeans(x, na.rm=TRUE)
+}
+
+#' Sign match ICA results
+#' 
+#' Flips all source signal estiamtes (S) to positive skew
+#' 
+#' @param x The ICA results with entries \code{S} and \code{M}
+#' @return \code{x} but with positive skew source signals
+#' @keywords internal
+#' 
+sign_flip <- function(x){
+  stopifnot(is.list(x))
+  stopifnot(("S" %in% names(x)) & ("M" %in% names(x)))
+  spos <- skew_pos(x$M)
+  x$M[,!spos] <- -x$M[,!spos]
+  x$S[,!spos] <- x$S[,!spos]
+  x
 }

@@ -45,7 +45,7 @@ Default: \code{c("left","right")} (cortical surface only).}
 \item{var_method}{\code{"unbiased"} (default) or \code{"non-negative"}}
 
 \item{keep_DR}{Keep the DR estimates? If \code{TRUE}, the DR estimates are
-returned too. If a single file path, save the DR estimates as an .rds file to
+returned too. If a single file path, save the DR estimates as an .rds file at
 that location. If \code{FALSE} (default), do not save the DR estimates and
 only return the templates.}
 

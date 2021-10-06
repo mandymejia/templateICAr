@@ -27,6 +27,7 @@ Imports:
     abind,
     ciftiTools,
     excursions,
+    ica,
     Matrix,
     matrixStats,
     methods,

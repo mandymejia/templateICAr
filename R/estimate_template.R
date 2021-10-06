@@ -19,7 +19,7 @@
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param keep_DR Keep the DR estimates? If \code{TRUE}, the DR estimates are
-#'  returned too. If a single file path, save the DR estimates as an .rds file to
+#'  returned too. If a single file path, save the DR estimates as an .rds file at
 #'  that location. If \code{FALSE} (default), do not save the DR estimates and
 #'  only return the templates.
 #   If a list of two vectors of file paths, each of which the
