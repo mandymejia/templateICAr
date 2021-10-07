@@ -60,8 +60,8 @@ groupICA.cifti <- function(
   smooth_surf_FWHM=5,
   smooth_vol_FWHM=5,
   smooth_zeroes_as_NA=FALSE,
-  smooth_subcortical_merged=FALSE,
-  nRuns = 5
+  smooth_subcortical_merged=FALSE#,
+  #nRuns = 5
   ){
   
   if (!is.null(out_fname)) {

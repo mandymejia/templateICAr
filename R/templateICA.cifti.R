@@ -241,12 +241,96 @@ activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=
     verbose=verbose, which.ICs=which.ICs, deviation=deviation
   )
 
-  activations_result$active <- newdata_xifti(result$subjICmean, activations_result$active*1)
-  activations_result$active <- transform_xifti(
-    activations_result$active, function(x){ x[x==0] <- NA; x }
+  activations_result$active <- newdata_xifti(
+    result$subjICmean, as.numeric(activations_result$active)
   )
+  activations_result$active <- convert_xifti(activations_result$active, "dlabel", colors="red")
+  for (ii in seq(ncol(activations_result$active))) {
+    rownames(activations_result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
+  }
+
+  class(activations_result) <- "tICA_activations"
 
   activations_result
 }
 
+#' Summarize a \code{"tICA_activations"} object
+#'
+#' Summary method for class \code{"tICA_activations"}
+#'
+#' @param object Object of class \code{"tICA_activations"}. 
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary tICA_activations
+summary.tICA_activations <- function(object, ...) {
 
+  act_counts <- colSums(as.matrix(object$active), na.rm=TRUE)
+
+  x <- c(
+    summary(object$vars),
+    list(act_counts=act_counts),
+    object[c("u", "alpha", "method_p", "deviation")]
+  )
+
+  class(x) <- "summary.tICA_activations"
+  return(x)
+}
+
+#' @rdname summary.tICA_activations
+#' @export
+#' 
+#' @param x The activations from \code{activations.cifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.tICA_activations
+print.summary.tICA_activations <- function(x, ...) {
+  
+  cat("====ACTIVATIONS STATS================\n")
+  cat("Threshold:       ", x$u, "\n")
+  cat("alpha:           ", x$alpha, "\n")
+  pm_nice <- switch(x$method_p,
+    bonferroni = "Bonferroni",
+    holm = "Holm",
+    hochberg = "Hochberg",
+    hommel = "Hommel",
+    BH = "Benjamini & Hochberg (FDR)",
+    fdr = "Benjamini & Hochberg (FDR)",
+    by = "Benjamini & Yekutieli",
+    none = "none"
+  )
+  cat("p-val method:    ", pm_nice, "\n")
+  cat("Deviation:       ", x$deviation, "\n")
+  # [TO DO]: add activation counts
+  cat("\n")
+
+  class(x) <- "summary.xifti"
+  print(x) 
+}
+
+#' @rdname summary.tICA_activations
+#' @export
+#' 
+#' @method print tICA_activations
+print.tICA_activations <- function(x, ...) {
+  print.summary.tICA_activations(summary(x))
+}
+
+#' Plot activations
+#' 
+#' @param x The activations from \code{activations.cifti}
+#' @param stat \code{"active"} (default), \code{"pvals"}, \code{"pvals_adj"},
+#'  \code{"tstats"}, or \code{"vars"}.
+#' @param ... Additional arguments to \code{view_xifti}
+#' @return The plot
+#' @export
+#' @importFrom ciftiTools view_xifti
+#' @method plot tICA_activations
+plot.tICA_activations <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "vars"), ...) {
+  stopifnot(inherits(x, "tICA_activations"))
+  stat <- match.arg(stat, c("active", "pvals", "pvals_adj", "tstats", "vars"))
+  if (stat == "active") {
+    x <- x$active
+  } else {
+    x <- newdata_xifti(x$vars, as.matrix(x[[stat]]))
+  }
+  view_xifti(x, ...)
+}

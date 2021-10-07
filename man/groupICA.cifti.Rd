@@ -19,8 +19,7 @@ groupICA.cifti(
   smooth_surf_FWHM = 5,
   smooth_vol_FWHM = 5,
   smooth_zeroes_as_NA = FALSE,
-  smooth_subcortical_merged = FALSE,
-  nRuns = 5
+  smooth_subcortical_merged = FALSE
 )
 }
 \arguments{
