@@ -87,6 +87,8 @@ groupICA.cifti <- function(
     subjects <- as.factor(seq(length(cifti_fnames)))
   }
 
+  if (missing(num_ICs)) { stop("`num_ICs` must be provided.") }
+
   notthere <- !file.exists(cifti_fnames)
   if (all(notthere)) {
     stop("All files in `cifti_fnames` do not exist.")
@@ -110,7 +112,7 @@ groupICA.cifti <- function(
       cat(paste0("Number of total scans: ", Nscans, "\n"))
       cat("Scans per subject: ")
       sub_counts <- unique(table(subjects))
-      if (length(sub_counts < 2)) {
+      if (length(sub_counts) < 2) {
         cat(sub_counts); cat("\n")
       } else {
         cat(paste0(min(sub_counts), "-", max(sub_counts), "\n"))
@@ -144,7 +146,7 @@ groupICA.cifti <- function(
   }
 
   # READ IN DATA AND PERFORM INITIAL DIMENSION REDUCTION
-  next_row <- 1
+  next_col <- 1
   for (ii in seq(Nsub)) {
 
     # Get CIFTI files.
@@ -169,6 +171,7 @@ groupICA.cifti <- function(
 
     # Read in BOLD data.
     BOLD_ii <- lapply(fnames_ii, read_cifti, brainstructures=brainstructures)
+    # [TO DO]: center rows?
     BOLD_ii <- merge_xifti(xifti_list=BOLD_ii)
     BOLD_ii <- as.matrix(BOLD_ii)
     ntime <- ncol(BOLD_ii)
@@ -176,57 +179,46 @@ groupICA.cifti <- function(
     # Check original and reduced dimensions. 
     if (ii==1) {
       nvox <- nrow(BOLD_ii)
-      bigY <- matrix(NA, nrow=size_bigY, ncol=nvox) #for initializing online PCA
+      bigY <- matrix(NA, nrow=nvox, ncol=size_bigY) #for initializing online PCA
     } else {
       if (nrow(BOLD_ii) != nvox) {
         stop('Data resolution for subject ',ii,' does not match that of first subject.')
       }
     }
     num_PCs_ii <- min(num_PCs, ntime-1)
+    cols_ii <- next_col - 1 + seq(num_PCs_ii)
     # Quit if adding these next PCs would take the number of PCs past the limit.
-    if (next_row - 1 + num_PCs_ii > size_bigY) { break }
+    if (max(cols_ii) > size_bigY) { break }
     #perform subject-level PCA and add rows to bigY
     if(verbose) cat(paste0('... performing dimension reduction\n'))
-    if (ntime < num_PCs) {
-      warning(
-        'For subject ',ii,
-        ' there are fewer than `num_PCs` (',num_PCs,') time points. Skipping dimension reduction.'
-      )
-    } #note: still use SVD to standardize variance
+    # if (ntime < num_PCs) {
+    #   warning(
+    #     'For subject ',ii,
+    #     ' there are fewer than `num_PCs` (',num_PCs,') time points. Skipping dimension reduction.'
+    #   )
+    # } #note: still use SVD to standardize variance
 
     # TIMER -----------------------------------------
     tick = Sys.time() 
-    Y_ctr <- BOLD_ii - rowMeans(BOLD_ii, na.rm=TRUE) # center voxel timecourses
-    # [TO DO]: need to center columns?
-    Y_svd <- PCA(Y_ctr, Q=num_PCs_ii)
-    U_ii <- Y_svd$u
-    D_ii <- sqrt(Y_svd$d[seq(num_PCs_ii)])
-    Vt_ii <- diag(1/D_ii) %*% t(U_ii) %*% Y_ctr
-
-    rows_ii <- next_row - 1 + seq(num_PCs_ii)
-    bigY[rows_ii,] <- Vt_ii
-    next_row <- next_row + seq(num_PCs_ii)
+    bigY[,cols_ii] <- PCA(BOLD_ii, Q=num_PCs_ii, nv="Q")$v
     # TIMER -----------------------------------------
-    # stop timer
-    print("Single subject dimension reduction timer:")
+    cat("Single subject dimension reduction timer:\n")
     print(Sys.time() - tick)
-  }
 
-  # PERFORM GROUP-LEVEL PCA FOR DIMENSION REDUCTION
+    next_col <- next_col + seq(num_PCs_ii)
+  }
+  bigY <- bigY[,seq(next_col-1),drop=FALSE]
+
   # TIMER -----------------------------------------
   # start timer
   tick = Sys.time()
-  bigY <- bigY - rep(colMeans(bigY), rep.int(size_bigY, nvox)) # efficient scale(bigY, scale=FALSE)
-  # [TO DO]: rows already centered?
-  bigY_svd <- PCA(bigY, Q=num_ICs) # 40 min for cross prod; 45 min for SVD
-  rm(bigY)
-  # U_bigY <- bigY_svd$u
-  D_bigY <- sqrt(bigY_svd$d[seq(num_ICs)])
-  V_bigY <- t(bigY) %*% bigY_svd$u %*% diag(1/D_bigY)
-  rm(bigY_svd)
+
+  # PERFORM GROUP-LEVEL PCA FOR DIMENSION REDUCTION
+  bigY <- PCA(bigY, Q=num_ICs, nv="Q")$v
 
   # PERFORM GROUP-LEVEL ICA
-  GICA <- icaimax(V_bigY, nc=num_ICs, center=TRUE)
+  GICA <- icaimax(t(bigY), nc=num_ICs, center=TRUE)
+  rm(bigY)
   GICA <- sign_flip(GICA)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -289,7 +281,6 @@ groupICA.cifti <- function(
   # }
   
   # TIMER -----------------------------------------
-  # stop timer
   elapsed = Sys.time() - tick
   cat("Group-level icaimax timer: \n")
   # print(paste0("group-level infomax (x", numRun, ") timer:"))
@@ -297,17 +288,17 @@ groupICA.cifti <- function(
   
   # Format GICA as a xifti object and write out a cifti
 
-  xifti_GICA <- read_cifti(
+  xii_GICA <- read_cifti(
     fnames_ii[1], brainstructures=brainstructures,
     surfL_fname=surfL, surfR_fname=surfR,
   )
-  xifti_GICA <- select_xifti(xifti_GICA, rep(1, nrow(GICA)))
-  xifti_GICA <- convert_xifti(xifti_GICA, "dscalar")
-  xifti_GICA <- newdata_xifti(xifti_GICA, GICA)
+  xii_GICA <- select_xifti(xii_GICA, rep(1, ncol(GICA$M)))
+  xii_GICA <- convert_xifti(xii_GICA, "dscalar")
+  xii_GICA <- newdata_xifti(xii_GICA, GICA$M)
 
   if(!is.null(out_fname)){
-    return(write_cifti(xifti_GICA, out_fname, verbose=verbose))
+    return(write_cifti(xii_GICA, out_fname, verbose=verbose))
   } else {
-    return(xifti_GICA)
+    return(xii_GICA)
   }
 }

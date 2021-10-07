@@ -7,9 +7,7 @@
 dim_reduce(X, Q = NULL, Q_max = 100)
 }
 \arguments{
-\item{X}{\eqn{VxT} fMRI timeseries data matrix, centered by columns and rows 
-(columns are actually all that matter, but MATLAB implementation of Minka 
-method also assumes rows have been centered (implicit in use of cov function))}
+\item{X}{\eqn{VxT} fMRI timeseries data matrix, centered by columns.}
 
 \item{Q}{Number of latent dimensions to estimate. If not specified, 
 estimated using PESEL (Sobczyka et al. 2020).}

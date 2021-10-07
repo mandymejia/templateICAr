@@ -4,9 +4,7 @@
 #'  SVD. If dimensionality is not specified, it is estimated using the method 
 #'  described in Minka (2008).
 #'
-#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns and rows 
-#'  (columns are actually all that matter, but MATLAB implementation of Minka 
-#'  method also assumes rows have been centered (implicit in use of cov function))
+#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns.
 #' @param Q Number of latent dimensions to estimate. If not specified, 
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
@@ -54,33 +52,53 @@ dim_reduce <- function(X, Q=NULL, Q_max=100){
 
 #' PCA
 #' 
-#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns and rows 
-#'  (columns are actually all that matter, but MATLAB implementation of Minka 
-#'  method also assumes rows have been centered (implicit in use of cov function))
+#' Efficient PCA for a tall matrix (much more rows than columns). Uses the SVD
+#'  of the covariance matrix.
+#' 
+#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns
+#' @param center Center the columns of \code{X}? Default: \code{TRUE}. Set to
+#'  \code{FALSE} if already centered. 
 #' @param Q Number of latent dimensions to estimate. If not specified, 
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
 #'  dimensionality selection with PESEL. Default: \code{100}
+#' @param nv Number of principal directions to obtain. Default: \code{0}. Can
+#'  also be \code{"Q"} to set equal to the value of \code{Q}. Note that setting
+#'  this value less than \code{Q} does not speed up computation time, but does
+#'  save on memory. Note that the directions will be with respect to \code{X},
+#'  not its covariance matrix.
 #' 
 #' @importFrom pesel pesel
 #' 
 #' @return The SVD decomposition
 #' 
-PCA <- function(X, Xt=FALSE, Q=NULL, Q_max=100) {
+PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nv=0) {
   nvox <- nrow(X) #number of brain locations
   ntime <- ncol(X) #number of fMRI volumes (reduce this)
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
-  # check that X has been centered both ways
-  TOL <- 1e-8
-  if (max(abs(colMeans(X))) > TOL) stop('Columns of X must be centered')
-  if (max(abs(rowMeans(X))) > TOL) warning('Rows of X should be centered')
-
-  #determine PCA dimensionality
+  if (center) {
+    X <- colCenter(X)
+  } else {
+    TOL <- 1e-8
+    if (max(abs(colMeans(X))) > TOL) stop('Columns of X must be centered')
+  }
+  # Removed check for row centering
+  
+  # Determine PCA dimensionality
   if(is.null(Q)){
     Q <- pesel(X, npc.max=Q_max, method='homogenous')$nPCs
   }
+  if (nv == "Q") { nv <- Q }
+  if (nv > Q) { warning("nv > Q, so setting nv to Q."); nv <- Q }
 
-  #perform dimension reduction
-  svd(crossprod(X) / nvox, nu=Q, nv=0)
+  # Perform dimension reduction
+  out <- svd(crossprod(X) / (nvox-1), nu=Q, nv=0)
+
+  # Compute directions. (out$v would have the directions for XtX, not X.)
+  if (nv > 0) {
+    out$v <- X %*% out$u[,seq(nv)] %*% diag(1/out$d[seq(nv)])
+  }
+
+  out
 }

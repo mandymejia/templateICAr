@@ -201,3 +201,14 @@ sign_flip <- function(x){
   x$S[,!spos] <- x$S[,!spos]
   x
 }
+
+#' Center cols
+#' 
+#' Efficiently center columns of a matrix. (Faster than \code{scale})
+#' 
+#' @param X The data matrix. Its columns wil lbe centered
+#' @return The centered data
+#' @keywords internal
+colCenter <- function(X) {
+  X - rep(colMeans(X), rep.int(nrow(X), ncol(X)))
+}
