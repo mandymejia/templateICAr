@@ -4,7 +4,7 @@
 #'
 #' @param cifti_fname File path of CIFTI-format timeseries data (ending in .dtseries.nii).
 #' @param template Result of call to \code{estimate_template.cifti}, either (1) an object of class
-#' \code{template.cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
+#' \code{template_cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
 #' and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti}. For
 #' spatial template ICA (\code{spatial_model=TRUE}), must be the latter.
 #' @param spatial_model Should spatial modeling be performed? (Default \eqn{FALSE}) If \code{TRUE}. surface
@@ -110,7 +110,7 @@ templateICA.cifti <- function(cifti_fname,
 
   # GET TEMPLATE MEAN AND VARIANCE (xifti objects)
   template_class <- class(template)
-  if (template_class != 'template.cifti') {
+  if (template_class != 'template_cifti') {
     if (verbose) cat('Reading in templates.\n')
     fname_mean <- paste0(template,'_mean.dscalar.nii')
     fname_var <- paste0(template,'_var.dscalar.nii')
@@ -129,7 +129,7 @@ templateICA.cifti <- function(cifti_fname,
     )
   } else {
     stop(
-      'template argument must be an object of class template.cifti or file path',
+      'template argument must be an object of class template_cifti or file path',
       'prefix to result of estimate_template.cifti() (same as out_fname argument',
       'passed to estimate_template.cifti().'
     )
@@ -194,143 +194,4 @@ templateICA.cifti <- function(cifti_fname,
   }
 
   return(result)
-}
-
-
-#' Activations of (s)tICA
-#'
-#' Identify areas of activation in each independent component map
-#'
-#' @param result Result of templateICA.cifti model call
-#' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
-#' @param u Activation threshold, default = 0
-#' @param alpha Significance level for joint PPM, default = 0.1
-#' @param type Type of region.  Default is '>' (positive excursion region).
-#' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
-#'
-#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
-#'
-#' @importFrom ciftiTools newdata_xifti transform_xifti
-#' @export
-#'
-#'
-activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
-
-  if( (!inherits(result, "tICA")) && (!inherits(result, "stICA")) ) stop("result must be of class stICA or tICA")
-
-  # Select stICA or tICA
-  if (is.null(spatial_model)) { spatial_model <- inherits(result, "stICA") }
-  if (isTRUE(spatial_model) && inherits(result, "tICA")) {
-    warning(
-      'spatial_model set to TRUE but class of model result is tICA. ', 
-      'Setting spatial_model = FALSE, performing inference using standard ', 
-      'template ICA.'
-    )
-    spatial_model <- FALSE
-  }
-  if (isFALSE(spatial_model) && inherits(result, "stICA")) {
-    result <- result$result_tICA
-  } 
-
-  #run activations function
-  activations_result <- activations(
-    result, u=u, alpha=alpha, type=type, method_p=method_p, 
-    verbose=verbose, which.ICs=which.ICs, deviation=deviation
-  )
-
-  activations_result$active <- newdata_xifti(
-    result$subjICmean, as.numeric(activations_result$active)
-  )
-  activations_result$active <- convert_xifti(activations_result$active, "dlabel", colors="red")
-  for (ii in seq(ncol(activations_result$active))) {
-    rownames(activations_result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
-  }
-
-  class(activations_result) <- "tICA_activations"
-
-  activations_result
-}
-
-#' Summarize a \code{"tICA_activations"} object
-#'
-#' Summary method for class \code{"tICA_activations"}
-#'
-#' @param object Object of class \code{"tICA_activations"}. 
-#' @param ... further arguments passed to or from other methods.
-#' @export
-#' @method summary tICA_activations
-summary.tICA_activations <- function(object, ...) {
-
-  act_counts <- colSums(as.matrix(object$active), na.rm=TRUE)
-
-  x <- c(
-    summary(object$vars),
-    list(act_counts=act_counts),
-    object[c("u", "alpha", "method_p", "deviation")]
-  )
-
-  class(x) <- "summary.tICA_activations"
-  return(x)
-}
-
-#' @rdname summary.tICA_activations
-#' @export
-#' 
-#' @param x The activations from \code{activations.cifti}
-#' @param ... further arguments passed to or from other methods.
-#' @method print summary.tICA_activations
-print.summary.tICA_activations <- function(x, ...) {
-  
-  cat("====ACTIVATIONS STATS================\n")
-  cat("Threshold:       ", x$u, "\n")
-  cat("alpha:           ", x$alpha, "\n")
-  pm_nice <- switch(x$method_p,
-    bonferroni = "Bonferroni",
-    holm = "Holm",
-    hochberg = "Hochberg",
-    hommel = "Hommel",
-    BH = "Benjamini & Hochberg (FDR)",
-    fdr = "Benjamini & Hochberg (FDR)",
-    by = "Benjamini & Yekutieli",
-    none = "none"
-  )
-  cat("p-val method:    ", pm_nice, "\n")
-  cat("Deviation:       ", x$deviation, "\n")
-  # [TO DO]: add activation counts
-  cat("\n")
-
-  class(x) <- "summary.xifti"
-  print(x) 
-}
-
-#' @rdname summary.tICA_activations
-#' @export
-#' 
-#' @method print tICA_activations
-print.tICA_activations <- function(x, ...) {
-  print.summary.tICA_activations(summary(x))
-}
-
-#' Plot activations
-#' 
-#' @param x The activations from \code{activations.cifti}
-#' @param stat \code{"active"} (default), \code{"pvals"}, \code{"pvals_adj"},
-#'  \code{"tstats"}, or \code{"vars"}.
-#' @param ... Additional arguments to \code{view_xifti}
-#' @return The plot
-#' @export
-#' @importFrom ciftiTools view_xifti
-#' @method plot tICA_activations
-plot.tICA_activations <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "vars"), ...) {
-  stopifnot(inherits(x, "tICA_activations"))
-  stat <- match.arg(stat, c("active", "pvals", "pvals_adj", "tstats", "vars"))
-  if (stat == "active") {
-    x <- x$active
-  } else {
-    x <- newdata_xifti(x$vars, as.matrix(x[[stat]]))
-  }
-  view_xifti(x, ...)
 }

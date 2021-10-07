@@ -30,7 +30,7 @@ templateICA.cifti(
 \item{cifti_fname}{File path of CIFTI-format timeseries data (ending in .dtseries.nii).}
 
 \item{template}{Result of call to \code{estimate_template.cifti}, either (1) an object of class
-\code{template.cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
+\code{template_cifti} OR (2) the file path and basename prefix (the part before "_mean.dscalar.nii"
 and "_var.dscalar.nii") of cifti files written out by \code{estimate_template.cifti}. For
 spatial template ICA (\code{spatial_model=TRUE}), must be the latter.}
 

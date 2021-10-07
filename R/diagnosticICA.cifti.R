@@ -6,7 +6,7 @@
 #'  ".dtseries.nii").
 #' @param templates Set of templates, each the result of call to 
 #'  \code{\link{estimate_template.cifti}} (one template for each group).
-#' Either a list of objects of class \code{"template.cifti"}, OR a vector of 
+#' Either a list of objects of class \code{"template_cifti"}, OR a vector of 
 #'  file path prefixes (the part before "_mean.dscalar.nii"
 #'  and "_var.dscalar.nii") of cifti files written out by 
 #'  \code{\link{estimate_template.cifti}}.
@@ -123,7 +123,7 @@ diagnosticICA.cifti <- function(cifti_fname,
   for(g in 1:G){
 
     #Obtain template_mean_g and template_var_g
-    if (template_class[1]=='template.cifti') {
+    if (template_class[1]=='template_cifti') {
       template_mean_cifti[[g]] <- templates[[g]]$template_mean #class xifti
       template_var_cifti[[g]] <- templates[[g]]$template_var #class xifti
     } else if (template_class[1]=='character') {
@@ -134,7 +134,7 @@ diagnosticICA.cifti <- function(cifti_fname,
       template_mean_cifti[[g]] <- read_cifti(fname_mean, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
       template_var_cifti[[g]] <- read_cifti(fname_var, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
     } else {
-      stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
+      stop('template argument must be an object of class template_cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
     }
 
     #Extract data matrix from template_mean_g and template_var_g
