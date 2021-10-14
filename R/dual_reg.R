@@ -181,8 +181,8 @@ dual_reg2 <- function(
   out$missing <- FALSE
 
   nT <- min(dim(BOLD)[length(dim(BOLD))], dim(BOLD2)[length(dim(BOLD2))])
-  skip_nuisIC_nreg <- (!is.null(Q2) && Q2 <= 0) || (!is.null(maxQ) && maxQ <=0)
-  if (!skip_nuisIC_nreg) {
+  skip_rm_nuisIC <- (!is.null(Q2) && Q2 <= 0) || (!is.null(maxQ) && maxQ <=0)
+  if (!skip_rm_nuisIC) {
 
     L <- ncol(GICA)
 
@@ -209,8 +209,8 @@ dual_reg2 <- function(
 
     # Estimate and deal with nuisance ICs
     if (maxQ > L) {
-      BOLD <- nuisIC_nreg(BOLD, DR=out$test, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
-      BOLD2 <- nuisIC_nreg(BOLD2, DR=out$retest, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
     }
 
     # Do DR again.

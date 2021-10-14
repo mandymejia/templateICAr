@@ -186,11 +186,11 @@ templateICA.cifti <- function(cifti_fname,
   rm(BOLD)
 
   result$subjICmean <- newdata_xifti(template$mean, result$subjICmean)
-  result$subjICvar <- newdata_xifti(template$var, result$subjICvar)
+  result$subjICse <- newdata_xifti(template$var, result$subjICse)
 
   if (spatial_model) {
     result$result_tICA$subjICmean <- newdata_xifti(template$mean, result$result_tICA$subjICmean)
-    result$result_tICA$subjICvar <- newdata_xifti(template$var, result$result_tICA$subjICvar)
+    result$result_tICA$subjICse <- newdata_xifti(template$var, result$result_tICA$subjICse)
   }
 
   return(result)

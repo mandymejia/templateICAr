@@ -222,9 +222,9 @@ diagnosticICA.cifti <- function(cifti_fname,
     select_xifti(template_mean_cifti[[1]], rep(1, ncol(result$subjICmean))),
     result$subjICmean
   )
-  result$subjICvar <- newdata_xifti(
-    select_xifti(template_var_cifti[[1]], rep(1, ncol(result$subjICvar))),
-    result$subjICvar
+  result$subjICse <- newdata_xifti(
+    select_xifti(template_var_cifti[[1]], rep(1, ncol(result$subjICse))),
+    result$subjICse
   )
 
   # RETURN XIFTI RESULTS AND MODEL RESULT

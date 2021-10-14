@@ -270,7 +270,7 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 
   result <- list(group_probs = MAP$group_probs,
                  subjICmean=MAP$ICmean,
-                 subjICvar=MAP$ICvar,
+                 subjICse=sqrt(MAP$ICvar),
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,

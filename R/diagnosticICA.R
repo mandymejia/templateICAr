@@ -356,7 +356,7 @@ diagnosticICA <- function(template_mean,
 
     #organize estimates and variances in matrix form
     resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
-    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
+    resultEM$subjICse <- matrix(diag(sqrt(resultEM$subjICcov)), ncol=L)
   }
 
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A

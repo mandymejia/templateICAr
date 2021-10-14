@@ -78,9 +78,9 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     L <- ncol(result$subjICmean)
 
     if(deviation){
-      t_stat <- as.matrix((result$subjICmean - template_mean - u)/sqrt(result$subjICvar))
+      t_stat <- as.matrix((result$subjICmean - template_mean - u)/result$subjICse)
     } else {
-      t_stat <- as.matrix((result$subjICmean - u)/sqrt(result$subjICvar))
+      t_stat <- as.matrix((result$subjICmean - u)/result$subjICse)
     }
 
     if(type=='>') pvals <- 1-pnorm(t_stat)
@@ -98,7 +98,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 
     result <- list(
       active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat,
-      vars = result$subjICvar, u = u, alpha = alpha, method_p =
+      se = result$subjICse, u = u, alpha = alpha, method_p =
       method_p, deviation=deviation
     )
   }

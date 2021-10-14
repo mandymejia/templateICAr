@@ -42,7 +42,7 @@ will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{out_fname}{The path and base name prefix of the NIFTI files to write.
 Will be appended with "_subjICmean.nii" for IC mean maps and 
-"_subjICvar.nii" for IC variance maps.}
+"_subjICse.nii" for IC variance maps.}
 }
 \value{
 A list containing the subject IC estimates (class 'xifti'), the 

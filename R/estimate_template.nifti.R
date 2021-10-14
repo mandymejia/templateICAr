@@ -187,4 +187,3 @@ estimate_template.nifti <- function(
   class(result) <- 'template.nifti'
   return(result)
 }
-

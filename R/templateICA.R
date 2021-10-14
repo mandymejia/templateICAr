@@ -152,10 +152,10 @@ templateICA <- function(template_mean,
 
   if(maxQ > L){
     if (multi_scans) {
-      BOLD <- lapply(BOLD, nuisIC_nreg, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD <- lapply(BOLD, rm_nuisIC, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
       BOLD <- do.call(cbind, BOLD)
     } else {
-      BOLD <- nuisIC_nreg(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
+      BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
     }
   } 
 
@@ -287,7 +287,7 @@ templateICA <- function(template_mean,
 
     #organize estimates and variances in matrix form
     resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
-    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
+    resultEM$subjICse <- matrix(diag(sqrt(resultEM$subjICcov)), ncol=L)
   }
 
   #if(dim_reduce_flag) {
@@ -309,11 +309,11 @@ templateICA <- function(template_mean,
   # #map estimates & templates back to original locations
   # if(sum(!keep)>0){
   #   #estimates
-  #   subjICmean <- subjICvar <- matrix(nrow=length(keep), ncol=L)
+  #   subjICmean <- subjICse <- matrix(nrow=length(keep), ncol=L)
   #   subjICmean[keep,] <- resultEM$subjICmean
-  #   subjICvar[keep,] <- resultEM$subjICvar
+  #   subjICse[keep,] <- resultEM$subjICse
   #   resultEM$subjICmean <- subjICmean
-  #   resultEM$subjICvar <- subjICvar
+  #   resultEM$subjICse <- subjICse
   #   #templates
   #   resultEM$template_mean <- template_mean_orig
   #   resultEM$template_var <- template_var_orig

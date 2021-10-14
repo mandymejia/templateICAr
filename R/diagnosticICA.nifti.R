@@ -19,7 +19,7 @@
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
 #'  Will be appended with "_subjICmean.nii" for IC mean maps and 
-#'  "_subjICvar.nii" for IC variance maps.
+#'  "_subjICse.nii" for IC variance maps.
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #'
@@ -99,24 +99,23 @@ diagnosticICA.nifti <- function(nifti_fname,
   L <- ncol(result$subjICmean)
   BOLD_nifti@.Data <- BOLD_nifti@.Data[,,,1:L] #remove non-template ICs
   BOLD_nifti@dim_[5] <- L
-  subjICmean_nifti <- subjICvar_nifti <- BOLD_nifti #copy over header information from GICA
+  subjICmean_nifti <- subjICse_nifti <- BOLD_nifti #copy over header information from GICA
   img_tmp <- mask_all
   for(l in 1:L){
     img_tmp[mask_all==1] <- result$subjICmean[,l]
     subjICmean_nifti@.Data[,,,l] <- img_tmp
-    img_tmp[mask_all==1] <- result$subjICvar[,l]
-    subjICvar_nifti@.Data[,,,l] <- img_tmp
+    img_tmp[mask_all==1] <- result$subjICse[,l]
+    subjICse_nifti@.Data[,,,l] <- img_tmp
   }
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_subjICmean')
-    out_fname_var <- paste0(out_fname, '_subjICvar')
+    out_fname_var <- paste0(out_fname, '_subjICse')
     writeNIfTI(subjICmean_nifti, out_fname_mean)
-    writeNIfTI(subjICvar_nifti, out_fname_var)
+    writeNIfTI(subjICse_nifti, out_fname_var)
     writeNIfTI(mask_all, 'mask_all')
   }
 
   return(result)
 
 }
-

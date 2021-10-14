@@ -267,7 +267,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
   }
 
   result <- list(subjICmean=miu_s,
-                 subjICvar=var_s,
+                 subjICse=sqrt(var_s),
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,

@@ -15,7 +15,7 @@
 #' @return The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it
 #' 
 #' @keywords internal 
-nuisIC_nreg <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, verbose=FALSE){
+rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, verbose=FALSE){
 
   if ( (!is.null(Q2) && Q2 <=0) || (!is.null(Q2_max) && Q2_max <=0) ) {
     if (verbose) { cat("`Q2`/`Q2_max` specifies no nuisance ICs. Returning original BOLD.") }

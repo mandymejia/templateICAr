@@ -138,29 +138,29 @@ templateICA.nifti <- function(BOLD_fname,
     template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
   }
 
-  subjICmean_xifti <- subjICvar_xifti <- template_mean
+  subjICmean_xifti <- subjICse_xifti <- template_mean
   n_left <- n_right <- n_sub <- 0
   if(do_left) {
     n_left <- nrow(subjICmean_xifti$data$cortex_left)
     subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
-    subjICvar_xifti$data$cortex_left <- result$subjICvar[1:n_left,]
+    subjICse_xifti$data$cortex_left <- result$subjICse[1:n_left,]
   }
   if(do_right) {
     n_right <- nrow(subjICmean_xifti$data$cortex_right)
     subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
-    subjICvar_xifti$data$cortex_right <- result$subjICvar[n_left+(1:n_right),]
+    subjICse_xifti$data$cortex_right <- result$subjICse[n_left+(1:n_right),]
   }
   if(do_sub) {
     n_sub <- nrow(subjICmean_xifti$data$subcort)
     subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
-    subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
+    subjICse_xifti$data$subcort <- result$subjICse[n_left + n_right + (1:n_sub),]
   }
 
 #return mask!!
 
   RESULT <- list(
     subjICmean_xifti = subjICmean_xifti,
-    subjICvar_xifti = subjICvar_xifti,
+    subjICse_xifti = subjICse_xifti,
     model_result = result
   )
   class(RESULT) <- 'templateICA.cifti'
