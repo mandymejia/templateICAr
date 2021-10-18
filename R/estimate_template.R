@@ -23,6 +23,7 @@
 #' resolution, usually necessary for spatial template ICA.) The path and base name
 #' prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 #' template mean maps and "_var.dscalar.nii" for template variance maps.
+#' @param FC If TRUE, include template for functional connectivity
 #'
 #' @importFrom ciftiTools read_cifti write_cifti newdata_xifti
 #'
@@ -39,10 +40,16 @@ estimate_template.cifti <- function(
   scale=TRUE,
   brainstructures=c("left","right"),
   verbose=TRUE,
-  out_fname=NULL){
+  out_fname=NULL,
+  FC = FALSE){
 
   #TO DOs:
   # Create function to print and check template, template.cifti and template.nifti objects
+
+  #IDEA:
+  # Denoise the data by estimating and removing noise IC's for each scan, as we do in template ICA
+  # Have an argument denoise (logical).  For small datasets, denoising may result in cleaner templates.
+  # For larger datasets, denoising may be slow and unnecessary.
 
   if(!is.null(out_fname)){
     if(!dir.exists(dirname(out_fname))) stop('directory part of out_fname does not exist')
@@ -100,6 +107,7 @@ estimate_template.cifti <- function(
 
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
   DR1 <- DR2 <- array(NA, dim=c(N, L, V))
+  if(FC) FC1 <- FC2 <- array(NA, dim=c(N, L, L)) #for functional connectivity template
   missing_data <- NULL
   for(ii in 1:N){
 
@@ -146,11 +154,14 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)$S
-    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)$S
-    DR1[ii,,] <- DR1_ii[inds,]
-    DR2[ii,,] <- DR2_ii[inds,]
+    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale)
+    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale)
+    DR1[ii,,] <- DR1_ii$S[inds,]
+    DR2[ii,,] <- DR2_ii$S[inds,]
+    if(FC) FC1[ii,,] <- cov(DR1_ii$A[,inds])
+    if(FC) FC2[ii,,] <- cov(DR2_ii$A[,inds])
   }
+  #save(FC1, FC2, file='FC_temp.RData')
 
   # Estimate template
   if (verbose) { cat("\nEstimating template.\n") }
@@ -185,10 +196,51 @@ estimate_template.cifti <- function(
     write_cifti(xifti_var, paste0(out_fname, '_var.dscalar.nii'), verbose=verbose)
   }
 
-  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
+  if(FC){
+
+    mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
+    var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
+    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
+    var_FC_between <- var_FC_tot - var_FC_within
+    var_FC_between[var_FC_between < 0] <- NA
+
+    #function to minimize w.r.t. k
+    fun <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
+      LHS <- var_ij
+      phi_ij <- xbar_ij*(nu-p-1)
+      phi_ii <- xbar_ii*(nu-p-1)
+      phi_jj <- xbar_jj*(nu-p-1)
+      RHS_numer <- (nu-p+1)*phi_ij^2 + (nu-p-1)*phi_ii*phi_jj
+      RHS_denom <- (nu-p)*((nu-p-1)^2)*(nu-p-3)
+
+      sq_diff <- (LHS - RHS_numer/RHS_denom)^2
+      return(sq_diff)
+    }
+
+    nu_est <- matrix(NA, L, L)
+    for(q1 in 1:L){
+      for(q2 in q1:L){
+
+        #estimate k = nu - p - 1
+        nu_opt <- optimize(f=fun, interval=c(L+1,L*10), p=L, var_ij=var_FC_between[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
+        nu_est[q1,q2] <- nu_opt$minimum
+      }
+    }
+    nu_est[lower.tri(nu_est, diag=FALSE)] <- NA
+    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
+
+    template_FC <- list(nu = nu_est1,
+                        psi = mean_FC*(nu_est1 - L - 1))
+  } else {
+    template_FC <- NULL
+  }
+
+  result <- list(template_mean=xifti_mean, template_var=xifti_var, template_FC, scale=scale, inds=inds)
   class(result) <- 'template.cifti'
   result
 }
+
+
 
 #' Estimate NIFTI template
 #'
@@ -234,12 +286,18 @@ estimate_template.nifti <- function(
   if(verbose) cat('\n Reading in GICA result')
   GICA <- readNIfTI(GICA_fname, reorient = FALSE)
   mask2 <- mask <- readNIfTI(mask_fname, reorient = FALSE)
-  dims <- dim(mask)
+  if((length(dim(mask)) > 3)){
+    if(dim(mask)[4] > 1){
+      stop('Mask should not contain more than three dimesions')
+    }
+  }
+  dims <- dim(mask)[1:3]
   vals <- sort(unique(as.vector(mask)))
-  if(any(!(vals %in% c(0,1)))) stop('Mask must be binary.')
+  if(any(!(vals %in% c(0,1)))) warning('Values other than 0/1 or TRUE/FALSE detected in the mask.  Coercing to binary.')
+  mask@.Data <- array(1*as.logical(mask), dim=dims)
   V <- sum(mask)
   Q <- dim(GICA)[4]
-  if(any(dim(GICA)[-4] != dims)) stop('GICA dims and mask dims do not match')
+  if(any(dim(GICA)[1:3] != dims)) stop('First three dimensions of GICA and mask do not match.')
   GICA_mat <- matrix(NA, V, Q)
   for(q in 1:Q){
     GICA_mat[,q] <- GICA[,,,q][mask==1]
@@ -366,6 +424,7 @@ estimate_template.nifti <- function(
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_mean')
     out_fname_var <- paste0(out_fname, '_var')
+    out_fname_mask <- paste0(out_fname, '_mask')
     GICA@.Data <- GICA@.Data[,,,inds] #remove non-template ICs
     GICA@dim_[5] <- length(inds)
     template_mean_nifti <- template_var_nifti <- GICA #copy over header information from GICA
@@ -378,13 +437,12 @@ estimate_template.nifti <- function(
     }
     writeNIfTI(template_mean_nifti, out_fname_mean)
     writeNIfTI(template_var_nifti, out_fname_var)
-    writeNIfTI(mask2, 'mask2')
+    writeNIfTI(mask2, out_fname_mask)
   }
 
   result <- list(template_mean=template_mean, template_var=template_var, scale=scale, mask=mask, mask2=mask2, inds=inds)
   class(result) <- 'template.nifti'
   return(result)
 }
-
 
 

@@ -1,35 +1,35 @@
 #' Diagnostic ICA for NIFTI
-#' 
+#'
 #' Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template
 #'
-#' @param nifti_fname File path of NIFTI BOLD timeseries data
-#' @param templates Set of templates, each the result of call to 
+#' @param BOLD File path of NIFTI BOLD timeseries data
+#' @param templates Set of templates, each the result of call to
 #'  \code{\link{estimate_template.nifti}}.
-#' (one template for each group). Either a list of objects of class 
+#' (one template for each group). Either a list of objects of class
 #'  \code{"template.nifti"}.
-#' @param scale Should BOLD data be scaled by the spatial standard deviation 
-#'  before model fitting? Default: \code{TRUE}. If done when estimating 
+#' @param scale Should BOLD data be scaled by the spatial standard deviation
+#'  before model fitting? Default: \code{TRUE}. If done when estimating
 #'  templates, should be done here too.
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default),
 #'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify
 #'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
-#'  Will be appended with "_subjICmean.nii" for IC mean maps and 
+#'  Will be appended with "_subjICmean.nii" for IC mean maps and
 #'  "_subjICvar.nii" for IC variance maps.
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #'
-#' @return A list containing the subject IC estimates (class 'xifti'), the 
-#'  subject IC variance estimates (class 'xifti'), and the result of the model
+#' @return A list containing the subject IC estimates (class 'nifti'), the
+#'  subject IC variance estimates (class 'nifti'), and the result of the model
 #'  call to \code{diagnosticICA} (class 'dICA')
-#' 
+#'
 #' @export
 #'
-diagnosticICA.nifti <- function(nifti_fname,
+diagnosticICA.nifti <- function(BOLD,
                               templates,
                               scale=TRUE,
                               Q2=NULL,
@@ -45,8 +45,8 @@ diagnosticICA.nifti <- function(nifti_fname,
 
 
   # READ IN BOLD TIMESERIES DATA
-  if(!file.exists(nifti_fname)) stop(paste0('The BOLD timeseries file ',nifti_fname,' does not exist.'))
-  BOLD_nifti <- readNIfTI(nifti_fname, reorient=FALSE)
+  if(!file.exists(BOLD)) stop(paste0('The BOLD timeseries file ',BOLD,' does not exist.'))
+  BOLD_nifti <- readNIfTI(BOLD, reorient=FALSE)
 
   # GET TEMPLATE MEAN AND VARIANCE FOR EACH GROUP
   template_class <- sapply(templates, class)

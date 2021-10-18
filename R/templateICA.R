@@ -135,7 +135,8 @@ templateICA <- function(template_mean,
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
     if(is.null(Q2)){
       if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      Q2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')$nPCs #estimated number of nuisance ICs
+      pesel_BOLD2 <- suppressWarnings(pesel(BOLD2, npc.max=maxQ-L, method='homogenous'))
+      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
       if(verbose) cat(paste0(Q2,'\n'))
     }
 
@@ -196,11 +197,14 @@ templateICA <- function(template_mean,
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
   theta00 <- theta0
   theta00$nu0_sq = dat_list$sigma_sq
-  resultEM <- EM_templateICA.independent(
-    template_mean, template_var, 
-    BOLD4, theta00, C_diag=dat_list$C_diag, 
-    maxiter=maxiter, epsilon=epsilon, verbose=verbose
-  )
+  resultEM <- EM_templateICA.independent(template_mean,
+                                         template_var,
+                                         BOLD=BOLD4,
+                                         theta0=theta00,
+                                         C_diag=dat_list$C_diag,
+                                         maxiter=maxiter,
+                                         epsilon=epsilon,
+                                         verbose=verbose)
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A
   class(resultEM) <- 'tICA'
 
