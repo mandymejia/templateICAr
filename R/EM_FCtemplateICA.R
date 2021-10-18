@@ -1,5 +1,4 @@
 #' @name EM_FCtemplateICA
-#' @rdname EM_RFtemplateICA
 #'
 #' @title EM Algorithm for FC Template ICA Model
 #'

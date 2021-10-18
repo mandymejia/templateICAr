@@ -9,3 +9,5 @@
 ^cran-comments.md
 ^CRAN-RELEASE$
 ^\.github$
+^R/EM_FCtemplateICA\.R$
+^R/groupICA\.R$

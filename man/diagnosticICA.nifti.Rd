@@ -5,7 +5,7 @@
 \title{Diagnostic ICA for NIFTI}
 \usage{
 diagnosticICA.nifti(
-  nifti_fname,
+  BOLD,
   templates,
   scale = TRUE,
   Q2 = NULL,
@@ -17,21 +17,21 @@ diagnosticICA.nifti(
 )
 }
 \arguments{
-\item{nifti_fname}{File path of NIFTI BOLD timeseries data}
+\item{BOLD}{File path of NIFTI BOLD timeseries data}
 
-\item{templates}{Set of templates, each the result of call to 
+\item{templates}{Set of templates, each the result of call to
  \code{\link{estimate_template.nifti}}.
-(one template for each group). Either a list of objects of class 
+(one template for each group). Either a list of objects of class
  \code{"template.nifti"}.}
 
-\item{scale}{Should BOLD data be scaled by the spatial standard deviation 
-before model fitting? Default: \code{TRUE}. If done when estimating 
+\item{scale}{Should BOLD data be scaled by the spatial standard deviation
+before model fitting? Default: \code{TRUE}. If done when estimating
 templates, should be done here too.}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default), 
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default),
 will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
+\item{maxQ}{Maximum number of ICs (template+nuisance) to identify
 (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
@@ -41,12 +41,12 @@ will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
 \item{out_fname}{The path and base name prefix of the NIFTI files to write.
-Will be appended with "_subjICmean.nii" for IC mean maps and 
+Will be appended with "_subjICmean.nii" for IC mean maps and
 "_subjICvar.nii" for IC variance maps.}
 }
 \value{
-A list containing the subject IC estimates (class 'xifti'), the 
- subject IC variance estimates (class 'xifti'), and the result of the model
+A list containing the subject IC estimates (class 'nifti'), the
+ subject IC variance estimates (class 'nifti'), and the result of the model
  call to \code{diagnosticICA} (class 'dICA')
 }
 \description{

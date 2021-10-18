@@ -26,6 +26,7 @@
 #' @param FC If TRUE, include template for functional connectivity
 #'
 #' @importFrom ciftiTools read_cifti write_cifti newdata_xifti
+#' @importFrom stats cov quantile
 #'
 #' @return List of two elements: template mean of class xifti and template
 #'  variance of class xifti
@@ -154,8 +155,8 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale)
-    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale)
+    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)
+    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)
     DR1[ii,,] <- DR1_ii$S[inds,]
     DR2[ii,,] <- DR2_ii$S[inds,]
     if(FC) FC1[ii,,] <- cov(DR1_ii$A[,inds])
@@ -266,6 +267,7 @@ estimate_template.cifti <- function(
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #' @importFrom matrixStats rowVars
+#' @importFrom stats cov quantile
 #'
 #' @export
 #'
