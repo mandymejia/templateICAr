@@ -39,6 +39,8 @@ templateICA <- function(template_mean,
                         #common_smoothness=TRUE,
                         kappa_init=0.2){
 
+  #TO DO: Define do_FC, pass in FC template
+
   if(!is.null(meshes)){
     INLA_check()
     flag <- INLA::inla.pardiso.check()
@@ -163,153 +165,118 @@ templateICA <- function(template_mean,
   }
   rm(BOLD)
 
-  ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
-
-  if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
-
-  dat_list <- dim_reduce(BOLD3, L)
-
-  BOLD4 <- dat_list$data_reduced
-  H <- dat_list$H
-  Hinv <- dat_list$H_inv
-  C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-  if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
-
-  ### 3. SET INITIAL VALUES FOR PARAMETERS
-
-  #initialize mixing matrix (use dual regression-based estimate for starting value)
+  #use dual regression for initial values
   dat_DR <- dual_reg(BOLD3, template_mean)
+
   rm(BOLD3)
-  HA <- H %*% dat_DR$A #apply dimension reduction
-  # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
-  # HA <- HA %*% diag(1/sd_A) #standardize scale of A
-  theta0 <- list(A = HA)
-  #if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
 
-  # #initialize residual variance
-  # theta0$nu0_sq = dat_list$sigma_sq
-  # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+  if(!do_FC){ #do not actually perform dimension reduction for FC template ICA
 
+    ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
+
+    if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
+    dat_list <- dim_reduce(BOLD3, L)
+    err_var <- dat_list$sigma_sq
+
+    BOLD4 <- dat_list$data_reduced
+    H <- dat_list$H
+    Hinv <- dat_list$H_inv
+    C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
+    if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
+
+    ### 3. SET INITIAL VALUES FOR PARAMETERS
+
+    #initialize mixing matrix (use dual regression-based estimate for starting value)
+    HA <- H %*% dat_DR$A #apply dimension reduction
+    theta0 <- list(A = HA)
+    # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
+    # theta0$nu0_sq = dat_list$sigma_sq
+    # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+  }
 
   ### 4. RUN EM ALGORITHM!
 
-  #TEMPLATE ICA
-  if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
-  theta00 <- theta0
-  theta00$nu0_sq = dat_list$sigma_sq
-  resultEM <- EM_templateICA.independent(template_mean,
+  #Three algorithms to choose from:
+  #1) FC Template ICA (new)
+  #2) Template ICA
+  #3) Spatial Template ICA (initialize with standard Template ICA)
+
+  if(do_FC) {
+    ### FC TEMPLATE ICA
+
+    ## TO DO: FILL IN HERE
+    prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
+    resultEM <- EM_FCtemplateICA(template_mean,
+                                 template_var,
+                                 template_FC,
+                                 prior_params, #for prior on tau^2
+                                 BOLD=BOLD3,
+                                 AS_init = dat_DR, #initial values for A and S
+                                 maxiter=maxiter,
+                                 epsilon=epsilon,
+                                 verbose=verbose)
+
+    ## TO DO: FILL IN HERE
+
+  } else {
+    ### TEMPLATE ICA AND SPATIAL TEMPLATE ICA
+
+    #TEMPLATE ICA
+    if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
+    theta00 <- theta0
+    theta00$nu0_sq <- err_var
+    resultEM <- EM_templateICA.independent(template_mean,
+                                           template_var,
+                                           BOLD=BOLD4,
+                                           theta0=theta00,
+                                           C_diag=dat_list$C_diag,
+                                           maxiter=maxiter,
+                                           epsilon=epsilon,
+                                           verbose=verbose)
+    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+    class(resultEM) <- 'tICA'
+
+    #SPATIAL TEMPLATE ICA
+    if(do_spatial){
+
+      resultEM_tICA <- resultEM
+      theta0$kappa <- rep(kappa_init, L)
+      if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
+      t000 <- Sys.time()
+      resultEM <- EM_templateICA.spatial(template_mean,
                                          template_var,
+                                         meshes,
                                          BOLD=BOLD4,
-                                         theta0=theta00,
-                                         C_diag=dat_list$C_diag,
+                                         theta0,
+                                         C_diag,
                                          maxiter=maxiter,
                                          epsilon=epsilon,
                                          verbose=verbose)
-  resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-  class(resultEM) <- 'tICA'
+      #common_smoothness=common_smoothness)
+      print(Sys.time() - t000)
 
-  #SPATIAL TEMPLATE ICA
-  if(do_spatial){
+      #organize estimates and variances in matrix form
+      resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
+      resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
+    }
 
-    resultEM_tICA <- resultEM
-
-    # if(dim_reduce_flag == FALSE){
-    #   BOLD4 <- BOLD3
-    #   C_diag <- rep(1, ntime)
-    #   theta0$A <- dat_DR$A
-    # }
-
-    # #starting value for kappas (use data from one hemisphere for speed)
-    # if(is.null(kappa_init)){
-    #   #kappa_init <- 0.5
-    #
-    #   # #This needs to be generalized to multiple meshes
-    #   if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
-    #   locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
-    #   n_mesh1 <- length(locs)
-    #
-    #   #organize data and replicates
-    #   for(q in 1:L){
-    #     #print(paste0('IC ',q,' of ',L))
-    #     d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
-    #     #d_q <- tmp[,q] - template_mean[,q]
-    #     rep_q <- rep(q, length(d_q))
-    #     D_diag_q <- sqrt(template_var[1:n_mesh1,q])
-    #     if(q==1) {
-    #       dev <- d_q
-    #       rep <- rep_q
-    #       D_diag <- D_diag_q
-    #     } else {
-    #       dev <- c(dev, d_q)
-    #       rep <- c(rep, rep_q)
-    #       D_diag <- c(D_diag, D_diag_q)
-    #     }
-    #   }
-    #
-    #   #determine MLE of kappa
-    #   #~50 min with V=5200, L=16
-    #   print(system.time(opt <- optim(par=c(0,-20),
-    #                  fn=loglik_kappa_est,
-    #                  method='L-BFGS-B',
-    #                  lower=c(-5,-20),
-    #                  upper=c(1,Inf), #kappa usually less than 1, log(1)=0
-    #                  delta=dev,
-    #                  D_diag=D_diag,
-    #                  mesh=meshes[[1]],
-    #                  Q=L)))
-    #   kappa_init <- exp(opt$par[1])
-    #
-    #   # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
-    #   # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
-    #   # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
-    #   # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
-    #   # kappa_init <- exp(result_spde$summary.log.kappa$mean)
-    #   if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
-    # }
-
-    theta0$kappa <- rep(kappa_init, L)
-
-    # This would need to be generalized to multiple meshes, but currently data locations and mesh locations are the same when templateICA.cifti used
-    # #project BOLD and templates to mesh locations
-    # Amat <- mesh$A # n_orig x n_mesh matrix
-    # nmesh <- ncol(Amat)
-    # if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-
-    if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
-    t000 <- Sys.time()
-    resultEM <- EM_templateICA.spatial(template_mean,
-                                       template_var,
-                                       meshes,
-                                       BOLD=BOLD4,
-                                       theta0,
-                                       C_diag,
-                                       maxiter=maxiter,
-                                       epsilon=epsilon,
-                                       verbose=verbose)
-                                       #common_smoothness=common_smoothness)
-    print(Sys.time() - t000)
-
-    #organize estimates and variances in matrix form
-    resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
-    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
-  }
-
-  #if(dim_reduce_flag) {
     resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-  #}
 
-
-  #for stICA, return tICA estimates also
-  if(do_spatial){
-    resultEM$result_tICA <- resultEM_tICA
-    class(resultEM) <- 'stICA'
+    #for stICA, return tICA estimates also
+    if(do_spatial){
+      resultEM$result_tICA <- resultEM_tICA
+      class(resultEM) <- 'stICA'
+    }
   }
 
   #return DR estimates
   resultEM$result_DR <- dat_DR
 
-  #resultEM$keep <- keep
+  #This part problematic for spatial template ICA, but can bring back
+  #for template ICA and FC template ICA.  When we check for bad locations,
+  #can return an error only for spatial template ICA.
 
+  #resultEM$keep <- keep
   # #map estimates & templates back to original locations
   # if(sum(!keep)>0){
   #   #estimates
