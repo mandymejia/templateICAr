@@ -281,36 +281,29 @@ estimate_template.cifti <- function(
     }
 
     nu_est <- matrix(NA, L, L)
-    for(q1 in 1:(L-1)){
-      for(q2 in (q1+1):L){
+    for(q1 in 1:L){
+      for(q2 in q1:L){
 
         #estimate k = nu - p - 1
-        nu_opt <- optimize(f=fun, interval=c(L+1,100), p=L, var_ij=var_FC_between[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
+        nu_opt <- optimize(f=fun, interval=c(L+1,L*10), p=L, var_ij=var_FC_between[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
         nu_est[q1,q2] <- nu_opt$minimum
       }
     }
-    nu_est[lower.tri(nu_est, diag=TRUE)] <- NA
-    nu_est_avg <- mean(nu_est[upper.tri(nu_est)], na.rm=TRUE)
-    template_FC <- list(nu = nu_est_avg,
-                        psi = mean_FC/(nu_est_avg - L - 1))
+    nu_est[lower.tri(nu_est, diag=FALSE)] <- NA
+    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
+
+    template_FC <- list(nu = nu_est1,
+                        psi = mean_FC*(nu_est1 - L - 1))
   } else {
     template_FC <- NULL
   }
 
-  var2 <- matrix(NA, L, L)
-  for(q1 in 1:(L-1)){
-    for(q2 in (q1+1):L){
-      nu <- nu_est_avg
-      num_qq <- (nu-L+1)*mean_FC[q1,q2]*(nu-L-1)^2 + (nu - L - 1)*1*1*(nu - L - 1)^2
-      denom_qq <- (nu-L)*((nu-L-1)^2)*(nu-L-3)
-      var2[q1,q2] <- num_qq/denom_qq
-    }
-  }
-
-  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
+  result <- list(template_mean=xifti_mean, template_var=xifti_var, template_FC, scale=scale, inds=inds)
   class(result) <- 'template.cifti'
   result
 }
+
+
 
 #' Estimate NIFTI template
 #'
@@ -530,6 +523,5 @@ estimate_template.nifti <- function(
   class(result) <- 'template.nifti'
   return(result)
 }
-
 
 
