@@ -41,7 +41,7 @@ templateICA.nifti <- function(BOLD_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(BOLD_fname)) stop(paste0('The BOLD timeseries file ',BOLD_fname,' does not exist.'))
-  BOLD_nifti <- readNIfTI(BOLD_fname, reorient=FALSE)
+  BOLD_nifti <- readNIfTI(BOLD_fname, reorient=FALSE, rescale_data=FALSE)
 
   # GET TEMPLATE MEAN AND VARIANCE
   template_class <- class(template)
@@ -76,27 +76,32 @@ templateICA.nifti <- function(BOLD_fname,
     mask <- template_mask
   }
   if(sum(template_mask==TRUE, na.rm=TRUE) + sum(template_mask==FALSE, na.rm=TRUE) != length(template_mask)) stop('Template mask contains values that cannot be coerced to logical.')
-  mask <- as.logical(mask*template_mask) #intersection mask
+  if((length(dim(mask)) > 3)){
+    if(dim(mask)[4] > 1){
+      stop('Mask should not contain more than three dimesions')
+    }
+  }
+  dim3d <- dim(mask)[1:3]
+  mask@.Data <- array(as.logical(mask*template_mask), dim=dim3d) #intersection mask
   V <- sum(mask==TRUE)
   if(verbose) cat(paste0('Mask contains ', V, ' locations to be included in analysis.'))
 
   # CHECK DIMENSIONS
-  dim3d <- dim(mask)[1:3]
   Q <- dim(template_mean)[4]
   ntime <- dim(BOLD_nifti)[4]
-  if(!all.equal(dim3d, dim(template_mean)[1:3])) stop('Dimensions of template mean image do not match mask dimensions')
-  if(!all.equal(dim3d, dim(template_var)[1:3])) stop('Dimensions of template var image do not match mask dimensions')
-  if(!all.equal(dim3d, dim(BOLD_nifti)[1:3])) stop('Dimensions of BOLD image do not match mask dimensions')
+  if(any(dim3d != dim(template_mean)[1:3])) stop('Dimensions of template mean image do not match mask dimensions')
+  if(any(dim3d != dim(template_var)[1:3])) stop('Dimensions of template var image do not match mask dimensions')
+  if(any(dim3d != dim(BOLD_nifti)[1:3])) stop('Dimensions of BOLD image do not match mask dimensions')
   if(dim(template_var)[4] != Q) stop('Number of ICs in template mean and template var images do not match.')
 
   if(verbose) cat(paste0('Number of template ICs: ', Q, '\n'))
   if(verbose) cat(paste0('Length of BOLD timeseries: ', ntime, '\n'))
 
   # FORM DATA MATRIX AND TEMPLATE MATRICES
-  vectorize <- function(img3d, mask){ return(img3d[mask=TRUE]) }
-  BOLD_mat <- apply(BOLD_nifti, 4, vectorize)
-  template_mean_mat <- apply(template_mean, 4, vectorize)
-  template_var_mat <- apply(template_var, 4, vectorize)
+  vectorize <- function(img3d, mask){ return(img3d[mask==TRUE]) }
+  BOLD_mat <- apply(BOLD_nifti, 4, vectorize, mask)
+  template_mean_mat <- apply(template_mean, 4, vectorize, mask)
+  template_var_mat <- apply(template_var, 4, vectorize, mask)
 
   if(!is.null(time_inds)){
     all_inds <- 1:ncol(BOLD_mat)
@@ -115,8 +120,6 @@ templateICA.nifti <- function(BOLD_fname,
     V <- sum(mask)
   }
 
-
-
   # CALL TEMPLATE ICA FUNCTION
 
   result <- templateICA(template_mean = template_mean_mat,
@@ -129,41 +132,27 @@ templateICA.nifti <- function(BOLD_fname,
                             epsilon=epsilon,
                             verbose=verbose)
 
-  # HERE -----
-
   # MAP ESTIMATES AND VARIANCE TO NIFTI FORMAT
 
-  #reformat column names to IC 1, IC 2, etc.
-  if(!grepl('IC',template_mean$meta$cifti$names[1])){
-    template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
-  }
+  subjICmean_nifti <- subjICvar_nifti <- template_mean
 
-  subjICmean_xifti <- subjICvar_xifti <- template_mean
-  n_left <- n_right <- n_sub <- 0
-  if(do_left) {
-    n_left <- nrow(subjICmean_xifti$data$cortex_left)
-    subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
-    subjICvar_xifti$data$cortex_left <- result$subjICvar[1:n_left,]
+  unvectorize <- function(img_vec, mask){
+    img3d <- mask
+    img3d[mask==TRUE] <- img_vec
+    return(img3d)
   }
-  if(do_right) {
-    n_right <- nrow(subjICmean_xifti$data$cortex_right)
-    subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
-    subjICvar_xifti$data$cortex_right <- result$subjICvar[n_left+(1:n_right),]
+  for(q in 1:Q){
+    subjICmean_nifti@.Data[,,,q] <- unvectorize(result$subjICmean[,q], mask)
+    subjICvar_nifti@.Data[,,,q] <- unvectorize(result$subjICvar[,q], mask)
   }
-  if(do_sub) {
-    n_sub <- nrow(subjICmean_xifti$data$subcort)
-    subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
-    subjICvar_xifti$data$subcort <- result$subjICvar[n_left + n_right + (1:n_sub),]
-  }
-
-#return mask!!
 
   RESULT <- list(
-    subjICmean_xifti = subjICmean_xifti,
-    subjICvar_xifti = subjICvar_xifti,
-    model_result = result
+    subjICmean_nifti = subjICmean_nifti,
+    subjICvar_nifti = subjICvar_nifti,
+    model_result = result,
+    mask = mask
   )
-  class(RESULT) <- 'templateICA.cifti'
+  class(RESULT) <- 'templateICA.nifti'
   return(RESULT)
 }
 
