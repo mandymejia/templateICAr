@@ -21,10 +21,6 @@
 #'  file representing the left cortex. Only required if \code{brainstructures} includes \code{"left"}.
 #' @param surfR_fname (Required for spatial modeling) File path of GIFTI surface geometry
 #'  file representing the right cortex. Only required if \code{brainstructures} includes \code{"right"}.
-#' @param surfL_fname_vis (Optional) File path of GIFTI surface geometry file representing the left cortex
-#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"left"}.
-#' @param surfR_fname_vis (Optional) File path of GIFTI surface geometry file representing the right cortex
-#' to be used for visualization. Only provide if \code{brainstructures} includes \code{"right"}.
 #' @param resamp_res (Only recommended for spatial modeling) Target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.
@@ -54,8 +50,6 @@ templateICA.cifti <- function(cifti_fname,
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,
-                              surfL_fname_vis=NULL,
-                              surfR_fname_vis=NULL,
                               resamp_res=NULL,
                               scale=TRUE,
                               Q2=NULL,
@@ -116,8 +110,6 @@ templateICA.cifti <- function(cifti_fname,
     fname_var <- paste0(template,'_var.dscalar.nii')
     if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
     if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
-    if(!is.null(surfL_fname_vis)) surfL_fname_template <- surfL_fname_vis else surfL_fname_template <- surfL_fname
-    if(!is.null(surfR_fname_vis)) surfR_fname_template <- surfR_fname_vis else surfR_fname_template <- surfR_fname
     template <- list(mean=NULL, var=NULL)
     template$mean <- read_cifti(
       fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, 

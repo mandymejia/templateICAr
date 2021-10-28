@@ -11,8 +11,6 @@ templateICA.cifti(
   spatial_model = FALSE,
   surfL_fname = NULL,
   surfR_fname = NULL,
-  surfL_fname_vis = NULL,
-  surfR_fname_vis = NULL,
   resamp_res = NULL,
   scale = TRUE,
   Q2 = NULL,
@@ -51,12 +49,6 @@ file representing the left cortex. Only required if \code{brainstructures} inclu
 
 \item{surfR_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
 file representing the right cortex. Only required if \code{brainstructures} includes \code{"right"}.}
-
-\item{surfL_fname_vis}{(Optional) File path of GIFTI surface geometry file representing the left cortex
-to be used for visualization. Only provide if \code{brainstructures} includes \code{"left"}.}
-
-\item{surfR_fname_vis}{(Optional) File path of GIFTI surface geometry file representing the right cortex
-to be used for visualization. Only provide if \code{brainstructures} includes \code{"right"}.}
 
 \item{resamp_res}{(Only recommended for spatial modeling) Target resolution for resampling (number of
 cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
