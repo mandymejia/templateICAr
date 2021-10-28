@@ -18,7 +18,7 @@ rm_nuisIC(
 
 \item{DR, template_mean}{We need an initial estimate of the group ICs, so that we can avoid removing them
 during removal of the estimated noise ICs. Provide either \code{DR} if dual regression has already
-been calculated, or \code{template_mean} if it hasn't. One is required.}
+been calculated, or \code{template_mean} (in this context, equivalent to GICA) if it hasn't. One is required.}
 
 \item{Q2}{the number of nuisance ICs. If \code{NULL} (default) will estimate using PESEL.}
 

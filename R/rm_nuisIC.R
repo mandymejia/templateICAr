@@ -6,7 +6,7 @@
 #' @param BOLD the \eqn{V} by \eqn{T} data
 #' @param DR,template_mean We need an initial estimate of the group ICs, so that we can avoid removing them
 #'  during removal of the estimated noise ICs. Provide either \code{DR} if dual regression has already
-#'  been calculated, or \code{template_mean} if it hasn't. One is required. 
+#'  been calculated, or \code{template_mean} (in this context, equivalent to GICA) if it hasn't. One is required. 
 #' @param Q2 the number of nuisance ICs. If \code{NULL} (default) will estimate using PESEL.
 #' @param Q2_max If \code{Q2} is \code{NULL}, PESEL's estimate will be less than or equal to \code{Q2_max}.
 #'  If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate. 

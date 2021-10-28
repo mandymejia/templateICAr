@@ -17,7 +17,9 @@ dual_reg <- function(dat, GICA, scale=FALSE){
   nT <- ncol(dat) #length of timeseries
   nvox <- nrow(dat) #number of data locations
   if(nT > nvox) warning('More time points than voxels. Are you sure?')
-  if(nvox != nrow(GICA)) stop('The number of voxels in dat and GICA must match')
+  if(nvox != nrow(GICA)) {
+    stop('The number of voxels in dat (', nvox, ') and GICA (', nrow(GICA), ') must match')
+  }
 
   Q <- ncol(GICA) #number of ICs
   if(Q > nvox) warning('More ICs than voxels. Are you sure?')
@@ -25,15 +27,15 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 
   # center timeseries data across space and time (and standardize scale if scale=TRUE)
   # transpose it
-  dat_ctr <- t(scale_BOLD(dat, scale=scale))
+  dat <- t(scale_BOLD(dat, scale=scale))
 
   #center each group IC over voxels
   GICA - rep(colMeans(GICA), rep.int(nvox, Q))
 
 	#estimate A (IC timeseries)
-	A <- (dat_ctr %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
+	A <- (dat %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
 	#estimate S (IC maps)
-	S <- solve(a=crossprod(A), b=crossprod(A, dat_ctr))
+	S <- solve(a=crossprod(A), b=crossprod(A, dat))
 
 	#fix scale of spatial maps (sd=1)
 	#sd_S <- sqrt(rowVars(S))
