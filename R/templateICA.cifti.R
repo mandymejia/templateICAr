@@ -113,11 +113,11 @@ templateICA.cifti <- function(cifti_fname,
     template <- list(mean=NULL, var=NULL)
     template$mean <- read_cifti(
       fname_mean, brainstructures=brainstructures, resamp_res=resamp_res, 
-      surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template
+      surfL_fname = surfL_fname, surfR_fname = surfR_fname
     )
     template$var <- read_cifti(
       fname_var, brainstructures=brainstructures, resamp_res=resamp_res, 
-      surfL_fname = surfL_fname_template, surfR_fname = surfR_fname_template
+      surfL_fname = surfL_fname, surfR_fname = surfR_fname
     )
   } else {
     stop(

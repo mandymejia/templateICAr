@@ -215,17 +215,14 @@ estimate_template.cifti <- function(
   xifti_mean$meta$cifti$misc <- list(template="mean")
   xifti_var <- newdata_xifti(GICA, template$var)
   xifti_var$meta$cifti$misc <- list(template="var")
-  xifti_FC <- newdata_xifti(GICA, template$FC)
-  xifti_FC$meta$cifti$misc <- list(template="FC")
 
   if(!is.null(out_fname)){
     write_cifti(xifti_mean, paste0(out_fname, '_mean.dscalar.nii'), verbose=verbose)
     write_cifti(xifti_var, paste0(out_fname, '_var.dscalar.nii'), verbose=verbose)
-    write_cifti(xifti_FC, paste0(out_fname, '_FC.dscalar.nii'), verbose=verbose)
   }
 
   result <- list(
-    template_mean=xifti_mean, template_var=xifti_var, template_FC=xifti_FC,
+    template_mean=xifti_mean, template_var=xifti_var, template_FC=template_FC,
     scale=scale, inds=inds, var_method=var_method
   )
   if (keep_DR) { result <- c(result, list(DR=list(DR1=DR1, DR2=DR2))) }
