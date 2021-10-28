@@ -165,8 +165,7 @@ diagnosticICA <- function(template_mean,
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
     if(is.null(Q2)){
       if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homo')
-      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+      Q2 <- suppressWarnings(pesel(BOLD2, npc.max=maxQ-L, method='homo'))$nPCs #estimated number of nuisance ICs
       if(verbose) cat(paste0(Q2,'\n'))
     }
 

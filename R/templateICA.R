@@ -26,7 +26,6 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom pesel pesel
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'

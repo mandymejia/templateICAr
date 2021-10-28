@@ -87,7 +87,7 @@ PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nv=0) {
   
   # Determine PCA dimensionality
   if(is.null(Q)){
-    Q <- pesel(X, npc.max=Q_max, method='homogenous')$nPCs
+    Q <- suppressWarnings(pesel(X, npc.max=Q_max, method='homogenous'))$nPCs
   }
   if (nv == "Q") { nv <- Q }
   if (nv > Q) { warning("nv > Q, so setting nv to Q."); nv <- Q }
