@@ -43,6 +43,8 @@ templateICA <- function(template_mean,
                         #common_smoothness=TRUE,
                         kappa_init=0.2){
 
+  #TO DO: Define do_FC, pass in FC template
+
   if(!is.null(meshes)){
     INLA_check()
     flag <- INLA::inla.pardiso.check()
@@ -163,10 +165,6 @@ templateICA <- function(template_mean,
   if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
   ntime <- sum(ntime)
 
-  ### 2. PERFORM DIMENSION REDUCTION --> BOLD2
-
-  if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
-
   BOLD <- dim_reduce(BOLD, L)
   BOLD2 <- BOLD$data_reduced
   H <- BOLD$H
@@ -174,7 +172,9 @@ templateICA <- function(template_mean,
   C_diag <- BOLD$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
   if(do_spatial) C_diag <- C_diag * (BOLD$sigma_sq) #(nu^2)HH' in paper
 
-  ### 3. SET INITIAL VALUES FOR PARAMETERS
+    if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
+    dat_list <- dim_reduce(BOLD3, L)
+    err_var <- dat_list$sigma_sq
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   dat_DR <- dual_reg(BOLD, template_mean)
@@ -185,15 +185,10 @@ templateICA <- function(template_mean,
   theta0 <- list(A = HA)
   #if(!do_spatial) theta0$nu0_sq = BOLD$sigma_sq
 
-  # #initialize residual variance
-  # theta0$nu0_sq = BOLD$sigma_sq
-  # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
-
-
   ### 4. RUN EM ALGORITHM!
 
   #TEMPLATE ICA
-  if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
+  if(do_spatial & verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
   theta00 <- theta0
   theta00$nu0_sq = BOLD$sigma_sq
   resultEM <- EM_templateICA.independent(
@@ -288,24 +283,65 @@ templateICA <- function(template_mean,
     #organize estimates and variances in matrix form
     resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
     resultEM$subjICse <- matrix(diag(sqrt(resultEM$subjICcov)), ncol=L)
-  }
+  } else {
+    ### TEMPLATE ICA AND SPATIAL TEMPLATE ICA
 
-  #if(dim_reduce_flag) {
+    #TEMPLATE ICA
+    if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
+    theta00 <- theta0
+    theta00$nu0_sq <- err_var
+    resultEM <- EM_templateICA.independent(template_mean,
+                                           template_var,
+                                           BOLD=BOLD4,
+                                           theta0=theta00,
+                                           C_diag=dat_list$C_diag,
+                                           maxiter=maxiter,
+                                           epsilon=epsilon,
+                                           verbose=verbose)
     resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-  #}
+    class(resultEM) <- 'tICA'
 
+    #SPATIAL TEMPLATE ICA
+    if(do_spatial){
 
-  #for stICA, return tICA estimates also
-  if(do_spatial){
-    resultEM$result_tICA <- resultEM_tICA
-    class(resultEM) <- 'stICA'
+      resultEM_tICA <- resultEM
+      theta0$kappa <- rep(kappa_init, L)
+      if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
+      t000 <- Sys.time()
+      resultEM <- EM_templateICA.spatial(template_mean,
+                                         template_var,
+                                         meshes,
+                                         BOLD=BOLD4,
+                                         theta0,
+                                         C_diag,
+                                         maxiter=maxiter,
+                                         epsilon=epsilon,
+                                         verbose=verbose)
+      #common_smoothness=common_smoothness)
+      print(Sys.time() - t000)
+
+      #organize estimates and variances in matrix form
+      resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
+      resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
+    }
+
+    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+
+    #for stICA, return tICA estimates also
+    if(do_spatial){
+      resultEM$result_tICA <- resultEM_tICA
+      class(resultEM) <- 'stICA'
+    }
   }
 
   #return DR estimates
   resultEM$result_DR <- dat_DR
 
-  #resultEM$keep <- keep
+  #This part problematic for spatial template ICA, but can bring back
+  #for template ICA and FC template ICA.  When we check for bad locations,
+  #can return an error only for spatial template ICA.
 
+  #resultEM$keep <- keep
   # #map estimates & templates back to original locations
   # if(sum(!keep)>0){
   #   #estimates

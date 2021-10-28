@@ -8,3 +8,5 @@
 ^CRAN-RELEASE$
 ^cran-comments\.md
 ^R/ignore\.R$
+^R/EM_FCtemplateICA\.R$
+^R/groupICA\.R$

@@ -16,7 +16,8 @@ estimate_template.cifti(
   Q2 = NULL,
   maxQ = NULL,
   verbose = TRUE,
-  out_fname = NULL
+  out_fname = NULL,
+  FC = FALSE
 )
 }
 \arguments{
@@ -60,6 +61,8 @@ only return the templates.}
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
+
+\item{FC}{If TRUE, include template for functional connectivity}
 }
 \value{
 List of two elements: template mean of class xifti and template

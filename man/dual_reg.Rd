@@ -11,7 +11,7 @@ dual_reg(dat, GICA, scale = FALSE)
 
 \item{GICA}{Group-level independent components (\eqn{VxQ})}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should 
+\item{scale}{A logical value indicating whether the fMRI timeseries should
 be scaled by the image standard deviation.}
 }
 \value{

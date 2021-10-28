@@ -2,7 +2,7 @@
 #'
 #' @param dat Subject-level fMRI data (\eqn{VxT})
 #' @param GICA Group-level independent components (\eqn{VxQ})
-#' @param scale A logical value indicating whether the fMRI timeseries should 
+#' @param scale A logical value indicating whether the fMRI timeseries should
 #'  be scaled by the image standard deviation.
 #'
 #' @importFrom matrixStats colVars

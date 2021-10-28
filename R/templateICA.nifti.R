@@ -41,7 +41,7 @@ templateICA.nifti <- function(BOLD_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(BOLD_fname)) stop(paste0('The BOLD timeseries file ',BOLD_fname,' does not exist.'))
-  BOLD_nifti <- readNIfTI(BOLD_fname, reorient=FALSE)
+  BOLD_nifti <- readNIfTI(BOLD_fname, reorient=FALSE, rescale_data=FALSE)
 
   # GET TEMPLATE MEAN AND VARIANCE
   template_class <- class(template)
@@ -76,27 +76,32 @@ templateICA.nifti <- function(BOLD_fname,
     mask <- template_mask
   }
   if(sum(template_mask==TRUE, na.rm=TRUE) + sum(template_mask==FALSE, na.rm=TRUE) != length(template_mask)) stop('Template mask contains values that cannot be coerced to logical.')
-  mask <- as.logical(mask*template_mask) #intersection mask
+  if((length(dim(mask)) > 3)){
+    if(dim(mask)[4] > 1){
+      stop('Mask should not contain more than three dimesions')
+    }
+  }
+  dim3d <- dim(mask)[1:3]
+  mask@.Data <- array(as.logical(mask*template_mask), dim=dim3d) #intersection mask
   V <- sum(mask==TRUE)
   if(verbose) cat(paste0('Mask contains ', V, ' locations to be included in analysis.'))
 
   # CHECK DIMENSIONS
-  dim3d <- dim(mask)[1:3]
   Q <- dim(template_mean)[4]
   ntime <- dim(BOLD_nifti)[4]
-  if(!all.equal(dim3d, dim(template_mean)[1:3])) stop('Dimensions of template mean image do not match mask dimensions')
-  if(!all.equal(dim3d, dim(template_var)[1:3])) stop('Dimensions of template var image do not match mask dimensions')
-  if(!all.equal(dim3d, dim(BOLD_nifti)[1:3])) stop('Dimensions of BOLD image do not match mask dimensions')
+  if(any(dim3d != dim(template_mean)[1:3])) stop('Dimensions of template mean image do not match mask dimensions')
+  if(any(dim3d != dim(template_var)[1:3])) stop('Dimensions of template var image do not match mask dimensions')
+  if(any(dim3d != dim(BOLD_nifti)[1:3])) stop('Dimensions of BOLD image do not match mask dimensions')
   if(dim(template_var)[4] != Q) stop('Number of ICs in template mean and template var images do not match.')
 
   if(verbose) cat(paste0('Number of template ICs: ', Q, '\n'))
   if(verbose) cat(paste0('Length of BOLD timeseries: ', ntime, '\n'))
 
   # FORM DATA MATRIX AND TEMPLATE MATRICES
-  vectorize <- function(img3d, mask){ return(img3d[mask=TRUE]) }
-  BOLD_mat <- apply(BOLD_nifti, 4, vectorize)
-  template_mean_mat <- apply(template_mean, 4, vectorize)
-  template_var_mat <- apply(template_var, 4, vectorize)
+  vectorize <- function(img3d, mask){ return(img3d[mask==TRUE]) }
+  BOLD_mat <- apply(BOLD_nifti, 4, vectorize, mask)
+  template_mean_mat <- apply(template_mean, 4, vectorize, mask)
+  template_var_mat <- apply(template_var, 4, vectorize, mask)
 
   if(!is.null(time_inds)){
     all_inds <- 1:ncol(BOLD_mat)
@@ -115,8 +120,6 @@ templateICA.nifti <- function(BOLD_fname,
     V <- sum(mask)
   }
 
-
-
   # CALL TEMPLATE ICA FUNCTION
 
   result <- templateICA(template_mean = template_mean_mat,
@@ -129,98 +132,84 @@ templateICA.nifti <- function(BOLD_fname,
                             epsilon=epsilon,
                             verbose=verbose)
 
-  # HERE -----
-
   # MAP ESTIMATES AND VARIANCE TO NIFTI FORMAT
 
-  #reformat column names to IC 1, IC 2, etc.
-  if(!grepl('IC',template_mean$meta$cifti$names[1])){
-    template_mean$meta$cifti$names <- paste0('IC ',template_mean$meta$cifti$names)
-  }
+  subjICmean_nifti <- subjICvar_nifti <- template_mean
 
-  subjICmean_xifti <- subjICse_xifti <- template_mean
-  n_left <- n_right <- n_sub <- 0
-  if(do_left) {
-    n_left <- nrow(subjICmean_xifti$data$cortex_left)
-    subjICmean_xifti$data$cortex_left <- result$subjICmean[1:n_left,]
-    subjICse_xifti$data$cortex_left <- result$subjICse[1:n_left,]
+  unvectorize <- function(img_vec, mask){
+    img3d <- mask
+    img3d[mask==TRUE] <- img_vec
+    return(img3d)
   }
-  if(do_right) {
-    n_right <- nrow(subjICmean_xifti$data$cortex_right)
-    subjICmean_xifti$data$cortex_right <- result$subjICmean[n_left+(1:n_right),]
-    subjICse_xifti$data$cortex_right <- result$subjICse[n_left+(1:n_right),]
+  for(q in 1:Q){
+    subjICmean_nifti@.Data[,,,q] <- unvectorize(result$subjICmean[,q], mask)
+    subjICvar_nifti@.Data[,,,q] <- unvectorize(result$subjICvar[,q], mask)
   }
-  if(do_sub) {
-    n_sub <- nrow(subjICmean_xifti$data$subcort)
-    subjICmean_xifti$data$subcort <- result$subjICmean[n_left + n_right + (1:n_sub),]
-    subjICse_xifti$data$subcort <- result$subjICse[n_left + n_right + (1:n_sub),]
-  }
-
-#return mask!!
 
   RESULT <- list(
-    subjICmean_xifti = subjICmean_xifti,
-    subjICse_xifti = subjICse_xifti,
-    model_result = result
+    subjICmean_nifti = subjICmean_nifti,
+    subjICvar_nifti = subjICvar_nifti,
+    model_result = result,
+    mask = mask
   )
-  class(RESULT) <- 'templateICA.cifti'
+  class(RESULT) <- 'templateICA.nifti'
   return(RESULT)
 }
 
 
-# #' Activations of (s)tICA
-# #'
-# #' Identify areas of activation in each independent component map
-# #'
-# #' @param result Result of templateICA.cifti model call
-# #' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
-# #' @param u Activation threshold, default = 0
-# #' @param alpha Significance level for joint PPM, default = 0.1
-# #' @param type Type of region.  Default is '>' (positive excursion region).
-# #' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
-# #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-# #' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-# #' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
-# #'
-# #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
-# #'
-# #' @export
-# #'
-# #'
-# activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+#' Activations of (s)tICA
+#'
+#' Identify areas of activation in each independent component map
+#'
+#' @param result Result of templateICA.cifti model call
+#' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
+#' @param u Activation threshold, default = 0
+#' @param alpha Significance level for joint PPM, default = 0.1
+#' @param type Type of region.  Default is '>' (positive excursion region).
+#' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
+#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
+#'
+#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+#'
+#' @export
+#'
+#'
+activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-#   if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
+  if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
 
-#   model_result <- result$model_result
-#   active_xifti <- clear_data(result$subjICmean_xifti)
-#   nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
-#   nright <- nrow(result$subjICmean_xifti$data$cortex_right)
+  model_result <- result$model_result
+  active_xifti <- clear_data(result$subjICmean_xifti)
+  nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
+  nright <- nrow(result$subjICmean_xifti$data$cortex_right)
 
-#   if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
-#   if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
-#   if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
-#     warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
-#     spatial_model <- FALSE
-#   }
+  if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
+  if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
+  if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
+    warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
+    spatial_model <- FALSE
+  }
 
-#   #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
-#   if(class(model_result)=='stICA' & spatial_model==FALSE){
-#     model_result <- model_result$result_tICA
-#   }
+  #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
+  if(class(model_result)=='stICA' & spatial_model==FALSE){
+    model_result <- model_result$result_tICA
+  }
 
-#   #run activations function
-#   activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
+  #run activations function
+  activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
 
-#   #construct xifti object for activation maps
-#   act_viz <- activations_result$active*1
-#   act_viz[act_viz==0] <- NA
-#   active_xifti$data$cortex_left <- act_viz[1:nleft,]
-#   active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
+  #construct xifti object for activation maps
+  act_viz <- activations_result$active*1
+  act_viz[act_viz==0] <- NA
+  active_xifti$data$cortex_left <- act_viz[1:nleft,]
+  active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
 
-#   #include convert_to_dlabel function
+  #include convert_to_dlabel function
 
-#   return(list(activations = activations_result,
-#                  active_xifti = active_xifti))
-# }
+  return(list(activations = activations_result,
+                 active_xifti = active_xifti))
+}
 
 
