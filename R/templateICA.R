@@ -45,10 +45,17 @@ templateICA <- function(template_mean,
   #TO DO: Define do_FC, pass in FC template
   do_FC <- FALSE
 
-  if(!is.null(meshes)){
+  if (!is.null(meshes)) {
     INLA_check()
     flag <- INLA::inla.pardiso.check()
-    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
+    if (grepl('FAILURE',flag)) {
+      stop(
+        'PARDISO IS NOT INSTALLED OR NOT WORKING. ', 
+        'PARDISO for R-INLA is required for computational efficiency. ',
+        'If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again. ',
+        'If not, run inla.pardiso() to obtain a license.'
+      )
+    }
     INLA::inla.setOption(smtp='pardiso')
   }
 
@@ -76,28 +83,28 @@ templateICA <- function(template_mean,
   L <- ncol(template_mean) #number of ICs
 
   #check that the number of data locations (nvox), time points (ntime) and ICs (L) makes sense
-  if(sum(ntime) > nvox) warning('More time points than voxels. Are you sure?')
-  if(L > nvox) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of template_mean, template_var and BOLD.')
-  if(L > sum(ntime)) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
+  if (sum(ntime) > nvox) warning('More time points than voxels. Are you sure?')
+  if (L > nvox) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of template_mean, template_var and BOLD.')
+  if (L > sum(ntime)) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
 
   #check that all arguments have consistent number of data locations (nvox) and ICs (L)
-  if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations, but they do not.')
-  if(ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
+  if (nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations, but they do not.')
+  if (ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
 
   #check that the supplied mesh object is of type templateICA_mesh
   do_spatial <- !is.null(meshes)
-  if(do_spatial){
-    if(verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.\n')
-    if(!is.list(meshes)) stop('meshes argument must be a list.')
+  if (do_spatial) {
+    if (verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.\n')
+    if (!is.list(meshes)) stop('meshes argument must be a list.')
     mesh_classes <- sapply(meshes, 'class')
-    if(any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
+    if (any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
   }
   #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
 
-  if(round(maxiter) != maxiter | maxiter <= 0) stop('maxiter must be a positive integer')
+  if (round(maxiter) != maxiter | maxiter <= 0) stop('maxiter must be a positive integer')
 
-  if(!is.null(kappa_init)){
+  if (!is.null(kappa_init)) {
     if(length(kappa_init) != 1 | kappa_init <= 0) stop('kappa_init must be a positive scalar or NULL')
   }
 
@@ -120,9 +127,13 @@ templateICA <- function(template_mean,
 
   if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
 
+  if (multi_scans) {
+    BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
+  } else {
+    BOLD <- scale_BOLD(BOLD, scale=scale)
+  }
 
   ### IDENTIFY AND REMOVE ANY BAD VOXELS/VERTICES
-
   keep <- rep(TRUE, nvox)
   keep[rowSums(is.nan(template_mean)) > 0] <- FALSE
   keep[rowSums(is.na(template_mean)) > 0] <- FALSE
@@ -131,7 +142,6 @@ templateICA <- function(template_mean,
   keep[rowSums(is.nan(BOLD)) > 0] <- FALSE
   keep[rowSums(is.na(BOLD)) > 0] <- FALSE
   keep[rowVars(BOLD) == 0] <- FALSE
-
   if(sum(!keep) > 0){
     stop('flat or NA voxels detected in data or templates')
     # For this part, would need to also update "A" matrix (projection from mesh to data locations)
@@ -142,12 +152,6 @@ templateICA <- function(template_mean,
     # template_mean <- template_mean[keep,]
     # template_var <- template_var[keep,]
     # BOLD <- BOLD[keep,]
-  }
-
-  if (multi_scans) {
-    BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
-  } else {
-    BOLD <- scale_BOLD(BOLD, scale=scale)
   }
 
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)

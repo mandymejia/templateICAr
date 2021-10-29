@@ -2,8 +2,8 @@
 #'
 #' @param dat Subject-level fMRI data (\eqn{VxT})
 #' @param GICA Group-level independent components (\eqn{VxQ})
-#' @param scale A logical value indicating whether the fMRI timeseries should
-#'  be scaled by the image standard deviation.
+#' @param center,scale A logical value indicating whether the fMRI timeseries should
+#'  be centered and/or scaled. See \link{\code{scale_BOLD}}.
 #'
 #' @importFrom matrixStats colVars
 #' 
@@ -12,7 +12,7 @@
 #' 
 #' @export
 #'
-dual_reg <- function(dat, GICA, scale=FALSE){
+dual_reg <- function(dat, GICA, center=FALSE, scale=FALSE){
 
   nT <- ncol(dat) #length of timeseries
   nvox <- nrow(dat) #number of data locations
@@ -25,9 +25,10 @@ dual_reg <- function(dat, GICA, scale=FALSE){
   if(Q > nvox) warning('More ICs than voxels. Are you sure?')
   if(Q > nT) warning('More ICs than time points. Are you sure?')
 
-  # center timeseries data across space and time (and standardize scale if scale=TRUE)
+  # center timeseries data across space and time if `center`
+  # standardize data scale if `scale`
   # transpose it
-  dat <- t(scale_BOLD(dat, scale=scale))
+  dat <- t(scale_BOLD(dat, center=center, scale=scale))
 
   #center each group IC over voxels
   GICA - rep(colMeans(GICA), rep.int(nvox, Q))

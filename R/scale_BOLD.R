@@ -1,8 +1,9 @@
 #' Scale BOLD
 #' 
-#' Center BOLD data across space and time and scale (optionally)
+#' Center BOLD data across space and time, and scale
 #'
 #' @param BOLD (\eqn{VxT} matrix) fMRI timeseries data matrix
+#' @param center Center BOLD data across space and time?
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
 #'
 #' @return Centered and scaled BOLD data (\eqn{VxT} matrix)
@@ -21,16 +22,20 @@
 #' template estimation, it should also be applied to the BOLD timeseries being analyzed with template ICA using the resulting templates to ensure
 #' compatibility of scale.
 #'
-scale_BOLD <- function(BOLD, scale=FALSE){
+scale_BOLD <- function(BOLD, center=TRUE, scale=FALSE){
   ntime <- ncol(BOLD) #length of timeseries
   nvox <- nrow(BOLD) #number of data locations
   if (ntime > nvox) warning('More time points than voxels. Are you sure?')
 
-  if (scale) { sig <- sqrt(mean(rowVars(BOLD))) } #variance across image, averaged across time, square root to get SD
-  #center timeseries data across space and time and standardize scale
-  BOLD <- t(BOLD - rowMeans(BOLD)) #center each voxel time series (remove mean image)
-  BOLD <- t(BOLD - rowMeans(BOLD)) #center each image (centering across space)
-  if (scale) { BOLD <- BOLD/sig } #standardize by global SD
+  if (center) {
+    BOLD <- t(BOLD - rowMeans(BOLD)) #center each voxel time series (remove mean image)
+    BOLD <- t(BOLD - rowMeans(BOLD)) #center each image (centering across space)
+  }
+  
+  if (scale) { 
+    sig <- sqrt(mean(rowVars(BOLD)))
+    BOLD <- BOLD/sig #standardize by global SD
+  } 
   
   BOLD
 }
