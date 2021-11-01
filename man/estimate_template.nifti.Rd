@@ -11,6 +11,7 @@ estimate_template.nifti(
   mask_fname,
   inds = NULL,
   scale = TRUE,
+  normA = FALSE,
   verbose = TRUE,
   out_fname = NULL
 )
@@ -32,6 +33,8 @@ use all Q original group ICs.}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the
 spatial standard deviation before template estimation.}
+
+\item{normA}{Normalize the A matrix (spatial maps)?}
 
 \item{verbose}{If \code{TRUE}. display progress updates}
 

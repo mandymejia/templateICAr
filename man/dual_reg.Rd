@@ -4,12 +4,14 @@
 \alias{dual_reg}
 \title{Dual Regression}
 \usage{
-dual_reg(dat, GICA, scale = FALSE)
+dual_reg(dat, GICA, normA = FALSE, scale = FALSE)
 }
 \arguments{
 \item{dat}{Subject-level fMRI data (\eqn{VxT})}
 
 \item{GICA}{Group-level independent components (\eqn{VxQ})}
+
+\item{normA}{Normalize the A matrix (spatial maps)?}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should 
 be scaled by the image standard deviation.}

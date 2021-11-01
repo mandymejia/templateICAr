@@ -13,6 +13,7 @@
 #'  use all group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
+#' @param normA Normalize the A matrix (spatial maps)?
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -168,8 +169,8 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale)$S
-    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale)$S
+    DR1_ii <- dual_reg(BOLD1_ii, GICA_flat, scale=scale, normA=normA)$S
+    DR2_ii <- dual_reg(BOLD2_ii, GICA_flat, scale=scale, normA=normA)$S
     DR1[ii,,] <- DR1_ii[inds,]
     DR2[ii,,] <- DR2_ii[inds,]
   }
@@ -248,7 +249,7 @@ estimate_template.cifti <- function(
     write_cifti(xifti_var, out_fname_var, verbose=verbose)
   }
 
-  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, inds=inds)
+  result <- list(template_mean=xifti_mean, template_var=xifti_var, scale=scale, normA=normA, inds=inds)
   class(result) <- 'template.cifti'
   result
 }
@@ -268,6 +269,7 @@ estimate_template.cifti <- function(
 #'  use all Q original group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
+#' @param normA Normalize the A matrix (spatial maps)?
 #' @param verbose If \code{TRUE}. display progress updates
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
 #' Will be appended with "_mean.nii" for template mean maps and "_var.nii" for
@@ -287,6 +289,7 @@ estimate_template.nifti <- function(
   mask_fname,
   inds=NULL,
   scale=TRUE,
+  normA=FALSE,
   verbose=TRUE,
   out_fname=NULL){
 

@@ -32,6 +32,6 @@ Suggests:
     knitr,
     rmarkdown,
     INLA (>= 0.0-1468840039)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues

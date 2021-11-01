@@ -4,6 +4,7 @@
 #' @param GICA Group-level independent components (\eqn{VxQ})
 #' @param scale A logical value indicating whether the fMRI timeseries should 
 #'  be scaled by the image standard deviation.
+#' @param normA Normalize the A matrix (spatial maps)?
 #'
 #' @importFrom matrixStats colVars
 #' 
@@ -13,7 +14,7 @@
 #' 
 #' @export
 #'
-dual_reg <- function(dat, GICA, scale=FALSE){
+dual_reg <- function(dat, GICA, normA=FALSE, scale=FALSE){
 
   ntime <- ncol(dat) #length of timeseries
   nvox <- nrow(dat) #number of data locations
@@ -33,16 +34,12 @@ dual_reg <- function(dat, GICA, scale=FALSE){
 
 	#estimate A (IC timeseries)
 	A <- dat_ctr_t %*% GICA %*% solve(t(GICA) %*% GICA)
+  if (normA) { A <- scale(A) }
+
 	#estimate S (IC maps)
 	S <- solve(a=(t(A) %*% A), b=(t(A) %*% dat_ctr_t))
-
-	#fix scale of spatial maps (sd=1)
-	#sd_S <- sqrt(rowVars(S))
-	#A <- A %*% diag(sd_S)
-	#S <- diag(1/sd_S) %*% S
 
 	#return result
 	result <- list(S = S, A = A, dat_ctr = dat_ctr)
 	return(result)
-
 }

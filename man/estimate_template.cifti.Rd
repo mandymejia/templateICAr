@@ -44,6 +44,8 @@ Default: \code{c("left","right")} (cortical surface only).}
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
+
+\item{normA}{Normalize the A matrix (spatial maps)?}
 }
 \value{
 List of two elements: template mean of class xifti and template

@@ -9,6 +9,7 @@ templateICA(
   template_var,
   BOLD,
   scale = TRUE,
+  normA = FALSE,
   meshes = NULL,
   Q2 = NULL,
   maxQ = NULL,
@@ -26,6 +27,8 @@ templateICA(
 \item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+
+\item{normA}{Normalize the A matrix (spatial maps)?}
 
 \item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
 created by \code{make_mesh} (spatial priors are assumed on each independent component).
