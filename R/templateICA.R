@@ -6,6 +6,7 @@
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
+#' @param normA Normalize the A matrix (spatial maps)?
 #' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
 #' created by \code{make_mesh} (spatial priors are assumed on each independent component).
 #' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
@@ -30,6 +31,7 @@ templateICA <- function(template_mean,
                         template_var,
                         BOLD,
                         scale=TRUE,
+                        normA=FALSE,
                         meshes=NULL,
                         Q2=NULL,
                         maxQ=NULL,
@@ -127,7 +129,7 @@ templateICA <- function(template_mean,
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
     BOLD1 <- scale_BOLD(BOLD, scale=scale)
-    DR1 <- dual_reg(BOLD1, template_mean)
+    DR1 <- dual_reg(BOLD1, template_mean, normA=normA)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
     BOLD2 <- BOLD1 - t(DR1$A %*% DR1$S) #data without template ICs
@@ -166,7 +168,7 @@ templateICA <- function(template_mean,
   rm(BOLD)
 
   #use dual regression for initial values
-  dat_DR <- dual_reg(BOLD3, template_mean)
+  dat_DR <- dual_reg(BOLD3, template_mean, normA=normA)
 
   rm(BOLD3)
 

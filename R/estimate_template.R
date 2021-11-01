@@ -13,6 +13,7 @@
 #'  use all group ICs.
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation.
+#' @param normA Normalize the A matrix (spatial maps)?
 #' @param brainstructures Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -39,6 +40,7 @@ estimate_template.cifti <- function(
   GICA_fname,
   inds=NULL,
   scale=TRUE,
+  normA=FALSE,
   brainstructures=c("left","right"),
   verbose=TRUE,
   out_fname=NULL,
@@ -155,8 +157,8 @@ estimate_template.cifti <- function(
     }
 
     #perform dual regression on test and retest data
-    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale)
-    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale)
+    DR1_ii <- dual_reg(BOLD1_ii, as.matrix(GICA), scale=scale, normA=normA)
+    DR2_ii <- dual_reg(BOLD2_ii, as.matrix(GICA), scale=scale, normA=normA)
     DR1[ii,,] <- DR1_ii$S[inds,]
     DR2[ii,,] <- DR2_ii$S[inds,]
     if(FC) FC1[ii,,] <- cov(DR1_ii$A[,inds])
