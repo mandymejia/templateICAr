@@ -4,10 +4,12 @@
 \alias{scale_BOLD}
 \title{Scale BOLD}
 \usage{
-scale_BOLD(BOLD, scale = FALSE)
+scale_BOLD(BOLD, center = TRUE, scale = FALSE)
 }
 \arguments{
 \item{BOLD}{(\eqn{VxT} matrix) fMRI timeseries data matrix}
+
+\item{center}{Center BOLD data across space and time?}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
 }
@@ -15,7 +17,7 @@ scale_BOLD(BOLD, scale = FALSE)
 Centered and scaled BOLD data (\eqn{VxT} matrix)
 }
 \description{
-Center BOLD data across space and time and scale (optionally)
+Center BOLD data across space and time, and scale
 }
 \details{
 The BOLD data is centered across time, which removes the mean image by subtracting the mean of each voxel timeseries, and across space,

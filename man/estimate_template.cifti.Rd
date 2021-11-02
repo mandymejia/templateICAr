@@ -10,7 +10,6 @@ estimate_template.cifti(
   GICA_fname,
   inds = NULL,
   scale = TRUE,
-  normA = FALSE,
   brainstructures = c("left", "right"),
   var_method = c("unbiased", "non-negative"),
   keep_DR = FALSE,
@@ -38,8 +37,6 @@ use all group ICs.}
 \item{scale}{Logical indicating whether BOLD data should be scaled by the
 spatial standard deviation before template estimation. Will also scale each
 component in the ICA maps. Default: \code{TRUE}.}
-
-\item{normA}{Normalize the A matrix (spatial maps)?}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
