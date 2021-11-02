@@ -6,8 +6,8 @@
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
 #' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices. 
 #' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param meshes Either \code{NULL} (assume spatial independence) or a list of 
-#'  objects of type \code{templateICA_mesh}
+#' @param normA Normalize the A matrix (spatial maps)?
+#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
 #' created by \code{make_mesh} (spatial priors are assumed on each independent component).
 #' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
 #' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
@@ -33,6 +33,7 @@ templateICA <- function(template_mean,
                         template_var,
                         BOLD,
                         scale=TRUE,
+                        normA=FALSE,
                         meshes=NULL,
                         Q2=NULL,
                         maxQ=NULL,
@@ -166,7 +167,7 @@ templateICA <- function(template_mean,
   } 
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD, template_mean)
+  dat_DR <- dual_reg(BOLD, template_mean, normA=normA)
 
   # Concatenate if multiple sessions exist.
   if (multi_scans) { BOLD <- do.call(cbind, BOLD) }

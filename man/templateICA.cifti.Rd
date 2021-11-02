@@ -13,6 +13,7 @@ templateICA.cifti(
   surfR_fname = NULL,
   resamp_res = NULL,
   scale = TRUE,
+  normA = FALSE,
   Q2 = NULL,
   maxQ = NULL,
   maxiter = 100,
@@ -56,6 +57,8 @@ feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the spatial
 standard deviation before model fitting. If done when estimating templates, should be done here too.}
+
+\item{normA}{Normalize the A matrix (spatial maps)?}
 
 \item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
 
