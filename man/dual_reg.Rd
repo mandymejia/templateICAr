@@ -4,7 +4,7 @@
 \alias{dual_reg}
 \title{Dual Regression}
 \usage{
-dual_reg(dat, GICA, center = FALSE, scale = FALSE, normA = FALSE)
+dual_reg(dat, GICA, center = TRUE, scale = FALSE, normA = FALSE)
 }
 \arguments{
 \item{dat}{Subject-level fMRI data (\eqn{VxT})}

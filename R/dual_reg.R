@@ -13,7 +13,7 @@
 #' 
 #' @export
 #'
-dual_reg <- function(dat, GICA, center=FALSE, scale=FALSE, normA=FALSE){
+dual_reg <- function(dat, GICA, center=TRUE, scale=FALSE, normA=FALSE){
 
   nT <- ncol(dat) #length of timeseries
   nvox <- nrow(dat) #number of data locations
