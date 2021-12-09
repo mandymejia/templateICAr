@@ -20,26 +20,35 @@ templateICA(
 )
 }
 \arguments{
-\item{template_mean}{(VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
+\item{template_mean}{(VxL matrix) template mean estimates, i.e. 
+mean of empirical population prior for each of L independent components}
 
-\item{template_var}{(VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
+\item{template_var}{(VxL matrix) template variance estimates, i.e. 
+between-subject variance of empirical population prior for each of L ICs}
 
-\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices.}
+\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of 
+volumes (time points) and V is the number of brain locations. Or, a list 
+of such data matrices.}
 
-\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the 
+spatial standard deviation before model fitting. If done when estimating 
+templates, should be done here too.}
 
 \item{normA}{Normalize the A matrix (spatial maps)?}
 
-\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
-created by \code{make_mesh} (spatial priors are assumed on each independent component).
-Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)}
+\item{meshes}{Either NULL (assume spatial independence) or a list of objects
+of type \code{templateICA_mesh}
+created by \code{make_mesh} (spatial priors are assumed on each independent
+component).
+Each list element represents a brain structure, between which spatial 
+independence is assumed (e.g. left and right hemispheres)}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
-Only provide \code{Q2} or \code{maxQ} but not both.}
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL}, will be 
+estimated. Only provide \code{Q2} or \code{maxQ} but not both.}
 
 \item{maxQ}{Maximum number of ICs (template+nuisance) to identify 
-(L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
-Only provide \code{Q2} or \code{maxQ} but not both.}
+(L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance 
+regressors. Only provide \code{Q2} or \code{maxQ} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations}
 
@@ -48,9 +57,13 @@ Only provide \code{Q2} or \code{maxQ} but not both.}
 \item{verbose}{If \code{TRUE}. display progress of algorithm}
 
 \item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
+
+\item{DCT_detrend}{Detrend}
 }
 \value{
-A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+A list containing the estimated independent components S 
+ (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of 
+ nuisance ICs estimated (Q_nuis)
 }
 \description{
 Perform template independent component analysis (ICA) using expectation-maximization (EM)

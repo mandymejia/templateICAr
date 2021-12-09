@@ -2,26 +2,40 @@
 #'
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
-#' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
-#' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices. 
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
+#' @param template_mean (VxL matrix) template mean estimates, i.e. 
+#'  mean of empirical population prior for each of L independent components
+#' @param template_var (VxL matrix) template variance estimates, i.e. 
+#'  between-subject variance of empirical population prior for each of L ICs
+#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of 
+#'  volumes (time points) and V is the number of brain locations. Or, a list 
+#'  of such data matrices. 
+#' @param scale Logical indicating whether BOLD data should be scaled by the 
+#'  spatial standard deviation before model fitting. If done when estimating 
+#'  templates, should be done here too.
+#' @param DCT_detrend Detrend 
 #' @param normA Normalize the A matrix (spatial maps)?
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
-#' created by \code{make_mesh} (spatial priors are assumed on each independent component).
-#' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
-#'  Only provide \code{Q2} or \code{maxQ} but not both.
+#' @param meshes Either NULL (assume spatial independence) or a list of objects
+#'  of type \code{templateICA_mesh}
+#'  created by \code{make_mesh} (spatial priors are assumed on each independent
+#'  component).
+#'  Each list element represents a brain structure, between which spatial 
+#'  independence is assumed (e.g. left and right hemispheres)
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be 
+#'  estimated. Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify 
-#'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
-#'  Only provide \code{Q2} or \code{maxQ} but not both.
+#'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance 
+#'  regressors. Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
 #' @param verbose If \code{TRUE}. display progress of algorithm
-# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version 
+#  of the spatial template ICA model, which assumes that all IC's have the same 
+#  smoothness parameter, \eqn{\kappa}
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 #'
-#' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+#' @return A list containing the estimated independent components S 
+#'  (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of 
+#'  nuisance ICs estimated (Q_nuis)
 #'
 #' @export
 #'
@@ -128,8 +142,11 @@ templateICA <- function(template_mean,
 
   if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
 
+  ### CENTER, SCALE, and DETREND DATA
   if (multi_scans) {
     BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
+    BOLD <- do.call(cbind, BOLD)
+    ntime <- sum(ntime)
   } else {
     BOLD <- scale_BOLD(BOLD, scale=scale)
   }
@@ -158,19 +175,13 @@ templateICA <- function(template_mean,
   ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
 
   if(maxQ > L){
-    if (multi_scans) {
-      BOLD <- lapply(BOLD, rm_nuisIC, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
-      BOLD <- do.call(cbind, BOLD)
-    } else {
-      BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
-    }
+    BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
   } 
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
   dat_DR <- dual_reg(BOLD, template_mean, normA=normA)
 
   # Concatenate if multiple sessions exist.
-  if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
   ntime <- sum(ntime)
 
   ### 4. RUN EM ALGORITHM!
