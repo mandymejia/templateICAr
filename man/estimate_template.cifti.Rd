@@ -32,7 +32,12 @@ create pseudo test-retest data from single session.}
 \item{GICA_fname}{File path of CIFTI-format group ICA maps (ending in .d*.nii)}
 
 \item{inds}{Numeric indices of the group ICs to include in template. If NULL,
-use all group ICs.}
+ use all group ICs.
+
+ The dual regression estimate (as well as the cleaned dual regression estimate)
+ will be calculated using all ICs. ICs not in \code{inds} are removed afterward.
+ This is because removing the ICs prior to dual regression would leave unmodeled
+ signals, which could bias the dual regression results (and thus the templates).}
 
 \item{scale}{Logical indicating whether BOLD data should be scaled by the
 spatial standard deviation before template estimation. Will also scale each

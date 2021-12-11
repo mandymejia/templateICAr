@@ -125,6 +125,7 @@ estimate_template_from_DR <- function(
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
+#' @importFrom ciftiTools read_xifti is.xifti
 #'
 #' @return A list with two entries, \code{"template_mean"} and \code{"template_var"}. There
 #'  may be more entries too, depending on the function arguments. 
@@ -201,13 +202,13 @@ estimate_template <- function(
     if (length(dim(mask)) == 4 && dim(mask)[4] == 1) { mask <- mask[,,,1] }
     if (length(dim(mask)) != 3) { stop("`mask` should be a 3D binary image.") }
     if (!is.logical(mask)) {
-      if (verbose) { cat("Coercing `mask` to a logical array with `as.logical`.\n)" }
+      if (verbose) { cat("Coercing `mask` to a logical array with `as.logical`.\n") }
       mask[] <- as.logical(mask)
     }
     if (!all(dim(mask) != nV)) {
       stop( 
-        "The group ICA images have dimensions", paste(nV, collapse="x") 
-        " but the mask has dimensions", paste(dim(mask, collapse="x")), "."
+        "The group ICA images have dimensions", paste(nV, collapse="x"),
+        " but the mask has dimensions", paste(dim(mask), collapse="x"), "."
       )
     }
   }
@@ -274,7 +275,7 @@ estimate_template <- function(
     if (length(out_fname) == 1) {
       out_fname <- c(
         gsub(FORMAT_extn, "_mean.dscalar.nii", out_fname),
-        gsub(FORMAT_extn, "_var.dscalar.nii", out_fname)
+        gsub(FORMAT_extn, "_var.dscalar.nii", out_fname),
         gsub(FORMAT_extn, "_var_nn.dscalar.nii", out_fname)
       )
       if (var_method != "both") { out_fname <- out_fname[seq(2)] }
@@ -321,7 +322,7 @@ estimate_template <- function(
     DR_ii <- dual_reg2(
       BOLD[ii], BOLD2=B2, GICA=GICA_mat,
       scale=scale, normA=normA,
-      format=format, dim_expect=nDV,
+      format=format, 
       brainstructures=brainstructures, mask=mask,
       Q2=Q2, maxQ=maxQ, verbose=verbose
     )
@@ -366,7 +367,7 @@ estimate_template <- function(
     nii_temp <- GICA
     nii_temp[] <- template$mean
     template$mean <- nii_temp
-    nii_temp[] <- template_var
+    nii_temp[] <- template$var
     template$var <- nii_temp
 
   }
@@ -374,18 +375,20 @@ estimate_template <- function(
   if(!is.null(out_fname)){
     write_cifti(template$mean, out_fname[1], verbose=verbose)
     write_cifti(template$var, out_fname[2], verbose=verbose)
-    if (FORMAT == "NIFTI") { writeNIfTI(mask2, 'mask2') }
+    # if (FORMAT == "NIFTI") { writeNIfTI(mask2, 'mask2') }
   }
   # [TO DO] var both
 
   # Results list.
   result <- list(
-    template_mean=xifti_mean, template_var=xifti_var, template_FC=template_FC,
+    template_mean=template$mean, 
+    template_var=template$var, 
+    template_FC=template$FC,
     scale=scale, inds=inds, var_method=var_method
   )
   
   # Keep DR?
-  if (is.character(keep_DR) {
+  if (is.character(keep_DR)) {
     saveRDS(list(DR1=DR1, DR2=DR2), keep_DR)
     keep_DR <- FALSE # no longer need it.
   }

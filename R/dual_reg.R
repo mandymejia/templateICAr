@@ -3,7 +3,7 @@
 #' @param dat Subject-level fMRI data (\eqn{VxT})
 #' @param GICA Group-level independent components (\eqn{VxQ})
 #' @param center,scale A logical value indicating whether the fMRI timeseries should
-#'  be centered and/or scaled. See \link{\code{scale_BOLD}}.
+#'  be centered and/or scaled. See \code{\link{scale_BOLD}}.
 #' @param normA Normalize the A matrix (spatial maps)?
 #'
 #' @importFrom matrixStats colVars
@@ -158,6 +158,8 @@ dual_reg2 <- function(
     if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask) }
   }
 
+  dBOLD <- BOLD # ???
+
   # Check dims.
   nV <- dim(GICA)[1]
   nQ <- dim(GICA)[2]
@@ -172,16 +174,16 @@ dual_reg2 <- function(
       if (length(dim(mask)) == 4 && dim(mask)[4] == 1) { mask <- mask[,,,1] }
       if (length(dim(mask)) != 3) { stop("`mask` should be a 3D binary image.") }
       if (!is.logical(mask)) {
-        if (verbose) { cat("Coercing `mask` to a logical array with `as.logical`.\n)" }
+        if (verbose) { cat("Coercing `mask` to a logical array with `as.logical`.\n") }
         mask[] <- as.logical(mask)
       }
       if (sum(mask) != expectedV) {
         stop("sum(mask) is ", sum(mask), ", but `expectedV` is ", expectedV, ".")
       }
-      if (!all(dim(mask)[seq(3)] == dim(BOLD[seq(3)])) {
+      if (!all(dim(mask)[seq(3)] == dim(BOLD[seq(3)]))) {
         stop("`BOLD` and `mask` do not have the same spatial dimensions (first three dims).")
       }
-      if (retest && !all(dim(mask)[seq(3)] == dim(BOLD2[seq(3)])) {
+      if (retest && !all(dim(mask)[seq(3)] == dim(BOLD2[seq(3)]))) {
         stop("`BOLD2` and `mask` do not have the same spatial dimensions (first three dims).")
       }
     } else {

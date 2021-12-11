@@ -239,19 +239,17 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
     }
 
   # Non-character vector: xifti, nifti, or data
-  } else {
-    if (inherits(BOLD[[1]], "xifti")) {
-      if (all(lapply(BOLD, inherits, "xifti"))) {
-        format <- "xifti"
-      } else {
-        stop("BOLD format seems to be a mix of `xifti` files and something else. Use the same format for all.")
-      }
-    } else if (inherits(BOLD[[1]], "nifti")) {
-      if (all(lapply(BOLD, inherits, "nifti"))) {
-        format <- "nifti"
-      } else {
-        stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
-      }
+  } else if (inherits(BOLD[[1]], "xifti")) {
+    if (all(lapply(BOLD, inherits, "xifti"))) {
+      format <- "xifti"
+    } else {
+      stop("BOLD format seems to be a mix of `xifti` files and something else. Use the same format for all.")
+    }
+  } else if (inherits(BOLD[[1]], "nifti")) {
+    if (all(lapply(BOLD, inherits, "nifti"))) {
+      format <- "nifti"
+    } else {
+      stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
     }
   } else {
     BOLD_dims <- lapply(BOLD, dim)

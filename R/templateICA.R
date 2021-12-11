@@ -2,15 +2,24 @@
 #'
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
-#' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
-#' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices.
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation be model fitting. If done when estimating templates, should be done here too.
-#' @param meshes Either \code{NULL} (assume spatial independence) or a list of
-#'  objects of type \code{templateICA_mesh}
+#' @param template_mean (VxL matrix) template mean estimates, i.e. 
+#'  mean of empirical population prior for each of L independent components
+#' @param template_var (VxL matrix) template variance estimates, i.e. 
+#'  between-subject variance of empirical population prior for each of L ICs
+#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of 
+#'  volumes (time points) and V is the number of brain locations. Or, a list 
+#'  of such data matrices. 
+#' @param scale Logical indicating whether BOLD data should be scaled by the 
+#'  spatial standard deviation before model fitting. If done when estimating 
+#'  templates, should be done here too.
+#' @param DCT_detrend Detrend 
 #' @param normA Normalize the A matrix (spatial maps)?
-#' created by \code{make_mesh} (spatial priors are assumed on each independent component).
-#' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
+#' @param meshes Either NULL (assume spatial independence) or a list of objects
+#'  of type \code{templateICA_mesh}
+#'  created by \code{make_mesh} (spatial priors are assumed on each independent
+#'  component).
+#'  Each list element represents a brain structure, between which spatial 
+#'  independence is assumed (e.g. left and right hemispheres)
 #' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
 #'  Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param maxQ Maximum number of ICs (template+nuisance) to identify
@@ -21,10 +30,14 @@
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two.
 #' @param verbose If \code{TRUE}. display progress of algorithm
-# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version 
+#  of the spatial template ICA model, which assumes that all IC's have the same 
+#  smoothness parameter, \eqn{\kappa}
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 #'
-#' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+#' @return A list containing the estimated independent components S 
+#'  (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of 
+#'  nuisance ICs estimated (Q_nuis)
 #'
 #' @export
 #'
@@ -132,8 +145,11 @@ templateICA <- function(template_mean,
 
   if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
 
+  ### CENTER, SCALE, and DETREND DATA
   if (multi_scans) {
     BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
+    BOLD <- do.call(cbind, BOLD)
+    ntime <- sum(ntime)
   } else {
     BOLD <- scale_BOLD(BOLD, scale=scale)
   }
@@ -193,8 +209,10 @@ templateICA <- function(template_mean,
     }
   }
 
+  #initialize mixing matrix (use dual regression-based estimate for starting value)
+  dat_DR <- dual_reg(BOLD, template_mean, normA=normA)
+
   # Concatenate if multiple sessions exist.
-  if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
   ntime <- sum(ntime)
 
   #initialize mixing matrix (use dual regression-based estimate for starting value)
@@ -224,6 +242,8 @@ templateICA <- function(template_mean,
                                  epsilon=epsilon,
                                  verbose=verbose)
   }
+
+  dat_list <- NULL # NEED TO FIX!
 
   #TEMPLATE ICA
   if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
@@ -349,7 +369,7 @@ templateICA <- function(template_mean,
     theta00$nu0_sq <- err_var
     resultEM <- EM_templateICA.independent(template_mean,
                                            template_var,
-                                           BOLD=BOLD,
+                                           BOLD=BOLD2,
                                            theta0=theta00,
                                            C_diag=C_diag,
                                            maxiter=maxiter,
@@ -368,7 +388,7 @@ templateICA <- function(template_mean,
       resultEM <- EM_templateICA.spatial(template_mean,
                                          template_var,
                                          meshes,
-                                         BOLD=BOLD,
+                                         BOLD=BOLD2,
                                          theta0,
                                          C_diag,
                                          maxiter=maxiter,

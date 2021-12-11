@@ -173,7 +173,7 @@ estimate_template.nifti <- function(
     template_mean_nifti <- template_var_nifti <- GICA #copy over header information from GICA
     img_tmp <- mask2
     for(l in 1:L){
-      img_tmp[mask2==1] <- template_mean[,l]
+      img_tmp[mask2==1] <- template_mean_nifti[,l]
       template_mean_nifti@.Data[,,,l] <- img_tmp
       img_tmp[mask2==1] <- template_var[,l]
       template_var_nifti@.Data[,,,l] <- img_tmp
@@ -183,7 +183,7 @@ estimate_template.nifti <- function(
     writeNIfTI(mask2, 'mask2')
   }
 
-  result <- list(template_mean=template_mean, template_var=template_var, scale=scale, mask=mask, mask2=mask2, inds=inds)
+  result <- list(template_mean=template_mean_nifti, template_var=template_var_nifti, scale=scale, mask=mask, mask2=mask2, inds=inds)
   class(result) <- 'template.nifti'
   return(result)
 }

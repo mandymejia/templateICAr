@@ -66,6 +66,7 @@ estimate_template.cifti <- function(
   #TO DOs:
   # Create function to print and check template, template_cifti and template_nifti objects
 
+  retest <- !is.null(cifti_fnames) # ???
 
   if (is.character(cifti_fnames)) {
     notthere <- sum(!file.exists(cifti_fnames))
@@ -126,7 +127,7 @@ estimate_template.cifti <- function(
 
     DR_ii <- dual_reg2(
       cifti_fnames[ii], BOLD2=BOLD2, GICA=as.matrix(GICA),
-      scale=scale, format="CIFTI", dim_expect=V,
+      scale=scale, format="CIFTI",
       brainstructures=brainstructures, 
       Q2=Q2, maxQ=maxQ, verbose=verbose
     )
@@ -217,7 +218,9 @@ estimate_template.cifti <- function(
   }
 
   result <- list(
-    template_mean=xifti_mean, template_var=xifti_var, template_FC=template_FC,
+    template_mean=xifti_mean, 
+    template_var=xifti_var, 
+    template_FC=template_FC,
     scale=scale, inds=inds, var_method=var_method
   )
   if (keep_DR) { result <- c(result, list(DR=list(DR1=DR1, DR2=DR2))) }
