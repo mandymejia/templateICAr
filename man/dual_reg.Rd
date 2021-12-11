@@ -12,7 +12,7 @@ dual_reg(dat, GICA, center = TRUE, scale = FALSE, normA = FALSE)
 \item{GICA}{Group-level independent components (\eqn{VxQ})}
 
 \item{center, scale}{A logical value indicating whether the fMRI timeseries should
-be centered and/or scaled. See \link{\code{scale_BOLD}}.}
+be centered and/or scaled. See \code{\link{scale_BOLD}}.}
 
 \item{normA}{Normalize the A matrix (spatial maps)?}
 }

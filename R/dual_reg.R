@@ -3,7 +3,7 @@
 #' @param dat Subject-level fMRI data (\eqn{VxT})
 #' @param GICA Group-level independent components (\eqn{VxQ})
 #' @param center,scale A logical value indicating whether the fMRI timeseries should
-#'  be centered and/or scaled. See \link{\code{scale_BOLD}}.
+#'  be centered and/or scaled. See \code{\link{scale_BOLD}}.
 #' @param normA Normalize the A matrix (spatial maps)?
 #'
 #' @importFrom matrixStats colVars
