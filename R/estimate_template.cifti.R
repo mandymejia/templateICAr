@@ -11,6 +11,11 @@
 #' @param GICA_fname File path of CIFTI-format group ICA maps (ending in .d*.nii)
 #' @param inds Numeric indices of the group ICs to include in template. If NULL,
 #'  use all group ICs.
+#' 
+#'  The dual regression estimate (as well as the cleaned dual regression estimate)
+#'  will be calculated using all ICs. ICs not in \code{inds} are removed afterward.
+#'  This is because removing the ICs prior to dual regression would leave unmodeled
+#'  signals, which could bias the dual regression results (and thus the templates).
 #' @param scale Logical indicating whether BOLD data should be scaled by the
 #'  spatial standard deviation before template estimation. Will also scale each
 #'  component in the ICA maps. Default: \code{TRUE}.
@@ -60,24 +65,14 @@ estimate_template.cifti <- function(
 
   #TO DOs:
   # Create function to print and check template, template_cifti and template_nifti objects
-  #IDEA:
-  # Denoise the data by estimating and removing noise IC's for each scan, as we do in template ICA
-  # Have an argument denoise (logical).  For small datasets, denoising may result in cleaner templates.
-  # For larger datasets, denoising may be slow and unnecessary.
 
-  if(!is.null(out_fname)){
-    if(!dir.exists(dirname(out_fname))) stop('directory part of out_fname does not exist')
+
+  if (is.character(cifti_fnames)) {
+    notthere <- sum(!file.exists(cifti_fnames))
+    if(notthere == length(cifti_fnames)) stop('The files in cifti_fnames do not exist.')
+    if(notthere > 0) warning(paste0('There are ', notthere, ' files in cifti_fnames that do not exist. These scans will be excluded from template estimation.'))
   }
-
-  retest <- !is.null(cifti_fnames2)
-  if(retest){
-    if(length(cifti_fnames) != length(cifti_fnames2)) stop('If provided, cifti_fnames2 must have same length as cifti_fnames and be in the same subject order.')
-  }
-
-  notthere <- sum(!file.exists(cifti_fnames))
-  if(notthere == length(cifti_fnames)) stop('The files in cifti_fnames do not exist.')
-  if(notthere > 0) warning(paste0('There are ', notthere, ' files in cifti_fnames that do not exist. These scans will be excluded from template estimation.'))
-  if(retest) {
+  if (retest && is.character(cifti_fnames)) {
     notthere2 <- sum(!file.exists(cifti_fnames2))
     if(notthere2 == length(cifti_fnames2)) stop('The files in cifti_fnames2 do not exist.')
     if(notthere2 > 0) warning(paste0('There are ', notthere2, ' files in cifti_fnames2 that do not exist. These scans will be excluded from template estimation.'))

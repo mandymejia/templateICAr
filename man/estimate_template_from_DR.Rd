@@ -17,4 +17,3 @@ List of two elements: the mean and variance templates
 \description{
 Estimate template from DR estimates
 }
-\keyword{internal}

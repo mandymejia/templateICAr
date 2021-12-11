@@ -166,12 +166,12 @@ templateICA <- function(template_mean,
     }
   } 
 
-  #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD, template_mean, normA=normA)
-
   # Concatenate if multiple sessions exist.
   if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
   ntime <- sum(ntime)
+
+  #initialize mixing matrix (use dual regression-based estimate for starting value)
+  dat_DR <- dual_reg(BOLD, template_mean, normA=normA)
 
   ### 4. RUN EM ALGORITHM!
 

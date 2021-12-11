@@ -50,38 +50,52 @@ dual_reg <- function(dat, GICA, center=TRUE, scale=FALSE, normA=FALSE){
 #' Wrapper to \code{dual_reg}. Handles NIFTI or CIFTI file input, halves the 
 #' data in absense of retest data, and may remove nuisance regressors.
 #' 
-#' @param BOLD,BOLD2 subject-level BOLD data: a CIFTI file, NIFTI file, or data matrix.
-#'  Cannot be a \code{"xifti"} object, \code{"nifti"} object, etc. If \code{BOLD2} is provided 
-#'  it must be in the same format as \code{BOLD}; \code{BOLD} will be the test data and
-#'  \code{BOLD2} will be the retest data. If \code{BOLD2} is not provided,
-#'  \code{BOLD} will be split in half; the first half will be the test data and
-#'  the second half will be the retest data.
+#' @param BOLD subject-level fMRI timeseries data in one of the following formats: 
+#'  a CIFTI file path, a \code{"xifti"}, a NIFTI file path, a \code{"nifti"}, or
+#'  a \eqn{V \times T} numeric matrix.
 #' 
-#'  NIFTI implementation is not complete yet (will return error).
-#' @param scale Logical indicating whether BOLD data should be scaled by the
-#'  spatial standard deviation before template estimation.
-#' @param GICA Group ICA data matrix. Cannot be a \code{"xifti"} object, \code{"nifti"} object, file, etc.
+#'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
+#'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
+#'  If \code{BOLD2} is not provided, \code{BOLD} will be split in half; 
+#'  the first half will be the test data and the second half will be the retest data.
+#' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also be
+#'  vectorized (a \eqn{V \times T} numeric matrix) no matter the format of \code{BOLD}.
+#' @param scale Scale \code{BOLD} (and \code{BOLD2}) by its mean spatial
+#'  standard deviation before computing dual regression? Default: \code{TRUE}.
+#' @param normA Normalize the A matrix (spatial maps)?
 #' @param format Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
-#'  \code{"infer"} (default), a \code{"data"} matrix, \code{"CIFTI"} file, or \code{"NIFTI"} file.
-#' @param dim_expect If \code{!(format == "NIFTI")}, this is the number of rows to expect in the data.
-#'  Otherwise, ... 
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
-#'  Only provide \code{Q2} or \code{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
-#'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
-#'  Only provide \code{Q2} or \code{maxQ} but not both.
+#'  \code{"infer"} (default), a \code{"CIFTI"} file, a \code{"xifti"} object, a
+#'  \code{"NIFTI"} file, a \code{"nifti"} object, or a \code{"data"} matrix.
+#' @param expectedV The number of rows to expect in the data. Or if the fMRI data
+#'  is a NIFTI or "nifti", this is the number of in-mask locations.
 #' @param brainstructures Only applies if \code{format} is \code{"CIFTI"}. 
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param verbose If \code{TRUE}, display progress updates
+#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+#'  \code{"nifti"} objects. A binary brain map of the same size as the fMRI data, with
+#'  \code{1} corresponding to in-mask voxels.
+#' @param Q2,maxQ Denoise the dual regression estimate? Denoising is based on modeling and
+#'  removing nuisance ICs. It may result in a cleaner estimate, but will take longer to compute. 
+#'  If both are \code{NULL},
+#'  denoising will be performed, with the number of nuisance ICs estimated for \code{BOLD} and \code{BOLD2}
+#'  separately. If \code{Q2==0}, do not denoise (default). Otherwise, specify one or the other:
+#'  use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
+#'  total ICs (template/group + nuisance). \eqn{L <= (L+Q2) = maxQ <= T}, where \eqn{L} is the number
+#'  of template ICs and \eqn{T} is the number of timepoints in each fMRI scan. 
+#' @param verbose Display progress updates? Default: \code{TRUE}.
 #' 
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL, GICA, scale=FALSE, format=c("infer", "data", "CIFTI", "NIFTI"), 
-  Q2=NULL, maxQ=NULL, dim_expect=NULL, brainstructures=c("left", "right"), verbose=FALSE){
+  BOLD, BOLD2=NULL, 
+  GICA, 
+  scale=TRUE, normA=FALSE,
+  format=c("infer", "CIFTI", "xifti", "NIFTI", "nifti", "data"), expectedV=NULL,
+  brainstructures=c("left", "right"), mask=NULL, 
+  Q2=0, maxQ=NULL, 
+  verbose=TRUE){
 
   # TO DO: add removal of nuisance ICs.
   # If !retest, must be careful about the number of ICs since nT is halved.
@@ -97,36 +111,36 @@ dual_reg2 <- function(
   retest <- !is.null(BOLD2)
 
   # Determine the format of `BOLD` and `BOLD2`
-  format <- match.arg(format, c("infer", "data", "CIFTI", "NIFTI"))
-  if (format == "infer") {
-    if (is.character(BOLD)) {
-      stopifnot(length(BOLD) == 1)
-      format <- ifelse(
-        endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"),
-        "CIFTI", "NIFTI"
-      )
-    } else {
-      format <- "data"
+  format <- match.arg(format, c("infer", "CIFTI", "xifti", "NIFTI", "nifti", "data"))
+  if (format == "infer") { format <- infer_BOLD_format(BOLD) }
+  if (format %in% c("CIFTI", "NIFTI") && length(BOLD) > 1) { stop("`BOLD` should be length one.") }
+  if (retest) {
+    format2 <- infer_BOLD_format(BOLD2)
+    if (format2 != format) {
+      stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
     }
-    if (verbose) { cat("Inferred input format:", format, "\n") }
+    if (format %in% c("CIFTI", "NIFTI") && length(BOLD2) > 1) { stop("`BOLD2` should be length one.") }
   }
-
-  if (format == "NIFTI") { stop("Not completed yet.") }
+  FORMAT <- switch(format,
+    CIFTI = "CIFTI",
+    xifti = "CIFTI",
+    NIFTI = "NIFTI",
+    nifti = "NIFTI",
+    data = "DATA"
+  )
 
   # If BOLD (and BOLD2) is a CIFTI or NIFTI, check that it exists.
   if (format %in% c("CIFTI", "NIFTI")) {
-    if (retest) { 
-      stopifnot(is.character(BOLD2))
-      stopifnot(length(BOLD2) == 1)
-    }
     BOLD_exists <- file.exists(c(BOLD, BOLD2))
     if (!any(BOLD_exists)) {
+      if (verbose) { warning("Missing BOLD file(s).") }
       out$missing <- c(BOLD, BOLD2)[BOLD_exists]
       return(out)
     }
   }
 
-  # If BOLD (and BOLD2) is a CIFTI or NIFTI, read it in.
+  # If BOLD (and BOLD2) is a CIFTI or NIFTI, read it in. Also read in the mask.
+  # Get CIFTI data as matrix.
   #   CIFTI
   if (format == "CIFTI") {
     # [TO DO]: check for ciftiTools
@@ -136,28 +150,54 @@ dual_reg2 <- function(
     }
   #   NIFTI
   } else if (format == "NIFTI") {
-    # [TO DO]: check for RNifti
-    BOLD <- readNIfTI(BOLD, reorient=FALSE)
+    BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE)
     if (retest) {
-      BOLD2 <- readNIfTI(BOLD2, reorient=FALSE)
+      BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE)
+    }
+    if (is.null(mask)) { stop("`mask` is required.") }
+    if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask) }
+  }
+
+  # Check dims.
+  nV <- dim(GICA)[1]
+  nQ <- dim(GICA)[2]
+  nDV <- ifelse(FORMAT=="NIFTI", sum(mask), nV)
+  if (!is.null(expectedV)) {
+    expectedV <- as.numeric(expectedV)
+    if (length(expectedV) > 1) {
+      warning("`expectedV` should be the number of data locations. Using the first entry only.\n")
+      expectedV <- expectedV[1]
+    }
+    if (format == "NIFTI") {
+      if (length(dim(mask)) == 4 && dim(mask)[4] == 1) { mask <- mask[,,,1] }
+      if (length(dim(mask)) != 3) { stop("`mask` should be a 3D binary image.") }
+      if (!is.logical(mask)) {
+        if (verbose) { cat("Coercing `mask` to a logical array with `as.logical`.\n)" }
+        mask[] <- as.logical(mask)
+      }
+      if (sum(mask) != expectedV) {
+        stop("sum(mask) is ", sum(mask), ", but `expectedV` is ", expectedV, ".")
+      }
+      if (!all(dim(mask)[seq(3)] == dim(BOLD[seq(3)])) {
+        stop("`BOLD` and `mask` do not have the same spatial dimensions (first three dims).")
+      }
+      if (retest && !all(dim(mask)[seq(3)] == dim(BOLD2[seq(3)])) {
+        stop("`BOLD2` and `mask` do not have the same spatial dimensions (first three dims).")
+      }
+    } else {
+      if (dBOLD[1] != expectedV) {
+        stop("nrow(BOLD) is ", dBOLD[1], ", but `expectedV` is ", expectedV, ".")
+      }
+      if (retest && dim(BOLD2)[1] != expectedV) {
+        stop("nrow(BOLD2) is ", dBOLD[1], ", but `nrow(BOLD)` is ", expectedV, ".")
+      }
     }
   }
 
-  # Check dim
-  dBOLD <- dim(BOLD)
-  if (!is.null(dim_expect)) {
-    dim_expect <- as.numeric(dim_expect)
-    if (format == "NIFTI") {
-      stop()
-    } else {
-      if (length(dim_expect) > 1) {
-        warning("`dim_expect` should only give the number of expected rows. Using the first entry only.\n")
-        dim_expect <- dim_expect[1]
-      }
-      if (dBOLD[1] != dim_expect) {
-        stop("nrow(BOLD) is ", dBOLD[1], ", but `dim_expect` is ", dim_expect, ".")
-      }
-    }
+  # Get NIFTI data as matrix.
+  if (format == "NIFTI") {
+    BOLD <- matrix(BOLD[rep(mask, nQ)], ncol=nQ)
+    if (retest) { BOLD2 <- matrix(BOLD2[rep(mask, nQ), ncol=nQ]) }
   }
 
   # If no retest data, halve the test data
