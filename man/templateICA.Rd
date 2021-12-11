@@ -16,6 +16,7 @@ templateICA(
   maxiter = 100,
   epsilon = 0.001,
   verbose = TRUE,
+  usePar = FALSE,
   kappa_init = 0.2
 )
 }
@@ -26,7 +27,7 @@ templateICA(
 
 \item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices.}
 
-\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation be model fitting. If done when estimating templates, should be done here too.}
 
 \item{normA}{Normalize the A matrix (spatial maps)?}
 
@@ -46,6 +47,9 @@ Only provide \code{Q2} or \code{maxQ} but not both.}
 \item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
 
 \item{verbose}{If \code{TRUE}. display progress of algorithm}
+
+\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
+to use or \code{TRUE}, which will use the number on the PC minus two.}
 
 \item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
 }

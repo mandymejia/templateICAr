@@ -19,6 +19,8 @@
 #'  of the spatial template ICA model, which assumes that all IC's have the
 #'  same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
+#'  to use or \code{TRUE}, which will use the number on the PC minus two. 
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
@@ -197,7 +199,7 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
 }
 
 #' @rdname EM_templateICA
-EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose){
+EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -255,15 +257,36 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
   #A = theta$A
   At_nu0Cinv <- crossprod(theta$A, diag(1/(C_diag*theta$nu0_sq)))
   At_nu0Cinv_A <- At_nu0Cinv %*% theta$A
-  miu_s <- matrix(NA, nrow=nvox, ncol=Q)
-  var_s <- matrix(NA, nrow=nvox, ncol=Q)
-  for(v in 1:nvox){
-    y_v <- BOLD[v,]
-    s0_v <- template_mean[v,]
-    E_v_inv <- diag(1/template_var[v,])
-    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
-    miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-    var_s[v,] <- diag(Sigma_s_v)
+
+  if (usePar) {
+
+    if (!requireNamespace("foreach", quietly = TRUE)) { 
+      stop(
+        "Package \"foreach\" needed to parallel loop over voxels. Please install it.", 
+        call. = FALSE
+      )
+    }
+
+    q <- foreach::foreach(v = seq(nvox), .combine=rbind) %dopar% {
+      y_v <- BOLD[v,]
+      s0_v <- template_mean[v,]
+      E_v_inv <- diag(1/template_var[v,])
+      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+      c(Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v), diag(Sigma_s_v))
+    }
+    miu_s <- q[,seq(Q)]
+    var_s <- q[,seq(Q+1, Q*2)]
+  } else {
+    miu_s <- matrix(NA, nrow=nvox, ncol=Q)
+    var_s <- matrix(NA, nrow=nvox, ncol=Q)
+    for (v in seq(nvox)) {
+      y_v <- BOLD[v,]
+      s0_v <- template_mean[v,]
+      E_v_inv <- diag(1/template_var[v,])
+      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+      miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
+      var_s[v,] <- diag(Sigma_s_v)
+    }
   }
 
   result <- list(subjICmean=miu_s,

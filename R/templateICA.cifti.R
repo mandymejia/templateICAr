@@ -33,6 +33,7 @@
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}.
 # @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param write_dir Where should any output files be written? \code{NULL} (default) will write them to the current working directory.
 #' @param rm_mwall Should medial wall (missing data) locations be removed from mesh?  If TRUE, faster estimation but less accurate estimates on boundary of wall.
@@ -61,6 +62,7 @@ templateICA.cifti <- function(cifti_fname,
                               verbose=TRUE,
                               #common_smoothness=TRUE,
                               kappa_init=0.2,
+                              usePar=FALSE,
                               write_dir=NULL,
                               rm_mwall=TRUE,
                               time_inds=NULL){
@@ -174,6 +176,7 @@ templateICA.cifti <- function(cifti_fname,
     maxQ=maxQ,
     maxiter=maxiter,
     epsilon=epsilon,
+    usePar=usePar,
     verbose=verbose,
     #common_smoothness=common_smoothness,
     kappa_init=kappa_init

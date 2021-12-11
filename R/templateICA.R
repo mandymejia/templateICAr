@@ -4,19 +4,22 @@
 #'
 #' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
 #' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices. 
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
+#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations. Or, a list of such data matrices.
+#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation be model fitting. If done when estimating templates, should be done here too.
+#' @param meshes Either \code{NULL} (assume spatial independence) or a list of
+#'  objects of type \code{templateICA_mesh}
 #' @param normA Normalize the A matrix (spatial maps)?
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
 #' created by \code{make_mesh} (spatial priors are assumed on each independent component).
 #' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
 #' @param Q2 The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
 #'  Only provide \code{Q2} or \code{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
+#' @param maxQ Maximum number of ICs (template+nuisance) to identify
 #'  (L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
 #'  Only provide \code{Q2} or \code{maxQ} but not both.
 #' @param maxiter Maximum number of EM iterations
 #' @param epsilon Smallest proportion change between iterations (e.g. .01)
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
+#'  to use or \code{TRUE}, which will use the number on the PC minus two.
 #' @param verbose If \code{TRUE}. display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
@@ -40,6 +43,7 @@ templateICA <- function(template_mean,
                         maxiter=100,
                         epsilon=0.001,
                         verbose=TRUE,
+                        usePar=FALSE,
                         #common_smoothness=TRUE,
                         kappa_init=0.2){
 
@@ -51,7 +55,7 @@ templateICA <- function(template_mean,
     flag <- INLA::inla.pardiso.check()
     if (grepl('FAILURE',flag)) {
       stop(
-        'PARDISO IS NOT INSTALLED OR NOT WORKING. ', 
+        'PARDISO IS NOT INSTALLED OR NOT WORKING. ',
         'PARDISO for R-INLA is required for computational efficiency. ',
         'If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again. ',
         'If not, run inla.pardiso() to obtain a license.'
@@ -110,7 +114,7 @@ templateICA <- function(template_mean,
   }
 
   #check that maxQ makes sense
-  if (!is.null(maxQ)) { 
+  if (!is.null(maxQ)) {
     if(round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a round positive number.')
   } else {
     maxQ <- round(sum(ntime)/2)
@@ -119,7 +123,7 @@ templateICA <- function(template_mean,
     warning('maxQ must be at least L.  Setting maxQ=L.')
     maxQ <- L
   }
-  # This is to avoid the area of the pesel objective function that spikes close 
+  # This is to avoid the area of the pesel objective function that spikes close
   #   to rank(X), which often leads to nPC close to rank(X)
   if (maxQ > sum(ntime)*0.75) {
     warning('maxQ too high, setting to 75% of T.')
@@ -132,6 +136,29 @@ templateICA <- function(template_mean,
     BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
   } else {
     BOLD <- scale_BOLD(BOLD, scale=scale)
+  }
+
+  if (!isFALSE(usePar)) {
+
+    if (!requireNamespace("parallel", quietly = TRUE)) {
+      stop(
+        "Package \"parallel\" needed to parallel loop over voxels. Please install it.",
+        call. = FALSE
+      )
+    }
+    if (!requireNamespace("doParallel", quietly = TRUE)) {
+      stop(
+        "Package \"doParallel\" needed to parallel loop over voxels. Please install it.",
+        call. = FALSE
+      )
+    }
+
+    cores <- parallel::detectCores()
+    if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
+    if (nCores < 2) { usePar <- FALSE } else {
+      cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(cluster)
+    }
   }
 
   ### IDENTIFY AND REMOVE ANY BAD VOXELS/VERTICES
@@ -164,7 +191,7 @@ templateICA <- function(template_mean,
     } else {
       BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-L, verbose=verbose)
     }
-  } 
+  }
 
   # Concatenate if multiple sessions exist.
   if (multi_scans) { BOLD <- do.call(cbind, BOLD) }
@@ -196,10 +223,108 @@ templateICA <- function(template_mean,
                                  maxiter=maxiter,
                                  epsilon=epsilon,
                                  verbose=verbose)
+  }
 
-    ## TO DO: FILL IN HERE
+  #TEMPLATE ICA
+  if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
+  theta00 <- theta0
+  theta00$nu0_sq = dat_list$sigma_sq
+  resultEM <- EM_templateICA.independent(
+    template_mean, template_var,
+    BOLD2, theta00, C_diag=dat_list$C_diag,
+    maxiter=maxiter, epsilon=epsilon, usePar=usePar, verbose=verbose
+  )
+  resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+  class(resultEM) <- 'tICA'
 
+  if (usePar) { parallel::stopCluster(cluster) }
+
+  #SPATIAL TEMPLATE ICA
+  if(do_spatial){
+
+    resultEM_tICA <- resultEM
+
+    # if(dim_reduce_flag == FALSE){
+    #   BOLD2 <- BOLD3
+    #   C_diag <- rep(1, ntime)
+    #   theta0$A <- dat_DR$A
+    # }
+
+    # #starting value for kappas (use data from one hemisphere for speed)
+    # if(is.null(kappa_init)){
+    #   #kappa_init <- 0.5
+    #
+    #   # #This needs to be generalized to multiple meshes
+    #   if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
+    #   locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
+    #   n_mesh1 <- length(locs)
+    #
+    #   #organize data and replicates
+    #   for(q in 1:L){
+    #     #print(paste0('IC ',q,' of ',L))
+    #     d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
+    #     #d_q <- tmp[,q] - template_mean[,q]
+    #     rep_q <- rep(q, length(d_q))
+    #     D_diag_q <- sqrt(template_var[1:n_mesh1,q])
+    #     if(q==1) {
+    #       dev <- d_q
+    #       rep <- rep_q
+    #       D_diag <- D_diag_q
+    #     } else {
+    #       dev <- c(dev, d_q)
+    #       rep <- c(rep, rep_q)
+    #       D_diag <- c(D_diag, D_diag_q)
+    #     }
+    #   }
+    #
+    #   #determine MLE of kappa
+    #   #~50 min with V=5200, L=16
+    #   print(system.time(opt <- optim(par=c(0,-20),
+    #                  fn=loglik_kappa_est,
+    #                  method='L-BFGS-B',
+    #                  lower=c(-5,-20),
+    #                  upper=c(1,Inf), #kappa usually less than 1, log(1)=0
+    #                  delta=dev,
+    #                  D_diag=D_diag,
+    #                  mesh=meshes[[1]],
+    #                  Q=L)))
+    #   kappa_init <- exp(opt$par[1])
+    #
+    #   # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
+    #   # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
+    #   # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
+    #   # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
+    #   # kappa_init <- exp(result_spde$summary.log.kappa$mean)
+    #   if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
+    # }
+
+    theta0$kappa <- rep(kappa_init, L)
+
+    # This would need to be generalized to multiple meshes, but currently data locations and mesh locations are the same when templateICA.cifti used
+    # #project BOLD and templates to mesh locations
+    # Amat <- mesh$A # n_orig x n_mesh matrix
+    # nmesh <- ncol(Amat)
+    # if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
+
+    if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
+    t000 <- Sys.time()
+    resultEM <- EM_templateICA.spatial(template_mean,
+                                       template_var,
+                                       meshes,
+                                       BOLD=BOLD2,
+                                       theta0,
+                                       C_diag,
+                                       maxiter=maxiter,
+                                       epsilon=epsilon,
+                                       verbose=verbose)
+                                       #common_smoothness=common_smoothness)
+    print(Sys.time() - t000)
+
+    #organize estimates and variances in matrix form
+    resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
+    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
   } else {
+
     ### TEMPLATE ICA AND SPATIAL TEMPLATE ICA
     BOLD <- dim_reduce(BOLD, L)
     err_var <- BOLD$sigma_sq
@@ -217,7 +342,7 @@ templateICA <- function(template_mean,
     # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
     # theta0$nu0_sq = dat_list$sigma_sq
     # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
-    
+
     #TEMPLATE ICA
     if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
     theta00 <- theta0

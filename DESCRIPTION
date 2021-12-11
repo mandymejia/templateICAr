@@ -37,9 +37,12 @@ Imports:
     stats
 Suggests:
     covr,
+    doParallel,
+    foreach,
     knitr,
     rmarkdown,
     INLA (>= 0.0-1468840039),
+    parallel,
     testthat (>= 3.0.0)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/templateICAr

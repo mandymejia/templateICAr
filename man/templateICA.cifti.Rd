@@ -20,6 +20,7 @@ templateICA.cifti(
   epsilon = 0.001,
   verbose = TRUE,
   kappa_init = 0.2,
+  usePar = FALSE,
   write_dir = NULL,
   rm_mwall = TRUE,
   time_inds = NULL
@@ -71,6 +72,8 @@ standard deviation before model fitting. If done when estimating templates, shou
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
 \item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
+
+\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}.}
 
 \item{write_dir}{Where should any output files be written? \code{NULL} (default) will write them to the current working directory.}
 

@@ -26,6 +26,7 @@ EM_templateICA.independent(
   C_diag,
   maxiter = 100,
   epsilon = 0.001,
+  usePar = FALSE,
   verbose
 )
 }
@@ -55,6 +56,9 @@ same smoothness parameter, \eqn{\kappa}}
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
+
+\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
+to use or \code{TRUE}, which will use the number on the PC minus two.}
 }
 \value{
 A list: theta (list of final parameter estimates), subICmean
