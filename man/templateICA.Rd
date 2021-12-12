@@ -62,7 +62,7 @@ to use or \code{TRUE}, which will use the number on the PC minus two.}
 
 \item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
 
-\item{DCT_detrend}{Detrend}
+\item{detrend_DCT}{Detrend}
 }
 \value{
 A list containing the estimated independent components S 

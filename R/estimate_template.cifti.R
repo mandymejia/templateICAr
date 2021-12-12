@@ -116,8 +116,9 @@ estimate_template.cifti <- function(
   }
 
   # PERFORM DUAL REGRESSION ON (PSEUDO) TEST-RETEST DATA
-  DR1 <- DR2 <- array(NA, dim=c(N, L, V))
-  if(FC) FC1 <- FC2 <- array(NA, dim=c(N, L, L)) #for functional connectivity template
+  M <- 2
+  DR1 <- array(NA, dim=c(M, N, L, V)) # measurements by subjects by components by locations
+  if(FC) FC1 <- array(NA, dim=c(M, N, L, L)) #for functional connectivity template
 
   missing_data <- NULL
 
@@ -137,22 +138,44 @@ estimate_template.cifti <- function(
       next
     }
 
-    DR1[ii,,] <- DR_ii$test[inds,]
-    DR2[ii,,] <- DR_ii$retest[inds,]
-    if(FC) FC1[ii,,] <- cov(DR_ii$test[,inds])
-    if(FC) FC2[ii,,] <- cov(DR_ii$retest[,inds])
+    DR1[1,ii,,] <- DR_ii$test[inds,]
+    DR1[2,ii,,] <- DR_ii$retest[inds,]
+    if(FC) FC1[1,ii,,] <- cov(DR_ii$test[,inds])
+    if(FC) FC1[2,ii,,] <- cov(DR_ii$retest[,inds])
   }
+
+  # Vectorize components and locations
+  DR1 <- array(DR1, dim=c(M, N, L*V))
+  FC1 <- array(FC1, dim=c(M, N, L*L))
 
   # Estimate template
   if (verbose) { cat("Estimating template.\n") }
-  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
-  template <- estimate_template_from_DR(DR1, DR2, var_method=var_method)
+  template <- estimate_template_from_DR(DR1, c(L, V))
+
+  # Keep DR
+  if (!isFALSE(keep_DR)) {
+    if (is.character(keep_DR)) {
+      if (length(keep_DR) > 1) {
+        warning("Using first entry of `keep_DR`.")
+        keep_DR <- keep_DR[1]
+      }
+      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
+      DR1 <- array(DR1, dim=c(M, N, L, V)) # Undo vectorize
+      saveRDS(DR1, keep_DR)
+      keep_DR <- FALSE # no longer need it.
+    } else if (!isTRUE(keep_DR)) {
+      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+      keep_DR <- FALSE
+    }
+  }
+  if (!keep_DR) { rm(DR1) }
 
   if(FC){
 
-    mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
-    var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
-    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
+    mean_FC <- var_FC_tot <- var_FC_within <- NULL
+    # mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
+    # var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
+    # var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
     var_FC_between <- var_FC_tot - var_FC_within
     var_FC_between[var_FC_between < 0] <- NA
 
@@ -187,23 +210,6 @@ estimate_template.cifti <- function(
     template_FC <- NULL
   }
 
-  # Keep DR
-  if (!isFALSE(keep_DR)) {
-    if (is.character(keep_DR)) {
-      if (length(keep_DR) > 1) {
-        warning("Using first entry of `keep_DR`.")
-        keep_DR <- keep_DR[1]
-      }
-      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
-      saveRDS(list(DR1=DR1, DR2=DR2), keep_DR)
-      keep_DR <- FALSE # no longer need it.
-    } else if (!isTRUE(keep_DR)) {
-      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
-      keep_DR <- FALSE
-    }
-  }
-  if (!keep_DR) { rm(DR1, DR2) }
-
   # Format template as "xifti"s
   GICA <- select_xifti(GICA, inds)
   GICA$meta$cifti$names <- paste0("IC ", inds)
@@ -223,7 +229,7 @@ estimate_template.cifti <- function(
     template_FC=template_FC,
     scale=scale, inds=inds, var_method=var_method
   )
-  if (keep_DR) { result <- c(result, list(DR=list(DR1=DR1, DR2=DR2))) }
+  if (keep_DR) { result <- c(result, list(DR=DR1)) }
 
   class(result) <- 'template_cifti'
   result

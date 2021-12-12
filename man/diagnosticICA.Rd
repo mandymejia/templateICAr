@@ -25,7 +25,7 @@ estimates for each group \eqn{1} to \eqn{G}.}
 \item{template_var}{(A list of G matrices, each \eqn{VxL}) template variance
 estimates for each group \eqn{1} to \eqn{G}.}
 
-\item{BOLD}{(\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
+\item{BOLD}{(\eqn{V \times T} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
 of volumes (time points) and \eqn{V} is the number of brain locations}
 
 \item{scale}{Should BOLD data be scaled by the spatial standard deviation

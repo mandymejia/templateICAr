@@ -7,7 +7,7 @@
 PCA(X, center = TRUE, Q = NULL, Q_max = 100, nv = 0)
 }
 \arguments{
-\item{X}{\eqn{VxT} fMRI timeseries data matrix, centered by columns}
+\item{X}{\eqn{V \times T} fMRI timeseries data matrix, centered by columns}
 
 \item{center}{Center the columns of \code{X}? Default: \code{TRUE}. Set to
 \code{FALSE} if already centered.}

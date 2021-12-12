@@ -4,20 +4,36 @@
 \alias{dual_reg}
 \title{Dual Regression}
 \usage{
-dual_reg(dat, GICA, center = TRUE, scale = FALSE, normA = FALSE)
+dual_reg(
+  BOLD,
+  GICA,
+  center_rows = TRUE,
+  center_cols = TRUE,
+  scale = FALSE,
+  detrend_DCT = 0,
+  center_Gcols = TRUE,
+  normA = FALSE
+)
 }
 \arguments{
-\item{dat}{Subject-level fMRI data (\eqn{VxT})}
+\item{BOLD}{Subject-level fMRI data matrix (\eqn{V \times T})}
 
-\item{GICA}{Group-level independent components (\eqn{VxQ})}
+\item{GICA}{Group-level independent components (\eqn{V \times Q})}
 
-\item{center, scale}{A logical value indicating whether the fMRI timeseries should
-be centered and/or scaled. See \code{\link{scale_BOLD}}.}
+\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
 
-\item{normA}{Normalize the A matrix (spatial maps)?}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+
+\item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
+
+\item{center_Gcols}{Center GICA across columns (each ICA)? Default: \code{TRUE}.}
+
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
+estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
+such that the product \eqn{A \times S} remains the same).}
 }
 \value{
-A list containing the subject-level independent components \strong{S} (\eqn{VxQ}), 
+A list containing the subject-level independent components \strong{S} (\eqn{V \times Q}), 
  and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 }
 \description{

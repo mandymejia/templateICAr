@@ -3,12 +3,12 @@
 #'
 #' @title EM Algorithm for FC Template ICA Model
 #'
-#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template,
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param template_FC (list) Parameters of functional connectivity template
 #' @param prior_params Alpha and beta parameters of IG prior on tau^2 (error variance)
-#' @param BOLD (\eqn{VxT} matrix) preprocessed fMRI data
+#' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
 #' @param AS_init (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.

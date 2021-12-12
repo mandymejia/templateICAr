@@ -3,13 +3,13 @@
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
-#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template,
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \code{\link{make_mesh}}) for each brain structure.
-#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
+#' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix),
 #'  nu0_sq (residual variance from first level) and (for spatial model only)
 #'  kappa (SPDE smoothness parameter for each IC map)
@@ -267,6 +267,7 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
       )
     }
 
+    `%dopar%` <- foreach::`%dopar%`
     q <- foreach::foreach(v = seq(nvox), .combine=rbind) %dopar% {
       y_v <- BOLD[v,]
       s0_v <- template_mean[v,]
@@ -306,12 +307,12 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 #'
 #' @title Parameter Estimates in EM Algorithm for Template ICA Model
 #'
-#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template
-#' @param template_var (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template
+#' @param template_var (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \code{\link{make_mesh}}) for each brain structure.
-#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
+#' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param theta (list) current parameter estimates
 #' @param C_diag \eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction
 #' @param s0_vec Vectorized template means

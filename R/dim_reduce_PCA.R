@@ -4,7 +4,7 @@
 #'  SVD. If dimensionality is not specified, it is estimated using the method 
 #'  described in Minka (2008).
 #'
-#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns.
+#' @param X \eqn{V \times T} fMRI timeseries data matrix, centered by columns.
 #' @param Q Number of latent dimensions to estimate. If not specified, 
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
@@ -13,7 +13,7 @@
 #' @importFrom pesel pesel
 #' 
 #' @return A list containing the dimension-reduced data (data_reduced, a 
-#'  \eqn{VxQ} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
+#'  \eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
 #'  matrix) and its (pseudo-)inverse (Hinv, a \eqn{TxQ} matrix), the noise variance 
 #'  (sigma_sq), the correlation matrix of the dimension-reduced data 
 #'  (C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
@@ -55,7 +55,7 @@ dim_reduce <- function(X, Q=NULL, Q_max=100){
 #' Efficient PCA for a tall matrix (much more rows than columns). Uses the SVD
 #'  of the covariance matrix.
 #' 
-#' @param X \eqn{VxT} fMRI timeseries data matrix, centered by columns
+#' @param X \eqn{V \times T} fMRI timeseries data matrix, centered by columns
 #' @param center Center the columns of \code{X}? Default: \code{TRUE}. Set to
 #'  \code{FALSE} if already centered. 
 #' @param Q Number of latent dimensions to estimate. If not specified, 

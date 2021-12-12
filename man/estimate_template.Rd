@@ -9,7 +9,11 @@ estimate_template(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
+  center_rows = TRUE,
+  center_cols = TRUE,
   scale = TRUE,
+  detrend_DCT = 0,
+  center_Gcols = TRUE,
   normA = FALSE,
   brainstructures = c("left", "right"),
   mask = NULL,
@@ -23,18 +27,18 @@ estimate_template(
 )
 }
 \arguments{
-\item{BOLD}{Vector of fMRI timeseries data for template estimation. The data
-format can be one of the following: a character vector of CIFTI file paths
-(*.dtseries.nii), a list of \code{"xifti"} objects, a character vector of
-NIFTI file paths (*.nii), a list of \code{"nifti"} objects, or a list of 
-\eqn{V \times T} numeric matrices.}
+\item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following formats: 
+ CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
+ \eqn{V \times T} numeric matrices.
 
-\item{BOLD2}{Vector of fMRI timeseries retest data for template estimation. Must
-be from the same subjects, in the same order, and in the same format as \code{BOLD}.
-If \code{NULL} (default), a pseudo test-retest dataset will be made by splitting
-each scan of \code{BOLD} in half.}
+ If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
+ \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
+ \code{BOLD2} should be the same length as \code{BOLD} and have the same subjects in the same order.
+ If \code{BOLD2} is not provided, \code{BOLD} will be split in half; 
+ the first half will be the test data and the second half will be the retest data.}
 
-\item{GICA}{Group ICA maps in a format compatible with \code{BOLD}.}
+\item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also be a
+(vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.}
 
 \item{inds}{Numeric indices of the group ICs to include in the template. If 
  \code{NULL}, use all group ICs (default).
@@ -44,8 +48,13 @@ each scan of \code{BOLD} in half.}
  regression would leave unmodeled signals in the data, which could bias the 
  templates.}
 
-\item{scale}{Scale each entry of \code{BOLD} and \code{BOLD2} by its mean spatial
-standard deviation before computing dual regression? Default: \code{TRUE}.}
+\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
+
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+
+\item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
+
+\item{center_Gcols}{Center GICA across columns (each ICA)? Default: \code{TRUE}.}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
@@ -58,9 +67,9 @@ cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-\code{"nifti"} objects. A binary brain map of the same size as the fMRI data, with
-\code{1} corresponding to in-mask voxels.}
+\item{mask}{Required if and only if \code{BOLD} is a NIFTI file path or
+\code{"nifti"} object. This is a brain map formatted as a binary array of the same 
+size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{var_method}{Method for estimating the template variance: \code{"unbiased"} 
 (default), \code{"non-negative"}, or \code{"both"}. The unbiased template variance is
@@ -70,19 +79,21 @@ variance adds to it to account for greater potential between-subjects variation.
 
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR 
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
-returned too. If a single file path, save the DR estimates as an .rds file at
+returned too. If a single file path, save the DR estimates as an RDS file at
 that location. If a list of two vectors of file paths with the same lengths as
 \code{BOLD}, save the DR estimates as individual files at these locations in
-the appropriate format (CIFTI, NIFTI, or .rds, depending on \code{BOLD}).}
+the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}).}
 
-\item{Q2, maxQ}{Denoise the dual regression estimates? Denoising is based on modeling and
-removing nuisance ICs. It may result in cleaner estimates for smaller datasets, but may
-be unnecessary (and time-consuming) for larger datasets. If both are \code{NULL},
-denoising will be performed, with the number of nuisance ICs estimated for each fMRI scan
-separately. If \code{Q2==0}, do not denoise (default). Otherwise, specify one or the other:
+\item{Q2, maxQ}{Obtain dual regression estimates after denoising? Denoising is based on modeling and
+removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
+ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
 use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
-total ICs (template/group + nuisance). \eqn{L <= (L+Q2) = maxQ <= T}, where \eqn{L} is the number
-of template ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
+total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
+Default: \code{Q2==0} (do not denoise).
+
+The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
+of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
 
 \item{out_fname}{Character vector of file path(s) to write the mean and variance templates to.
 If one file name is provided, it will be appended with \code{"_mean.dscalar.nii"} for the

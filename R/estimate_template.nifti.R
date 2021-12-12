@@ -175,7 +175,7 @@ estimate_template.nifti <- function(
     for(l in 1:L){
       img_tmp[mask2==1] <- template_mean_nifti[,l]
       template_mean_nifti@.Data[,,,l] <- img_tmp
-      img_tmp[mask2==1] <- template_var[,l]
+      img_tmp[mask2==1] <- template_var_nifti[,l]
       template_var_nifti@.Data[,,,l] <- img_tmp
     }
     writeNIfTI(template_mean_nifti, out_fname_mean)

@@ -6,7 +6,7 @@
 #'  estimates for each group \eqn{1} to \eqn{G}.
 #' @param template_var (A list of G matrices, each \eqn{VxL}) template variance
 #'  estimates for each group \eqn{1} to \eqn{G}.
-#' @param BOLD (\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
+#' @param BOLD (\eqn{V \times T} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
 #'  of volumes (time points) and \eqn{V} is the number of brain locations
 #' @param scale Should BOLD data be scaled by the spatial standard deviation
 #'  before model fitting? Default: \code{TRUE}. If done when estimating
@@ -153,7 +153,7 @@ diagnosticICA <- function(template_mean,
   if(maxQ > L){
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    BOLD1 <- scale_BOLD(BOLD, scale=scale)
+    BOLD1 <- norm_BOLD(BOLD, scale=scale)
     DR1 <- dual_reg(BOLD1, template_mean_avg)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -187,7 +187,7 @@ diagnosticICA <- function(template_mean,
   } else {
 
     # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
+    BOLD3 <- norm_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
 
   }
 

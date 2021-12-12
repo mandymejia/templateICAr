@@ -280,3 +280,28 @@ logical_arg <- function(x, name="x"){
   if (length(x) > 1) { warning("Using the first element of `", name, "`\n"); x <- x[1] }
   x
 }
+
+#' Check maxQ
+#' 
+#' @param maxQ,L,T The args
+#' @return \code{maxQ}, clamped to acceptable range of values.
+#' @keywords internal
+maxQ_check <- function(maxQ, L, T){
+  if (!is.null(maxQ)) { 
+    if (round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a positive integer.')
+  } else {
+    maxQ <- round(T/2)
+  }
+  if (maxQ < L) {
+    warning('maxQ must be at least L.  Setting maxQ=L.')
+    maxQ <- L
+  }
+  # This is to avoid the area of the pesel objective function that spikes close 
+  #   to rank(X), which often leads to nPC close to rank(X)
+  if (maxQ > T*0.75) {
+    warning('maxQ too high, setting to 75% of T.')
+    maxQ <- round(T*0.75)
+  }
+
+  return(maxQ)
+}

@@ -31,15 +31,15 @@ UpdateTheta_templateICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(\eqn{VxQ} matrix) mean maps for each IC in template}
+\item{template_mean}{(\eqn{V \times Q} matrix) mean maps for each IC in template}
 
-\item{template_var}{(\eqn{VxQ} matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(\eqn{V \times Q} matrix) between-subject variance maps for each IC in template}
 
 \item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
 objects of class "templateICA_mesh" containing the triangular mesh (see
 \code{\link{make_mesh}}) for each brain structure.}
 
-\item{BOLD}{(\eqn{VxQ} matrix) dimension-reduced fMRI data}
+\item{BOLD}{(\eqn{V \times Q} matrix) dimension-reduced fMRI data}
 
 \item{theta}{(list) current parameter estimates}
 

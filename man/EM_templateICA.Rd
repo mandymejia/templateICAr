@@ -31,16 +31,16 @@ EM_templateICA.independent(
 )
 }
 \arguments{
-\item{template_mean}{(\eqn{VxQ} matrix) mean maps for each IC in template,
+\item{template_mean}{(\eqn{V \times Q} matrix) mean maps for each IC in template,
 where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.}
 
-\item{template_var}{(\eqn{VxQ} matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(\eqn{V \times Q} matrix) between-subject variance maps for each IC in template}
 
 \item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
 objects of class "templateICA_mesh" containing the triangular mesh (see
 \code{\link{make_mesh}}) for each brain structure.}
 
-\item{BOLD}{(\eqn{VxQ} matrix) dimension-reduced fMRI data}
+\item{BOLD}{(\eqn{V \times Q} matrix) dimension-reduced fMRI data}
 
 \item{theta0}{(list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix),
 nu0_sq (residual variance from first level) and (for spatial model only)

@@ -12,7 +12,7 @@
 #' @param scale Logical indicating whether BOLD data should be scaled by the 
 #'  spatial standard deviation before model fitting. If done when estimating 
 #'  templates, should be done here too.
-#' @param DCT_detrend Detrend 
+#' @param detrend_DCT Detrend 
 #' @param normA Normalize the A matrix (spatial maps)?
 #' @param meshes Either NULL (assume spatial independence) or a list of objects
 #'  of type \code{templateICA_mesh}
@@ -147,11 +147,11 @@ templateICA <- function(template_mean,
 
   ### CENTER, SCALE, and DETREND DATA
   if (multi_scans) {
-    BOLD <- lapply(BOLD, scale_BOLD, scale=scale)
+    BOLD <- lapply(BOLD, norm_BOLD, scale=scale)
     BOLD <- do.call(cbind, BOLD)
     ntime <- sum(ntime)
   } else {
-    BOLD <- scale_BOLD(BOLD, scale=scale)
+    BOLD <- norm_BOLD(BOLD, scale=scale)
   }
 
   if (!isFALSE(usePar)) {
