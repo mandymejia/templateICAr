@@ -205,8 +205,8 @@ dual_reg2 <- function(
   if (center_Gcols) { GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
 
   # Get BOLD (and BOLD2) as a data matrix or array. 
-  if (format == "CIFTI") {
-    BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures)
+  if (FORMAT == "CIFTI") {
+    if (is.character(BOLD) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
     if (is.xifti(BOLD)) { BOLD <- as.matrix(BOLD) }
     stopifnot(is.matrix(BOLD))
     if (retest) {
@@ -215,7 +215,7 @@ dual_reg2 <- function(
       stopifnot(is.matrix(BOLD2))
     }
   } else if (format == "NIFTI") {
-    BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE)
+    if (is.character(BOLD) { BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE) }
     stopifnot(length(dim(BOLD)) > 1)
     if (retest) {
       BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE)
