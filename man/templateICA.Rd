@@ -5,68 +5,125 @@
 \title{Template ICA}
 \usage{
 templateICA(
-  template_mean,
-  template_var,
   BOLD,
+  template_mean,
+  template_var = NULL,
+  template_FC = NULL,
+  center_rows = TRUE,
+  center_cols = TRUE,
   scale = TRUE,
+  detrend_DCT = 0,
   normA = FALSE,
-  meshes = NULL,
-  Q2 = NULL,
+  Q2 = 0,
   maxQ = NULL,
+  brainstructures = c("left", "right"),
+  mask = NULL,
+  time_inds = NULL,
+  spatial_model = NULL,
+  resamp_res = NULL,
+  rm_mwall = TRUE,
   maxiter = 100,
   epsilon = 0.001,
-  verbose = TRUE,
+  kappa_init = 0.2,
   usePar = FALSE,
-  kappa_init = 0.2
+  verbose = TRUE
 )
 }
 \arguments{
-\item{template_mean}{(VxL matrix) template mean estimates, i.e. 
-mean of empirical population prior for each of L independent components}
+\item{BOLD}{Vector of subject-level fMRI data in one of the following formats: 
+ CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
+ \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
+ \eqn{T} is the number of timepoints. 
 
-\item{template_var}{(VxL matrix) template variance estimates, i.e. 
-between-subject variance of empirical population prior for each of L ICs}
+ If multiple BOLD data are provided, they will be independently centered, scaled, and detrended (if applicable),
+ and then they will be concatenated together prior to denoising (if applicable) and computing the initial dual regression estimate.}
 
-\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of 
-volumes (time points) and V is the number of brain locations. Or, a list 
-of such data matrices.}
+\item{template_mean, template_var, template_FC}{Template estimates in a format
+ compatible with \code{BOLD}. 
 
-\item{scale}{Logical indicating whether BOLD data should be scaled by the 
-spatial standard deviation before model fitting. If done when estimating 
-templates, should be done here too.}
+ \code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components. 
+ Its vectorized dimensions should be \eqn{V \times L}.
+ 
+ \code{template_var} gives the between-subject variance of the empirical population prior for each of the \eqn{L} independent components.
+ Its vectorized dimensions should be \eqn{V \times L}. If not provided and \code{template_mean}
+ is a file path, will be inferred by substituting \code{"_mean"} in the file name with \code{"_var"}.
 
-\item{normA}{Normalize the A matrix (spatial maps)?}
+ \code{template_FC} is not yet supported.}
 
-\item{meshes}{Either NULL (assume spatial independence) or a list of objects
-of type \code{templateICA_mesh}
-created by \code{make_mesh} (spatial priors are assumed on each independent
-component).
-Each list element represents a brain structure, between which spatial 
-independence is assumed (e.g. left and right hemispheres)}
+\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL}, will be estimated.
-Only provide \code{Q2} or \code{maxQ} but not both.}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify
-(L <= maxQ <= T). If \code{maxQ == L}, then do not remove any nuisance regressors.
-Only provide \code{Q2} or \code{maxQ} but not both.}
+\item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{maxiter}{Maximum number of EM iterations}
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
+estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
+such that the product \eqn{A \times S} remains the same).}
 
-\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
+\item{Q2, maxQ}{Obtain initial dual regression estimates after denoising? Denoising is based on modeling and
+removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
+ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
+use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
+total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
+Default: \code{Q2==0} (do not denoise).
 
-\item{verbose}{If \code{TRUE}. display progress of algorithm}
+The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
+of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
 
-\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
-to use or \code{TRUE}, which will use the number on the PC minus two.}
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
+Character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
+
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+\code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
+size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
+
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis. If \code{NULL} (default), use all volumes.}
+
+\item{spatial_model}{Should spatial modeling be performed? If \code{NULL}, assume
+ spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
+ each independent component. Each should represent a brain structure, between which
+ spatial independence can be assumed.
+
+ If \code{BOLD} represents CIFTI-format data, \code{spatial_model} should give the left and
+ right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
+ objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
+ the subcortex. This argument can also be \code{TRUE}, in which case spatial modelling
+ will be performed with the surfaces included in the first entry of \code{BOLD} if it is a 
+ \code{"xifti"} object, or if those are not present available, the default inflated
+ surfaces from \code{ciftiTools}.
+
+ If \code{BOLD} represents NIFTI-format data, spatial modelling is not yet available.
+
+ If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
+ (see \code{\link{make_mesh}}).}
+
+\item{resamp_res}{Only applies if \code{BOLD} represents CIFTI-format data, and only recommended
+for spatial modeling. The target resolution for resampling (number of
+cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
+feasibility. If \code{NULL} (default), do not perform resampling.}
+
+\item{rm_mwall}{Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
+If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.}
+
+\item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
+
+\item{epsilon}{Smallest proportion change between iterations. Default: \code{.001}.}
 
 \item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
 
-\item{detrend_DCT}{Detrend}
+\item{usePar}{Parallelize the computation over data locations? Default: \code{FALSE}. Can be the number of cores
+to use or \code{TRUE}, which will use the number on the PC minus two.}
+
+\item{verbose}{If \code{TRUE}. display progress of algorithm}
 }
 \value{
-A list containing the estimated independent components S 
- (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of 
+A list containing the estimated independent components S
+ (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of
  nuisance ICs estimated (Q_nuis)
 }
 \description{

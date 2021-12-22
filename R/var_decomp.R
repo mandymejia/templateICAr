@@ -1,5 +1,8 @@
+#' Compute variance decomposition
+#' @param x measurements by subjects by variables
+#' @keywords internal
+#' @return The variance decomposition
 var_decomp <- function(x) {
-  # `x` is measurements by subjects by variables
 
   # Get data dimensions.
   # cat("\tChecking data dimensions and missing values presence.\n")
@@ -45,6 +48,9 @@ var_decomp <- function(x) {
 }
 
 #' Compute mean squares from variance decomposition
+#' @param vd The variance decomposition
+#' @keywords internal
+#' @return The mean squares
 mean_squares <- function(vd){
   n <- vd$nS; v <- vd$nM
   SST <- vd$SST

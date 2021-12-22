@@ -2,6 +2,8 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template}
 \alias{estimate_template}
+\alias{estimate_template.cifti}
+\alias{estimate_template.nifti}
 \title{Estimate template}
 \usage{
 estimate_template(
@@ -15,8 +17,50 @@ estimate_template(
   detrend_DCT = 0,
   center_Gcols = TRUE,
   normA = FALSE,
+  Q2 = 0,
+  maxQ = NULL,
   brainstructures = c("left", "right"),
   mask = NULL,
+  var_method = c("unbiased", "non-negative"),
+  keep_DR = FALSE,
+  out_fname = NULL,
+  FC = FALSE,
+  verbose = TRUE
+)
+
+estimate_template.cifti(
+  BOLD,
+  BOLD2 = NULL,
+  GICA,
+  inds = NULL,
+  center_rows = TRUE,
+  center_cols = TRUE,
+  scale = TRUE,
+  detrend_DCT = 0,
+  center_Gcols = TRUE,
+  normA = FALSE,
+  brainstructures = c("left", "right"),
+  var_method = c("unbiased", "non-negative"),
+  keep_DR = FALSE,
+  Q2 = 0,
+  maxQ = NULL,
+  out_fname = NULL,
+  FC = FALSE,
+  verbose = TRUE
+)
+
+estimate_template.nifti(
+  BOLD,
+  BOLD2 = NULL,
+  GICA,
+  inds = NULL,
+  center_rows = TRUE,
+  center_cols = TRUE,
+  scale = TRUE,
+  detrend_DCT = 0,
+  center_Gcols = TRUE,
+  normA = FALSE,
+  mask = mask,
   var_method = c("unbiased", "non-negative"),
   keep_DR = FALSE,
   Q2 = 0,
@@ -29,7 +73,8 @@ estimate_template(
 \arguments{
 \item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following formats: 
  CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
- \eqn{V \times T} numeric matrices.
+ \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
+ \eqn{T} is the number of timepoints.
 
  If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
@@ -50,7 +95,7 @@ estimate_template(
 
 \item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
 
@@ -60,6 +105,17 @@ estimate_template(
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 such that the product \eqn{A \times S} remains the same).}
 
+\item{Q2, maxQ}{Obtain dual regression estimates after denoising? Denoising is based on modeling and
+removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
+ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
+use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
+total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
+Default: \code{Q2==0} (do not denoise).
+
+The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
+of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
+
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -67,8 +123,8 @@ cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{mask}{Required if and only if \code{BOLD} is a NIFTI file path or
-\code{"nifti"} object. This is a brain map formatted as a binary array of the same 
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+\code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{var_method}{Method for estimating the template variance: \code{"unbiased"} 
@@ -83,17 +139,6 @@ returned too. If a single file path, save the DR estimates as an RDS file at
 that location. If a list of two vectors of file paths with the same lengths as
 \code{BOLD}, save the DR estimates as individual files at these locations in
 the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}).}
-
-\item{Q2, maxQ}{Obtain dual regression estimates after denoising? Denoising is based on modeling and
-removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
-If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
-ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
-use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
-total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
-Default: \code{Q2==0} (do not denoise).
-
-The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
-of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
 
 \item{out_fname}{Character vector of file path(s) to write the mean and variance templates to.
 If one file name is provided, it will be appended with \code{"_mean.dscalar.nii"} for the

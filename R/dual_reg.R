@@ -4,7 +4,7 @@
 #' @param GICA Group-level independent components (\eqn{V \times Q})
 #' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
 #' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
@@ -83,7 +83,7 @@ dual_reg <- function(
 #'  (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.
 #' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
 #' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
@@ -127,6 +127,8 @@ dual_reg2 <- function(
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
+  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
+  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
 

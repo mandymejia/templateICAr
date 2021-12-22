@@ -243,3 +243,60 @@ plot.tICA_activations <- function(x, stat=c("active", "pvals", "pvals_adj", "tst
   }
   view_xifti(x, ...)
 }
+
+#' Activations of (s)tICA
+#'
+#' Identify areas of activation in each independent component map
+#'
+#' @param result Result of templateICA.cifti model call
+#' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
+#' @param u Activation threshold, default = 0
+#' @param alpha Significance level for joint PPM, default = 0.1
+#' @param type Type of region.  Default is '>' (positive excursion region).
+#' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
+#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
+#'
+#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+#'
+#' @export
+#'
+#'
+activations.cifti2 <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+
+  if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
+
+  model_result <- result$model_result
+  active_xifti <- clear_data(result$subjICmean_xifti)
+  nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
+  nright <- nrow(result$subjICmean_xifti$data$cortex_right)
+
+  if(class(model_result)=='stICA' & is.null(spatial_model)) spatial_model <- TRUE
+  if(class(model_result)=='tICA' & is.null(spatial_model)) spatial_model <- FALSE
+  if((spatial_model==TRUE) & (class(model_result) == 'tICA')) {
+    warning('spatial_model set to TRUE but class of model result is tICA. Setting spatial_model = FALSE, performing inference using standard template ICA.')
+    spatial_model <- FALSE
+  }
+
+  #if spatial model available but spatial_model set to FALSE, grab standard template ICA model result
+  if(class(model_result)=='stICA' & spatial_model==FALSE){
+    model_result <- model_result$result_tICA
+  }
+
+  #run activations function
+  activations_result <- activations(model_result, u=u, alpha=alpha, type=type, method_p=method_p, verbose=verbose, which.ICs=which.ICs, deviation=deviation)
+
+  #construct xifti object for activation maps
+  act_viz <- activations_result$active*1
+  act_viz[act_viz==0] <- NA
+  active_xifti$data$cortex_left <- act_viz[1:nleft,]
+  active_xifti$data$cortex_right <- act_viz[nleft+(1:nright),]
+
+  #include convert_to_dlabel function
+
+  return(list(activations = activations_result,
+                 active_xifti = active_xifti))
+}
+
+

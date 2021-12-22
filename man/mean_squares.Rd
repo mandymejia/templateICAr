@@ -6,6 +6,13 @@
 \usage{
 mean_squares(vd)
 }
+\arguments{
+\item{vd}{The variance decomposition}
+}
+\value{
+The mean squares
+}
 \description{
 Compute mean squares from variance decomposition
 }
+\keyword{internal}

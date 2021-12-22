@@ -102,7 +102,8 @@ estimate_template_from_DR_two <- function(
 #'
 #' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following formats: 
 #'  CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
-#'  \eqn{V \times T} numeric matrices.
+#'  \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
+#'  \eqn{T} is the number of timepoints.
 #' 
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
@@ -120,7 +121,7 @@ estimate_template_from_DR_two <- function(
 #'  templates.
 #' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
 #' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
@@ -131,8 +132,8 @@ estimate_template_from_DR_two <- function(
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param mask Required if and only if \code{BOLD} is a NIFTI file path or
-#'  \code{"nifti"} object. This is a brain map formatted as a binary array of the same 
+#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+#'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
 #' @param var_method Method for estimating the template variance: \code{"unbiased"} 
 #'  (default), \code{"non-negative"}, or \code{"both"}. The unbiased template variance is
@@ -165,7 +166,7 @@ estimate_template_from_DR_two <- function(
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
-#' @importFrom ciftiTools read_xifti is.xifti
+#' @importFrom ciftiTools read_xifti is.xifti write_cifti
 #'
 #' @return A list with two entries, \code{"template_mean"} and \code{"template_var"}. There
 #'  may be more entries too, depending on the function arguments. 
@@ -177,21 +178,25 @@ estimate_template <- function(
   GICA, inds=NULL,
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
+  Q2=0, maxQ=NULL,
   brainstructures=c("left","right"), mask=NULL,
   var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
-  Q2=0, maxQ=NULL,
   out_fname=NULL,
-  FC = FALSE, 
+  FC=FALSE, 
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
+  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
+  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
   var_method <- match.arg(var_method, c("unbiased", "non-negative")) 
   if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
+  stopifnot(is.logical(FC) && length(FC)==1)
+  stopifnot(is.logical(verbose) && length(verbose)==1)
 
   retest <- !is.null(BOLD2)
 
@@ -340,10 +345,6 @@ estimate_template <- function(
   # `brainstructures` is handled when needed
   # `Q2` and `maxQ` handled later
 
-  # Rest of arguments
-  verbose <- as.logical(verbose, "verbose")
-  FC <- as.logical(FC, "FC")
-
   # Process each scan ---------------------
   if (verbose) {
     cat('Number of data locations:      ', nV, "\n")
@@ -440,7 +441,7 @@ estimate_template <- function(
     nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
 
     template_FC <- list(nu = nu_est1,
-                        psi = mean_FC*(nu_est1 - L - 1))
+                        psi = mean_FC*(nu_est1 - nL - 1))
   } else {
     template_FC <- NULL
   }
@@ -502,4 +503,124 @@ estimate_template <- function(
   # Return results.
   class(result) <- paste0(template, "_", tolower(FORMAT))
   result
+}
+
+#' @rdname estimate_template
+#' 
+estimate_template.cifti <- function(
+  BOLD, BOLD2=NULL, 
+  GICA, inds=NULL,
+  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
+  center_Gcols=TRUE, normA=FALSE,
+  brainstructures=c("left","right"), 
+  var_method=c("unbiased", "non-negative"),
+  keep_DR=FALSE,
+  Q2=0, maxQ=NULL,
+  out_fname=NULL,
+  FC=FALSE, 
+  verbose=TRUE) {
+
+  estimate_template(
+    BOLD=BOLD, BOLD2=BOLD2,
+    GICA=GICA, inds=inds,
+    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    center_Gcols=center_Gcols, normA=normA,
+    brainstructures=brainstructures, 
+    var_method=var_method,
+    keep_DR=keep_DR,
+    Q2=Q2, maxQ=maxQ,
+    out_fname=out_fname,
+    FC=FC, 
+    verbose=verbose
+  )
+}
+
+#' Summarize a \code{"template_cifti"} object
+#'
+#' Summary method for class \code{"template_cifti"}
+#'
+#' @param object Object of class \code{"template_cifti"}. 
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary template_cifti
+summary.template_cifti <- function(object, ...) {
+
+  x <- c(
+    summary(object$template_mean),
+    list(has_DR="DR" %in% names(object)),
+    object[c("scale", "inds", "var_method")]
+  )
+
+  class(x) <- "summary.template_cifti"
+  return(x)
+}
+
+#' @rdname summary.template_cifti
+#' @export
+#' 
+#' @param x The template from \code{estimate_template.cifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.template_cifti
+print.summary.template_cifti <- function(x, ...) {
+
+  cat("====TEMPLATE INFO====================\n")
+  cat("Spatially scaled:", x$scale, "\n")
+  cat("Variance method: ", x$var_method, "\n")
+  cat("\n")
+
+  class(x) <- "summary.xifti"
+  print(x) 
+}
+
+#' @rdname summary.template_cifti
+#' @export
+#' 
+#' @method print template_cifti
+print.template_cifti <- function(x, ...) {
+  print.summary.template_cifti(summary(x))
+}
+
+#' Plot template
+#' 
+#' @param x The template from \code{estimate_template.cifti}
+#' @param stat \code{"mean"} (default) or \code{"var"}
+#' @param ... Additional arguments to \code{view_xifti}
+#' @return The plot
+#' @export
+#' @importFrom ciftiTools view_xifti
+#' @method plot template_cifti
+plot.template_cifti <- function(x, stat=c("mean", "var"), ...) {
+  stopifnot(inherits(x, "template_cifti"))
+  stat <- match.arg(stat, c("mean", "var"))
+  view_xifti(x[[paste0("template_", stat)]], ...)
+}
+
+#' @rdname estimate_template
+#' 
+estimate_template.nifti <- function(
+  BOLD, BOLD2=NULL, 
+  GICA, inds=NULL,
+  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
+  center_Gcols=TRUE, normA=FALSE,
+  mask=mask, 
+  var_method=c("unbiased", "non-negative"),
+  keep_DR=FALSE,
+  Q2=0, maxQ=NULL,
+  out_fname=NULL,
+  FC=FALSE, 
+  verbose=TRUE) {
+
+  estimate_template(
+    BOLD=BOLD, BOLD2=BOLD2,
+    GICA=GICA, inds=inds,
+    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    center_Gcols=center_Gcols, normA=normA,
+    mask=mask, 
+    var_method=var_method,
+    keep_DR=keep_DR,
+    Q2=Q2, maxQ=maxQ,
+    out_fname=out_fname,
+    FC=FC, 
+    verbose=verbose
+  )
 }
