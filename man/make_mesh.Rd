@@ -2,12 +2,12 @@
 % Please edit documentation in R/make_mesh.R
 \name{make_mesh}
 \alias{make_mesh}
-\title{Make INLA mesh}
+\title{Make INLA mesh from \code{"surf"} object}
 \usage{
 make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 }
 \arguments{
-\item{surf}{Object of class \code{"surface"}. See
+\item{surf}{Object of class \code{"surf"}. See
 \code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.}
 
 \item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial 
@@ -23,5 +23,5 @@ List containing INLA mesh, observation weight matrix \strong{A} for
  locations.
 }
 \description{
-Create INLA mesh and observation weight matrix based on a surface object
+Create INLA mesh and observation weight matrix based on a \code{"surf"} object
 }
