@@ -192,6 +192,7 @@ estimate_template <- function(
   stopifnot(is.logical(normA) && length(normA)==1)
   var_method <- match.arg(var_method, c("unbiased", "non-negative")) 
   if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
+  xii1 <- NULL
 
   retest <- !is.null(BOLD2)
 
@@ -446,7 +447,7 @@ estimate_template <- function(
   }
 
   # Format and save template
-  if (FORMAT == "CIFTI") {
+  if (FORMAT == "CIFTI" && !is.null(xii1)) {
     # Format template as "xifti"s
     GICA <- newdata_xifti(select_xifti(xii1, rep(1, nL)), GICA)
     GICA$meta$cifti$names <- paste0("IC ", inds)
@@ -454,7 +455,11 @@ estimate_template <- function(
     template$mean$meta$cifti$misc <- list(template="mean")
     template$var <- newdata_xifti(GICA, template$var)
     template$var$meta$cifti$misc <- list(template="var")
-
+    if (!is.null(out_fname)) {
+      write_cifti(template$mean, out_fname[1], verbose=verbose)
+      write_cifti(template$var, out_fname[2], verbose=verbose)
+      # if (FORMAT == "NIFTI") { writeNIfTI(mask2, 'mask2') }
+    }
   } else if (FORMAT == "NIFTI") {
     # GICA@.Data <- GICA@.Data[,,,inds]
     # GICA@dim_[5] <- length(inds) 
@@ -474,12 +479,18 @@ estimate_template <- function(
     nii_temp <- array(mask, dim=c(dim(mask), nL))
     nii_temp[nii_temp[]] <- template$var
     template$var <- nii_temp
-  }
+    if (!is.null(out_fname)) {
+      writeNIfTI(template$mean, out_fname[1])
+      writeNIfTI(template$var, out_fname[2])
+      writeNIfTI(mask2, 'mask2') # [TO DO] fix
+    }
 
-  if(!is.null(out_fname)){
-    write_cifti(template$mean, out_fname[1], verbose=verbose)
-    write_cifti(template$var, out_fname[2], verbose=verbose)
-    # if (FORMAT == "NIFTI") { writeNIfTI(mask2, 'mask2') }
+  } else {
+    if (!is.null(out_fname)) {
+      saveRDS(template$mean, out_fname[1])
+      saveRDS(template$var, out_fname[2])
+      if (FORMAT == "NIFTI") { saveRDS(mask2, 'mask2') }
+    }
   }
 
   # Results list.
