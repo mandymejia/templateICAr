@@ -49,7 +49,7 @@ dual_reg <- function(
   ))
 
   # Center each group IC over voxels
-  if (center_Gcols) { GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
+  if (center_Gcols) { GICA <- GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
 
 	# Estimate A (IC timeseries)
 	A <- (BOLD %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
