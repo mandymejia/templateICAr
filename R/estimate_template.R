@@ -40,6 +40,7 @@ estimate_template.cifti <- function(
   scale=TRUE,
   brainstructures=c("left","right"),
   verbose=TRUE,
+  normA=FALSE,
   out_fname=NULL){
 
   #TO DOs:

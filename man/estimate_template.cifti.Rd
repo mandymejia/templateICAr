@@ -12,6 +12,7 @@ estimate_template.cifti(
   scale = TRUE,
   brainstructures = c("left", "right"),
   verbose = TRUE,
+  normA = FALSE,
   out_fname = NULL
 )
 }
@@ -40,12 +41,12 @@ Default: \code{c("left","right")} (cortical surface only).}
 
 \item{verbose}{If \code{TRUE}. display progress updates}
 
+\item{normA}{Normalize the A matrix (spatial maps)?}
+
 \item{out_fname}{(Required if templates are to be resampled to a lower spatial
 resolution, usually necessary for spatial template ICA.) The path and base name
 prefix of the CIFTI files to write. Will be appended with "_mean.dscalar.nii" for
 template mean maps and "_var.dscalar.nii" for template variance maps.}
-
-\item{normA}{Normalize the A matrix (spatial maps)?}
 }
 \value{
 List of two elements: template mean of class xifti and template
