@@ -11,7 +11,7 @@ estimate_template_from_DR <- function(
   DR, var_method=c("unbiased", "non-negative"), LV=NULL){
 
   # Check arguments.
-  stopifnot(length(dim(DR)) == 4)
+  stopifnot(length(dim(DR)) == 3)
   nM <- dim(DR)[1]
   nN <- dim(DR)[2]
   nLV <- dim(DR)[3]
@@ -33,6 +33,9 @@ estimate_template_from_DR <- function(
   if (!is.null(LV)) {
     template <- lapply(template, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
   }
+
+  template$mean <- t(template$mean)
+  template$var <- t(template$var)
 
   template
 }
@@ -140,6 +143,8 @@ estimate_template_from_DR_two <- function(
 #'  based on the assumed mixed effects/ANOVA model, whereas the non-negative template
 #'  variance adds to it to account for greater potential between-subjects variation.
 #'  (The template mean is the same for either choice of \code{var_method}.) 
+#' 
+#'  \code{"both"} is not yet supported [TO DO].
 #' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save the DR 
 #'  estimates and only return the templates. If \code{TRUE}, the DR estimates are
 #'  returned too. If a single file path, save the DR estimates as an RDS file at
@@ -184,7 +189,7 @@ estimate_template <- function(
   center_Gcols=TRUE, normA=FALSE,
   Q2=0, Q2_max=NULL, 
   brainstructures=c("left","right"), mask=NULL,
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("unbiased", "non-negative", "both"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE, 
@@ -200,7 +205,8 @@ estimate_template <- function(
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
-  var_method <- match.arg(var_method, c("unbiased", "non-negative")) 
+  var_method <- match.arg(var_method, c("unbiased", "non-negative", "both"))
+  if (var_method=="both") { stop("`var_method=='both' not supported yet.") }
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
@@ -399,7 +405,7 @@ estimate_template <- function(
 
   # Estimate mean and var template
   if (verbose) { cat("Estimating template.\n") }
-  template <- estimate_template_from_DR(DR0, c(nL, nV))
+  template <- estimate_template_from_DR(DR0, c(nL, nV), var_method=var_method)
 
   # Keep DR
   if (!isFALSE(keep_DR)) {
@@ -460,18 +466,26 @@ estimate_template <- function(
     template_FC <- NULL
   }
 
-  # Format and save template
+  # Format and save template ---------------------------------------------------
+  # Params
   template_params <- list(
-    inds=inds,
-    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    inds=paste0(inds, collapse=" "),
+    center_rows=center_rows, center_cols=center_cols, 
+    scale=scale, detrend_DCT=detrend_DCT, 
     center_Gcols=center_Gcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     var_method=var_method
   )
+  template_params <- lapply(
+    template_params, 
+    function(x){if (is.null(x)) { x <- "NULL"}; as.character(x)}
+  )
+
+  # Save
   if (FORMAT == "CIFTI" && !is.null(xii1)) {
     # Format template as "xifti"s
-    GICA <- newdata_xifti(select_xifti(xii1, rep(1, nL)), GICA)
+    GICA <- newdata_xifti(select_xifti(xii1, rep(1, nL)), GICA[,inds])
     GICA$meta$cifti$names <- paste0("IC ", inds)
     template$mean <- newdata_xifti(GICA, template$mean)
     template$mean$meta$cifti$misc <- c(
@@ -512,7 +526,6 @@ estimate_template <- function(
       writeNIfTI(template$var, out_fname[2])
       writeNIfTI(mask2, 'mask2') # [TO DO] fix
     }
-
   } else {
     if (!is.null(out_fname)) {
       saveRDS(template$mean, out_fname[1])
@@ -525,21 +538,11 @@ estimate_template <- function(
   result <- list(
     template_mean=template$mean, 
     template_var=template$var, 
-    template_FC=template$FC,
-    opts=list(
-      center_rows=center_rows, 
-      center_cols=center_cols, 
-      scale=scale, 
-      detrend_DCT=detrend_DCT, 
-      center_Gcols=center_Gcols,
-      normA=normA,
-      inds=inds,
-      var_method=var_method
-    )
+    template_FC=template$FC
   )
 
   # Return results.
-  class(result) <- paste0(template, "_", tolower(FORMAT))
+  class(result) <- paste0("template_", tolower(FORMAT))
   result
 }
 
@@ -551,7 +554,7 @@ estimate_template.cifti <- function(
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
   brainstructures=c("left","right"), 
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("unbiased", "non-negative", "both"),
   keep_DR=FALSE,
   Q2=0, Q2_max=NULL,
   out_fname=NULL,
@@ -641,7 +644,7 @@ estimate_template.nifti <- function(
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
   mask=mask, 
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("unbiased", "non-negative", "both"),
   keep_DR=FALSE,
   Q2=0, Q2_max=NULL,
   out_fname=NULL,

@@ -21,7 +21,7 @@ estimate_template(
   Q2_max = NULL,
   brainstructures = c("left", "right"),
   mask = NULL,
-  var_method = c("unbiased", "non-negative"),
+  var_method = c("unbiased", "non-negative", "both"),
   keep_DR = FALSE,
   out_fname = NULL,
   FC = FALSE,
@@ -40,7 +40,7 @@ estimate_template.cifti(
   center_Gcols = TRUE,
   normA = FALSE,
   brainstructures = c("left", "right"),
-  var_method = c("unbiased", "non-negative"),
+  var_method = c("unbiased", "non-negative", "both"),
   keep_DR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -61,7 +61,7 @@ estimate_template.nifti(
   center_Gcols = TRUE,
   normA = FALSE,
   mask = mask,
-  var_method = c("unbiased", "non-negative"),
+  var_method = c("unbiased", "non-negative", "both"),
   keep_DR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -132,10 +132,12 @@ Default: \code{c("left","right")} (cortical surface only).}
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{var_method}{Method for estimating the template variance: \code{"unbiased"} 
-(default), \code{"non-negative"}, or \code{"both"}. The unbiased template variance is
-based on the assumed mixed effects/ANOVA model, whereas the non-negative template
-variance adds to it to account for greater potential between-subjects variation.
-(The template mean is the same for either choice of \code{var_method}.)}
+ (default), \code{"non-negative"}, or \code{"both"}. The unbiased template variance is
+ based on the assumed mixed effects/ANOVA model, whereas the non-negative template
+ variance adds to it to account for greater potential between-subjects variation.
+ (The template mean is the same for either choice of \code{var_method}.) 
+
+ \code{"both"} is not yet supported [TO DO].}
 
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR 
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
