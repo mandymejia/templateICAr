@@ -358,7 +358,7 @@ estimate_template <- function(
   }
 
   # Center `GICA` columns.
-  if (center_Gcols) { GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
+  if (center_Gcols) { GICA <- GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
 
   # Process each scan ----------------------------------------------------------
   if (verbose) {
@@ -409,13 +409,13 @@ estimate_template <- function(
 
   # Keep DR
   if (!isFALSE(keep_DR)) {
+    DR0 <- array(DR0, dim=c(nM, nN, nL, nV)) # Undo vectorize
     if (is.character(keep_DR)) {
       if (length(keep_DR) > 1) {
         warning("Using first entry of `keep_DR`.")
         keep_DR <- keep_DR[1]
       }
       if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
-      DR0 <- array(DR0, dim=c(nM, nN, nL, nV)) # Undo vectorize
       saveRDS(DR0, keep_DR)
       keep_DR <- FALSE # no longer need it.
     } else if (!isTRUE(keep_DR)) {
@@ -540,6 +540,8 @@ estimate_template <- function(
     template_var=template$var, 
     template_FC=template$FC
   )
+
+  if (keep_DR) { result$DR <- DR0 }
 
   # Return results.
   class(result) <- paste0("template_", tolower(FORMAT))
