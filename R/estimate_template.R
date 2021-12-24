@@ -384,6 +384,7 @@ estimate_template <- function(
       FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
     }
   }
+  mask2 <- NULL # [TO DO]: fix
 
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nV))

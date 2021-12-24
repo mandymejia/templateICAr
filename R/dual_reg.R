@@ -124,6 +124,7 @@ dual_reg2 <- function(
   out <- list(test = NULL, retest = NULL)
 
   # Load helper variables.
+  retest <- is.null(BOLD2)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
