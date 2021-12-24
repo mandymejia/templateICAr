@@ -33,6 +33,7 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=TRUE, scale=FALSE, det
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
+  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
 

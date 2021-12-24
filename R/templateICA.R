@@ -26,17 +26,20 @@
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 #'  such that the product \eqn{A \times S} remains the same).
-
-#' @param Q2,maxQ Obtain initial dual regression estimates after denoising? Denoising is based on modeling and
-#'  removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
-#'  If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
-#'  ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
-#'  use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
-#'  total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
-#'  Default: \code{Q2==0} (do not denoise).
+#' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
+#'  based on modeling and removing nuisance ICs. It may result in a cleaner 
+#'  estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+#'  for larger datasets. 
 #'  
-#'  The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
-#'  of group ICs and \eqn{T} is the number of timepoints in each fMRI scan. 
+#'  Set \code{Q2} to control denoising: use a positive integer to specify the
+#'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+#'  estimated by PESEL, or zero (default) to skip denoising. 
+#' 
+#'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+#'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
+#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -96,7 +99,7 @@ templateICA <- function(
   template_mean, template_var=NULL, template_FC=NULL,
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   normA=FALSE,
-  Q2=0, maxQ=NULL,
+  Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
   maxiter=100,
@@ -112,10 +115,11 @@ templateICA <- function(
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
+  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
-  if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
+  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   if (!is.null(resamp_res)) {
     stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
     stopifnot(round(resamp_res) == resamp_res && resamp_res >= 0)
@@ -461,9 +465,8 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  maxQ <- maxQ_check(maxQ, nL, nT)
-  if (maxQ > nL) {
-    BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-nL, verbose=verbose)
+  if (is.null(Q2) || Q2>0) {
+    BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   }
 
   # Center and scale `BOLD` again, but do not detrend again. -------------------

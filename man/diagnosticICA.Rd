@@ -10,8 +10,8 @@ diagnosticICA(
   BOLD,
   scale = TRUE,
   meshes = NULL,
-  Q2 = NULL,
-  maxQ = NULL,
+  Q2 = 0,
+  Q2_max = NULL,
   maxiter = 100,
   epsilon = 0.01,
   verbose = TRUE,
@@ -36,11 +36,20 @@ templates, should be done here too.}
 of type \code{templateICA_mesh} created by \code{make_mesh} (each list element
 corresponds to one brain structure)}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default),
-will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{Q2, Q2_max}{Obtain dual regression estimates after denoising? Denoising is
+ based on modeling and removing nuisance ICs. It may result in a cleaner 
+ estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+ for larger datasets. 
+ 
+ Set \code{Q2} to control denoising: use a positive integer to specify the
+ number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+ estimated by PESEL, or zero (default) to skip denoising. 
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify
-(\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+ If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+ nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+ than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
+ fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+ \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 

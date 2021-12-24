@@ -15,7 +15,7 @@ dual_reg2(
   detrend_DCT = 0,
   normA = FALSE,
   Q2 = 0,
-  maxQ = NULL,
+  Q2_max = NULL,
   brainstructures = c("left", "right"),
   mask = NULL,
   verbose = TRUE
@@ -50,16 +50,20 @@ a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 such that the product \eqn{A \times S} remains the same).}
 
-\item{Q2, maxQ}{Obtain dual regression estimates after denoising? Denoising is based on modeling and
-removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
-If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
-ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
-use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
-total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
-Default: \code{Q2==0} (do not denoise).
+\item{Q2, Q2_max}{Obtain dual regression estimates after denoising? Denoising is
+ based on modeling and removing nuisance ICs. It may result in a cleaner 
+ estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+ for larger datasets. 
+ 
+ Set \code{Q2} to control denoising: use a positive integer to specify the
+ number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+ estimated by PESEL, or zero (default) to skip denoising. 
 
-The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
-of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
+ If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+ nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+ than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
+ fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+ \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 Character vector indicating which brain structure(s)

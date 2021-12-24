@@ -146,16 +146,20 @@ estimate_template_from_DR_two <- function(
 #'  that location. If a list of two vectors of file paths with the same lengths as
 #'  \code{BOLD}, save the DR estimates as individual files at these locations in
 #'  the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}). 
-#' @param Q2,maxQ Obtain dual regression estimates after denoising? Denoising is based on modeling and
-#'  removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
-#'  If both arguments are \code{NULL}, denoising will be performed, with the number of nuisance 
-#'  ICs estimated for \code{BOLD} and \code{BOLD2} separately. Otherwise, specify one or the other:
-#'  use \code{Q2} to specify the number of nuisance ICs, or \code{maxQ} to specify the number of
-#'  total ICs (group + nuisance, or \eqn{Q + Q2}). Set either to zero to skip denoising.
-#'  Default: \code{Q2==0} (do not denoise).
+#' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
+#'  based on modeling and removing nuisance ICs. It may result in a cleaner 
+#'  estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+#'  for larger datasets. 
 #'  
-#'  The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
-#'  of group ICs and \eqn{T} is the number of timepoints in each fMRI scan. 
+#'  Set \code{Q2} to control denoising: use a positive integer to specify the
+#'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+#'  estimated by PESEL, or zero (default) to skip denoising. 
+#' 
+#'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+#'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
+#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param out_fname Character vector of file path(s) to write the mean and variance templates to.
 #'  If one file name is provided, it will be appended with \code{"_mean.dscalar.nii"} for the
 #'  template mean map and \code{"_var.dscalar.nii"} for the template variance map. If two
@@ -178,7 +182,7 @@ estimate_template <- function(
   GICA, inds=NULL,
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
-  Q2=0, maxQ=NULL,
+  Q2=0, Q2_max=NULL, 
   brainstructures=c("left","right"), mask=NULL,
   var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
@@ -192,11 +196,12 @@ estimate_template <- function(
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
+  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
   var_method <- match.arg(var_method, c("unbiased", "non-negative")) 
-  if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
+  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
   retest <- !is.null(BOLD2)
@@ -362,7 +367,9 @@ estimate_template <- function(
   if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) #for functional connectivity template
 
   for (ii in seq(nN)) {
-    if(verbose) cat('\n Reading and analyzing data for subject ', ii,' of ', nN, ".\n")
+    if(verbose) { cat(paste0(
+      '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+    )) }
     if (retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
     DR_ii <- dual_reg2(
@@ -372,7 +379,7 @@ estimate_template <- function(
       center_rows=center_rows, center_cols=center_cols, 
       scale=scale, detrend_DCT=detrend_DCT,
       normA=normA,
-      Q2=Q2, maxQ=maxQ,
+      Q2=Q2, Q2_max=Q2_max,
       brainstructures=brainstructures, mask=mask,
       verbose=verbose
     )
@@ -458,7 +465,7 @@ estimate_template <- function(
     inds=inds,
     center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
     center_Gcols=center_Gcols, normA=normA,
-    Q2=Q2, maxQ=maxQ,
+    Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     var_method=var_method
   )
@@ -546,7 +553,7 @@ estimate_template.cifti <- function(
   brainstructures=c("left","right"), 
   var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
-  Q2=0, maxQ=NULL,
+  Q2=0, Q2_max=NULL,
   out_fname=NULL,
   FC=FALSE, 
   verbose=TRUE) {
@@ -559,7 +566,7 @@ estimate_template.cifti <- function(
     brainstructures=brainstructures, 
     var_method=var_method,
     keep_DR=keep_DR,
-    Q2=Q2, maxQ=maxQ,
+    Q2=Q2, Q2_max=Q2_max,
     out_fname=out_fname,
     FC=FC, 
     verbose=verbose
@@ -636,7 +643,7 @@ estimate_template.nifti <- function(
   mask=mask, 
   var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
-  Q2=0, maxQ=NULL,
+  Q2=0, Q2_max=NULL,
   out_fname=NULL,
   FC=FALSE, 
   verbose=TRUE) {
@@ -649,7 +656,7 @@ estimate_template.nifti <- function(
     mask=mask, 
     var_method=var_method,
     keep_DR=keep_DR,
-    Q2=Q2, maxQ=maxQ,
+    Q2=Q2, Q2_max=Q2_max,
     out_fname=out_fname,
     FC=FC, 
     verbose=verbose
