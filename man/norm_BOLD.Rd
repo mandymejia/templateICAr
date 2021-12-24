@@ -17,7 +17,7 @@ norm_BOLD(
 
 \item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation. Default: \code{FALSE}.}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
 }

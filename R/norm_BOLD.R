@@ -4,7 +4,7 @@
 #'
 #' @param BOLD fMRI numeric data matrix (\eqn{V \times T})
 #' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation (see Details).
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation. Default: \code{FALSE}.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' 
 #' @return Normalized BOLD data matrix (\eqn{V \times T})
@@ -74,4 +74,20 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=TRUE, scale=FALSE, det
   } 
   
   BOLD
+}
+
+#' Scale BOLD (legacy version of \code{norm_BOLD})
+#' 
+#' @param BOLD fMRI numeric data matrix (\eqn{V \times T})
+#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation. Default: \code{FALSE}.
+
+scale_BOLD <- function(BOLD, scale=FALSE){
+  warning(
+    "`scale_BOLD` has been renamed to `norm_BOLD`. ",
+    " `scale_BOLD` will be removed in a future version. ",
+    "Please replace instances of `scale_BOLD` with `norm_BOLD`. ",
+    "Also, note that the scaling factor is computed slightly differently now."
+  )
+
+  norm_BOLD(BOLD, scale=scale)
 }
