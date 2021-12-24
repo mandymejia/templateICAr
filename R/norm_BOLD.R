@@ -57,7 +57,7 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=TRUE, scale=FALSE, det
     if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD) }
   }
 
-  # Detrend
+  # Detrend.
   if (detrend_DCT > 0) {
     BOLD <- nuisance_regression(BOLD, cbind(1, dct_bases(nT, detrend_DCT)))
     if (!center_rows) { BOLD <- BOLD + voxMeans }

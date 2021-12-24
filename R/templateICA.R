@@ -106,7 +106,9 @@ templateICA <- function(
   usePar=FALSE,
   verbose=TRUE){
 
-  # Check arguments ------------------------------------------
+  # Check arguments ------------------------------------------------------------
+  
+  # Simple argument checks.
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
@@ -130,7 +132,38 @@ templateICA <- function(
   stopifnot(is.logical(verbose) && length(verbose)==1)
   xii1 <- NULL
 
-  # Determine the format of `BOLD` and `BOLD2`
+  # `usePar`
+  if (!isFALSE(usePar)) {
+    parPkgs <- c("parallel", "doParallel")
+    parPkgs_missing <- vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
+    if (any(parPkgs_missing)) {
+      if (all(parPkgs_missing)) {
+        stop(paste0(
+          "Packages `parallel` and `doParallel` needed ",
+          "for `usePar` to loop over voxels. Please install it.", call.=FALSE
+        ))
+      } else {
+        stop(paste0(
+          "Package `", parPkgs[parPkgs_missing], "` needed ",
+          "for `usePar` to loop over voxels. Please install it.", call.=FALSE
+        ))
+      }
+    }
+
+    cores <- parallel::detectCores()
+    if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
+    if (nCores < 2) { 
+      usePar <- FALSE
+    } else {
+      cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(cluster)
+    }
+  }
+
+  # `out_fname`?
+
+  # `BOLD` ---------------------------------------------------------------------
+  # Determine the format of `BOLD`. 
   format <- infer_BOLD_format(BOLD)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
@@ -141,7 +174,7 @@ templateICA <- function(
   )
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
 
-  # [TO DO] if FORMAT=="CIFTI", take intersection of template mask and provided mask.
+  # [TO DO] if FORMAT=="NIFTI", take intersection of template mask and provided mask.
 
   # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
   if (format %in% c("CIFTI", "NIFTI")) {
@@ -158,7 +191,17 @@ templateICA <- function(
   if (is.xifti(BOLD, messages=FALSE) || is.matrix(BOLD) || is.array(BOLD)) { BOLD <- list(BOLD) }
   nN <- length(BOLD)
 
-  # Get templates as a numeric data matrix or array.
+  # `brainstructures`
+  if (FORMAT == "CIFTI") {
+    brainstructures <- match.arg(brainstructures, c("left", "right", "subcortical", "all"), several.ok=TRUE)
+    if ("all" %in% brainstructures) { brainstructures <- c("left", "right", "subcortical") }
+    do_left <- "left" %in% brainstructures
+    do_right <- "right" %in% brainstructures
+    do_sub <- "subcortical" %in% brainstructures
+  }
+
+  # templates ------------------------------------------------------------------
+  # Conver templates to numeric data matrices or arrays.
   # Check that the mean and variance template dimensions match.
   if (FORMAT == "CIFTI") {
     if (is.character(template_mean)) { 
@@ -208,9 +251,10 @@ templateICA <- function(
   stopifnot(all(dim(template_mean) == dim(template_var)))
   nL <- dim(template_mean)[length(dim(template_mean))]
 
+  # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
-  #   Check templates and `mask` dimensions match.
-  #   Vectorize templates.
+  # Check templates and `mask` dimensions match.
+  # Vectorize templates.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
     if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask, reorient=FALSE) }
@@ -235,20 +279,7 @@ templateICA <- function(
     nI <- nV <- nrow(template_mean)
   }
 
-  # `out_fname`?
-
-  # `brainstructures`
-  if (FORMAT == "CIFTI") {
-    brainstructures <- match.arg(brainstructures, c("left", "right", "subcortical", "all"), several.ok=TRUE)
-    if ("all" %in% brainstructures) { brainstructures <- c("left", "right", "subcortical") }
-    do_left <- "left" %in% brainstructures
-    do_right <- "right" %in% brainstructures
-    do_sub <- "subcortical" %in% brainstructures
-  }
-
-  # `Q2` and `maxQ` handled later
-
-  # spatial_model
+  # `spatial_model` ------------------------------------------------------------
   do_spatial <- !is.null(spatial_model)
   if (do_spatial) {
     # Check that `BOLD` format is compatible with the spatial model
@@ -321,45 +352,18 @@ templateICA <- function(
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
     #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
   }
-    
-  if (!isFALSE(usePar)) {
-    parPkgs <- c("parallel", "doParallel")
-    parPkgs_missing <- vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
-    if (any(parPkgs_missing)) {
-      if (all(parPkgs_missing)) {
-        stop(paste0(
-          "Packages `parallel` and `doParallel` needed ",
-          "for `usePar` to loop over voxels. Please install it.", call.=FALSE
-        ))
-      } else {
-        stop(paste0(
-          "Package `", parPkgs[parPkgs_missing], "` needed ",
-          "for `usePar` to loop over voxels. Please install it.", call.=FALSE
-        ))
-      }
-    }
-
-    cores <- parallel::detectCores()
-    if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
-    if (nCores < 2) { 
-      usePar <- FALSE
-    } else {
-      cluster <- parallel::makeCluster(nCores)
-      doParallel::registerDoParallel(cluster)
-    }
-  }
 
   #TO DO: Define do_FC, pass in FC template
   do_FC <- FALSE
 
-  # Process each scan ---------------------
+  # Process the scan -----------------------------------------------------------
   if (verbose) {
     cat('Number of data locations:      ', nV, "\n")
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of BOLD scans:          ', nN, "\n")
   }
 
-  # Read in.
+  # Get each entry of `BOLD` as a data matrix or array. 
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
@@ -408,7 +412,7 @@ templateICA <- function(
   stopifnot(ldB-1 == length(nI))
   stopifnot(all(dBOLD[seq(ldB-1)] == nI))
 
-  # Vectorize BOLD
+  # Vectorize `BOLD`.
   if (FORMAT=="NIFTI") {
     for (bb in seq(nN)) {
       BOLD[[bb]] <- matrix(BOLD[[bb]][rep(mask, dBOLD[ldB])], ncol=nT)
@@ -444,43 +448,37 @@ templateICA <- function(
     # BOLD <- BOLD[keep,]
   }
 
-  #check that maxQ makes sense
-  if (!is.null(maxQ)) {
-    if(round(maxQ) != maxQ || maxQ <= 0) stop('maxQ must be NULL or a round positive number.')
-  } else {
-    maxQ <- round(sum(nT)/2)
-  }
-  if (maxQ < nL) {
-    warning('maxQ must be at least L.  Setting maxQ=L.')
-    maxQ <- nL
-  }
-  # This is to avoid the area of the pesel objective function that spikes close
-  #   to rank(X), which often leads to nPC close to rank(X)
-  if (maxQ > round(sum(nT)*0.75)) {
-    warning('maxQ too high, setting to 75% of T.')
-    maxQ <- round(sum(nT)*0.75)
-  }
-
-  # Normalize (center, scale, and detrend) and concatenate data
+  # Normalize BOLD -------------------------------------------------------------
+  # (Center, scale, and detrend)
+  
   BOLD <- lapply(BOLD, norm_BOLD, 
     center_rows=center_rows, center_cols=center_cols, 
     scale=scale, detrend_DCT=detrend_DCT
   )
+
+  # Concatenate the data.
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
 
-  ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
-
+  # Estimate and deal with nuisance ICs ----------------------------------------
+  maxQ <- maxQ_check(maxQ, nL, nT)
   if (maxQ > nL) {
     BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=maxQ-nL, verbose=verbose)
   }
 
-  # [TO DO] Scale again?
+  # Center and scale `BOLD` again, but do not detrend again. -------------------
+  BOLD <- norm_BOLD(
+    BOLD, center_rows=center_rows, center_cols=center_cols, 
+    scale=scale, detrend_DCT=FALSE
+  )
 
-  # Initialize mixing matrix (use dual regression-based estimate for starting value)
-  BOLD_DR <- dual_reg(BOLD, template_mean, normA=normA)
+  # Initialize with the dual regression-based estimate -------------------------
+  BOLD_DR <- dual_reg(
+    BOLD, template_mean, center_rows=FALSE, center_cols=FALSE, 
+    scale=FALSE, detrend_DCT=0, normA=normA
+  )
 
-  ### 4. RUN EM ALGORITHM!
+  # EM -------------------------------------------------------------------------
 
   #Three algorithms to choose from:
   #1) FC Template ICA (new)
@@ -493,7 +491,7 @@ templateICA <- function(
     ## TO DO: FILL IN HERE
     prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
     template_FC <- NULL
-    EM_FCtemplateICA <- function(){NULL}
+    EM_FCtemplateICA <- function(...){NULL}
     resultEM <- EM_FCtemplateICA(
       template_mean, template_var, template_FC,
       prior_params, #for prior on tau^2

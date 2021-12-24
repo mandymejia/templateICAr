@@ -186,7 +186,9 @@ estimate_template <- function(
   FC=FALSE, 
   verbose=TRUE) {
 
-  # Check arguments ------------------------------------------
+  # Check arguments ------------------------------------------------------------
+  
+  # Simple argument checks.
   stopifnot(is.logical(center_rows) && length(center_rows)==1)
   stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
@@ -197,11 +199,53 @@ estimate_template <- function(
   if (!is.null(Q2) && !is.null(maxQ)) { stop("Specify one of `Q2` or `maxQ`.") }
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
-  xii1 <- NULL
-
   retest <- !is.null(BOLD2)
 
-  # Determine the format of `BOLD` and `BOLD2`
+  # `keep_DR`
+  if (is.logical(keep_DR)) {
+    stopifnot(length(keep_DR)==1)
+  } else {
+    if (is.character(keep_DR)) {
+      stopifnot(length(keep_DR)==1)
+      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
+      if (!dir.exists(dirname(keep_DR))) { stop('Directory part of `keep_DR` does not exist.') }
+    } else if (is.list(keep_DR)) {
+      if (length(keep_DR) != 2) {
+        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      }
+      if (length(keep_DR[[1]]) != nN || length(keep_DR[[2]]) != nN) {
+        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      }
+      if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
+    }
+  }
+
+  # `out_fname`
+  if (!is.null(out_fname)) {
+    out_fname <- as.character(out_fname)
+    if (!dir.exists(dirname(out_fname))) { stop('Directory part of `out_fname` does not exist.') }
+    if (!endsWith(out_fname, FORMAT_extn)) { out_fname <- paste0(out_fname, FORMAT_extn) }
+    if (length(out_fname) == 1) {
+      out_fname <- c(
+        gsub(FORMAT_extn, paste0("_mean", FORMAT_extn), out_fname),
+        gsub(FORMAT_extn, paste0("_var", FORMAT_extn), out_fname),
+        gsub(FORMAT_extn, paste0("_varNN", FORMAT_extn), out_fname)
+      )
+      if (var_method != "both") { out_fname <- out_fname[seq(2)] }
+    } else if (var_method != "both") {
+      if (length(out_fname) > 2) { warning("Using the first two entries of `out_fname`."); out_fname <- out_fname[seq(2)] }
+    } else {
+      if (length(out_fname) == 2) {
+        out_fname <- c(out_fname, gsub(FORMAT_extn, paste0("_varNN", FORMAT_extn), out_fname))
+      } else if (length(out_fname) > 3) { warning("Using the first three entries of `out_fname`."); out_fname <- out_fname[seq(3)] }
+    }
+  }
+
+  # `xii1` will be used to format output
+  xii1 <- NULL
+
+  # `BOLD` and `BOLD2` ---------------------------------------------------------
+  # Determine the format of `BOLD` and `BOLD2`. 
   format <- infer_BOLD_format(BOLD)
   if (retest) {
     format2 <- infer_BOLD_format(BOLD2)
@@ -249,7 +293,8 @@ estimate_template <- function(
     }
   }
 
-  # Get `GICA` as a numeric data matrix or array.
+  # `GICA` ---------------------------------------------------------------------
+  # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_xifti(GICA, brainstructures=brainstructures) }
     if (is.xifti(GICA)) { 
@@ -265,9 +310,19 @@ estimate_template <- function(
   }
   nQ <- dim(GICA)[length(dim(GICA))]
 
+  # `inds`.
+  if (!is.null(inds)) {
+    if (!all(inds %in% seq(nQ))) stop('Invalid entries in inds argument.')
+    nL <- length(inds)
+  } else {
+    inds <- seq(nQ)
+    nL <- nQ
+  }
+
+  # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
-  #   Check `GICA` and `mask` dimensions match.
-  #   Vectorize `GICA`.
+  # Check `GICA` and `mask` dimensions match.
+  # Vectorize `GICA`.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
     if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask, reorient=FALSE) }
@@ -294,59 +349,7 @@ estimate_template <- function(
   # Center `GICA` columns.
   if (center_Gcols) { GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
 
-  # `keep_DR`
-  if (is.logical(keep_DR)) {
-    if (length(keep_DR) > 1) { warning("Using the first entry of `keep_DR`."); keep_DR <- keep_DR[1] }
-  } else {
-    if (is.character(keep_DR)) {
-      if (length(keep_DR) > 1) { warning("Using the first entry of `keep_DR`."); keep_DR <- keep_DR[1] }
-      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
-      if (!dir.exists(dirname(keep_DR))) { stop('Directory part of `keep_DR` does not exist.') }
-    } else if (is.list(keep_DR)) {
-      if (length(keep_DR) != 2) {
-        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
-      }
-      if (length(keep_DR[[1]]) != nN || length(keep_DR[[2]]) != nN) {
-        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
-      }
-      if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
-    }
-  }
-
-  # `inds`.
-  if (!is.null(inds)) {
-    if (!all(inds %in% seq(nQ))) stop('Invalid entries in inds argument.')
-    nL <- length(inds)
-  } else {
-    inds <- seq(nQ)
-    nL <- nQ
-  }
-
-  # `out_fname`
-  if (!is.null(out_fname)) {
-    out_fname <- as.character(out_fname)
-    if (!dir.exists(dirname(out_fname))) { stop('Directory part of `out_fname` does not exist.') }
-    if (!endsWith(out_fname, FORMAT_extn)) { out_fname <- paste0(out_fname, FORMAT_extn) }
-    if (length(out_fname) == 1) {
-      out_fname <- c(
-        gsub(FORMAT_extn, paste0("_mean", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_var", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_varNN", FORMAT_extn), out_fname)
-      )
-      if (var_method != "both") { out_fname <- out_fname[seq(2)] }
-    } else if (var_method != "both") {
-      if (length(out_fname) > 2) { warning("Using the first two entries of `out_fname`."); out_fname <- out_fname[seq(2)] }
-    } else {
-      if (length(out_fname) == 2) {
-        out_fname <- c(out_fname, gsub(FORMAT_extn, paste0("_varNN", FORMAT_extn), out_fname))
-      } else if (length(out_fname) > 3) { warning("Using the first three entries of `out_fname`."); out_fname <- out_fname[seq(3)] }
-    }
-  }
-
-  # `brainstructures` is handled when needed
-  # `Q2` and `maxQ` handled later
-
-  # Process each scan ---------------------
+  # Process each scan ----------------------------------------------------------
   if (verbose) {
     cat('Number of data locations:      ', nV, "\n")
     cat('Number of original group ICs:  ', nQ, "\n")
@@ -363,13 +366,15 @@ estimate_template <- function(
     if (retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
     DR_ii <- dual_reg2(
-      BOLD[ii], BOLD2=B2, GICA=GICA,
+      BOLD[ii], BOLD2=B2, 
+      format=format,       
+      GICA=GICA,
       center_rows=center_rows, center_cols=center_cols, 
       scale=scale, detrend_DCT=detrend_DCT,
-      center_Gcols=FALSE, normA=normA,
-      format=format, 
+      normA=normA,
+      Q2=Q2, maxQ=maxQ,
       brainstructures=brainstructures, mask=mask,
-      Q2=Q2, maxQ=maxQ, verbose=verbose
+      verbose=verbose
     )
 
     DR0[1,ii,,] <- DR_ii$test[inds,]

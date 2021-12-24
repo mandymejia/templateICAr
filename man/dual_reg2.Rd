@@ -7,33 +7,38 @@
 dual_reg2(
   BOLD,
   BOLD2 = NULL,
+  format = c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
   GICA,
   center_rows = TRUE,
   center_cols = TRUE,
   scale = TRUE,
   detrend_DCT = 0,
-  center_Gcols = TRUE,
   normA = FALSE,
-  format = c("infer", "CIFTI", "xifti", "NIFTI", "nifti", "data"),
-  brainstructures = c("left", "right"),
-  mask = NULL,
   Q2 = 0,
   maxQ = NULL,
+  brainstructures = c("left", "right"),
+  mask = NULL,
   verbose = TRUE
 )
 }
 \arguments{
 \item{BOLD, BOLD2}{Subject-level fMRI data in one of the following formats: 
- a CIFTI file path, a \code{"xifti"}, a NIFTI file path, a \code{"nifti"}, or
- a \eqn{V \times T} numeric matrix.
+ a CIFTI file path, a \code{"xifti"} object, a NIFTI file path, a \code{"nifti"} object, or
+ \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
+ \eqn{T} is the number of timepoints.
 
  If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
+ \code{BOLD2} should be the same length as \code{BOLD} and have the same subjects in the same order.
  If \code{BOLD2} is not provided, \code{BOLD} will be split in half; 
  the first half will be the test data and the second half will be the retest data.}
 
-\item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also be a
-(vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.}
+\item{format}{Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
+a \code{"CIFTI"} file path, a \code{"xifti"} object, a
+\code{"NIFTI"} file path, a \code{"nifti"} object, or a \code{"data"} matrix.}
+
+\item{GICA}{Group ICA maps in as a (vectorized) numeric matrix 
+(\eqn{V \times Q}). Columns should be centered.}
 
 \item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
 
@@ -41,26 +46,9 @@ dual_reg2(
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Gcols}{Center GICA across columns (each ICA)? Default: \code{TRUE}.}
-
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 such that the product \eqn{A \times S} remains the same).}
-
-\item{format}{Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
-\code{"infer"} (default), a \code{"CIFTI"} file path, a \code{"xifti"} object, a
-\code{"NIFTI"} file path, a \code{"nifti"} object, or a \code{"data"} matrix.}
-
-\item{brainstructures}{Only applies if \code{format} is \code{"CIFTI"}. 
-Character vector indicating which brain structure(s)
-to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
-cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
-gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
-
-\item{mask}{Required if and only if \code{BOLD} is a NIFTI file path or
-\code{"nifti"} object. This is a brain map formatted as a binary array of the same 
-size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{Q2, maxQ}{Obtain dual regression estimates after denoising? Denoising is based on modeling and
 removing nuisance ICs. It may result in a cleaner estimate for smaller datasets, but it may be unnecessary (and time-consuming) for larger datasets.
@@ -73,15 +61,21 @@ Default: \code{Q2==0} (do not denoise).
 The valid inputs are \eqn{Q <= (Q+Q2) = maxQ <= T}, where \eqn{Q} is the number
 of group ICs and \eqn{T} is the number of timepoints in each fMRI scan.}
 
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
+Character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
+
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+\code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
+size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
+
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \description{
-Wrapper to \code{dual_reg}. Can handle NIFTI or CIFTI file input, halving the 
-data in absense of retest data, and removing nuisance regressors.
-}
-\details{
-Used to compute dual regression for the purpose of template estimation, and 
- to obtain initial subject-level IC estimates for template ICA. In the latter
- case, \code{GICA} should be the template mean.
+Wrapper to \code{dual_reg} used by `estimate_template`. The format of `BOLD`
+ (and `BOLD2`) must be provided, and `GICA` must be vectorized if applicable.
 }
 \keyword{internal}
