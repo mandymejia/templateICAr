@@ -454,14 +454,28 @@ estimate_template <- function(
   }
 
   # Format and save template
+  template_params <- list(
+    inds=inds,
+    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    center_Gcols=center_Gcols, normA=normA,
+    Q2=Q2, maxQ=maxQ,
+    brainstructures=brainstructures,
+    var_method=var_method
+  )
   if (FORMAT == "CIFTI" && !is.null(xii1)) {
     # Format template as "xifti"s
     GICA <- newdata_xifti(select_xifti(xii1, rep(1, nL)), GICA)
     GICA$meta$cifti$names <- paste0("IC ", inds)
     template$mean <- newdata_xifti(GICA, template$mean)
-    template$mean$meta$cifti$misc <- list(template="mean")
+    template$mean$meta$cifti$misc <- c(
+      list(template="mean"), 
+      template_params[names(template_params) != "var_method"]
+    )
     template$var <- newdata_xifti(GICA, template$var)
-    template$var$meta$cifti$misc <- list(template="var")
+    template$var$meta$cifti$misc <- c(
+      list(template="var"), 
+      template_params
+    )
     if (!is.null(out_fname)) {
       write_cifti(template$mean, out_fname[1], verbose=verbose)
       write_cifti(template$var, out_fname[2], verbose=verbose)
