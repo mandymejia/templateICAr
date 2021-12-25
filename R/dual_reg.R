@@ -128,7 +128,7 @@ dual_reg2 <- function(
   out <- list(test = NULL, retest = NULL)
 
   # Load helper variables.
-  retest <- is.null(BOLD2)
+  retest <- !is.null(BOLD2)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -146,7 +146,7 @@ dual_reg2 <- function(
     stopifnot(is.matrix(BOLD))
     if (retest) {
       BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures)
-      if (is.xifti(BOLD2)) { BOLD <- as.matrix(BOLD2) }
+      if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
   } else if (format == "NIFTI") {
@@ -154,7 +154,7 @@ dual_reg2 <- function(
     stopifnot(length(dim(BOLD)) > 1)
     if (retest) {
       BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE)
-      stopifnot(length(dim(BOLD)) > 1)
+      stopifnot(length(dim(BOLD2)) > 1)
     }
   } else {
     stopifnot(is.matrix(BOLD))
