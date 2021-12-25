@@ -11,12 +11,16 @@ estimate_template_from_DR(
 )
 }
 \arguments{
-\item{DR, }{the test and retest dual regression estimates (\eqn{M \times N \times (L \times V)})}
+\item{DR, }{the test and retest(s) dual regression estimates, as a matrix with
+dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
+of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
+IC networks, and \eqn{V} is the number of data locations.}
 
 \item{var_method}{\code{"unbiased"} (default) or \code{"non-negative"}}
 
-\item{LV}{A length-two integer vector giving the dimensions L and V to reshape the result. 
-Default: \code{NULL} (do not reshape the result).}
+\item{LV}{A length-two integer vector giving the dimensions \eqn{L} and 
+\eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
+result).}
 }
 \value{
 List of two elements: the mean and variance templates

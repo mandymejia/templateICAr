@@ -211,15 +211,20 @@ dual_reg2 <- function(
   out$test <- dual_reg(
     BOLD, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
-  )$S
+  )
   out$retest <- dual_reg(
     BOLD2, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
-  )$S
+  )
+  # (Do not remove $A here, because it's needed for `rm_nuisIC`.)
 
   # Return now, if denoising is not needed. ------------------------------------
   nT2 <- min(ncol(BOLD), ncol(BOLD2))
-  if (!is.null(Q2) && Q2==0) { return(out) }
+  if (!is.null(Q2) && Q2==0) { 
+    out$test <- out$test$S
+    out$retest <- out$retest$S
+    return(out) 
+  }
 
   # Estimate and deal with nuisance ICs. ---------------------------------------
   BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
@@ -236,12 +241,12 @@ dual_reg2 <- function(
   )
 
   # Do DR again. ---------------------------------------------------------------
-  out$test_preclean <- out$test
+  out$test_preclean <- out$test$S
   out$test <- dual_reg(
     BOLD, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, detrend_DCT=0, normA=normA
   )$S
-  out$retest_preclean <- out$retest
+  out$retest_preclean <- out$retest$S
   out$retest <- dual_reg(
     BOLD2, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, detrend_DCT=0, normA=normA

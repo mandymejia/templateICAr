@@ -1,9 +1,13 @@
 #' Estimate template from DR estimates
 #'
-#' @param DR, the test and retest dual regression estimates (\eqn{M \times N \times (L \times V)})
+#' @param DR, the test and retest(s) dual regression estimates, as a matrix with
+#'  dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
+#'  of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
+#'  IC networks, and \eqn{V} is the number of data locations.
 #' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
-#' @param LV A length-two integer vector giving the dimensions L and V to reshape the result. 
-#'  Default: \code{NULL} (do not reshape the result).
+#' @param LV A length-two integer vector giving the dimensions \eqn{L} and 
+#'  \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
+#'  result).
 #'
 #' @return List of two elements: the mean and variance templates
 #' @export
@@ -12,9 +16,9 @@ estimate_template_from_DR <- function(
 
   # Check arguments.
   stopifnot(length(dim(DR)) == 3)
-  nM <- dim(DR)[1]
-  nN <- dim(DR)[2]
-  nLV <- dim(DR)[3]
+  nM <- dim(DR)[1]  # visits
+  nN <- dim(DR)[2]  # subjects
+  nLV <- dim(DR)[3] # locations & networks
   var_method <- match.arg(var_method, c("unbiased", "non-negative"))
   if (!is.null(LV)) {
     stopifnot(is.numeric(nLV) && all(nLV > 0) && all(nLV == round(nLV)))
@@ -22,11 +26,14 @@ estimate_template_from_DR <- function(
   }
 
   vd <- var_decomp(DR)
+  # Below true for M==2. Double check correct for M > 3? (Not used currently.)
+  MSB_divM <- (vd$SSB / (nN-1)) / nM
+  MSE_divM <- (vd$SSR / ((nM-1)*(nN-1))) / nM
   template <- list(
     mean = vd$grand_mean,
     var = switch(var_method,
-      unbiased = (vd$SSB / (nN-1)) / 2,
-      `non-negative` = ((vd$SSB / (nN-1) - vd$SSR / ((nM-1)*(nN-1)))) / 2
+      unbiased = pmax(0, MSB_divM - MSE_divM),
+      `non-negative` = MSB_divM
     )
   )
 
