@@ -13,6 +13,6 @@ sign_flip(x)
 \code{x} but with positive skew source signals
 }
 \description{
-Flips all source signal estiamtes (S) to positive skew
+Flips all source signal estimates (S) to positive skew
 }
 \keyword{internal}

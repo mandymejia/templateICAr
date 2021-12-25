@@ -90,7 +90,7 @@ estimate_template.nifti(
 
  If \code{inds} is provided, the ICs not included will be removed after calculating
  dual regression, not before. This is because removing the ICs prior to dual 
- regression would leave unmodeled signals in the data, which could bias the 
+ regression would leave unmodelled signals in the data, which could bias the 
  templates.}
 
 \item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}

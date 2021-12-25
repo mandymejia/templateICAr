@@ -96,12 +96,12 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
  If \code{BOLD} represents CIFTI-format data, \code{spatial_model} should give the left and
  right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
  objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
- the subcortex. This argument can also be \code{TRUE}, in which case spatial modelling
+ the subcortex. This argument can also be \code{TRUE}, in which case spatial modeling
  will be performed with the surfaces included in the first entry of \code{BOLD} if it is a 
  \code{"xifti"} object, or if those are not present available, the default inflated
  surfaces from \code{ciftiTools}.
 
- If \code{BOLD} represents NIFTI-format data, spatial modelling is not yet available.
+ If \code{BOLD} represents NIFTI-format data, spatial modeling is not yet available.
 
  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
  (see \code{\link{make_mesh}}).}
