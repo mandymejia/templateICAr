@@ -268,7 +268,7 @@ activations.cifti2 <- function(result, spatial_model=NULL, u=0, alpha=0.01, type
   if(class(result) != 'templateICA.cifti') stop("result argument must be of class 'templateICA.cifti', the result of a call to function templateICA.cifti()")
 
   model_result <- result$model_result
-  active_xifti <- clear_data(result$subjICmean_xifti)
+  active_xifti <- result$subjICmean_xifti * 0
   nleft <- nrow(result$subjICmean_xifti$data$cortex_left)
   nright <- nrow(result$subjICmean_xifti$data$cortex_right)
 

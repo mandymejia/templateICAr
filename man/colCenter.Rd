@@ -7,7 +7,7 @@
 colCenter(X)
 }
 \arguments{
-\item{X}{The data matrix. Its columns wil lbe centered}
+\item{X}{The data matrix. Its columns will be centered}
 }
 \value{
 The centered data

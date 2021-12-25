@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{Q2_max_check}
 \alias{Q2_max_check}
-\title{Check Q2_max}
+\title{Check \code{Q2_max}}
 \usage{
 Q2_max_check(Q2_max, nQ, nT)
 }
@@ -13,6 +13,6 @@ Q2_max_check(Q2_max, nQ, nT)
 \code{Q2_max}, clamped to acceptable range of values.
 }
 \description{
-Check Q2_max
+Check \code{Q2_max} and set it if \code{NULL}.
 }
 \keyword{internal}

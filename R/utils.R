@@ -162,14 +162,6 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
 }
 
-#TRY TO REPLACE USE OF THIS WITH REPLACE_XIFTI_DATA
-clear_data <- function(x){
-  if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
-  if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
-  if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
-  return(x)
-}
-
 #' Positive skew?
 #' 
 #' Does the vector have a positive skew? 
@@ -206,7 +198,7 @@ sign_flip <- function(x){
 #' 
 #' Efficiently center columns of a matrix. (Faster than \code{scale})
 #' 
-#' @param X The data matrix. Its columns wil lbe centered
+#' @param X The data matrix. Its columns will be centered
 #' @return The centered data
 #' @keywords internal
 colCenter <- function(X) {
@@ -268,20 +260,9 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
   format
 }
 
-#' Logical argument
+#' Check \code{Q2_max}
 #' 
-#' Make \code{TRUE} or \code{FALSE}
-#' 
-#' @param x The argument input
-#' @return \code{TRUE} or \code{FALSE}
-#' @keywords internal
-logical_arg <- function(x, name="x"){
-  x <- as.logical(x)
-  if (length(x) > 1) { warning("Using the first element of `", name, "`\n"); x <- x[1] }
-  x
-}
-
-#' Check Q2_max
+#' Check \code{Q2_max} and set it if \code{NULL}.
 #' 
 #' @param Q2_max,nQ,nT The args
 #' @return \code{Q2_max}, clamped to acceptable range of values.
@@ -302,5 +283,5 @@ Q2_max_check <- function(Q2_max, nQ, nT){
     Q2_max <- round(nT*.75 - nQ)
   }
 
-  return(Q2_max)
+  Q2_max
 }

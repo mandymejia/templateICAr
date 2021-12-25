@@ -481,15 +481,16 @@ templateICA <- function(
     scale=FALSE, detrend_DCT=0, normA=normA
   )
 
+  # ----------------------------------------------------------------------------
   # EM -------------------------------------------------------------------------
-
   #Three algorithms to choose from:
   #1) FC Template ICA (new)
   #2) Template ICA
   #3) Spatial Template ICA (initialize with standard Template ICA)
+  # ----------------------------------------------------------------------------
 
+  #1) FC Template ICA ----------------------------------------------------------
   if(do_FC) {
-    ### FC TEMPLATE ICA
 
     ## TO DO: FILL IN HERE
     prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
@@ -505,24 +506,26 @@ templateICA <- function(
     )
   } else {
 
-    ### TEMPLATE ICA AND SPATIAL TEMPLATE ICA
+    # Reduce data dimensions
     BOLD <- dim_reduce(BOLD, nL)
     err_var <- BOLD$sigma_sq
     BOLD2 <- BOLD$data_reduced
     H <- BOLD$H
     Hinv <- BOLD$H_inv
-    C_diag <- BOLD$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-    if(do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
+    # In original template ICA model nu^2 is separate
+    #   for spatial template ICA it is part of C
+    C_diag <- BOLD$C_diag
+    if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
     rm(BOLD)
-
-    HA <- H %*% BOLD_DR$A #apply dimension reduction
+    # Apply dimension reduction
+    HA <- H %*% BOLD_DR$A 
     theta0 <- list(A = HA)
     # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
     # theta0$nu0_sq = dat_list$sigma_sq
     # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
 
-    #TEMPLATE ICA
-    if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
+    #2) Template ICA -----------------------------------------------------------
+    if (do_spatial && verbose) { cat('INITIATING WITH STANDARD TEMPLATE ICA\n') }
     theta00 <- theta0
     theta00$nu0_sq <- err_var
     resultEM <- EM_templateICA.independent(template_mean,
@@ -536,9 +539,8 @@ templateICA <- function(
     resultEM$A <- Hinv %*% resultEM$theta_MLE$A
     class(resultEM) <- 'tICA'
 
-    #SPATIAL TEMPLATE ICA
+    #3) Spatial Template ICA ---------------------------------------------------
     if(do_spatial){
-
       resultEM_tICA <- resultEM
       theta0$kappa <- rep(kappa_init, nL)
       if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
@@ -558,18 +560,14 @@ templateICA <- function(
       #organize estimates and variances in matrix form
       resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=nL)
       resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=nL)
-    }
+      resultEM$A <- Hinv %*% resultEM$theta_MLE$A
 
-    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-
-    #for stICA, return tICA estimates also
-    if(do_spatial){
       resultEM$result_tICA <- resultEM_tICA
-      class(resultEM) <- 'stICA'
+      class(resultEM) <- 'stICA'    
     }
   }
 
-  #return DR estimates
+  # Return DR estimates.
   resultEM$result_DR <- BOLD_DR
 
   #This part problematic for spatial template ICA, but can bring back
@@ -590,33 +588,34 @@ templateICA <- function(
   #   resultEM$template_var <- template_var_orig
   # }
 
+  # Format output.
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
-    result$subjICmean <- newdata_xifti(xii1, result$subjICmean)
-    result$subjICse <- newdata_xifti(xii1, result$subjICse)
-
+    resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
+    resultEM$subjICse <- newdata_xifti(xii1, resultEM$subjICse)
     if (spatial_model) {
-      result$result_tICA$subjICmean <- newdata_xifti(xii1, result$result_tICA$subjICmean)
-      result$result_tICA$subjICse <- newdata_xifti(xii1, result$result_tICA$subjICse)
+      resultEM$result_tICA$subjICmean <- newdata_xifti(xii1, resultEM$result_tICA$subjICmean)
+      resultEM$result_tICA$subjICse <- newdata_xifti(xii1, resultEM$result_tICA$subjICse)
     }
+    class(resultEM) <- 'templateICA.cifti'
+
   } else if (FORMAT == "NIFTI") {
-
     subjICmean_nifti <- subjICvar_nifti <- template_mean
-    unvectorize <- function(img_vec, mask){
-      img3d <- mask
-      img3d[mask==TRUE] <- img_vec
-      return(img3d)
+    newdata_nii <- function(dat, mask, nii_temp) {
+      nL <- ncol(dat)
+      for (qq in seq(nL)) {
+        z <- mask
+        z[mask] <- dat[,qq]
+        nii_temp@.Data[,,,qq] <- z
+      }
+      nii_temp
     }
-    for (qq in seq(nL)) {
-      subjICmean_nifti@.Data[,,,qq] <- unvectorize(result$subjICmean[,qq], mask)
-      subjICvar_nifti@.Data[,,,qq] <- unvectorize(result$subjICvar[,qq], mask)
+    resultEM$subjICmean <- newdata_nii(resultEM$subjICmean, mask, template_mean)
+    resultEM$subjICvar <- newdata_nii(resultEM$subjICvar, mask, template_mean)
+    if (spatial_model) {
+      resultEM$subjICmean <- newdata_nii(resultEM$subjICmean, mask, template_mean)
+      resultEM$subjICvar <- newdata_nii(resultEM$subjICvar, mask, template_mean)
     }
-
-    resultEM <- list(
-      subjICmean_nifti = subjICmean_nifti,
-      subjICvar_nifti = subjICvar_nifti,
-      model_result = resultEM,
-      mask = mask
-    )
+    resultEM$mask <- mask
     class(resultEM) <- 'templateICA.nifti'
   }
 

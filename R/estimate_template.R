@@ -358,7 +358,7 @@ estimate_template <- function(
   }
 
   # Center `GICA` columns.
-  if (center_Gcols) { GICA <- GICA - rep(colMeans(GICA), rep.int(nV, nQ)) }
+  if (center_Gcols) { GICA <- colCenter(GICA) }
 
   # Process each scan ----------------------------------------------------------
   if (verbose) {
