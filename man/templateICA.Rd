@@ -85,7 +85,9 @@ Default: \code{c("left","right")} (cortical surface only).}
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
-\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis. If \code{NULL} (default), use all volumes.}
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis. 
+If \code{NULL} (default), use all volumes. Subsetting is performed before
+any centering, scaling, detrending, and denoising.}
 
 \item{spatial_model}{Should spatial modeling be performed? If \code{NULL}, assume
  spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
