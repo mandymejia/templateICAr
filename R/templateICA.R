@@ -26,19 +26,18 @@
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 #'  such that the product \eqn{A \times S} remains the same).
-#' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
-#'  based on modeling and removing nuisance ICs. It may result in a cleaner 
-#'  estimate for smaller datasets, but it may be unnecessary (and time-consuming)
-#'  for larger datasets. 
+#' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and 
+#'  removing nuisance ICs. It may result in a cleaner estimate for smaller 
+#'  datasets, but it may be unnecessary (and time-consuming) for larger datasets. 
 #'  
 #'  Set \code{Q2} to control denoising: use a positive integer to specify the
 #'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
-#'  estimated by PESEL, or zero (default) to skip denoising. 
+#'  estimated by PESEL (default), or zero to skip denoising. 
 #' 
 #'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 #'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
-#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
-#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
+#'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
 #'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 #'  Character vector indicating which brain structure(s)
@@ -99,7 +98,7 @@ templateICA <- function(
   template_mean, template_var=NULL, template_FC=NULL,
   center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
   normA=FALSE,
-  Q2=0, Q2_max=NULL,
+  Q2=NULL, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
   maxiter=100,
