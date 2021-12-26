@@ -48,7 +48,9 @@
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param time_inds Subset of fMRI BOLD volumes to include in analysis. If \code{NULL} (default), use all volumes.
+#' @param time_inds Subset of fMRI BOLD volumes to include in analysis. 
+#'  If \code{NULL} (default), use all volumes. Subsetting is performed before
+#'  any centering, scaling, detrending, and denoising.
 #' @param spatial_model Should spatial modeling be performed? If \code{NULL}, assume
 #'  spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
 #'  each independent component. Each should represent a brain structure, between which
@@ -299,7 +301,7 @@ templateICA <- function(
     # INLA
     INLA_check()
     flag <- INLA::inla.pardiso.check()
-    if (grepl('FAILURE',flag)) {
+    if (any(grepl('FAILURE',flag))) {
       stop(
         'PARDISO IS NOT INSTALLED OR NOT WORKING. ',
         'PARDISO for R-INLA is required for computational efficiency. ',
