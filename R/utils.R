@@ -244,6 +244,7 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
       stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
     }
   } else {
+    if (!is.list(BOLD)) { BOLD <- list(BOLD) }
     BOLD_dims <- lapply(BOLD, dim)
     BOLD_dims_lens <- sort(unique(vapply(BOLD_dims, length, 0)))
     if (length(BOLD_dims_lens) > 1) {

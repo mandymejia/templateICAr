@@ -41,7 +41,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, v
   #pesel function expects nxp data and will determine asymptotic framework
   #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
   if (is.null(Q2)) {
-    if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
+    if(verbose) cat(paste0('Estimating number of nuisance components... '))
     Q2 <- suppressWarnings(pesel(BOLD2, npc.max=Q2_max, method='homogenous')$nPCs) #estimated number of nuisance ICs
     if(verbose) cat(paste0(Q2,'\n'))
   }

@@ -191,8 +191,11 @@ templateICA <- function(
   }
 
   # Make `BOLD` a list.
-  if (is.character(BOLD)) { BOLD <- as.list(BOLD) }
-  if (is.xifti(BOLD, messages=FALSE) || is.matrix(BOLD) || is.array(BOLD)) { BOLD <- list(BOLD) }
+  if (is.character(BOLD)) { 
+    BOLD <- as.list(BOLD)
+  } else if (!is.list(BOLD)) {
+    BOLD <- list(BOLD)
+  }
   nN <- length(BOLD)
 
   # `brainstructures`
@@ -392,10 +395,12 @@ templateICA <- function(
   }
   dBOLD <- dBOLDs[[1]]
   ldB <- length(dBOLD)
-  for (bb in seq(2, nN)) {
-    stopifnot(all(dBOLD[seq(ldB-1)] == dBOLD[[bb]][seq(ldB-1)]))
+  if (nN > 1) {
+    for (bb in seq(2, nN)) {
+      stopifnot(all(dBOLD[seq(ldB-1)] == dBOLDs[[bb]][seq(ldB-1)]))
+    }
   }
-  nT <- vapply(dBOLD, function(x){x[ldB]}, 0)
+  nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
 
   # `time_inds`
   if (!is.null(time_inds)) {
@@ -409,7 +414,7 @@ templateICA <- function(
       BOLD[[bb]] <- BOLD[[bb]][,time_inds_bb,drop=FALSE]
     }
   }
-  nT <- vapply(dBOLD, function(x){x[ldB]}, 0)
+  nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
   nTmin <- min(nT)
 
   # Check `BOLD` dimensions correspond with template and `mask`.
