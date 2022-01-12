@@ -314,48 +314,46 @@ templateICA <- function(
     #check that the supplied mesh object is of type templateICA_mesh
     if (verbose) cat('Fitting a spatial model based on the mesh provided. Note that computation time and memory demands may be high.\n')
     if (FORMAT == "CIFTI") {
-      if (isTRUE(spatial_model)) {
-        meshes <- NULL
-        if (is.null(resamp_res)) {
-          res <- ciftiTools:::infer_resolution(BOLD)
-        } else {
-          res <- resamp_res
-        }
-        if (do_left) {
-          surf <- BOLD[[1]]$surf$cortex_left
-          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
-          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
-            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$left)
-          } else {
-            wall_mask <- NULL
-          }
-          if (rm_mwall) { 
-            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
-          } else {
-            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
-          }
-          meshes <- c(meshes, list(left=mesh))
-        }
-        if (do_right) {
-          surf <- BOLD[[1]]$surf$cortex_right
-          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
-          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
-            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$right)
-          } else {
-            wall_mask <- NULL
-          }
-          if (rm_mwall) { 
-            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
-          } else {
-            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
-          }
-          meshes <- c(meshes, list(right=mesh))
-        }
+      meshes <- NULL
+      if (is.null(resamp_res)) {
+        res <- ciftiTools:::infer_resolution(BOLD)
+      } else {
+        res <- resamp_res
       }
-    }
-    if (!is.list(meshes)) stop('meshes argument must be a list.')
-    if (!all(vapply(meshes, inherits, "templateICA_mesh", FALSE))) {
-      stop('Each element of meshes argument should be of class `templateICA_mesh`. See `help(make_mesh)`.')
+      if (do_left) {
+        surf <- BOLD[[1]]$surf$cortex_left
+        if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+        if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
+          wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$left)
+        } else {
+          wall_mask <- NULL
+        }
+        if (rm_mwall) { 
+          mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+        } else {
+          mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+        }
+        meshes <- c(meshes, list(left=mesh))
+      }
+      if (do_right) {
+        surf <- BOLD[[1]]$surf$cortex_right
+        if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+        if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
+          wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$right)
+        } else {
+          wall_mask <- NULL
+        }
+        if (rm_mwall) { 
+          mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+        } else {
+          mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+        }
+        meshes <- c(meshes, list(right=mesh))
+      }
+      if (!is.list(meshes)) stop('meshes argument must be a list.')
+      if (!all(vapply(meshes, inherits, "templateICA_mesh", FALSE))) {
+        stop('Each element of meshes argument should be of class `templateICA_mesh`. See `help(make_mesh)`.')
+      }
     }
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
     #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
@@ -405,7 +403,7 @@ templateICA <- function(
 
   # `time_inds`
   if (!is.null(time_inds)) {
-    for (bb in seq(2, nN)) {
+    for (bb in seq(nN)) {
       if (!all(time_inds %in% seq(nT))) {
         warning('Not all `time_inds` available.') # [TO DO]: improve
         time_inds_bb <- intersect(time_inds, seq(nT))
