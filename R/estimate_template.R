@@ -4,56 +4,56 @@
 #'  dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
 #'  of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
 #'  IC networks, and \eqn{V} is the number of data locations.
-#' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
 #' @param LV A length-two integer vector giving the dimensions \eqn{L} and 
 #'  \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
 #'  result).
 #'
-#' @return List of two elements: the mean and variance templates
+#' @return List of two elements: the templates and the variance decompositions.
 #' @export
 estimate_template_from_DR <- function(
-  DR, var_method=c("unbiased", "non-negative"), LV=NULL){
+  DR, LV=NULL){
 
   # Check arguments.
   stopifnot(length(dim(DR)) == 3)
   nM <- dim(DR)[1]  # visits
   nN <- dim(DR)[2]  # subjects
   nLV <- dim(DR)[3] # locations & networks
-  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
   if (!is.null(LV)) {
     stopifnot(is.numeric(nLV) && all(nLV > 0) && all(nLV == round(nLV)))
     stopifnot(prod(LV) == nLV)
   }
 
+  # Variance decomposition
   vd <- var_decomp(DR)
+
+  # Template calculation
   # Below true for M==2. Double check correct for M > 3? (Not used currently.)
   MSB_divM <- (vd$SSB / (nN-1)) / nM
   MSE_divM <- (vd$SSR / ((nM-1)*(nN-1))) / nM
   template <- list(
     mean = vd$grand_mean,
-    var = switch(var_method,
-      unbiased = pmax(0, MSB_divM - MSE_divM),
-      `non-negative` = MSB_divM
-    )
+    varUB = pmax(0, MSB_divM - MSE_divM),
+    varNN = MSB_divM
   )
-
   if (!is.null(LV)) {
     template <- lapply(template, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
   }
 
-  template$mean <- t(template$mean)
-  template$var <- t(template$var)
-
-  template
+  # Format and return
+  vd$nM <- vd$grand_mean <- NULL
+  names(vd)[names(vd) == "nS"] <- "num_subjects"
+  list(templates=template, var_decomp=vd)
 }
 
 #' Estimate template from DR estimates (when there are two measurements)
+#' 
+#' Legacy version of \code{estimate_template_from_DR}
 #'
 #' @param DR1,DR2 the test and retest dual regression estimates (\eqn{N \times L \times V})
 #' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
 #'
 #' @return List of two elements: the mean and variance templates
-#' @export
+#' @keywords internal
 estimate_template_from_DR_two <- function(
   DR1, DR2, var_method=c("unbiased", "non-negative")){
 
@@ -259,7 +259,7 @@ estimate_template <- function(
     }
   }
 
-  # `xii1` will be used to format output
+  # `xii1` will be used to format the output
   xii1 <- NULL
 
   # `BOLD` and `BOLD2` ---------------------------------------------------------
@@ -410,9 +410,13 @@ estimate_template <- function(
   DR0 <- array(DR0, dim=c(nM, nN, nL*nV))
   # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
 
-  # Estimate mean and var template
   if (verbose) { cat("Estimating template.\n") }
-  template <- estimate_template_from_DR(DR0, c(nL, nV), var_method=var_method)
+  # Estimate the mean and variance templates. 
+  # Also obtain the variance decomposition.
+  x <- estimate_template_from_DR(DR0, c(nL, nV))
+  template <- x$template
+  var_decomp <- x$var_decomp
+  rm(x)
 
   # Keep DR
   if (!isFALSE(keep_DR)) {
@@ -499,6 +503,7 @@ estimate_template <- function(
       list(template="mean"), 
       template_params[names(template_params) != "var_method"]
     )
+    # [TO DO]: Handle template var type
     template$var <- newdata_xifti(GICA, template$var)
     template$var$meta$cifti$misc <- c(
       list(template="var"), 

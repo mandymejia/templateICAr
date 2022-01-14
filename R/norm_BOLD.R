@@ -72,7 +72,7 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=TRUE, scale=FALSE, det
     } else {
       BOLD <- BOLD / sig
     }
-  } 
+  }
   
   BOLD
 }

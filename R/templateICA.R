@@ -289,6 +289,8 @@ templateICA <- function(
 
   # `spatial_model` ------------------------------------------------------------
   do_spatial <- !is.null(spatial_model)
+  if (isTRUE(spatial_model)) { spatial_model <- NULL }
+  meshes <- spatial_model
   if (do_spatial) {
     # Check that `BOLD` format is compatible with the spatial model
     if (FORMAT == "NIFTI") { stop("`spatial_model` not available for NIFTI BOLD.") }
@@ -311,50 +313,66 @@ templateICA <- function(
     }
     INLA::inla.setOption(smtp='pardiso')
 
-    #check that the supplied mesh object is of type templateICA_mesh
-    if (verbose) cat('Fitting a spatial model based on the mesh provided. Note that computation time and memory demands may be high.\n')
+    if (verbose) {
+      mesh_name <- ifelse(is.null(meshes), "the default inflated surface", "the provided mesh")
+      cat(paste0(
+        "Fitting a spatial model based on ", mesh_name, ". ",
+        "Note that computation time and memory demands may be high.\n"
+      ))
+    }
+
     if (FORMAT == "CIFTI") {
-      meshes <- NULL
-      if (is.null(resamp_res)) {
-        res <- ciftiTools:::infer_resolution(BOLD)
-      } else {
-        res <- resamp_res
+      if (is.null(meshes)) {
+        if (is.null(resamp_res)) {
+          res <- ciftiTools:::infer_resolution(BOLD)
+        } else {
+          res <- resamp_res
+        }
+        if (do_left) {
+          surf <- BOLD[[1]]$surf$cortex_left
+          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
+            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$left)
+          } else {
+            wall_mask <- NULL
+          }
+          if (rm_mwall) { 
+            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+          } else {
+            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+          }
+          meshes <- c(meshes, list(left=mesh))
+        }
+        if (do_right) {
+          surf <- BOLD[[1]]$surf$cortex_right
+          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
+            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$right)
+          } else {
+            wall_mask <- NULL
+          }
+          if (rm_mwall) { 
+            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+          } else {
+            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+          }
+          meshes <- c(meshes, list(right=mesh))
+        }
       }
-      if (do_left) {
-        surf <- BOLD[[1]]$surf$cortex_left
-        if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
-        if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
-          wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$left)
-        } else {
-          wall_mask <- NULL
-        }
-        if (rm_mwall) { 
-          mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
-        } else {
-          mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
-        }
-        meshes <- c(meshes, list(left=mesh))
-      }
-      if (do_right) {
-        surf <- BOLD[[1]]$surf$cortex_right
-        if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
-        if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
-          wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$right)
-        } else {
-          wall_mask <- NULL
-        }
-        if (rm_mwall) { 
-          mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
-        } else {
-          mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
-        }
-        meshes <- c(meshes, list(right=mesh))
-      }
-      if (!is.list(meshes)) stop('meshes argument must be a list.')
-      if (!all(vapply(meshes, inherits, "templateICA_mesh", FALSE))) {
-        stop('Each element of meshes argument should be of class `templateICA_mesh`. See `help(make_mesh)`.')
+    } else {
+      if (is.null(meshes)) { 
+        stop("`meshes` must be provided if the input format is not CIFTI.") 
       }
     }
+    if (!is.list(meshes)) stop('`meshes` must be a list.')
+    if (!all(vapply(meshes, inherits, what="templateICA_mesh", FALSE))) {
+      stop('Each element of `meshes` should be of class `"templateICA_mesh"`. See `help(make_mesh)`.')
+    }
+    ndat_mesh <- sum(vapply(meshs, function(x){colSums(x$A)}, 0))
+    if (ndat_mesh != nV) { 
+      stop("Number of data locations in `meshes` does not match that of the BOLD data.") 
+    }
+    # [TO-DO]: Check that numbers of data locations on meshes (column sums of A) add up to match the number of data locations.
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
     #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
   }
@@ -526,7 +544,7 @@ templateICA <- function(
     theta0 <- list(A = HA)
     # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
     # theta0$nu0_sq = dat_list$sigma_sq
-    # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+    # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
 
     #2) Template ICA -----------------------------------------------------------
     if (do_spatial && verbose) { cat('INITIATING WITH STANDARD TEMPLATE ICA\n') }
@@ -596,7 +614,7 @@ templateICA <- function(
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
     resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
     resultEM$subjICse <- newdata_xifti(xii1, resultEM$subjICse)
-    if (spatial_model) {
+    if (do_spatial) {
       resultEM$result_tICA$subjICmean <- newdata_xifti(xii1, resultEM$result_tICA$subjICmean)
       resultEM$result_tICA$subjICse <- newdata_xifti(xii1, resultEM$result_tICA$subjICse)
     }

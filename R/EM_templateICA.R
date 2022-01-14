@@ -49,7 +49,9 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
+EM_templateICA.spatial <- function(
+  template_mean, template_var, meshes, BOLD, 
+  theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
 
   INLA_check()
 
@@ -155,7 +157,18 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
-  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE)
+  saveRDS(list(
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, 
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), 
+    tmean=template_mean, tvar=template_var, meshes=meshes, 
+    BOLD=BOLD, C_diag=C_diag, s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=TRUE
+  ), "tICA_spatial_pre_squarem1")
+  result_squarem <- squarem(
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, 
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), 
+    template_mean, template_var, meshes, 
+    BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE
+  )
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
