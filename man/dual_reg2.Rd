@@ -40,7 +40,7 @@ a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 \item{GICA}{Group ICA maps in as a (vectorized) numeric matrix 
 (\eqn{V \times Q}). Columns should be centered.}
 
-\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
+\item{center_rows, center_cols}{Center the rows (each data location's time series) or columns (each time point's image) of the BOLD data? Default: \code{TRUE} for both.}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
 

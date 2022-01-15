@@ -79,7 +79,7 @@ dual_reg <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps in as a (vectorized) numeric matrix 
 #'  (\eqn{V \times Q}). Columns should be centered.
-#' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
+#' @param center_rows,center_cols Center the rows (each data location's time series) or columns (each time point's image) of the BOLD data? Default: \code{TRUE} for both.
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
@@ -184,15 +184,6 @@ dual_reg2 <- function(
     }
   }
 
-  # If no retest data, halve the test data.
-  # [TO DO] consider doing this after centering, scaling, detrending, and denoising?
-  if (!retest) {
-    part1 <- seq(round(nT/2))
-    part2 <- setdiff(seq(nT), part1)
-    BOLD2 <- BOLD[, part2, drop=FALSE]
-    BOLD <- BOLD[, part1, drop=FALSE]
-  }
-
   # [TO DO]: Check for `NA` values?
 
   # Normalize BOLD (and BOLD2) -------------------------------------------------
@@ -202,33 +193,50 @@ dual_reg2 <- function(
     BOLD, center_rows=center_rows, center_cols=center_cols, 
     scale=scale, detrend_DCT=detrend_DCT
   )
-  BOLD2 <- norm_BOLD(
-    BOLD2, center_rows=center_rows, center_cols=center_cols, 
-    scale=scale, detrend_DCT=detrend_DCT
-  )
+  if (retest) {
+    BOLD2 <- norm_BOLD(
+      BOLD2, center_rows=center_rows, center_cols=center_cols, 
+      scale=scale, detrend_DCT=detrend_DCT
+    )
+  }
 
   # Perform dual regression on test and retest data. ---------------------------
+
+  # If no retest data, halve the test data.
+  if (!retest) {
+    part1 <- seq(round(nT/2))
+    part2 <- setdiff(seq(nT), part1)
+    BOLD2_pre <- BOLD[, part2, drop=FALSE]
+    BOLD_pre <- BOLD[, part1, drop=FALSE]
+  } else {
+    BOLD_pre <- BOLD
+    BOLD2_pre <- BOLD2
+  }
+
   out$test <- dual_reg(
-    BOLD, GICA, center_rows=FALSE, center_cols=FALSE, 
+    BOLD_pre, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )
   out$retest <- dual_reg(
-    BOLD2, GICA, center_rows=FALSE, center_cols=FALSE, 
+    BOLD2_pre, GICA, center_rows=FALSE, center_cols=FALSE, 
     scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )
-  # (Do not remove $A here, because it's needed for `rm_nuisIC`.)
 
-  # Return now, if denoising is not needed. ------------------------------------
-  nT2 <- min(ncol(BOLD), ncol(BOLD2))
-  if (!is.null(Q2) && Q2==0) { 
-    out$test <- out$test$S
-    out$retest <- out$retest$S
-    return(out) 
-  }
+  rm(BOLD_pre, BOLD2_pre)
 
   # Estimate and deal with nuisance ICs. ---------------------------------------
   BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
-  BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
+  if (retest) {
+    BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
+  }
+
+  # If no retest data, halve the test data.
+  if (!retest) {
+    part1 <- seq(round(nT/2))
+    part2 <- setdiff(seq(nT), part1)
+    BOLD2 <- BOLD[, part2, drop=FALSE]
+    BOLD <- BOLD[, part1, drop=FALSE]
+  }
 
   # Center and scale `BOLD` (and `BOLD2`) again, but do not detrend again. -----
   BOLD <- norm_BOLD(
