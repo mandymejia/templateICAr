@@ -4,11 +4,7 @@
 \alias{estimate_template_from_DR}
 \title{Estimate template from DR estimates}
 \usage{
-estimate_template_from_DR(
-  DR,
-  var_method = c("unbiased", "non-negative"),
-  LV = NULL
-)
+estimate_template_from_DR(DR, LV = NULL)
 }
 \arguments{
 \item{DR, }{the test and retest(s) dual regression estimates, as a matrix with
@@ -16,14 +12,12 @@ dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
 of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
 IC networks, and \eqn{V} is the number of data locations.}
 
-\item{var_method}{\code{"unbiased"} (default) or \code{"non-negative"}}
-
 \item{LV}{A length-two integer vector giving the dimensions \eqn{L} and 
 \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
 result).}
 }
 \value{
-List of two elements: the mean and variance templates
+List of two elements: the templates and the variance decompositions.
 }
 \description{
 Estimate template from DR estimates
