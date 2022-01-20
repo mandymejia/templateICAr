@@ -9,7 +9,7 @@ diagnosticICA.nifti(
   templates,
   scale = TRUE,
   Q2 = NULL,
-  maxQ = 100,
+  Q2_max = 100,
   maxiter = 100,
   epsilon = 0.01,
   verbose = TRUE,
@@ -29,10 +29,10 @@ before model fitting? Default: \code{TRUE}. If done when estimating
 templates, should be done here too.}
 
 \item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default),
-will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify
-(\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{Q2_max}{Maximum number of ICs (template+nuisance) to identify
+(\eqn{L <= Q2_max <= T}). Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 

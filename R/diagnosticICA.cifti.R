@@ -33,9 +33,9 @@
 #'  before model fitting? Default: \code{TRUE}. If done when estimating 
 #'  templates, should be done here too.
 #' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
-#'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
-#'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#'  will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.
+#' @param Q2_max Maximum number of ICs (template+nuisance) to identify 
+#'  (\eqn{L <= Q2_max <= T}). Only provide \eqn{Q2} or \eqn{Q2_max} but not both.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
@@ -62,7 +62,7 @@ diagnosticICA.cifti <- function(cifti_fname,
                               resamp_res=NULL,
                               scale=TRUE,
                               Q2=NULL,
-                              maxQ=NULL,
+                              Q2_max=NULL,
                               maxiter=100,
                               epsilon=0.01,
                               verbose=TRUE,
@@ -210,7 +210,7 @@ diagnosticICA.cifti <- function(cifti_fname,
                             scale = scale,
                             meshes = meshes,
                             Q2 = Q2,
-                            maxQ = maxQ,
+                            Q2_max = Q2_max,
                             maxiter = maxiter,
                             epsilon = epsilon,
                             verbose = verbose,

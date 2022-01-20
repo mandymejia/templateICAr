@@ -368,7 +368,7 @@ templateICA <- function(
     if (!all(vapply(meshes, inherits, what="templateICA_mesh", FALSE))) {
       stop('Each element of `meshes` should be of class `"templateICA_mesh"`. See `help(make_mesh)`.')
     }
-    ndat_mesh <- sum(vapply(meshs, function(x){colSums(x$A)}, 0))
+    ndat_mesh <- sum(vapply(meshes, function(x){colSums(x$A)}, 0))
     if (ndat_mesh != nV) { 
       stop("Number of data locations in `meshes` does not match that of the BOLD data.") 
     }
