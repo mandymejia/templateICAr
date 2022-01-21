@@ -20,7 +20,7 @@
 #'  is a file path, will be inferred by substituting \code{"_mean"} in the file name with \code{"_var"}.
 #' 
 #'  \code{template_FC} is not yet supported. 
-#' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
@@ -98,8 +98,8 @@
 templateICA <- function(
   BOLD,
   template_mean, template_var=NULL, template_FC=NULL,
-  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
-  normA=FALSE,
+  scale=TRUE, detrend_DCT=0, 
+  center_Bcols=FALSE, normA=FALSE,
   Q2=NULL, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
@@ -113,12 +113,11 @@ templateICA <- function(
   # Check arguments ------------------------------------------------------------
   
   # Simple argument checks.
-  stopifnot(is.logical(center_rows) && length(center_rows)==1)
-  stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
+  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   if (!is.null(resamp_res)) {
@@ -478,7 +477,7 @@ templateICA <- function(
   # (Center, scale, and detrend)
   
   BOLD <- lapply(BOLD, norm_BOLD, 
-    center_rows=center_rows, center_cols=center_cols, 
+    center_rows=TRUE, center_cols=center_Bcols, 
     scale=scale, detrend_DCT=detrend_DCT
   )
 
@@ -493,13 +492,13 @@ templateICA <- function(
 
   # Center and scale `BOLD` again, but do not detrend again. -------------------
   BOLD <- norm_BOLD(
-    BOLD, center_rows=center_rows, center_cols=center_cols, 
+    BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, detrend_DCT=FALSE
   )
 
   # Initialize with the dual regression-based estimate -------------------------
   BOLD_DR <- dual_reg(
-    BOLD, template_mean, center_rows=FALSE, center_cols=FALSE, 
+    BOLD, template_mean, center_Bcols=FALSE, 
     scale=FALSE, detrend_DCT=0, normA=normA
   )
 

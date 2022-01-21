@@ -83,9 +83,9 @@ dual_reg <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps in as a (vectorized) numeric matrix 
 #'  (\eqn{V \times Q}). Columns should be centered.
-#' @param center_rows,center_cols Center the rows (each data location's time series) or columns (each time point's image) of the BOLD data? Default: \code{TRUE} for both.
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 #'  such that the product \eqn{A \times S} remains the same).
@@ -121,9 +121,8 @@ dual_reg <- function(
 dual_reg2 <- function(
   BOLD, BOLD2=NULL, 
   format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
-  GICA, 
-  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
-  normA=FALSE,
+  GICA, scale=TRUE, detrend_DCT=0, 
+  center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, 
   brainstructures=c("left", "right"), mask=NULL, 
   verbose=TRUE){
@@ -194,12 +193,12 @@ dual_reg2 <- function(
   # (Center, scale, and detrend)
 
   BOLD <- norm_BOLD(
-    BOLD, center_rows=center_rows, center_cols=center_cols, 
+    BOLD, center_rows=TRUE, center_cols=center_Bcols, 
     scale=scale, detrend_DCT=detrend_DCT
   )
   if (retest) {
     BOLD2 <- norm_BOLD(
-      BOLD2, center_rows=center_rows, center_cols=center_cols, 
+      BOLD2, center_rows=TRUE, center_cols=center_Bcols, 
       scale=scale, detrend_DCT=detrend_DCT
     )
   }
@@ -218,12 +217,12 @@ dual_reg2 <- function(
   }
 
   out$test <- dual_reg(
-    BOLD_pre, GICA, center_rows=FALSE, center_cols=FALSE, 
-    scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    BOLD_pre, GICA, scale=FALSE, 
+    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )
   out$retest <- dual_reg(
-    BOLD2_pre, GICA, center_rows=FALSE, center_cols=FALSE, 
-    scale=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    BOLD2_pre, GICA, scale=FALSE, 
+    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )
 
   rm(BOLD_pre, BOLD2_pre)
@@ -244,24 +243,24 @@ dual_reg2 <- function(
 
   # Center and scale `BOLD` (and `BOLD2`) again, but do not detrend again. -----
   BOLD <- norm_BOLD(
-    BOLD, center_rows=center_rows, center_cols=center_cols, 
+    BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, detrend_DCT=0
   )
   BOLD2 <- norm_BOLD(
-    BOLD2, center_rows=center_rows, center_cols=center_cols, 
+    BOLD2, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, detrend_DCT=0
   )
 
   # Do DR again. ---------------------------------------------------------------
   out$test_preclean <- out$test$S
   out$test <- dual_reg(
-    BOLD, GICA, center_rows=FALSE, center_cols=FALSE, 
-    scale=FALSE, detrend_DCT=0, normA=normA
+    BOLD, GICA, scale=FALSE, 
+    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )$S
   out$retest_preclean <- out$retest$S
   out$retest <- dual_reg(
-    BOLD2, GICA, center_rows=FALSE, center_cols=FALSE, 
-    scale=FALSE, detrend_DCT=0, normA=normA
+    BOLD2, GICA, scale=FALSE, 
+    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
   )$S
 
   out

@@ -9,10 +9,9 @@ templateICA(
   template_mean,
   template_var = NULL,
   template_FC = NULL,
-  center_rows = TRUE,
-  center_cols = TRUE,
   scale = TRUE,
   detrend_DCT = 0,
+  center_Bcols = FALSE,
   normA = FALSE,
   Q2 = NULL,
   Q2_max = NULL,
@@ -50,11 +49,11 @@ templateICA(
 
  \code{template_FC} is not yet supported.}
 
-\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
-
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
+
+\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}

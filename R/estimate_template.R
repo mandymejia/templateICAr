@@ -129,10 +129,10 @@ estimate_template_from_DR_two <- function(
 #'  dual regression, not before. This is because removing the ICs prior to dual 
 #'  regression would leave unmodelled signals in the data, which could bias the 
 #'  templates.
-#' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
-#' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
+#' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 #'  such that the product \eqn{A \times S} remains the same).
@@ -192,8 +192,8 @@ estimate_template_from_DR_two <- function(
 estimate_template <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
-  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
-  center_Gcols=TRUE, normA=FALSE,
+  scale=TRUE, detrend_DCT=0, 
+  center_Bcols=FALSE, center_Gcols=TRUE, normA=FALSE,
   Q2=0, Q2_max=NULL, 
   brainstructures=c("left","right"), mask=NULL,
   var_method=c("unbiased", "non-negative", "both"),
@@ -205,8 +205,7 @@ estimate_template <- function(
   # Check arguments ------------------------------------------------------------
   
   # Simple argument checks.
-  stopifnot(is.logical(center_rows) && length(center_rows)==1)
-  stopifnot(is.logical(center_cols) && length(center_cols)==1)
+  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
@@ -389,7 +388,7 @@ estimate_template <- function(
       BOLD[ii], BOLD2=B2, 
       format=format,       
       GICA=GICA,
-      center_rows=center_rows, center_cols=center_cols, 
+      center_Bcols=center_Bcols, 
       scale=scale, detrend_DCT=detrend_DCT,
       normA=normA,
       Q2=Q2, Q2_max=Q2_max,
@@ -481,7 +480,7 @@ estimate_template <- function(
   # Params
   template_params <- list(
     inds=paste0(inds, collapse=" "),
-    center_rows=center_rows, center_cols=center_cols, 
+    center_Bcols=center_Bcols, 
     scale=scale, detrend_DCT=detrend_DCT, 
     center_Gcols=center_Gcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
@@ -565,7 +564,7 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
-  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
+  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
   brainstructures=c("left","right"), 
   var_method=c("unbiased", "non-negative", "both"),
@@ -578,7 +577,7 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, 
     center_Gcols=center_Gcols, normA=normA,
     brainstructures=brainstructures, 
     var_method=var_method,
@@ -655,7 +654,7 @@ plot.template_cifti <- function(x, stat=c("mean", "var"), ...) {
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
-  center_rows=TRUE, center_cols=TRUE, scale=TRUE, detrend_DCT=0, 
+  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, 
   center_Gcols=TRUE, normA=FALSE,
   mask=mask, 
   var_method=c("unbiased", "non-negative", "both"),
@@ -668,7 +667,7 @@ estimate_template.nifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_rows=center_rows, center_cols=center_cols, scale=scale, detrend_DCT=detrend_DCT, 
+    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, 
     center_Gcols=center_Gcols, normA=normA,
     mask=mask, 
     var_method=var_method,
