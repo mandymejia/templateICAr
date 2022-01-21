@@ -36,10 +36,11 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, v
 
   #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
   BOLD2 <- BOLD - t(DR$A %*% DR$S) #data without template ICs
+  BOLD2 <- colCenter(BOLD2)
 
   #iii. ESTIMATE THE NUMBER OF REMAINING ICS
-  #pesel function expects nxp data and will determine asymptotic framework
-  #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
+  # pesel function expects nxp data and will determine asymptotic framework
+  # here, we consider n=V (vertices) and p=T (timepoints). (it will use n-asymptotic framework)
   if (is.null(Q2)) {
     if(verbose) cat(paste0('Estimating number of nuisance components... '))
     Q2 <- suppressWarnings(pesel(BOLD2, npc.max=Q2_max, method='homogenous')$nPCs) #estimated number of nuisance ICs

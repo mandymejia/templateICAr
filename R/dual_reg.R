@@ -2,7 +2,7 @@
 #'
 #' @param BOLD Subject-level fMRI data matrix (\eqn{V \times T})
 #' @param GICA Group-level independent components (\eqn{V \times Q})
-#' @param center_rows,center_cols Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
 #' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
@@ -18,20 +18,16 @@
 #' @export
 #'
 dual_reg <- function(
-  BOLD, GICA, 
-  center_rows=TRUE, center_cols=TRUE, scale=FALSE, detrend_DCT=0, 
-  center_Gcols=TRUE, normA=FALSE){
+  BOLD, GICA, scale=FALSE, detrend_DCT=0, center_Bcols=FALSE, center_Gcols=TRUE, normA=FALSE){
 
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
-  stopifnot(is.logical(center_rows) && length(center_rows)==1)
-  stopifnot(is.logical(center_cols) && length(center_cols)==1)
   stopifnot(is.logical(scale) && length(scale)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
 
-  nT <- ncol(BOLD) #length of timeseries
   nV <- nrow(BOLD) #number of data locations
-  if(nT > nV) warning('More time points than voxels. Are you sure?')
+  nT <- ncol(BOLD) #length of timeseries
+  if(nV < nT) warning('More time points than voxels. Are you sure?')
   if(nV != nrow(GICA)) {
     stop('The number of voxels in dat (', nV, ') and GICA (', nrow(GICA), ') must match')
   }
@@ -40,26 +36,34 @@ dual_reg <- function(
   if(nQ > nV) warning('More ICs than voxels. Are you sure?')
   if(nQ > nT) warning('More ICs than time points. Are you sure?')
 
-  # Center timeseries data across space and time if `center`
-  # Standardize data scale if `scale`
-  # Transpose it
+  # Center each voxel timecourse. Do not center the image at each timepoint.
+  # Standardize scale if `scale`, and detrend if `detrend_DCT`.
+  # Transpose it: now `BOLD` is TxV.
   BOLD <- t(norm_BOLD(
-    BOLD, center_rows=center_rows, center_cols=center_cols, 
+    BOLD, center_rows=TRUE, center_cols=center_Bcols, 
     scale=scale, detrend_DCT=detrend_DCT
   ))
 
-  # Center each group IC over voxels
+  # Center each group IC across space if `center_Gcols`.
   if (center_Gcols) { GICA <- colCenter(GICA) }
 
-	# Estimate A (IC timeseries)
-	A <- (BOLD %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
-	if (normA) { A <- scale(A) }
+  # Estimate A (IC timeseries).
+  # We need to center `BOLD` across space because the linear model has no intercept.
+  A <- ((BOLD - rowMeans(BOLD)) %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
 
-	# Estimate S (IC maps)
-	S <- solve(a=crossprod(A), b=crossprod(A, BOLD))
+  # Center each subject IC timecourse across time.
+  # (Redundant. Since BOLD is column-centered, A is already column-centered.)
+  # A <- colCenter(A)
 
-	#return result
-	list(S = S, A = A)
+  # Normalize each subject IC timecourse if `normA`.
+  if (normA) { A <- scale(A) }
+
+  # Estimate S (IC maps).
+  # `BOLD` is already centered across time.
+  S <- solve(a=crossprod(A), b=crossprod(A, BOLD))
+
+  #return result
+  list(S = S, A = A)
 }
 
 #' Dual Regression wrapper

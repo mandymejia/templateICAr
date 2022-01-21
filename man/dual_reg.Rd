@@ -7,10 +7,9 @@
 dual_reg(
   BOLD,
   GICA,
-  center_rows = TRUE,
-  center_cols = TRUE,
   scale = FALSE,
   detrend_DCT = 0,
+  center_Bcols = FALSE,
   center_Gcols = TRUE,
   normA = FALSE
 )
@@ -20,11 +19,11 @@ dual_reg(
 
 \item{GICA}{Group-level independent components (\eqn{V \times Q})}
 
-\item{center_rows, center_cols}{Center BOLD data across rows (each data location's time series) or columns (each time point's image)? Default: \code{TRUE} for both.}
-
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
+
+\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).}
 
 \item{center_Gcols}{Center GICA across columns (each ICA)? Default: \code{TRUE}.}
 
