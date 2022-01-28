@@ -10,13 +10,13 @@ estimate_template_from_DR(DR, LV = NULL)
 \item{DR}{the test/retest(s) dual regression estimates, as an array with
  dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
  of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
- IC networks, and \eqn{V} is the number of data locations. 
+ IC networks, and \eqn{V} is the number of data locations.
 
  (\eqn{L} and \eqn{V} are collapsed because they are treated equivalently
  in the context of the variance decomposition).}
 
-\item{LV}{A length-two integer vector giving the dimensions \eqn{L} and 
-\eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
+\item{LV}{A length-two integer vector giving the dimensions \eqn{L} and
+\eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the
 result).}
 }
 \value{

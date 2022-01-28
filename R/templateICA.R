@@ -79,7 +79,7 @@
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two.
-#' @param verbose If \code{TRUE}. display progress of algorithm
+#' @param verbose If \code{TRUE}, display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version
 #  of the spatial template ICA model, which assumes that all IC's have the same
 #  smoothness parameter, \eqn{\kappa}
@@ -487,7 +487,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  if (is.null(Q2) || Q2>0) {
+  if ( !(!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0) ) {
     BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   }
 

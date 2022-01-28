@@ -1,11 +1,12 @@
 #' Compute variance decomposition
 #' @param x measurements by subjects by variables
+#' @param verbose If \code{TRUE}, display progress of algorithm
 #' @keywords internal
 #' @return The variance decomposition
-var_decomp <- function(x) {
+var_decomp <- function(x, verbose=FALSE) {
 
   # Get data dimensions.
-  # cat("\tChecking data dimensions and missing values presence.\n")
+  if (verbose) { cat("\tChecking data dimensions and missing values presence.\n") }
   d <- dim(x)
   if (length(d) == 2) { x <- array(x, dim=c(dim(x), 1)); d <- dim(x) }
   stopifnot(length(d) == 3)
@@ -15,19 +16,19 @@ var_decomp <- function(x) {
   # Handle missing values: for each var, remove subjects without complete data
   na_mask <- apply(is.na(x), seq(2, 3), any)
   if (any(na_mask)) {
-    # message("`NA`s detected. For each variable, removing subjects w/o complete data.\n")
+    message("`NA`s detected. For each variable, removing subjects w/o complete data.\n")
     x[rep(na_mask, each=nM)] <- NA
   }
 
   # Variance decomposition
-  # cat("\tCalculating means.\n")
+  if (verbose) { cat("\tCalculating means.\n") }
   sub_mean <- colMeans(x, na.rm=TRUE)
   visit_mean <- apply(x, c(1,3), mean, na.rm=TRUE)
   grand_mean <- colMeans(sub_mean, na.rm=TRUE)
   grand_mean2 <- array(rep(grand_mean, each=nM*nS), dim=dim(x))
 
   ### Sum of squares
-  # cat("\tCalculating variance decomposition.\n")
+  if (verbose) { cat("\tCalculating variance decomposition.\n") }
   SST <- apply((x - grand_mean2)^2, 3, sum, na.rm=TRUE)
   SSW <- apply((x - rep(sub_mean, each=nM))^2, 3, sum, na.rm=TRUE)
   SSB <- nM * colSums((sub_mean - rep(grand_mean, each=nS))^2, na.rm=TRUE)

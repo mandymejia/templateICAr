@@ -31,7 +31,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, c
   Q2_max <- Q2_max_check(Q2_max, nQ=nQ, nT=ncol(BOLD))
 
   if ( (!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0) ) {
-    if (verbose) { cat("`Q2` and/or `Q2_max` specifies no nuisance ICs. Returning original `BOLD`.") }
+    # if (verbose) { cat("`Q2` and/or `Q2_max` specifies no nuisance ICs. Skipping denoising.\n") }
     return(BOLD)
   }
 

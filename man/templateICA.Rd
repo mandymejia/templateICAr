@@ -123,7 +123,7 @@ If \code{TRUE}, faster computation but less accurate estimates at the boundary o
 \item{usePar}{Parallelize the computation over data locations? Default: \code{FALSE}. Can be the number of cores
 to use or \code{TRUE}, which will use the number on the PC minus two.}
 
-\item{verbose}{If \code{TRUE}. display progress of algorithm}
+\item{verbose}{If \code{TRUE}, display progress of algorithm}
 }
 \value{
 A list containing the estimated independent components S

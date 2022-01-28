@@ -4,10 +4,12 @@
 \alias{var_decomp}
 \title{Compute variance decomposition}
 \usage{
-var_decomp(x)
+var_decomp(x, verbose = FALSE)
 }
 \arguments{
 \item{x}{measurements by subjects by variables}
+
+\item{verbose}{If \code{TRUE}, display progress of algorithm}
 }
 \value{
 The variance decomposition
