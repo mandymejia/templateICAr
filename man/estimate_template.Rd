@@ -14,7 +14,6 @@ estimate_template(
   scale = TRUE,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  center_Gcols = TRUE,
   normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -35,7 +34,6 @@ estimate_template.cifti(
   center_Bcols = FALSE,
   scale = TRUE,
   detrend_DCT = 0,
-  center_Gcols = TRUE,
   normA = FALSE,
   brainstructures = c("left", "right"),
   var_method = c("unbiased", "non-negative", "both"),
@@ -55,7 +53,6 @@ estimate_template.nifti(
   center_Bcols = FALSE,
   scale = TRUE,
   detrend_DCT = 0,
-  center_Gcols = TRUE,
   normA = FALSE,
   mask = mask,
   var_method = c("unbiased", "non-negative", "both"),
@@ -80,7 +77,8 @@ estimate_template.nifti(
  the first half will be the test data and the second half will be the retest data.}
 
 \item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also be a
-(vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.}
+(vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.
+Its columns will be centered.}
 
 \item{inds}{Numeric indices of the group ICs to include in the template. If 
  \code{NULL}, use all group ICs (default).
@@ -90,17 +88,18 @@ estimate_template.nifti(
  regression would leave unmodelled signals in the data, which could bias the 
  templates.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.}
+\item{scale}{A logical value indicating whether the fMRI timeseries should be
+scaled by the image standard deviation. Default: \code{TRUE}.}
 
-\item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
+\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases 
+to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE}
+(not recommended).}
 
-\item{center_Gcols}{Center GICA across columns (each ICA)? Default: \code{TRUE}.}
-
-\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
-estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
-such that the product \eqn{A \times S} remains the same).}
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual 
+regression estimates? Default: \code{FALSE} (not recommended). Note that the
+product \eqn{A \times S} remains the same with either option.}
 
 \item{Q2, Q2_max}{Obtain dual regression estimates after denoising? Denoising is
  based on modeling and removing nuisance ICs. It may result in a cleaner 
@@ -113,9 +112,9 @@ such that the product \eqn{A \times S} remains the same).}
 
  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
- than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
- fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
- \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+ than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
+ each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} 
+ (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 Character vector indicating which brain structure(s)
@@ -134,23 +133,22 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
  variance adds to it to account for greater potential between-subjects variation.
  (The template mean is the same for either choice of \code{var_method}.) 
 
- \code{"both"} is not yet supported [TO DO].}
+ In any case, the variance template which is not chosen can be [TO DO].}
 
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR 
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
 returned too. If a single file path, save the DR estimates as an RDS file at
-that location. If a list of two vectors of file paths with the same lengths as
-\code{BOLD}, save the DR estimates as individual files at these locations in
-the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}).}
+that location rather than returning them.}
 
-\item{out_fname}{Character vector of file path(s) to write the mean and variance templates to.
-If one file name is provided, it will be appended with \code{"_mean.dscalar.nii"} for the
-template mean map and \code{"_var.dscalar.nii"} for the template variance map. If two
-file names are provided, the first will be used for the template mean and the second will
-be used for the template variance. If \code{var_method=="both"}, the non-negative template 
-variance will be appended with \code{"_var_nn.dscalar.nii"}.}
+\item{out_fname}{Character vector of file path(s) to write the mean and 
+variance templates to. If one file name is provided, it will be appended 
+with \code{"_mean.dscalar.nii"} for the template mean map and 
+\code{"_var.dscalar.nii"} for the template variance map. If two file names 
+are provided, the first will be used for the template mean and the second 
+will be used for the template variance.}
 
-\item{FC}{Include the functional connectivity template?}
+\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
+(work in progress, not available yet).}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }

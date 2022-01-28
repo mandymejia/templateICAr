@@ -29,20 +29,20 @@ templateICA(
 )
 }
 \arguments{
-\item{BOLD}{Vector of subject-level fMRI data in one of the following formats: 
+\item{BOLD}{Vector of subject-level fMRI data in one of the following formats:
  CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
  \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
- \eqn{T} is the number of timepoints. 
+ \eqn{T} is the number of timepoints.
 
  If multiple BOLD data are provided, they will be independently centered, scaled, and detrended (if applicable),
  and then they will be concatenated together prior to denoising (if applicable) and computing the initial dual regression estimate.}
 
 \item{template_mean, template_var, template_FC}{Template estimates in a format
- compatible with \code{BOLD}. 
+ compatible with \code{BOLD}.
 
- \code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components. 
+ \code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components.
  Its vectorized dimensions should be \eqn{V \times L}.
- 
+
  \code{template_var} gives the between-subject variance of the empirical population prior for each of the \eqn{L} independent components.
  Its vectorized dimensions should be \eqn{V \times L}. If not provided and \code{template_mean}
  is a file path, will be inferred by substituting \code{"_mean"} in the file name with \code{"_var"}.
@@ -55,17 +55,17 @@ templateICA(
 
 \item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).}
 
-\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression 
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual regression
 estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 such that the product \eqn{A \times S} remains the same).}
 
-\item{Q2, Q2_max}{Denoise the BOLD data? Denoising is based on modeling and 
- removing nuisance ICs. It may result in a cleaner estimate for smaller 
- datasets, but it may be unnecessary (and time-consuming) for larger datasets. 
- 
+\item{Q2, Q2_max}{Denoise the BOLD data? Denoising is based on modeling and
+ removing nuisance ICs. It may result in a cleaner estimate for smaller
+ datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+
  Set \code{Q2} to control denoising: use a positive integer to specify the
  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
- estimated by PESEL (default), or zero to skip denoising. 
+ estimated by PESEL (default), or zero to skip denoising.
 
  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
@@ -73,7 +73,7 @@ such that the product \eqn{A \times S} remains the same).}
  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
-\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths. 
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
 Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -81,10 +81,10 @@ gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
 \item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-\code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
+\code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
-\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis. 
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis.
 If \code{NULL} (default), use all volumes. Subsetting is performed before
 any centering, scaling, detrending, and denoising.}
 
@@ -97,7 +97,7 @@ any centering, scaling, detrending, and denoising.}
  right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
  objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
  the subcortex. This argument can also be \code{TRUE}, in which case spatial modeling
- will be performed with the surfaces included in the first entry of \code{BOLD} if it is a 
+ will be performed with the surfaces included in the first entry of \code{BOLD} if it is a
  \code{"xifti"} object, or if those are not present available, the default inflated
  surfaces from \code{ciftiTools}.
 

@@ -1,14 +1,21 @@
-#' Estimate template from DR estimates
+#' Estimate variance decomposition and templates from DR estimates
 #'
-#' @param DR, the test and retest(s) dual regression estimates, as a matrix with
+#' @param DR the test/retest(s) dual regression estimates, as an array with
 #'  dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
 #'  of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
-#'  IC networks, and \eqn{V} is the number of data locations.
+#'  IC networks, and \eqn{V} is the number of data locations. 
+#' 
+#'  (\eqn{L} and \eqn{V} are collapsed because they are treated equivalently
+#'  in the context of the variance decomposition).
 #' @param LV A length-two integer vector giving the dimensions \eqn{L} and 
 #'  \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the 
 #'  result).
 #'
-#' @return List of two elements: the templates and the variance decompositions.
+#' @return List of two elements: the templates and the variance decomposition.
+#' 
+#'  There are two version of the variance template: \code{varUB} gives the
+#'  unbiased variance estimate with values clamped to above zero, and
+#'  \code{varNN} gives the upwardly-biased non-negative variance estimate.
 #' @export
 estimate_template_from_DR <- function(
   DR, LV=NULL){
@@ -40,14 +47,14 @@ estimate_template_from_DR <- function(
   }
 
   # Format and return
-  vd$nM <- vd$grand_mean <- NULL
+  vd$nM <- vd$grand_mean <- NULL # Get rid of redundant entries
   names(vd)[names(vd) == "nS"] <- "num_subjects"
   list(templates=template, var_decomp=vd)
 }
 
 #' Estimate template from DR estimates (when there are two measurements)
 #' 
-#' Legacy version of \code{estimate_template_from_DR}
+#' Legacy version of \code{\link{estimate_template_from_DR}}
 #'
 #' @param DR1,DR2 the test and retest dual regression estimates (\eqn{N \times L \times V})
 #' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
@@ -122,6 +129,7 @@ estimate_template_from_DR_two <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also be a
 #'  (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.
+#'  Its columns will be centered.
 #' @param inds Numeric indices of the group ICs to include in the template. If 
 #'  \code{NULL}, use all group ICs (default).
 #' 
@@ -129,13 +137,15 @@ estimate_template_from_DR_two <- function(
 #'  dual regression, not before. This is because removing the ICs prior to dual 
 #'  regression would leave unmodelled signals in the data, which could bias the 
 #'  templates.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
-#' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
-#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
-#' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
-#'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
-#'  such that the product \eqn{A \times S} remains the same).
+#' @param scale A logical value indicating whether the fMRI timeseries should be
+#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases 
+#'  to use for detrending. If \code{0} (default), do not detrend.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
+#'  (not recommended).
+#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual 
+#'  regression estimates? Default: \code{FALSE} (not recommended). Note that the
+#'  product \eqn{A \times S} remains the same with either option.
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -151,13 +161,14 @@ estimate_template_from_DR_two <- function(
 #'  variance adds to it to account for greater potential between-subjects variation.
 #'  (The template mean is the same for either choice of \code{var_method}.) 
 #' 
-#'  \code{"both"} is not yet supported [TO DO].
+#'  In any case, the variance template which is not chosen can be [TO DO].
 #' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save the DR 
 #'  estimates and only return the templates. If \code{TRUE}, the DR estimates are
 #'  returned too. If a single file path, save the DR estimates as an RDS file at
-#'  that location. If a list of two vectors of file paths with the same lengths as
-#'  \code{BOLD}, save the DR estimates as individual files at these locations in
-#'  the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}). 
+#'  that location rather than returning them. 
+#   [TO DO] If a list of two vectors of file paths with the same lengths as
+#   \code{BOLD}, save the DR estimates as individual files at these locations in
+#   the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}). 
 #' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
 #'  based on modeling and removing nuisance ICs. It may result in a cleaner 
 #'  estimate for smaller datasets, but it may be unnecessary (and time-consuming)
@@ -169,16 +180,17 @@ estimate_template_from_DR_two <- function(
 #' 
 #'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 #'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
-#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
-#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
-#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param out_fname Character vector of file path(s) to write the mean and variance templates to.
-#'  If one file name is provided, it will be appended with \code{"_mean.dscalar.nii"} for the
-#'  template mean map and \code{"_var.dscalar.nii"} for the template variance map. If two
-#'  file names are provided, the first will be used for the template mean and the second will
-#'  be used for the template variance. If \code{var_method=="both"}, the non-negative template 
-#'  variance will be appended with \code{"_var_nn.dscalar.nii"}.
-#' @param FC Include the functional connectivity template?
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
+#'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} 
+#'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#' @param out_fname Character vector of file path(s) to write the mean and 
+#'  variance templates to. If one file name is provided, it will be appended 
+#'  with \code{"_mean.dscalar.nii"} for the template mean map and 
+#'  \code{"_var.dscalar.nii"} for the template variance map. If two file names 
+#'  are provided, the first will be used for the template mean and the second 
+#'  will be used for the template variance. 
+#' @param FC Include the functional connectivity template? Default: \code{FALSE}
+#'  (work in progress, not available yet).
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
@@ -193,7 +205,7 @@ estimate_template <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
   scale=TRUE, detrend_DCT=0, 
-  center_Bcols=FALSE, center_Gcols=TRUE, normA=FALSE,
+  center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, 
   brainstructures=c("left","right"), mask=NULL,
   var_method=c("unbiased", "non-negative", "both"),
@@ -224,16 +236,18 @@ estimate_template <- function(
   } else {
     if (is.character(keep_DR)) {
       stopifnot(length(keep_DR)==1)
-      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
       if (!dir.exists(dirname(keep_DR))) { stop('Directory part of `keep_DR` does not exist.') }
+      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
     } else if (is.list(keep_DR)) {
-      if (length(keep_DR) != 2) {
-        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
-      }
-      if (length(keep_DR[[1]]) != nN || length(keep_DR[[2]]) != nN) {
-        stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
-      }
-      if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
+      stop("Not supported: `keep_DR` must be `TRUE`, `FALSE`, or a single file path.")
+      # [TO DO]
+      # if (length(keep_DR) != 2) {
+      #   stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # }
+      # if (length(keep_DR[[1]]) != nN || length(keep_DR[[2]]) != nN) {
+      #   stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # }
+      # if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
     }
   }
 
@@ -364,6 +378,7 @@ estimate_template <- function(
   }
 
   # Center `GICA` columns.
+  center_Gcols <- TRUE
   if (center_Gcols) { GICA <- colCenter(GICA) }
 
   # Process each scan ----------------------------------------------------------
@@ -376,7 +391,7 @@ estimate_template <- function(
 
   nM <- 2
   DR0 <- array(NA, dim=c(nM, nN, nL, nV)) # measurements by subjects by components by locations
-  if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) #for functional connectivity template
+  if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
 
   for (ii in seq(nN)) {
     if(verbose) { cat(paste0(
@@ -403,8 +418,9 @@ estimate_template <- function(
       FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
     }
   }
-  mask2 <- NULL # [TO DO]: fix
+  mask2 <- NULL # [TO DO]: fix for NIFTI data.
 
+  # Aggregate results, and compute templates. ----------------------------------
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nV))
   # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
@@ -417,27 +433,10 @@ estimate_template <- function(
   var_decomp <- x$var_decomp
   rm(x)
 
-  # Keep DR
-  if (!isFALSE(keep_DR)) {
-    DR0 <- array(DR0, dim=c(nM, nN, nL, nV)) # Undo vectorize
-    if (is.character(keep_DR)) {
-      if (length(keep_DR) > 1) {
-        warning("Using first entry of `keep_DR`.")
-        keep_DR <- keep_DR[1]
-      }
-      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
-      saveRDS(DR0, keep_DR)
-      keep_DR <- FALSE # no longer need it.
-    } else if (!isTRUE(keep_DR)) {
-      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
-      keep_DR <- FALSE
-    }
-  }
-  if (!keep_DR) { rm(DR0) }
-
   # Estimate FC template
   if(FC){
 
+    # [TO DO]: move to a separate function.
     mean_FC <- var_FC_tot <- var_FC_within <- NULL
     # mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
     # var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
@@ -477,12 +476,24 @@ estimate_template <- function(
   }
 
   # Format and save template ---------------------------------------------------
-  # Params
+  # Keep DR
+  if (!isFALSE(keep_DR)) {
+    DR0 <- array(DR0, dim=c(nM, nN, nL, nV)) # Undo vectorize
+    if (is.character(keep_DR)) {
+      saveRDS(DR0, keep_DR)
+      keep_DR <- FALSE # no longer need it.
+    } else if (!isTRUE(keep_DR)) {
+      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+      keep_DR <- FALSE
+    }
+  }
+  if (!keep_DR) { rm(DR0) }
+
+  # Params, formatted as length-one character vectors to put in "xifti" metadata
   template_params <- list(
     inds=paste0(inds, collapse=" "),
     center_Bcols=center_Bcols, 
-    scale=scale, detrend_DCT=detrend_DCT, 
-    center_Gcols=center_Gcols, normA=normA,
+    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     var_method=var_method
@@ -549,7 +560,8 @@ estimate_template <- function(
   result <- list(
     template_mean=template$mean, 
     template_var=template$var, 
-    template_FC=template$FC
+    template_FC=template$FC,
+    var_decomp=var_decomp
   )
 
   if (keep_DR) { result$DR <- DR0 }
@@ -564,8 +576,7 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, 
-  center_Gcols=TRUE, normA=FALSE,
+  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, normA=FALSE,
   brainstructures=c("left","right"), 
   var_method=c("unbiased", "non-negative", "both"),
   keep_DR=FALSE,
@@ -577,8 +588,7 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, 
-    center_Gcols=center_Gcols, normA=normA,
+    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     brainstructures=brainstructures, 
     var_method=var_method,
     keep_DR=keep_DR,
@@ -654,8 +664,7 @@ plot.template_cifti <- function(x, stat=c("mean", "var"), ...) {
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL, 
   GICA, inds=NULL,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, 
-  center_Gcols=TRUE, normA=FALSE,
+  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, normA=FALSE,
   mask=mask, 
   var_method=c("unbiased", "non-negative", "both"),
   keep_DR=FALSE,
@@ -667,8 +676,7 @@ estimate_template.nifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, 
-    center_Gcols=center_Gcols, normA=normA,
+    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     mask=mask, 
     var_method=var_method,
     keep_DR=keep_DR,

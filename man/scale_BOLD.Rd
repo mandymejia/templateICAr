@@ -2,7 +2,7 @@
 % Please edit documentation in R/norm_BOLD.R
 \name{scale_BOLD}
 \alias{scale_BOLD}
-\title{Scale BOLD (legacy version of \code{norm_BOLD})}
+\title{Scale BOLD (legacy version of \code{norm_BOLD}) that centers both ways.}
 \usage{
 scale_BOLD(BOLD, scale = FALSE)
 }
@@ -12,5 +12,5 @@ scale_BOLD(BOLD, scale = FALSE)
 \item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation. Default: \code{FALSE}.}
 }
 \description{
-Scale BOLD (legacy version of \code{norm_BOLD})
+Scale BOLD (legacy version of \code{norm_BOLD}) that centers both ways.
 }

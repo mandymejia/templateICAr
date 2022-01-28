@@ -25,7 +25,7 @@ Encoding: UTF-8
 LazyData: true
 Imports:
     abind,
-    ciftiTools,
+    ciftiTools (>= 0.8.0),
     excursions,
     fMRIscrub,
     ica,

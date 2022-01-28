@@ -19,6 +19,6 @@ estimate_template_from_DR_two(
 List of two elements: the mean and variance templates
 }
 \description{
-Legacy version of \code{estimate_template_from_DR}
+Legacy version of \code{\link{estimate_template_from_DR}}
 }
 \keyword{internal}

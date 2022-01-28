@@ -1,24 +1,28 @@
 #' Dual Regression
 #'
-#' @param BOLD Subject-level fMRI data matrix (\eqn{V \times T})
+#' @param BOLD Subject-level fMRI data matrix (\eqn{V \times T}). Rows will be
+#'  centered. 
 #' @param GICA Group-level independent components (\eqn{V \times Q})
-#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
-#' @param center_Gcols Center GICA across columns (each ICA)? Default: \code{TRUE}.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
-#' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
-#'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
-#'  such that the product \eqn{A \times S} remains the same).
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
+#'  (not recommended).
+#' @param scale A logical value indicating whether the fMRI timeseries should be
+#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases 
+#'  to use for detrending. If \code{0} (default), do not detrend.
+#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual 
+#'  regression estimates? Default: \code{FALSE} (not recommended). Note that the
+#'  product \eqn{A \times S} remains the same with either option.
 #'
 #' @importFrom matrixStats colVars
 #' 
-#' @return A list containing the subject-level independent components \strong{S} (\eqn{V \times Q}), 
+#' @return A list containing 
+#'  the subject-level independent components \strong{S} (\eqn{V \times Q}), 
 #'  and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 #' 
 #' @export
 #'
 dual_reg <- function(
-  BOLD, GICA, scale=FALSE, detrend_DCT=0, center_Bcols=FALSE, center_Gcols=TRUE, normA=FALSE){
+  BOLD, GICA, scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE){
 
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
@@ -44,7 +48,8 @@ dual_reg <- function(
     scale=scale, detrend_DCT=detrend_DCT
   ))
 
-  # Center each group IC across space if `center_Gcols`.
+  # Center each group IC across space. (Used to be a function argument.)
+  center_Gcols <- TRUE
   if (center_Gcols) { GICA <- colCenter(GICA) }
 
   # Estimate A (IC timeseries).
@@ -59,7 +64,7 @@ dual_reg <- function(
   if (normA) { A <- scale(A) }
 
   # Estimate S (IC maps).
-  # `BOLD` is already centered across time.
+  # No worry about the intercept: `BOLD` and `A` are centered across time.
   S <- solve(a=crossprod(A), b=crossprod(A, BOLD))
 
   #return result
@@ -78,17 +83,20 @@ dual_reg <- function(
 #' 
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD}; 
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data. 
-#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same subjects in the same order.
+#' 
 #'  If \code{BOLD2} is not provided, \code{BOLD} will be split in half; 
 #'  the first half will be the test data and the second half will be the retest data.
-#' @param GICA Group ICA maps in as a (vectorized) numeric matrix 
-#'  (\eqn{V \times Q}). Columns should be centered.
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation.
-#' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
-#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
-#'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
-#'  such that the product \eqn{A \times S} remains the same).
+#' @param GICA Group ICA maps as a (vectorized) numeric matrix 
+#'  (\eqn{V \times Q}). Its columns will be centered.
+#' @param scale A logical value indicating whether the fMRI timeseries should be
+#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases 
+#'  to use for detrending. If \code{0} (default), do not detrend.
+#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
+#'  (not recommended).
+#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual 
+#'  regression estimates? Default: \code{FALSE} (not recommended). Note that the
+#'  product \eqn{A \times S} remains the same with either option.
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths. 
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -98,8 +106,8 @@ dual_reg <- function(
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param format Expected format of \code{BOLD} and \code{BOLD2}. Should be one of the following:
-#'  a \code{"CIFTI"} file path, a \code{"xifti"} object, a
+#' @param format Expected format of \code{BOLD} and \code{BOLD2}. Should be one 
+#'  of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 #'  \code{"NIFTI"} file path, a \code{"nifti"} object, or a \code{"data"} matrix.
 #' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
 #'  based on modeling and removing nuisance ICs. It may result in a cleaner 
@@ -112,10 +120,12 @@ dual_reg <- function(
 #' 
 #'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 #'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
-#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
-#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
-#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
+#'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} 
+#'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
+#' 
+#' @return The dual regression S matrices.
 #' 
 #' @keywords internal
 dual_reg2 <- function(
@@ -142,7 +152,7 @@ dual_reg2 <- function(
   nQ <- ncol(GICA)
   nI <- nV <- nrow(GICA)
 
-  # Get `BOLD` (and `BOLD2`) as a data matrix or array. 
+  # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
     if (is.xifti(BOLD)) { BOLD <- as.matrix(BOLD) }
@@ -177,7 +187,7 @@ dual_reg2 <- function(
   stopifnot(ldB-1 == length(nI))
   stopifnot(all(dBOLD[seq(ldB-1)] == nI))
 
-  # Vectorize `BOLD` (and `BOLD2`).
+  # Vectorize `BOLD` (and `BOLD2`). --------------------------------------------
   if (FORMAT=="NIFTI") {
     BOLD <- matrix(BOLD[rep(mask, dBOLD[ldB])], ncol=nT)
     stopifnot(nrow(BOLD) == nV)
@@ -191,7 +201,6 @@ dual_reg2 <- function(
 
   # Normalize BOLD (and BOLD2) -------------------------------------------------
   # (Center, scale, and detrend)
-
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols, 
     scale=scale, detrend_DCT=detrend_DCT
@@ -204,39 +213,32 @@ dual_reg2 <- function(
   }
 
   # Perform dual regression on test and retest data. ---------------------------
-
-  # If no retest data, halve the test data.
+  # If no retest data, halve the test data temporarily.
   if (!retest) {
     part1 <- seq(round(nT/2))
     part2 <- setdiff(seq(nT), part1)
-    BOLD2_pre <- BOLD[, part2, drop=FALSE]
-    BOLD_pre <- BOLD[, part1, drop=FALSE]
-  } else {
-    BOLD_pre <- BOLD
-    BOLD2_pre <- BOLD2
   }
 
   out$test <- dual_reg(
-    BOLD_pre, GICA, scale=FALSE, 
-    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    if (retest) { BOLD } else { BOLD[, part1, drop=FALSE] }, 
+    GICA, scale=FALSE, 
+    center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )
   out$retest <- dual_reg(
-    BOLD2_pre, GICA, scale=FALSE, 
-    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    if (retest) { BOLD2 } else { BOLD[, part2, drop=FALSE] }, 
+    GICA, scale=FALSE, 
+    center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )
 
-  rm(BOLD_pre, BOLD2_pre)
-
   # Estimate and deal with nuisance ICs. ---------------------------------------
+  # (If !retest, we prefer to estimate nuisance ICs across the full scan.)
   BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   if (retest) {
     BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   }
 
-  # If no retest data, halve the test data.
+  # If no retest data, halve the test data. ------------------------------------
   if (!retest) {
-    part1 <- seq(round(nT/2))
-    part2 <- setdiff(seq(nT), part1)
     BOLD2 <- BOLD[, part2, drop=FALSE]
     BOLD <- BOLD[, part1, drop=FALSE]
   }
@@ -255,12 +257,12 @@ dual_reg2 <- function(
   out$test_preclean <- out$test$S
   out$test <- dual_reg(
     BOLD, GICA, scale=FALSE, 
-    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )$S
   out$retest_preclean <- out$retest$S
   out$retest <- dual_reg(
     BOLD2, GICA, scale=FALSE, 
-    center_Bcols=FALSE, center_Gcols=FALSE, detrend_DCT=0, normA=normA
+    center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )$S
 
   out

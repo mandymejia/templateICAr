@@ -2,77 +2,77 @@
 #'
 #' Perform template independent component analysis (ICA) using expectation-maximization (EM)
 #'
-#' @param BOLD Vector of subject-level fMRI data in one of the following formats: 
+#' @param BOLD Vector of subject-level fMRI data in one of the following formats:
 #'  CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
 #'  \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
-#'  \eqn{T} is the number of timepoints. 
-#' 
+#'  \eqn{T} is the number of timepoints.
+#'
 #'  If multiple BOLD data are provided, they will be independently centered, scaled, and detrended (if applicable),
 #'  and then they will be concatenated together prior to denoising (if applicable) and computing the initial dual regression estimate.
 #' @param template_mean,template_var,template_FC Template estimates in a format
-#'  compatible with \code{BOLD}. 
-#' 
-#'  \code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components. 
+#'  compatible with \code{BOLD}.
+#'
+#'  \code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components.
 #'  Its vectorized dimensions should be \eqn{V \times L}.
-#'  
+#'
 #'  \code{template_var} gives the between-subject variance of the empirical population prior for each of the \eqn{L} independent components.
 #'  Its vectorized dimensions should be \eqn{V \times L}. If not provided and \code{template_mean}
 #'  is a file path, will be inferred by substituting \code{"_mean"} in the file name with \code{"_var"}.
-#' 
-#'  \code{template_FC} is not yet supported. 
+#'
+#'  \code{template_FC} is not yet supported.
 #' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
 #' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression 
+#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
 #'  such that the product \eqn{A \times S} remains the same).
-#' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and 
-#'  removing nuisance ICs. It may result in a cleaner estimate for smaller 
-#'  datasets, but it may be unnecessary (and time-consuming) for larger datasets. 
-#'  
+#' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
+#'  removing nuisance ICs. It may result in a cleaner estimate for smaller
+#'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+#'
 #'  Set \code{Q2} to control denoising: use a positive integer to specify the
 #'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
-#'  estimated by PESEL (default), or zero to skip denoising. 
-#' 
+#'  estimated by PESEL (default), or zero to skip denoising.
+#'
 #'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 #'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
 #'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
 #'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths. 
+#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-#'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same 
+#'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param time_inds Subset of fMRI BOLD volumes to include in analysis. 
+#' @param time_inds Subset of fMRI BOLD volumes to include in analysis.
 #'  If \code{NULL} (default), use all volumes. Subsetting is performed before
 #'  any centering, scaling, detrending, and denoising.
 #' @param spatial_model Should spatial modeling be performed? If \code{NULL}, assume
 #'  spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
 #'  each independent component. Each should represent a brain structure, between which
 #'  spatial independence can be assumed.
-#' 
+#'
 #'  If \code{BOLD} represents CIFTI-format data, \code{spatial_model} should give the left and
 #'  right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
 #'  objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
 #'  the subcortex. This argument can also be \code{TRUE}, in which case spatial modeling
-#'  will be performed with the surfaces included in the first entry of \code{BOLD} if it is a 
+#'  will be performed with the surfaces included in the first entry of \code{BOLD} if it is a
 #'  \code{"xifti"} object, or if those are not present available, the default inflated
 #'  surfaces from \code{ciftiTools}.
-#' 
+#'
 #'  If \code{BOLD} represents NIFTI-format data, spatial modeling is not yet available.
-#' 
+#'
 #'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
 #'  (see \code{\link{make_mesh}}).
 #' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data, and only recommended
 #'  for spatial modeling. The target resolution for resampling (number of
 #'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default), do not perform resampling.
-#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?  
+#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
 #'  If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
@@ -98,7 +98,7 @@
 templateICA <- function(
   BOLD,
   template_mean, template_var=NULL, template_FC=NULL,
-  scale=TRUE, detrend_DCT=0, 
+  scale=TRUE, detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=NULL, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
@@ -111,7 +111,7 @@ templateICA <- function(
   verbose=TRUE){
 
   # Check arguments ------------------------------------------------------------
-  
+
   # Simple argument checks.
   stopifnot(is.logical(scale) && length(scale)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
@@ -120,6 +120,7 @@ templateICA <- function(
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
+  if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
     stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
     stopifnot(round(resamp_res) == resamp_res && resamp_res >= 0)
@@ -156,7 +157,7 @@ templateICA <- function(
 
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
-    if (nCores < 2) { 
+    if (nCores < 2) {
       usePar <- FALSE
     } else {
       cluster <- parallel::makeCluster(nCores)
@@ -167,7 +168,7 @@ templateICA <- function(
   # `out_fname`?
 
   # `BOLD` ---------------------------------------------------------------------
-  # Determine the format of `BOLD`. 
+  # Determine the format of `BOLD`.
   format <- infer_BOLD_format(BOLD)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
@@ -191,7 +192,7 @@ templateICA <- function(
   }
 
   # Make `BOLD` a list.
-  if (is.character(BOLD)) { 
+  if (is.character(BOLD)) {
     BOLD <- as.list(BOLD)
   } else if (!is.list(BOLD)) {
     BOLD <- list(BOLD)
@@ -211,20 +212,20 @@ templateICA <- function(
   # Conver templates to numeric data matrices or arrays.
   # Check that the mean and variance template dimensions match.
   if (FORMAT == "CIFTI") {
-    if (is.character(template_mean)) { 
-      if (is.null(template_var)) { 
+    if (is.character(template_mean)) {
+      if (is.null(template_var)) {
         template_var <- gsub(
-          paste0("_mean", FORMAT_extn), paste0("_var", FORMAT_extn), 
+          paste0("_mean", FORMAT_extn), paste0("_var", FORMAT_extn),
           template_mean
         )
-        if (!file.exists(template_var)) { 
+        if (!file.exists(template_var)) {
           stop("Could not infer `template_var` file path; please provide it.")
         }
       }
-      template_mean <- ciftiTools::read_xifti(template_mean, brainstructures=brainstructures) 
-      template_var <- ciftiTools::read_xifti(template_var, brainstructures=brainstructures) 
+      template_mean <- ciftiTools::read_xifti(template_mean, brainstructures=brainstructures)
+      template_var <- ciftiTools::read_xifti(template_var, brainstructures=brainstructures)
     }
-    if (is.xifti(template_mean)) { 
+    if (is.xifti(template_mean)) {
       xii1 <- select_xifti(template_mean, 1) # for formatting output
       template_mean <- as.matrix(template_mean)
     }
@@ -236,15 +237,15 @@ templateICA <- function(
     stopifnot(is.matrix(template_var))
   } else if (FORMAT == "NIFTI") {
     if (is.character(template_mean)) {
-      if (is.null(template_var)) { 
+      if (is.null(template_var)) {
         template_var <- gsub(
-          paste0("_mean", FORMAT_extn), paste0("_var", FORMAT_extn), 
+          paste0("_mean", FORMAT_extn), paste0("_var", FORMAT_extn),
           template_mean
         )
-        if (!file.exists(template_var)) { 
+        if (!file.exists(template_var)) {
           stop("Could not infer `template_var` file path; please provide it.")
         }
-      }      
+      }
       template_mean <- oro.nifti::readNIfTI(template_mean, reorient=FALSE)
       template_var <- oro.nifti::readNIfTI(template_var, reorient=FALSE)
     }
@@ -266,7 +267,7 @@ templateICA <- function(
     if (is.null(mask)) { stop("`mask` is required.") }
     if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask, reorient=FALSE) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
-    if (is.numeric(mask)) { 
+    if (is.numeric(mask)) {
       cat("Coercing `mask` to a logical array with `as.logical`.\n")
       mask[] <- as.logical(mask)
     }
@@ -279,7 +280,7 @@ templateICA <- function(
       if (all(dim(template_mean)[length(dim(template_mean))-1] == nI)) {
         template_mean <- matrix(template_mean[rep(mask, nL)], ncol=nL)
         template_var <- matrix(template_var[rep(mask, nL)], ncol=nL)
-        stopifnot(nrow(template_mean) == nV)  
+        stopifnot(nrow(template_mean) == nV)
       }
     }
   } else {
@@ -294,7 +295,7 @@ templateICA <- function(
     # Check that `BOLD` format is compatible with the spatial model
     if (FORMAT == "NIFTI") { stop("`spatial_model` not available for NIFTI BOLD.") }
     if (FORMAT == "CIFTI") {
-      if ("subcortical" %in% brainstructures) { 
+      if ("subcortical" %in% brainstructures) {
         stop("Subcortical `brainstructures` not compatible with `spatial_model.`")
       }
     }
@@ -323,7 +324,7 @@ templateICA <- function(
     if (FORMAT == "CIFTI") {
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
-          res <- ciftiTools:::infer_resolution(BOLD)
+          res <- ciftiTools::infer_resolution(BOLD)
         } else {
           res <- resamp_res
         }
@@ -335,7 +336,7 @@ templateICA <- function(
           } else {
             wall_mask <- NULL
           }
-          if (rm_mwall) { 
+          if (rm_mwall) {
             mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
           } else {
             mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
@@ -350,7 +351,7 @@ templateICA <- function(
           } else {
             wall_mask <- NULL
           }
-          if (rm_mwall) { 
+          if (rm_mwall) {
             mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
           } else {
             mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
@@ -359,8 +360,8 @@ templateICA <- function(
         }
       }
     } else {
-      if (is.null(meshes)) { 
-        stop("`meshes` must be provided if the input format is not CIFTI.") 
+      if (is.null(meshes)) {
+        stop("`meshes` must be provided if the input format is not CIFTI.")
       }
     }
     if (!is.list(meshes)) stop('`meshes` must be a list.')
@@ -368,8 +369,8 @@ templateICA <- function(
       stop('Each element of `meshes` should be of class `"templateICA_mesh"`. See `help(make_mesh)`.')
     }
     ndat_mesh <- sum(vapply(meshes, function(x){colSums(x$A)}, 0))
-    if (ndat_mesh != nV) { 
-      stop("Number of data locations in `meshes` does not match that of the BOLD data.") 
+    if (ndat_mesh != nV) {
+      stop("Number of data locations in `meshes` does not match that of the BOLD data.")
     }
     # [TO-DO]: Check that numbers of data locations on meshes (column sums of A) add up to match the number of data locations.
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
@@ -386,7 +387,7 @@ templateICA <- function(
     cat('Number of BOLD scans:          ', nN, "\n")
   }
 
-  # Get each entry of `BOLD` as a data matrix or array. 
+  # Get each entry of `BOLD` as a data matrix or array.
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
@@ -475,9 +476,9 @@ templateICA <- function(
 
   # Normalize BOLD -------------------------------------------------------------
   # (Center, scale, and detrend)
-  
-  BOLD <- lapply(BOLD, norm_BOLD, 
-    center_rows=TRUE, center_cols=center_Bcols, 
+
+  BOLD <- lapply(BOLD, norm_BOLD,
+    center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT
   )
 
@@ -498,7 +499,7 @@ templateICA <- function(
 
   # Initialize with the dual regression-based estimate -------------------------
   BOLD_DR <- dual_reg(
-    BOLD, template_mean, center_Bcols=FALSE, 
+    BOLD, template_mean, center_Bcols=FALSE,
     scale=FALSE, detrend_DCT=0, normA=normA
   )
 
@@ -527,19 +528,21 @@ templateICA <- function(
     )
   } else {
 
+    browser()
+
     # Reduce data dimensions
     BOLD <- dim_reduce(BOLD, nL)
-    err_var <- BOLD$sigma_sq
+    err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
     BOLD2 <- BOLD$data_reduced
-    H <- BOLD$H
-    Hinv <- BOLD$H_inv
+    H <- BOLD$H # spw: identity
+    Hinv <- BOLD$H_inv # spw: identity
     # In original template ICA model nu^2 is separate
     #   for spatial template ICA it is part of C
-    C_diag <- BOLD$C_diag
+    C_diag <- BOLD$C_diag # spw: identity
     if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
     rm(BOLD)
     # Apply dimension reduction
-    HA <- H %*% BOLD_DR$A 
+    HA <- H %*% BOLD_DR$A # spw: just A
     theta0 <- list(A = HA)
     # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
     # theta0$nu0_sq = dat_list$sigma_sq
@@ -584,7 +587,7 @@ templateICA <- function(
       resultEM$A <- Hinv %*% resultEM$theta_MLE$A
 
       resultEM$result_tICA <- resultEM_tICA
-      class(resultEM) <- 'stICA'    
+      class(resultEM) <- 'stICA'
     }
   }
 

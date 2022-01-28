@@ -10,11 +10,12 @@ rm_nuisIC(
   template_mean = NULL,
   Q2 = NULL,
   Q2_max = NULL,
+  checkRowCenter = TRUE,
   verbose = FALSE
 )
 }
 \arguments{
-\item{BOLD}{the \eqn{V} by \eqn{T} data}
+\item{BOLD}{the row-centered \eqn{V} by \eqn{T} data}
 
 \item{DR, template_mean}{We need an initial estimate of the group ICs, so that we can avoid removing them
 during removal of the estimated noise ICs. Provide either \code{DR} if dual regression has already
@@ -24,6 +25,8 @@ been calculated, or \code{template_mean} (in this context, equivalent to GICA) i
 
 \item{Q2_max}{If \code{Q2} is \code{NULL}, PESEL's estimate will be less than or equal to \code{Q2_max}.
 If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate.}
+
+\item{checkRowCenter}{Check row means, and raise an error if they are nonzero? Default: \code{TRUE}.}
 
 \item{verbose}{If \code{TRUE}, display progress updates}
 }
