@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate brain networks using the template ICA model employing empirical population priors
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
