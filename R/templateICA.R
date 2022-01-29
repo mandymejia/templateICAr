@@ -149,13 +149,13 @@ templateICA <- function(
       if (all(parPkgs_missing)) {
         stop(paste0(
           "Packages `parallel` and `doParallel` needed ",
-          "for `usePar` to loop over voxels. Please install them.", call.=FALSE
-        ))
+          "for `usePar` to loop over voxels. Please install them."), call.=FALSE
+        )
       } else {
         stop(paste0(
           "Package `", parPkgs[parPkgs_missing], "` needed ",
-          "for `usePar` to loop over voxels. Please install it.", call.=FALSE
-        ))
+          "for `usePar` to loop over voxels. Please install it."), call.=FALSE
+        )
       }
     }
 
