@@ -236,7 +236,7 @@ estimate_template <- function(
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
-  retest <- !is.null(BOLD2)
+  real_retest <- !is.null(BOLD2)
 
   # `keep_DR`
   if (is.logical(keep_DR)) {
@@ -265,7 +265,7 @@ estimate_template <- function(
   # `BOLD` and `BOLD2` ---------------------------------------------------------
   # Determine the format of `BOLD` and `BOLD2`.
   format <- infer_BOLD_format(BOLD)
-  if (retest) {
+  if (real_retest) {
     format2 <- infer_BOLD_format(BOLD2)
     if (format2 != format) {
       stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
@@ -282,7 +282,7 @@ estimate_template <- function(
   nN <- length(BOLD)
 
   # Ensure `BOLD2` is the same length.
-  if (retest) {
+  if (real_retest) {
     if (length(BOLD) != length(BOLD2)) {
       stop("`BOLD2` represents corresponding retest data for `BOLD`, so it must have the same length as `BOLD`.")
     }
@@ -292,7 +292,7 @@ estimate_template <- function(
   if (format %in% c("CIFTI", "NIFTI")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
-    if (retest) {
+    if (real_retest) {
       missing_BOLD2 <- !file.exists(BOLD2)
       if (all(missing_BOLD2)) stop('The files in `BOLD2` do not exist.')
       # determine pairs with at least one missing scan
@@ -301,7 +301,7 @@ estimate_template <- function(
       if (all(missing_BOLD)) stop('Files in `BOLD` and/or `BOLD2` are missing such that no complete pair of data exists.')
     }
     if (any(missing_BOLD)) {
-      if (retest) {
+      if (real_retest) {
         warning('There are ', missing_BOLD, ' pairs of `BOLD` and `BOLD2` with at least one non-existent scan. These pairs will be excluded from template estimation.')
         BOLD <- BOLD[!missing_BOLD]
         BOLD2 <- BOLD[!missing_BOLD]
@@ -412,7 +412,7 @@ estimate_template <- function(
     if(verbose) { cat(paste0(
       '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
     )) }
-    if (retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
+    if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
     DR_ii <- dual_reg2(
       BOLD[ii], BOLD2=B2,
@@ -515,8 +515,9 @@ estimate_template <- function(
     center_Bcols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
-    brainstructures=brainstructures,
-    var_method=var_method
+    brainstructures=paste0(brainstructures, collapse=" "),
+    var_method=var_method,
+    pseudo_retest=!real_retest
   )
   template_params <- lapply(
     template_params,
