@@ -666,7 +666,9 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 
   #initialize new objects
   theta_new <- list(A = matrix(NA, nT, nQ), nu0_sq = NA)
-  A_part1 <- A_part2 <- matrix(0, nT, nQ) #two parts of product for A-hat (construct each looping over voxels)
+  #two parts of product for A-hat (construct each looping over voxels)
+  A_part1 <- matrix(0, nT, nQ)
+  A_part2 <- matrix(0, nQ, nQ)
 
   A <- theta$A # TxQ
   nu0_sq <- theta$nu0_sq # const
