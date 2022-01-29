@@ -74,6 +74,9 @@
 #'  feasibility. If \code{NULL} (default), do not perform resampling.
 #' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
 #'  If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.
+#' @param reduce_dim Reduce the temporal dimension of the data using PCA? Default: \code{TRUE}.
+#'  Skipping dimension reduction will slow the model estimation, but may result in
+#'  more accurate results.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
@@ -103,6 +106,7 @@ templateICA <- function(
   Q2=NULL, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
+  reduce_dim=TRUE,
   maxiter=100,
   epsilon=0.001,
   kappa_init=0.2,
@@ -487,9 +491,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  if ( !(!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0) ) {
-    BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
-  }
+  BOLD <- rm_nuisIC(BOLD, template_mean=template_mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
 
   # Center and scale `BOLD` again, but do not detrend again. -------------------
   BOLD <- norm_BOLD(
@@ -528,25 +530,30 @@ templateICA <- function(
     )
   } else {
 
-    browser()
-
-    # Reduce data dimensions
-    BOLD <- dim_reduce(BOLD, nL)
-    err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
-    BOLD2 <- BOLD$data_reduced
-    H <- BOLD$H # spw: identity
-    Hinv <- BOLD$H_inv # spw: identity
-    # In original template ICA model nu^2 is separate
-    #   for spatial template ICA it is part of C
-    C_diag <- BOLD$C_diag # spw: identity
-    if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
-    rm(BOLD)
-    # Apply dimension reduction
-    HA <- H %*% BOLD_DR$A # spw: just A
-    theta0 <- list(A = HA)
-    # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
-    # theta0$nu0_sq = dat_list$sigma_sq
-    # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+    if (reduce_dim) {
+      # Reduce data dimensions
+      BOLD <- dim_reduce(BOLD, nL)
+      err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
+      BOLD2 <- BOLD$data_reduced
+      H <- BOLD$H 
+      Hinv <- BOLD$H_inv 
+      # In original template ICA model nu^2 is separate
+      #   for spatial template ICA it is part of C
+      C_diag <- BOLD$C_diag
+      if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
+      rm(BOLD)
+      # Apply dimension reduction
+      HA <- H %*% BOLD_DR$A # spw: just A
+      theta0 <- list(A = HA)
+      # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
+      # theta0$nu0_sq = dat_list$sigma_sq
+      # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+    } else {
+      err_var <- dim_reduce(BOLD, nL)$sigma_sq
+      BOLD2 <- BOLD; rm(BOLD)
+      theta0 <- list(A = A)
+      C_diag <- rep(1, nT)
+    }
 
     #2) Template ICA -----------------------------------------------------------
     if (do_spatial && verbose) { cat('INITIATING WITH STANDARD TEMPLATE ICA\n') }
@@ -560,7 +567,7 @@ templateICA <- function(
                                            maxiter=maxiter,
                                            epsilon=epsilon,
                                            verbose=verbose)
-    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+    if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
     class(resultEM) <- 'tICA'
 
     #3) Spatial Template ICA ---------------------------------------------------

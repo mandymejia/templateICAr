@@ -21,6 +21,7 @@ templateICA(
   spatial_model = NULL,
   resamp_res = NULL,
   rm_mwall = TRUE,
+  reduce_dim = TRUE,
   maxiter = 100,
   epsilon = 0.001,
   kappa_init = 0.2,
@@ -113,6 +114,10 @@ feasibility. If \code{NULL} (default), do not perform resampling.}
 
 \item{rm_mwall}{Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
 If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.}
+
+\item{reduce_dim}{Reduce the temporal dimension of the data using PCA? Default: \code{TRUE}.
+Skipping dimension reduction will slow the model estimation, but may result in
+more accurate results.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
