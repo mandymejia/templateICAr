@@ -543,7 +543,7 @@ templateICA <- function(
       if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
       rm(BOLD)
       # Apply dimension reduction
-      HA <- H %*% BOLD_DR$A # spw: just A
+      HA <- H %*% BOLD_DR$A
       theta0 <- list(A = HA)
       # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
       # theta0$nu0_sq = dat_list$sigma_sq
@@ -551,7 +551,7 @@ templateICA <- function(
     } else {
       err_var <- dim_reduce(BOLD, nL)$sigma_sq
       BOLD2 <- BOLD; rm(BOLD)
-      theta0 <- list(A = A)
+      theta0 <- list(A = dim_reduce(BOLD, nL)$H %*% BOLD_DR$A) # [TO DO]: fix
       C_diag <- rep(1, nT)
     }
 
