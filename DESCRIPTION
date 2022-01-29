@@ -42,7 +42,7 @@ Suggests:
     foreach,
     knitr,
     rmarkdown,
-    INLA (>= 0.0-1468840039),
+    INLA,
     parallel,
     testthat (>= 3.0.0)
 RoxygenNote: 7.1.2
