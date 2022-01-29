@@ -163,14 +163,14 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 }
 
 #' Positive skew?
-#' 
-#' Does the vector have a positive skew? 
-#' 
+#'
+#' Does the vector have a positive skew?
+#'
 #' @param x The numeric vector for which to calculate the skew. Can also be a matrix,
 #'  in which case the skew of each column will be calculated.
 #' @return \code{TRUE} if the skew is positive or zero. \code{FALSE} if the skew is negative.
 #' @keywords internal
-#' 
+#'
 #' @importFrom stats median
 skew_pos <- function(x){
   x <- as.matrix(x)
@@ -178,13 +178,13 @@ skew_pos <- function(x){
 }
 
 #' Sign match ICA results
-#' 
+#'
 #' Flips all source signal estimates (S) to positive skew
-#' 
+#'
 #' @param x The ICA results with entries \code{S} and \code{M}
 #' @return \code{x} but with positive skew source signals
 #' @keywords internal
-#' 
+#'
 sign_flip <- function(x){
   stopifnot(is.list(x))
   stopifnot(("S" %in% names(x)) & ("M" %in% names(x)))
@@ -195,9 +195,9 @@ sign_flip <- function(x){
 }
 
 #' Center cols
-#' 
+#'
 #' Efficiently center columns of a matrix. (Faster than \code{scale})
-#' 
+#'
 #' @param X The data matrix. Its columns will be centered
 #' @return The centered data
 #' @keywords internal
@@ -206,11 +206,13 @@ colCenter <- function(X) {
 }
 
 #' Infer fMRI data format
-#' 
+#'
 #' @param BOLD The fMRI data
 #' @param verbose Print the format? Default: \code{FALSE}.
-#' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object, 
+#' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object,
 #'  \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
+#'  Can also be \code{"xifti_single"} or \code{"nifti_single"} to
+#'  indicate a single object.
 #' @keywords internal
 infer_BOLD_format <- function(BOLD, verbose=FALSE){
 
@@ -230,15 +232,20 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
       }
     }
 
+  } else if (inherits(BOLD, "xifti")) {
+    format <- "xifti"
+  } else if (inherits(BOLD, "nifti")) {
+    format <- "nifti"
+
   # Non-character vector: xifti, nifti, or data
   } else if (inherits(BOLD[[1]], "xifti")) {
-    if (all(lapply(BOLD, inherits, "xifti"))) {
+    if (all(vapply(BOLD, inherits, what="xifti", FALSE))) {
       format <- "xifti"
     } else {
       stop("BOLD format seems to be a mix of `xifti` files and something else. Use the same format for all.")
     }
   } else if (inherits(BOLD[[1]], "nifti")) {
-    if (all(lapply(BOLD, inherits, "nifti"))) {
+    if (all(vapply(BOLD, inherits, what="nifti", FALSE))) {
       format <- "nifti"
     } else {
       stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
@@ -262,22 +269,22 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
 }
 
 #' Check \code{Q2_max}
-#' 
+#'
 #' Check \code{Q2_max} and set it if \code{NULL}.
-#' 
+#'
 #' @param Q2_max,nQ,nT The args
 #' @return \code{Q2_max}, clamped to acceptable range of values.
 #' @keywords internal
 Q2_max_check <- function(Q2_max, nQ, nT){
-  if (!is.null(Q2_max)) { 
+  if (!is.null(Q2_max)) {
     if (round(Q2_max) != Q2_max || Q2_max <= 0) {
       stop('`Q2_max` must be `NULL` or a non-negative integer.')
     }
   } else {
     Q2_max <- pmax(round(nT*.50 - nQ), 1)
   }
-  
-  # This is to avoid the area of the pesel objective function that spikes close 
+
+  # This is to avoid the area of the pesel objective function that spikes close
   #   to rank(X), which often leads to nPC close to rank(X)
   if (Q2_max > round(nT*.75 - nQ)) {
     warning('`Q2_max` too high, setting to 75% of T.')

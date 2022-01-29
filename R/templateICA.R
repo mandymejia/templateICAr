@@ -173,7 +173,9 @@ templateICA <- function(
 
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
+  # same for NIFTI
   format <- infer_BOLD_format(BOLD)
+  if (verbose) { cat("Data input format:             ", format, "\n") }
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -199,6 +201,10 @@ templateICA <- function(
   if (is.character(BOLD)) {
     BOLD <- as.list(BOLD)
   } else if (!is.list(BOLD)) {
+    BOLD <- list(BOLD)
+  } else if (format == "xifti" && inherits(BOLD, "xifti")) {
+    BOLD <- list(BOLD)
+  } else if (format == "nifti" && inherits(BOLD, "nifti")) {
     BOLD <- list(BOLD)
   }
   nN <- length(BOLD)
@@ -420,13 +426,13 @@ templateICA <- function(
 
   # Process the scan -----------------------------------------------------------
   # Get each entry of `BOLD` as a data matrix or array.
-  if (format == "CIFTI") {
+  if (FORMAT == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
       if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
       stopifnot(is.matrix(BOLD[[bb]]))
     }
-  } else if (format == "NIFTI") {
+  } else if (FORMAT == "NIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) }
       stopifnot(length(dim(BOLD[[bb]])) > 1)
