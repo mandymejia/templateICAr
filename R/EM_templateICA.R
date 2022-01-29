@@ -660,41 +660,40 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 #' @rdname UpdateTheta_templateICA
 UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
-  Q <- ncol(BOLD)
-  nvox <- nrow(BOLD)
+  nQ <- ncol(BOLD)
+  nV <- nrow(BOLD)
+  # nT <- nrow(theta)
 
   #initialize new objects
-  theta_new <- list(A = matrix(NA, Q, Q), nu0_sq = NA)
-  A_part1 <- A_part2 <- matrix(0, Q, Q) #two parts of product for A-hat (construct each looping over voxels)
-
+  theta_new <- list(A = matrix(NA, nQ, nQ), nu0_sq = NA)
+  A_part1 <- A_part2 <- matrix(0, nQ, nQ) #two parts of product for A-hat (construct each looping over voxels)
 
   A <- theta$A
   nu0_sq <- theta$nu0_sq
   nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code
-  At_nu0Cinv <- crossprod(A, nu0C_inv)
+  At_nu0Cinv <- crossprod(A, nu0C_inv) # 
   At_nu0Cinv_A <- At_nu0Cinv %*% A
 
   if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
-  # miu_s <- matrix(NA, nrow=nvox, ncol=Q) # not used anymore
-  # miu_ssT <- array(NA, dim=c(nvox, Q, Q)) # not used anymore
+  # miu_s <- matrix(NA, nrow=nV, ncol=nQ) # not used anymore
+  # miu_ssT <- array(NA, dim=c(nV, nQ, nQ)) # not used anymore
 
-  for(v in 1:nvox){
-
-    y_v <- BOLD[v,]
-    s0_v <- template_mean[v,]
+  for (vv in 1:nV) {
+    y_v <- BOLD[vv,]
+    s0_v <- template_mean[vv,]
 
     ##########################################
     ### E-STEP FOR A AND nu0^2: POSTERIOR MOMENTS OF s_i(v)
     ##########################################
 
-    E_v_inv <- diag(1/template_var[v,])
+    E_v_inv <- diag(1/template_var[vv,])
     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
     miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
-    # miu_s[v,] <- miu_s_v #save for M-step of nu0_sq
-    # miu_ssT[v,,] <- miu_ssT_v #save for M-step of nu0_sq
+    # miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
+    # miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
@@ -702,7 +701,6 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 
     A_part1 <- A_part1 + tcrossprod(y_v, miu_s_v) #QxQ
     A_part2 <- A_part2 + miu_ssT_v #QxQ
-
   }
 
   #A_hat <- orthonorm(A_part1 %*% solve(A_part2))
@@ -721,21 +719,19 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   # At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
   # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
   #
-  # for(v in 1:nvox){
+  # for(vv in 1:nV){
   #
-  #   y_v <- BOLD[,v]
+  #   y_v <- BOLD[,vv]
   #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
-  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
+  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,vv]
+  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,vv]))
   # }
   #
-  # nu0sq_hat <- 1/(Q*nvox)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-
+  # nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
   nu0sq_hat <- theta$nu0_sq
 
 
   # RETURN NEW PARAMETER ESTIMATES
-
   theta_new$A <- A_hat
   theta_new$nu0_sq <- nu0sq_hat[1]
   return(theta_new)

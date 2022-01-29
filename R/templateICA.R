@@ -551,7 +551,7 @@ templateICA <- function(
     } else {
       err_var <- dim_reduce(BOLD, nL)$sigma_sq
       BOLD2 <- BOLD; rm(BOLD)
-      theta0 <- list(A = dim_reduce(BOLD, nL)$H %*% BOLD_DR$A) # [TO DO]: fix
+      theta0 <- list(A = BOLD_DR$A)
       C_diag <- rep(1, nT)
     }
 
