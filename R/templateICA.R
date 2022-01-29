@@ -338,19 +338,21 @@ templateICA <- function(
         "Note that computation time and memory demands may be high.\n"
       ))
     }
-    
+
     if (FORMAT == "CIFTI") {
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
-          res <- ciftiTools::infer_resolution(BOLD)
+          res <- ciftiTools::infer_resolution(BOLD[[1]])
         } else {
           res <- resamp_res
         }
         if (do_left) {
           surf <- BOLD[[1]]$surf$cortex_left
-          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
-            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$left)
+            wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$left
+            if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
+            wall_mask <- which(wall_mask)
           } else {
             wall_mask <- NULL
           }
@@ -363,9 +365,11 @@ templateICA <- function(
         }
         if (do_right) {
           surf <- BOLD[[1]]$surf$cortex_right
-          if (is.null(surf)) { surf <- make_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
-            wall_mask <- which(BOLD[[1]]$meta$cortex$medial_wall_mask$right)
+            wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$right
+            if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
+            wall_mask <- which(wall_mask)
           } else {
             wall_mask <- NULL
           }
@@ -549,8 +553,8 @@ templateICA <- function(
       BOLD <- dim_reduce(BOLD, nL)
       err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
       BOLD2 <- BOLD$data_reduced
-      H <- BOLD$H 
-      Hinv <- BOLD$H_inv 
+      H <- BOLD$H
+      Hinv <- BOLD$H_inv
       # In original template ICA model nu^2 is separate
       #   for spatial template ICA it is part of C
       C_diag <- BOLD$C_diag
