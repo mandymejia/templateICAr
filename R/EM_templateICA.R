@@ -964,13 +964,15 @@ bdiag_m <- function(lmat) {
 #'
 UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose){
 
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of data locations
   Q <- ncol(template_mean)
 
   #convert theta vector to list format
-  A <- theta_vec[1:(Q^2)]
+  A <- theta_vec[1:(Q*ntime)]
   #nu0_sq <- theta_vec[(Q^2)+1]
-  kappa <- theta_vec[(Q^2)+(1:Q)]
-  theta <- list(A = matrix(A, nrow=Q, ncol=Q),
+  kappa <- theta_vec[(Q*ntime)+(1:Q)]
+  theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
                 #nu0_sq = nu0_sq,
                 kappa = kappa)
 
