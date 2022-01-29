@@ -290,13 +290,14 @@ estimate_template <- function(
 
   # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
   if (format %in% c("CIFTI", "NIFTI")) {
-    missing_BOLD <- (!file.exists(BOLD)) | (!file.exists(BOLD2))
+    missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (retest) {
       missing_BOLD2 <- !file.exists(BOLD2)
       if (all(missing_BOLD2)) stop('The files in `BOLD2` do not exist.')
       # determine pairs with at least one missing scan
       missing_BOLD <- missing_BOLD | missing_BOLD2
+      rm(missing_BOLD2)
       if (all(missing_BOLD)) stop('Files in `BOLD` and/or `BOLD2` are missing such that no complete pair of data exists.')
     }
     if (any(missing_BOLD)) {
