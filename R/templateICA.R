@@ -212,6 +212,20 @@ templateICA <- function(
     do_sub <- "subcortical" %in% brainstructures
   }
 
+  # Read in CIFTI or NIFTI files.
+  # (Need to do now rather than later, so that CIFTI resolution info can be used.)
+  if (format == "CIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
+      stopifnot(is.xifti(BOLD[[bb]]))
+    }
+  } else if (format == "NIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) }
+      # [TO DO] check?
+    }
+  }
+
   # templates ------------------------------------------------------------------
   # Conver templates to numeric data matrices or arrays.
   # Check that the mean and variance template dimensions match.
@@ -300,7 +314,7 @@ templateICA <- function(
     if (FORMAT == "NIFTI") { stop("`spatial_model` not available for NIFTI BOLD.") }
     if (FORMAT == "CIFTI") {
       if ("subcortical" %in% brainstructures) {
-        stop("Subcortical `brainstructures` not compatible with `spatial_model.`")
+        stop("Subcortex not compatible with `spatial_model.`")
       }
     }
 
@@ -324,7 +338,7 @@ templateICA <- function(
         "Note that computation time and memory demands may be high.\n"
       ))
     }
-
+    
     if (FORMAT == "CIFTI") {
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
@@ -372,7 +386,7 @@ templateICA <- function(
     if (!all(vapply(meshes, inherits, what="templateICA_mesh", FALSE))) {
       stop('Each element of `meshes` should be of class `"templateICA_mesh"`. See `help(make_mesh)`.')
     }
-    ndat_mesh <- sum(vapply(meshes, function(x){colSums(x$A)}, 0))
+    ndat_mesh <- sum(vapply(meshes, function(x){sum(x$A)}, 0))
     if (ndat_mesh != nV) {
       stop("Number of data locations in `meshes` does not match that of the BOLD data.")
     }
