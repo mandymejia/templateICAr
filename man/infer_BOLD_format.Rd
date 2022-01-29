@@ -12,7 +12,7 @@ infer_BOLD_format(BOLD, verbose = FALSE)
 \item{verbose}{Print the format? Default: \code{FALSE}.}
 }
 \value{
-The format: \code{"CIFTI"} file path, \code{"xifti"} object, 
+The format: \code{"CIFTI"} file path, \code{"xifti"} object,
  \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
 }
 \description{

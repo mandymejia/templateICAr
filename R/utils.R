@@ -211,8 +211,6 @@ colCenter <- function(X) {
 #' @param verbose Print the format? Default: \code{FALSE}.
 #' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object,
 #'  \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
-#'  Can also be \code{"xifti_single"} or \code{"nifti_single"} to
-#'  indicate a single object.
 #' @keywords internal
 infer_BOLD_format <- function(BOLD, verbose=FALSE){
 
