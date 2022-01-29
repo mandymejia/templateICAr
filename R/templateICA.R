@@ -86,6 +86,7 @@ templateICA <- function(template_mean,
   }
 
   #check that maxQ makes sense
+  if (!is.null(Q2)) { maxQ <- L + Q2 }
   if(!is.null(maxQ)){ if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number') }
   if(is.null(maxQ)) maxQ <- round(ntime/2)
   if(maxQ < L){
