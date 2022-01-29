@@ -216,12 +216,19 @@ templateICA <- function(
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
+      if (is.character(BOLD[[bb]])) { 
+        BOLD[[bb]] <- ciftiTools::read_xifti(
+          BOLD[[bb]], resamp_res=resamp_res,
+          brainstructures=brainstructures
+        ) 
+      }
       stopifnot(is.xifti(BOLD[[bb]]))
     }
   } else if (format == "NIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) }
+      if (is.character(BOLD[[bb]])) { 
+        BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) 
+      }
       # [TO DO] check?
     }
   }
@@ -240,8 +247,14 @@ templateICA <- function(
           stop("Could not infer `template_var` file path; please provide it.")
         }
       }
-      template_mean <- ciftiTools::read_xifti(template_mean, brainstructures=brainstructures)
-      template_var <- ciftiTools::read_xifti(template_var, brainstructures=brainstructures)
+      template_mean <- ciftiTools::read_xifti(
+        template_mean, resamp_res=resamp_res,
+        brainstructures=brainstructures
+      )
+      template_var <- ciftiTools::read_xifti(
+        template_var, resamp_res=resamp_res,
+        brainstructures=brainstructures
+      )
     }
     if (is.xifti(template_mean)) {
       xii1 <- select_xifti(template_mean, 1) # for formatting output
@@ -392,7 +405,10 @@ templateICA <- function(
     }
     ndat_mesh <- sum(vapply(meshes, function(x){sum(x$A)}, 0))
     if (ndat_mesh != nV) {
-      stop("Number of data locations in `meshes` does not match that of the BOLD data.")
+      stop(
+        "Total number of data locations in `meshes` (", ndat_mesh, 
+        ") does not match that of the templates (", nV, ")."
+      )
     }
     # [TO-DO]: Check that numbers of data locations on meshes (column sums of A) add up to match the number of data locations.
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
