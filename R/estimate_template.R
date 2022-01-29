@@ -433,6 +433,7 @@ estimate_template <- function(
       FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
     }
   }
+  rm(DR_ii)
   mask2 <- NULL # [TO DO]: fix for NIFTI data.
 
   # Aggregate results, and compute templates. ----------------------------------

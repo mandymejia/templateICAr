@@ -22,19 +22,19 @@ centered.}
 \item{scale}{A logical value indicating whether the fMRI timeseries should be
 scaled by the image standard deviation. Default: \code{TRUE}.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases 
+\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE}
 (not recommended).}
 
-\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual 
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the
 product \eqn{A \times S} remains the same with either option.}
 }
 \value{
-A list containing 
- the subject-level independent components \strong{S} (\eqn{V \times Q}), 
+A list containing
+ the subject-level independent components \strong{S} (\eqn{V \times Q}),
  and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 }
 \description{
