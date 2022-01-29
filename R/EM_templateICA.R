@@ -20,7 +20,7 @@
 #'  same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
-#'  to use or \code{TRUE}, which will use the number on the PC minus two. 
+#'  to use or \code{TRUE}, which will use the number on the PC minus two.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
@@ -50,7 +50,7 @@ NULL
 #' @importFrom SQUAREM squarem
 #'
 EM_templateICA.spatial <- function(
-  template_mean, template_var, meshes, BOLD, 
+  template_mean, template_var, meshes, BOLD,
   theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
 
   INLA_check()
@@ -158,15 +158,15 @@ EM_templateICA.spatial <- function(
 
   t00000 <- Sys.time()
   saveRDS(list(
-    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, 
-    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), 
-    tmean=template_mean, tvar=template_var, meshes=meshes, 
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
+    tmean=template_mean, tvar=template_var, meshes=meshes,
     BOLD=BOLD, C_diag=C_diag, s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=TRUE
   ), "tICA_spatial_pre_squarem1")
   result_squarem <- squarem(
-    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, 
-    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), 
-    template_mean, template_var, meshes, 
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
+    template_mean, template_var, meshes,
     BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE
   )
   if(verbose) print(Sys.time() - t00000)
@@ -273,9 +273,9 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 
   if (usePar) {
 
-    if (!requireNamespace("foreach", quietly = TRUE)) { 
+    if (!requireNamespace("foreach", quietly = TRUE)) {
       stop(
-        "Package \"foreach\" needed to parallel loop over voxels. Please install it.", 
+        "Package \"foreach\" needed to parallel loop over voxels. Please install it.",
         call. = FALSE
       )
     }
@@ -660,19 +660,19 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 #' @rdname UpdateTheta_templateICA
 UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
-  nQ <- ncol(BOLD)
+  nQ <- ncol(template_mean)
   nV <- nrow(BOLD)
-  # nT <- nrow(theta)
+  nT <- ncol(BOLD)
 
   #initialize new objects
-  theta_new <- list(A = matrix(NA, nQ, nQ), nu0_sq = NA)
-  A_part1 <- A_part2 <- matrix(0, nQ, nQ) #two parts of product for A-hat (construct each looping over voxels)
+  theta_new <- list(A = matrix(NA, nT, nQ), nu0_sq = NA)
+  A_part1 <- A_part2 <- matrix(0, nT, nQ) #two parts of product for A-hat (construct each looping over voxels)
 
-  A <- theta$A
-  nu0_sq <- theta$nu0_sq
-  nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code
-  At_nu0Cinv <- crossprod(A, nu0C_inv) # 
-  At_nu0Cinv_A <- At_nu0Cinv %*% A
+  A <- theta$A # TxQ
+  nu0_sq <- theta$nu0_sq # const
+  nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code # TxT
+  At_nu0Cinv <- crossprod(A, nu0C_inv) # QxT
+  At_nu0Cinv_A <- At_nu0Cinv %*% A # QxQ
 
   if(verbose) cat('Updating A \n')
 
@@ -681,15 +681,15 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   # miu_ssT <- array(NA, dim=c(nV, nQ, nQ)) # not used anymore
 
   for (vv in 1:nV) {
-    y_v <- BOLD[vv,]
-    s0_v <- template_mean[vv,]
+    y_v <- BOLD[vv,] # T
+    s0_v <- template_mean[vv,] # Q
 
     ##########################################
     ### E-STEP FOR A AND nu0^2: POSTERIOR MOMENTS OF s_i(v)
     ##########################################
 
-    E_v_inv <- diag(1/template_var[vv,])
-    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+    E_v_inv <- diag(1/template_var[vv,]) # QxQ
+    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A) # QxQ
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
     miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
     # miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
@@ -699,7 +699,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
     ##########################################
 
-    A_part1 <- A_part1 + tcrossprod(y_v, miu_s_v) #QxQ
+    A_part1 <- A_part1 + tcrossprod(as.matrix(y_v), miu_s_v) #TxQ + (Tx1)*(1xQ)
     A_part2 <- A_part2 + miu_ssT_v #QxQ
   }
 
