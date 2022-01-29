@@ -144,7 +144,7 @@ templateICA <- function(
   # `usePar`
   if (!isFALSE(usePar)) {
     parPkgs <- c("parallel", "doParallel")
-    parPkgs_missing <- vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
+    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
     if (any(parPkgs_missing)) {
       if (all(parPkgs_missing)) {
         stop(paste0(
