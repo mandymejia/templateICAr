@@ -216,18 +216,18 @@ templateICA <- function(
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { 
+      if (is.character(BOLD[[bb]])) {
         BOLD[[bb]] <- ciftiTools::read_xifti(
           BOLD[[bb]], resamp_res=resamp_res,
           brainstructures=brainstructures
-        ) 
+        )
       }
       stopifnot(is.xifti(BOLD[[bb]]))
     }
   } else if (format == "NIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { 
-        BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) 
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE)
       }
       # [TO DO] check?
     }
@@ -406,7 +406,7 @@ templateICA <- function(
     ndat_mesh <- sum(vapply(meshes, function(x){sum(x$A)}, 0))
     if (ndat_mesh != nV) {
       stop(
-        "Total number of data locations in `meshes` (", ndat_mesh, 
+        "Total number of data locations in `meshes` (", ndat_mesh,
         ") does not match that of the templates (", nV, ")."
       )
     }
@@ -419,12 +419,6 @@ templateICA <- function(
   do_FC <- FALSE
 
   # Process the scan -----------------------------------------------------------
-  if (verbose) {
-    cat('Number of data locations:      ', nV, "\n")
-    cat('Number of template ICs:        ', nL, "\n")
-    cat('Number of BOLD scans:          ', nN, "\n")
-  }
-
   # Get each entry of `BOLD` as a data matrix or array.
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
@@ -469,8 +463,16 @@ templateICA <- function(
       BOLD[[bb]] <- BOLD[[bb]][,time_inds_bb,drop=FALSE]
     }
   }
+  dBOLDs <- lapply(BOLD, dim)
   nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
   nTmin <- min(nT)
+
+  if (verbose) {
+    cat('Number of data locations:      ', nV, "\n")
+    cat('Number of template ICs:        ', nL, "\n")
+    cat('Number of BOLD scans:          ', nN, "\n")
+    cat('Total number of timepoints:    ', sum(nT), "\n")
+  }
 
   # Check `BOLD` dimensions correspond with template and `mask`.
   stopifnot(ldB-1 == length(nI))
