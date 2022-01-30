@@ -17,7 +17,7 @@
 
 \item{...}{further arguments passed to or from other methods.}
 
-\item{x}{The template from \code{estimate_template.cifti}}
+\item{x}{The result of \code{templateICA} with CIFTI data}
 }
 \description{
 Summary method for class \code{"templateICA.cifti"}

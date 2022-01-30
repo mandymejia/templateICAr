@@ -62,7 +62,7 @@ print.template.cifti <- function(x, ...) {
 #' Plot template
 #'
 #' @param x The template from \code{estimate_template.cifti}
-#' @param stat \code{"mean"} (default) or \code{"var"}
+#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default)
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export

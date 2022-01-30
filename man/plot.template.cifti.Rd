@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{The template from \code{estimate_template.cifti}}
 
-\item{stat}{\code{"mean"} (default) or \code{"var"}}
+\item{stat}{\code{"mean"}, \code{"var"}, or \code{"both"} (default)}
 
 \item{...}{Additional arguments to \code{view_xifti}}
 }

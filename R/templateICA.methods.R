@@ -19,7 +19,7 @@ summary.templateICA.cifti <- function(object, ...) {
 #' @rdname summary.templateICA.cifti
 #' @export
 #'
-#' @param x The template from \code{estimate_template.cifti}
+#' @param x The result of \code{templateICA} with CIFTI data
 #' @param ... further arguments passed to or from other methods.
 #' @method print summary.templateICA.cifti
 print.summary.templateICA.cifti <- function(x, ...) {
@@ -65,6 +65,95 @@ print.summary.templateICA.cifti <- function(x, ...) {
 #' @method print templateICA.cifti
 print.templateICA.cifti <- function(x, ...) {
   print.summary.templateICA.cifti(summary(x))
+}
+
+#' Plot template
+#'
+#' @param x The result of \code{templateICA} with CIFTI data
+#' @param stat \code{"mean"} (default), \code{"se"}, or \code{"both"}
+#' @param ... Additional arguments to \code{view_xifti}
+#' @return The plot
+#' @export
+#' @importFrom ciftiTools view_xifti
+#' @method plot templateICA.cifti
+plot.templateICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
+  stopifnot(inherits(x, "templateICA.cifti"))
+
+  # Check `...`
+  args <- list(...)
+  has_title <- "title" %in% names(args)
+  has_idx <- "idx" %in% names(args)
+  has_fname <- "fname" %in% names(args)
+
+  # Check `stat`
+  stat <- tolower(stat)
+  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args))) {
+    if (identical(stat, c("mean", "se", "both"))) {
+      stat <- "mean"
+    } else {
+      stat <- match.arg(stat, c("mean", "se", "both"))
+    }
+    if (stat == "both") {
+      if (!("fname" %in% names(args))) {
+        warning(
+          "For multiple `idx`, use one call to plot() ",
+          "for the mean template, ",
+          "and a separate one for the seiance template. ",
+          "Showing the mean template now."
+        )
+        stat <- "mean"
+      }
+    }
+  }
+  stat <- match.arg(stat, c("mean", "se", "both"))
+
+  # Print message saying what's happening.
+  msg1 <- ifelse(has_idx,
+    "Plotting the",
+    "Plotting the first component's"
+  )
+  msg2 <- switch(stat,
+    both="estimate and standard error.",
+    mean="estimate.",
+    se="standard error."
+  )
+  cat(msg1, msg2, "\n")
+
+  # Plot
+  out <- list(mean=NULL, se=NULL)
+  if (stat == "both") { stat <- c("mean", "se") }
+  for (ss in stat) {
+    args_ss <- args
+    tsfx_ss <- c(mean="", se=" (se)")[ss]
+    # Handle title and idx
+    if (!has_title && !has_idx) {
+      c1name <- if (!is.null(x$subjICmean$meta$cifti$names)) {
+        x$subjICmean$meta$cifti$names[1]
+      } else {
+        "First component"
+      }
+      args_ss$title <- paste0(c1name, tsfx_ss)
+    } else if (!has_idx) {
+      args_ss$title <- paste0(args_ss$title, tsfx_ss)
+    }
+    # Handle fname
+    if (has_fname) {
+      fext <- if (grepl("html$", args_ss$fname[1])) {
+        "html"
+      } else if (grepl("pdf$", args_ss$fname[1])) {
+        "pdf"
+      } else {
+        "png"
+      }
+      args_ss$fname <- gsub(paste0(".", fext), "", args_ss$fname, fixed=TRUE)
+      args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
+    }
+    out[[ss]] <- do.call(
+      view_xifti, c(list(x[[paste0("subjIC", ss)]]), args_ss)
+    )
+  }
+
+  invisible(out)
 }
 
 #' Summarize a \code{"tICA"} object
