@@ -483,6 +483,7 @@ templateICA <- function(
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of BOLD scans:          ', nN, "\n")
     cat('Total number of timepoints:    ', sum(nT), "\n")
+    cat('\n')
   }
 
   # Check `BOLD` dimensions correspond with template and `mask`.
@@ -527,6 +528,7 @@ templateICA <- function(
 
   # Normalize BOLD -------------------------------------------------------------
   # (Center, scale, and detrend)
+  if (verbose) { cat("Pre-processing BOLD data.\n") }
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,
@@ -547,6 +549,8 @@ templateICA <- function(
   )
 
   # Initialize with the dual regression-based estimate -------------------------
+  if (verbose) { cat("Computing DR.\n") }
+
   BOLD_DR <- dual_reg(
     BOLD, template_mean, center_Bcols=FALSE,
     scale=FALSE, detrend_DCT=0, normA=normA
@@ -562,6 +566,7 @@ templateICA <- function(
 
   #1) FC Template ICA ----------------------------------------------------------
   if(do_FC) {
+    if (verbose) { cat("Computing FC.\n") }
 
     ## TO DO: FILL IN HERE
     prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
@@ -578,6 +583,7 @@ templateICA <- function(
   } else {
 
     if (reduce_dim) {
+      if (verbose) { cat("Reducing data dimensions.\n") }
       # Reduce data dimensions
       BOLD <- dim_reduce(BOLD, nL)
       err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
@@ -603,7 +609,10 @@ templateICA <- function(
     }
 
     #2) Template ICA -----------------------------------------------------------
-    if (do_spatial && verbose) { cat('INITIATING WITH STANDARD TEMPLATE ICA\n') }
+    if (verbose) { 
+      if (do_spatial) { cat("Initializing with standard Template ICA.\n") }
+      if (!do_spatial) { cat("Computing Template ICA.\n") }
+    }
     theta00 <- theta0
     theta00$nu0_sq <- err_var
     resultEM <- EM_templateICA.independent(template_mean,

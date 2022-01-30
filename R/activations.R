@@ -173,7 +173,8 @@ activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=
   out$active <- newdata_xifti(
     result$subjICmean, as.numeric(out$active)
   )
-  out$active <- convert_xifti(out$active, "dlabel", colors="red")
+  out$active <- convert_xifti(out$active, "dlabel", values=c(0, 1), colors="red")
+
   for (ii in seq(ncol(out$active))) {
     rownames(out$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
   }

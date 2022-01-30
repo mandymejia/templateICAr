@@ -35,8 +35,8 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     hochberg = "Hochberg",
     hommel = "Hommel",
     BH = "Benjamini & Hochberg (FDR)",
+    BY = "Benjamini & Yekutieli",
     fdr = "Benjamini & Hochberg (FDR)",
-    by = "Benjamini & Yekutieli",
     none = "none"
   )
 
@@ -175,16 +175,16 @@ summary.tICA_act <- function(object, ...) {
 #' @method print summary.tICA_act
 print.summary.tICA_act <- function(x, ...) {
 
-  #mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
-  apct <- round(x$act_counts/sum(x$verts_per_bs)*100)
+  #mapct <- paste0(" (", round(mean(x$act_counts)/x$nV*100), "% of locations)")
+  apct <- round(x$act_counts/x$nV*100)
   pm_nice <- switch(x$method_p,
     bonferroni = "Bonferroni",
     holm = "Holm",
     hochberg = "Hochberg",
     hommel = "Hommel",
     BH = "Benjamini & Hochberg (FDR)",
+    BY = "Benjamini & Yekutieli",
     fdr = "Benjamini & Hochberg (FDR)",
-    by = "Benjamini & Yekutieli",
     none = "none"
   )
 
