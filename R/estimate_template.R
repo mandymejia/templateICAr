@@ -39,9 +39,22 @@ estimate_template_from_DR <- function(
   MSE_divM <- (vd$SSR / ((nM-1)*(nN-1))) / nM
   template <- list(
     mean = vd$grand_mean,
-    varUB = pmax(0, MSB_divM - MSE_divM),
+    varUB = MSB_divM - MSE_divM,
     varNN = MSB_divM
   )
+
+  # Format `vd`
+  vd$nM <- vd$grand_mean <- NULL # Get rid of redundant entries
+  names(vd)[names(vd) == "nS"] <- "num_subjects"
+  # Add the variance templates in matrix form to `vd`.
+  vd$tmean <- template$mean
+  vd$tvarUB <- template$varUB
+  vd$tvarNN <- template$varNN
+
+  # Format `template`: clamp var est above zero.
+  template$varNN <- pmax(0, template$varNN)
+
+  # Format as matrix if applicable.
   if (!is.null(LV)) {
     template <- lapply(template, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
     vd[names(vd)!="num_subjects"] <- lapply(vd[names(vd)!="num_subjects"], 
@@ -49,9 +62,7 @@ estimate_template_from_DR <- function(
     )
   }
 
-  # Format and return
-  vd$nM <- vd$grand_mean <- NULL # Get rid of redundant entries
-  names(vd)[names(vd) == "nS"] <- "num_subjects"
+  # Return
   list(template=template, var_decomp=vd)
 }
 
@@ -452,10 +463,6 @@ estimate_template <- function(
   var_decomp <- x$var_decomp
   rm(x)
 
-  # Add the variance templates in matrix form to `var_decomp`.
-  var_decomp$template_varUB <- as.matrix(template[["varUB"]])
-  var_decomp$template_varNN <- as.matrix(template[["varNN"]])
-
   # Estimate FC template
   if(FC){
 
@@ -513,16 +520,18 @@ estimate_template <- function(
   if (!keep_DR) { rm(DR0) }
 
   # Params, formatted as length-one character vectors to put in "xifti" metadata
-  template_params <- list(
-    inds=inds, center_Bcols=center_Bcols,
+  indsp <- if (all(seq(nQ) %in% inds)) { paste("all", nQ) } else { inds }
+  tparams <- list(
+    num_subjects=nN, num_visits=nM,
+    inds=indsp, center_Bcols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     var_method=var_method,
     pseudo_retest=!real_retest
   )
-  template_params <- lapply(
-    template_params,
+  tparams <- lapply(
+    tparams,
     function(x) {
       if (is.null(x)) { x <- "NULL"};
       paste0(as.character(x), collapse=" ")
@@ -537,7 +546,7 @@ estimate_template <- function(
     for (tname in c("mean", "varUB", "varNN")) {
       template[[tname]] <- newdata_xifti(GICA, t(template[[tname]]))
       template[[tname]]$meta$cifti$misc <- c(
-        list(template=tname), template_params
+        list(template=tname), tparams
       )
     }
     # Save
@@ -588,7 +597,7 @@ estimate_template <- function(
     template_var=template[[var_name]],
     # template_FC=template$FC,
     var_decomp=var_decomp,
-    params=template_params
+    params=tparams
   )
 
   # Add paths to written files if applicable.

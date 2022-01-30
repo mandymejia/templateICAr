@@ -38,6 +38,7 @@ print.summary.template.cifti <- function(x, ...) {
   }
 
   cat("====TEMPLATE INFO====================\n")
+  cat("# Subjects:      ", x$num_subjects, "\n")
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
