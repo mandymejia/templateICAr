@@ -28,7 +28,7 @@ diagnosticICA.cifti(
 
 \item{templates}{Set of templates, each the result of call to
 \code{\link{estimate_template.cifti}} (one template for each group).
-Either a list of objects of class \code{"template_cifti"}, OR a vector of
+Either a list of objects of class \code{"template.cifti"}, OR a vector of
 file path prefixes (the part before "_mean.dscalar.nii"
 and "_var.dscalar.nii") of cifti files written out by
 \code{\link{estimate_template.cifti}}.}

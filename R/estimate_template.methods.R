@@ -1,29 +1,29 @@
-#' Summarize a \code{"template_cifti"} object
+#' Summarize a \code{"template.cifti"} object
 #'
-#' Summary method for class \code{"template_cifti"}
+#' Summary method for class \code{"template.cifti"}
 #'
-#' @param object Object of class \code{"template_cifti"}.
+#' @param object Object of class \code{"template.cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary template_cifti
-summary.template_cifti <- function(object, ...) {
+#' @method summary template.cifti
+summary.template.cifti <- function(object, ...) {
   x <- c(
     summary(object$template_mean),
     list(has_DR="DR" %in% names(object)),
     object$params
   )
 
-  class(x) <- "summary.template_cifti"
+  class(x) <- "summary.template.cifti"
   return(x)
 }
 
-#' @rdname summary.template_cifti
+#' @rdname summary.template.cifti
 #' @export
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.template_cifti
-print.summary.template_cifti <- function(x, ...) {
+#' @method print summary.template.cifti
+print.summary.template.cifti <- function(x, ...) {
   # Get DCT output.
   dct <- x$detrend_DCT
   if (!is.null(dct)) {
@@ -51,12 +51,12 @@ print.summary.template_cifti <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.template_cifti
+#' @rdname summary.template.cifti
 #' @export
 #'
-#' @method print template_cifti
-print.template_cifti <- function(x, ...) {
-  print.summary.template_cifti(summary(x))
+#' @method print template.cifti
+print.template.cifti <- function(x, ...) {
+  print.summary.template.cifti(summary(x))
 }
 
 #' Plot template
@@ -67,9 +67,9 @@ print.template_cifti <- function(x, ...) {
 #' @return The plot
 #' @export
 #' @importFrom ciftiTools view_xifti
-#' @method plot template_cifti
-plot.template_cifti <- function(x, stat=c("both", "mean", "var"), ...) {
-  stopifnot(inherits(x, "template_cifti"))
+#' @method plot template.cifti
+plot.template.cifti <- function(x, stat=c("both", "mean", "var"), ...) {
+  stopifnot(inherits(x, "template.cifti"))
 
   # Check `...`
   args <- list(...)
@@ -147,32 +147,32 @@ plot.template_cifti <- function(x, stat=c("both", "mean", "var"), ...) {
   invisible(out)
 }
 
-#' Summarize a \code{"template_data"} object
+#' Summarize a \code{"template.data"} object
 #'
-#' Summary method for class \code{"template_data"}
+#' Summary method for class \code{"template.data"}
 #'
-#' @param object Object of class \code{"template_data"}.
+#' @param object Object of class \code{"template.data"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary template_data
-summary.template_data <- function(object, ...) {
+#' @method summary template.data
+summary.template.data <- function(object, ...) {
   x <- c(
     list(has_DR="DR" %in% names(object)),
     list(nV=nrow(object$template_mean), nL=ncol(object$template_mean)),
     object$params
   )
 
-  class(x) <- "summary.template_data"
+  class(x) <- "summary.template.data"
   return(x)
 }
 
-#' @rdname summary.template_data
+#' @rdname summary.template.data
 #' @export
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.template_data
-print.summary.template_data <- function(x, ...) {
+#' @method print summary.template.data
+print.summary.template.data <- function(x, ...) {
   # Get DCT output.
   dct <- x$detrend_DCT
   if (!is.null(dct)) {
@@ -200,10 +200,10 @@ print.summary.template_data <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.template_data
+#' @rdname summary.template.data
 #' @export
 #'
-#' @method print template_data
-print.template_data <- function(x, ...) {
-  print.summary.template_data(summary(x))
+#' @method print template.data
+print.template.data <- function(x, ...) {
+  print.summary.template.data(summary(x))
 }
