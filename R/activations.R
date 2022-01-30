@@ -20,8 +20,15 @@
 #'
 activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  is_tICA <- inherits(result, "tICA") || inherits(result, "tICA.cifti") || inherits(result, "tICA.nifti")
-  is_stICA <- inherits(result, "stICA") || inherits(result, "stICA.cifti") || inherits(result, "stICA.nifti")
+  if (inherits(result, "tICA.cifti") || inherits(result, "stICA.cifti")) {
+    return(activations.cifti(
+      result=result, u=u, alpha=alpha, type=type, method_p=method_p,
+      verbose=verbose, which.ICs=which.ICs, deviation=deviation
+    ))
+  }
+
+  is_tICA <- inherits(result, "tICA") || inherits(result, "tICA.nifti")
+  is_stICA <- inherits(result, "stICA") || inherits(result, "stICA.nifti")
 
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
@@ -70,7 +77,10 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
       vars[,q] <- res_q$vars[inds_q]
     }
 
-    result <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, vars=vars, u = u, alpha = alpha, type = type, deviation=deviation)
+    result <- list(
+      active=active, jointPPM=jointPPM, marginalPPM=marginalPPM,
+      vars=vars, u = u, alpha = alpha, type = type, deviation=deviation
+    )
   }
 
   if (is_tICA) {
@@ -79,11 +89,10 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 
     nvox <- nrow(result$subjICmean)
     L <- ncol(result$subjICmean)
-
     if(deviation){
-      t_stat <- as.matrix((result$subjICmean - template_mean - u)/result$subjICse)
+      t_stat <- (as.matrix(result$subjICmean) - template_mean - u) / as.matrix(result$subjICse)
     } else {
-      t_stat <- as.matrix((result$subjICmean - u)/result$subjICse)
+      t_stat <- (as.matrix(result$subjICmean) - u) / as.matrix(result$subjICse)
     }
 
     if(type=='>') pvals <- 1-pnorm(t_stat)
@@ -100,9 +109,11 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     }
 
     result <- list(
-      active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat,
-      se = result$subjICse, u = u, alpha = alpha, method_p =
-      method_p, deviation=deviation
+      active = active,
+      pvals = pvals, pvals_adj = pvals_adj,
+      se = result$subjICse, tstats = t_stat,
+      alpha = alpha, method_p = method_p,
+      type=type, u = u, deviation=deviation
     )
   }
 
@@ -127,42 +138,46 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 #' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
 #'
 #' @importFrom ciftiTools newdata_xifti transform_xifti
-#' @export
+#' @keywords internal
 #'
 #'
 activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  is_tICA <- inherits(result, "tICA.cifti")
-  is_stICA <- inherits(result, "stICA.cifti")
+  # This function is now internal because you can just use `activations` directly.
+
+  is_tICAc <- inherits(result, "tICA.cifti")
+  is_stICAc <- inherits(result, "stICA.cifti")
+  if (!is_tICAc && !is_stICAc) { stop("Not a CIFTI Template ICA result.") }
+  class(result) <- if (is_stICAc) { "stICA" } else { "tICA" } # avoid infinite loop
 
   # Select stICA or tICA
-  if (is.null(spatial_model)) { spatial_model <- is_stICA }
-  if (isTRUE(spatial_model) && is_tICA) {
+  if (is.null(spatial_model)) { spatial_model <- is_stICAc }
+  if (isTRUE(spatial_model) && is_tICAc) {
     warning(
-      'spatial_model set to TRUE but class of model result is tICA. ', 
-      'Setting spatial_model = FALSE, performing inference using standard ', 
+      'spatial_model set to TRUE but class of model result is tICA. ',
+      'Setting spatial_model = FALSE, performing inference using standard ',
       'template ICA.'
     )
     spatial_model <- FALSE
   }
-  if (isFALSE(spatial_model) && is_stICA) {
+  if (isFALSE(spatial_model) && is_stICAc) {
     result <- result$result_tICA
-  } 
+  }
 
   #run activations function
-  activations_result <- activations(
-    result, u=u, alpha=alpha, type=type, method_p=method_p, 
+  out <- activations(
+    result, u=u, alpha=alpha, type=type, method_p=method_p,
     verbose=verbose, which.ICs=which.ICs, deviation=deviation
   )
 
-  activations_result$active <- newdata_xifti(
-    result$subjICmean, as.numeric(activations_result$active)
+  out$active <- newdata_xifti(
+    result$subjICmean, as.numeric(out$active)
   )
-  activations_result$active <- convert_xifti(activations_result$active, "dlabel", colors="red")
-  for (ii in seq(ncol(activations_result$active))) {
-    rownames(activations_result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
+  out$active <- convert_xifti(out$active, "dlabel", colors="red")
+  for (ii in seq(ncol(out$active))) {
+    rownames(out$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
   }
 
-  class(activations_result) <- "tICA_act.cifti"
-  activations_result
+  class(out) <- "tICA_act.cifti"
+  out
 }

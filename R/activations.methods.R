@@ -2,7 +2,7 @@
 #'
 #' Summary method for class \code{"tICA_act.cifti"}
 #'
-#' @param object Object of class \code{"tICA_act.cifti"}. 
+#' @param object Object of class \code{"tICA_act.cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
 #' @method summary tICA_act.cifti
@@ -12,7 +12,7 @@ summary.tICA_act.cifti <- function(object, ...) {
   x <- c(
     summary(object$active),
     list(act_counts=act_counts),
-    object[c("u", "alpha", "method_p", "deviation")]
+    object[c("u", "alpha", "type", "method_p", "deviation")]
   )
 
   class(x) <- "summary.tICA_act.cifti"
@@ -21,17 +21,14 @@ summary.tICA_act.cifti <- function(object, ...) {
 
 #' @rdname summary.tICA_act.cifti
 #' @export
-#' 
+#'
 #' @param x The activations from \code{activations.cifti}
 #' @param ... further arguments passed to or from other methods.
 #' @method print summary.tICA_act.cifti
 print.summary.tICA_act.cifti <- function(x, ...) {
 
-  mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
-  
-  cat("====ACTIVATIONS STATS================\n")
-  cat("Threshold:       ", x$u, "\n")
-  cat("alpha:           ", x$alpha, "\n")
+  #mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
+  apct <- round(x$act_counts/sum(x$verts_per_bs)*100)
   pm_nice <- switch(x$method_p,
     bonferroni = "Bonferroni",
     holm = "Holm",
@@ -42,25 +39,46 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     by = "Benjamini & Yekutieli",
     none = "none"
   )
+
+  usign <- ifelse(x$u >=0, "+", "-")
+  adesc <- if (x$deviation) {
+    if (x$u != 0) {
+      paste("x", x$type, "mu", usign, abs(x$u))
+    } else {
+      paste("x", x$type, "mu")
+    }
+  } else {
+    if (x$u != 0) {
+      paste("x", x$type, x$u)
+    } else {
+      paste("x", x$type, "0")
+    }
+  }
+
+  cat("====ACTIVATIONS STATS================\n")
+  cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
-  cat("Deviation:       ", x$deviation, "\n")
-  cat("Mean # active:   ", round(mean(x$act_counts)), mapct, "\n")
+  cat("Test:            ", adesc, "\n")
+  # cat("Type:            ", x$type, "\n")
+  # cat("Threshold:       ", x$u, "\n")
+  # cat("Deviation:       ", x$deviation, "\n")
+  cat("Active Loc. (%): ", paste0(paste(apct[seq(5)], collapse=", "), ", ..."), "\n")
   cat("\n")
 
   class(x) <- "summary.xifti"
-  print(x) 
+  print(x)
 }
 
 #' @rdname summary.tICA_act.cifti
 #' @export
-#' 
+#'
 #' @method print tICA_act.cifti
 print.tICA_act.cifti <- function(x, ...) {
   print.summary.tICA_act.cifti(summary(x))
 }
 
 #' Plot activations
-#' 
+#'
 #' @param x The activations from \code{activations.cifti}
 #' @param stat \code{"active"} (default), \code{"pvals"}, \code{"pvals_adj"},
 #'  \code{"tstats"}, or \code{"vars"}.
@@ -79,7 +97,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
   has_fname <- "fname" %in% names(args)
 
   stat <- match.arg(stat, c("active", "pvals", "pvals_adj", "tstats", "se"))
-  
+
   # Print message saying what's happening.
   msg1 <- ifelse(has_idx,
     "Plotting the",
@@ -93,7 +111,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
     se="standard errors."
   )
   cat(msg1, msg2, "\n")
-  
+
   if (stat == "active") {
     x <- x$active
   } else {
@@ -132,7 +150,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
 #'
 #' Summary method for class \code{"tICA_act"}
 #'
-#' @param object Object of class \code{"tICA_act"}. 
+#' @param object Object of class \code{"tICA_act"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
 #' @method summary tICA_act
@@ -142,7 +160,7 @@ summary.tICA_act <- function(object, ...) {
   x <- c(
     list(nV=nrow(object$active), nL=ncol(object$active)),
     list(act_counts=act_counts),
-    object[c("u", "alpha", "method_p", "deviation")]
+    object[c("u", "alpha", "type", "method_p", "deviation")]
   )
 
   class(x) <- "summary.tICA_act"
@@ -151,17 +169,14 @@ summary.tICA_act <- function(object, ...) {
 
 #' @rdname summary.tICA_act
 #' @export
-#' 
+#'
 #' @param x The activations from \code{activations}
 #' @param ... further arguments passed to or from other methods.
 #' @method print summary.tICA_act
 print.summary.tICA_act <- function(x, ...) {
 
-  mapct <- paste0(" (", round(mean(x$act_counts)/x$nV*100), "% of locations)")
-  
-  cat("====ACTIVATIONS STATS================\n")
-  cat("Threshold:       ", x$u, "\n")
-  cat("alpha:           ", x$alpha, "\n")
+  #mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
+  apct <- round(x$act_counts/sum(x$verts_per_bs)*100)
   pm_nice <- switch(x$method_p,
     bonferroni = "Bonferroni",
     holm = "Holm",
@@ -172,9 +187,30 @@ print.summary.tICA_act <- function(x, ...) {
     by = "Benjamini & Yekutieli",
     none = "none"
   )
+
+  usign <- ifelse(x$u >=0, "+", "-")
+  adesc <- if (x$deviation) {
+    if (x$u != 0) {
+      paste("x", x$type, "mu", usign, abs(x$u))
+    } else {
+      paste("x", x$type, "mu")
+    }
+  } else {
+    if (x$u != 0) {
+      paste("x", x$type, x$u)
+    } else {
+      paste("x", x$type, "0")
+    }
+  }
+
+  cat("====ACTIVATIONS STATS================\n")
+  cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
-  cat("Deviation:       ", x$deviation, "\n")
-  cat("Mean # active:   ", round(mean(x$act_counts)), mapct, "\n")
+  cat("Test:            ", adesc, "\n")
+  # cat("Type:            ", x$type, "\n")
+  # cat("Threshold:       ", x$u, "\n")
+  # cat("Deviation:       ", x$deviation, "\n")
+  cat("Active Loc. (%): ", paste0(paste(apct[seq(5)], collapse=", "), ", ..."), "\n")
   cat("-------------------------------------\n")
   cat("# Locations:     ", x$nL, "\n")
   cat("# Template ICs:  ", x$nV, "\n")
@@ -183,7 +219,7 @@ print.summary.tICA_act <- function(x, ...) {
 
 #' @rdname summary.tICA_act
 #' @export
-#' 
+#'
 #' @method print tICA_act
 print.tICA_act <- function(x, ...) {
   print.summary.tICA_act(summary(x))

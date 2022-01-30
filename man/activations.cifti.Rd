@@ -41,3 +41,4 @@ A list containing activation maps for each IC and the joint and marginal PPMs fo
 \description{
 Identify areas of activation in each independent component map
 }
+\keyword{internal}
