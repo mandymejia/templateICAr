@@ -9,8 +9,6 @@
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
 #'  dimensionality selection with PESEL. Default: \code{100}
-#'
-#' @importFrom pesel pesel
 #' 
 #' @return A list containing the dimension-reduced data (data_reduced, a 
 #'  \eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
