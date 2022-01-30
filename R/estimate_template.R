@@ -214,7 +214,7 @@ estimate_template <- function(
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
-  var_method=c("unbiased", "non-negative", "both"),
+  var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
@@ -229,8 +229,8 @@ estimate_template <- function(
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
-  var_method <- match.arg(var_method, c("unbiased", "non-negative", "both"))
-  if (var_method=="both") { stop("`var_method=='both' not supported yet.") }
+  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
+  # if (var_method=="both") { stop("`var_method=='both' not supported yet.") }
   var_name <- c(unbiased="varUB", `non-negative`="varNN")[var_method]
   var_name_alt <- c(unbiased="varNN", `non-negative`="varUB")[var_method]
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
@@ -511,17 +511,19 @@ estimate_template <- function(
 
   # Params, formatted as length-one character vectors to put in "xifti" metadata
   template_params <- list(
-    inds=paste0(inds, collapse=" "),
-    center_Bcols=center_Bcols,
+    inds=inds, center_Bcols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
-    brainstructures=paste0(brainstructures, collapse=" "),
+    brainstructures=brainstructures,
     var_method=var_method,
     pseudo_retest=!real_retest
   )
   template_params <- lapply(
     template_params,
-    function(x){if (is.null(x)) { x <- "NULL"}; as.character(x)}
+    function(x) {
+      if (is.null(x)) { x <- "NULL"};
+      paste0(as.character(x), collapse=" ")
+    }
   )
 
   # Save
@@ -582,7 +584,8 @@ estimate_template <- function(
     template_mean=template$mean,
     template_var=template[[var_name]],
     # template_FC=template$FC,
-    var_decomp=var_decomp
+    var_decomp=var_decomp,
+    params=template_params
   )
 
   # Add paths to written files if applicable.
@@ -600,11 +603,10 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, normA=FALSE,
-  brainstructures=c("left","right"),
-  var_method=c("unbiased", "non-negative", "both"),
+  scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=0, brainstructures=c("left", "right"),
+  var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
-  Q2=0, Q2_max=NULL,
   out_fname=NULL,
   FC=FALSE,
   verbose=TRUE) {
@@ -612,75 +614,14 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, normA=normA,
-    brainstructures=brainstructures,
+    scale=scale, detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max, brainstructures=brainstructures,
     var_method=var_method,
     keep_DR=keep_DR,
-    Q2=Q2, Q2_max=Q2_max,
     out_fname=out_fname,
     FC=FC,
     verbose=verbose
   )
-}
-
-#' Summarize a \code{"template_cifti"} object
-#'
-#' Summary method for class \code{"template_cifti"}
-#'
-#' @param object Object of class \code{"template_cifti"}.
-#' @param ... further arguments passed to or from other methods.
-#' @export
-#' @method summary template_cifti
-summary.template_cifti <- function(object, ...) {
-
-  x <- c(
-    summary(object$template_mean),
-    list(has_DR="DR" %in% names(object)),
-    object[c("scale", "inds", "var_method")]
-  )
-
-  class(x) <- "summary.template_cifti"
-  return(x)
-}
-
-#' @rdname summary.template_cifti
-#' @export
-#'
-#' @param x The template from \code{estimate_template.cifti}
-#' @param ... further arguments passed to or from other methods.
-#' @method print summary.template_cifti
-print.summary.template_cifti <- function(x, ...) {
-
-  cat("====TEMPLATE INFO====================\n")
-  cat("Spatially scaled:", x$scale, "\n")
-  cat("Variance method: ", x$var_method, "\n")
-  cat("\n")
-
-  class(x) <- "summary.xifti"
-  print(x)
-}
-
-#' @rdname summary.template_cifti
-#' @export
-#'
-#' @method print template_cifti
-print.template_cifti <- function(x, ...) {
-  print.summary.template_cifti(summary(x))
-}
-
-#' Plot template
-#'
-#' @param x The template from \code{estimate_template.cifti}
-#' @param stat \code{"mean"} (default) or \code{"var"}
-#' @param ... Additional arguments to \code{view_xifti}
-#' @return The plot
-#' @export
-#' @importFrom ciftiTools view_xifti
-#' @method plot template_cifti
-plot.template_cifti <- function(x, stat=c("mean", "var"), ...) {
-  stopifnot(inherits(x, "template_cifti"))
-  stat <- match.arg(stat, c("mean", "var"))
-  view_xifti(x[[paste0("template_", stat)]], ...)
 }
 
 #' @rdname estimate_template
@@ -688,11 +629,10 @@ plot.template_cifti <- function(x, stat=c("mean", "var"), ...) {
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0, normA=FALSE,
-  mask=mask,
-  var_method=c("unbiased", "non-negative", "both"),
+  scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=0, mask=NULL,
+  var_method=c("unbiased", "non-negative"),
   keep_DR=FALSE,
-  Q2=0, Q2_max=NULL,
   out_fname=NULL,
   FC=FALSE,
   verbose=TRUE) {
@@ -700,11 +640,10 @@ estimate_template.nifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    center_Bcols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT, normA=normA,
-    mask=mask,
+    scale=scale, detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max, mask=mask,
     var_method=var_method,
     keep_DR=keep_DR,
-    Q2=Q2, Q2_max=Q2_max,
     out_fname=out_fname,
     FC=FC,
     verbose=verbose
