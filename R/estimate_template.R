@@ -595,7 +595,7 @@ estimate_template <- function(
   if (keep_DR) { result$DR <- DR0 }
 
   # Return results.
-  class(result) <- paste0("template_", tolower(FORMAT))
+  class(result) <- paste0("template.", tolower(FORMAT))
   result
 }
 
