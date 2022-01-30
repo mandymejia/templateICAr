@@ -398,6 +398,7 @@ estimate_template <- function(
 
   # Process each scan ----------------------------------------------------------
   if (verbose) {
+    cat("Data input format:             ", format, "\n")
     cat('Number of data locations:      ', nV, "\n")
     cat('Number of original group ICs:  ', nQ, "\n")
     cat('Number of template ICs:        ', nL, "\n")
@@ -415,7 +416,7 @@ estimate_template <- function(
     if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
     DR_ii <- dual_reg2(
-      BOLD[ii], BOLD2=B2,
+      BOLD[[ii]], BOLD2=B2,
       format=format,
       GICA=GICA,
       center_Bcols=center_Bcols,

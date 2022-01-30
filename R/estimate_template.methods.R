@@ -7,7 +7,6 @@
 #' @export
 #' @method summary template_cifti
 summary.template_cifti <- function(object, ...) {
-
   x <- c(
     summary(object$template_mean),
     list(has_DR="DR" %in% names(object)),
@@ -49,6 +48,7 @@ print.summary.template_cifti <- function(x, ...) {
 
   class(x) <- "summary.xifti"
   print(x)
+  invisible(NULL)
 }
 
 #' @rdname summary.template_cifti
@@ -98,6 +98,8 @@ plot.template_cifti <- function(x, stat=c("both", "mean", "var"), ...) {
     }
   }
   stat <- match.arg(stat, c("both", "mean", "var"))
+
+  # Print message saying what's happening.
   msg1 <- ifelse(has_idx,
     "Plotting the",
     "Plotting the first component's"
@@ -108,7 +110,6 @@ plot.template_cifti <- function(x, stat=c("both", "mean", "var"), ...) {
     var="variance template."
   )
   cat(msg1, msg2, "\n")
-
 
   # Plot
   out <- list(mean=NULL, var=NULL)
@@ -146,3 +147,63 @@ plot.template_cifti <- function(x, stat=c("both", "mean", "var"), ...) {
   invisible(out)
 }
 
+#' Summarize a \code{"template_data"} object
+#'
+#' Summary method for class \code{"template_data"}
+#'
+#' @param object Object of class \code{"template_data"}.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary template_data
+summary.template_data <- function(object, ...) {
+  x <- c(
+    list(has_DR="DR" %in% names(object)),
+    list(nV=nrow(object$template_mean), nL=ncol(object$template_mean)),
+    object$params
+  )
+
+  class(x) <- "summary.template_data"
+  return(x)
+}
+
+#' @rdname summary.template_data
+#' @export
+#'
+#' @param x The template from \code{estimate_template.cifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.template_data
+print.summary.template_data <- function(x, ...) {
+  # Get DCT output.
+  dct <- x$detrend_DCT
+  if (!is.null(dct)) {
+    dct <- as.numeric(x$detrend_DCT)
+    dct <- if (dct>1) {
+      paste(dct, "DCT bases")
+    } else if (dct > 0) {
+      paste(dct, "DCT basis")
+    } else {
+      "None"
+    }
+  }
+
+  cat("====TEMPLATE INFO====================\n")
+  cat("Detrending:      ", dct, "\n")
+  cat("Spatial scaling: ", x$scale, "\n")
+  cat("A normalization: ", x$normA, "\n")
+  cat("Variance method: ", x$var_method, "\n")
+  cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("Dimensions:      \n")
+  cat("  # Locations:   ", x$nV, "\n")
+  cat("  # Template ICs:", x$nL, "\n")
+  cat("\n")
+
+  invisible(NULL)
+}
+
+#' @rdname summary.template_data
+#' @export
+#'
+#' @method print template_data
+print.template_data <- function(x, ...) {
+  print.summary.template_data(summary(x))
+}
