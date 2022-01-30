@@ -23,28 +23,28 @@ diagnosticICA.cifti(
 )
 }
 \arguments{
-\item{cifti_fname}{File path of CIFTI-format timeseries data (ending in 
+\item{cifti_fname}{File path of CIFTI-format timeseries data (ending in
 ".dtseries.nii").}
 
-\item{templates}{Set of templates, each the result of call to 
- \code{\link{estimate_template.cifti}} (one template for each group).
-Either a list of objects of class \code{"template_cifti"}, OR a vector of 
- file path prefixes (the part before "_mean.dscalar.nii"
- and "_var.dscalar.nii") of cifti files written out by 
- \code{\link{estimate_template.cifti}}.}
+\item{templates}{Set of templates, each the result of call to
+\code{\link{estimate_template.cifti}} (one template for each group).
+Either a list of objects of class \code{"template_cifti"}, OR a vector of
+file path prefixes (the part before "_mean.dscalar.nii"
+and "_var.dscalar.nii") of cifti files written out by
+\code{\link{estimate_template.cifti}}.}
 
 \item{brainstructures}{Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).  For spatial
-modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), 
+modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided),
 subcortical locations will be ignored.}
 
-\item{spatial_model}{Should spatial modeling be performed? Default: 
-\code{FALSE}. If \code{TRUE}, surface geometries will be used to fit a 
-spatial Bayesian model. Computational demands (time and memory) are much 
-higher with \code{spatial_model=TRUE} than \code{spatial_model=FALSE}, but 
+\item{spatial_model}{Should spatial modeling be performed? Default:
+\code{FALSE}. If \code{TRUE}, surface geometries will be used to fit a
+spatial Bayesian model. Computational demands (time and memory) are much
+higher with \code{spatial_model=TRUE} than \code{spatial_model=FALSE}, but
 results are more accurate.}
 
 \item{surfL_fname}{(Required for spatial modeling) File path of GIFTI surface geometry
@@ -57,14 +57,14 @@ file representing the right cortex. Only required if \code{brainstructures} incl
 cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
 feasibility. If \code{NULL} (default) or \code{FALSE}, do not perform resampling.}
 
-\item{scale}{Should BOLD data be scaled by the spatial standard deviation 
-before model fitting? Default: \code{TRUE}. If done when estimating 
+\item{scale}{Should BOLD data be scaled by the spatial standard deviation
+before model fitting? Default: \code{TRUE}. If done when estimating
 templates, should be done here too.}
 
-\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default), 
+\item{Q2}{The number of nuisance ICs to identify. If \code{NULL} (default),
 will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 
-\item{Q2_max}{Maximum number of ICs (template+nuisance) to identify 
+\item{Q2_max}{Maximum number of ICs (template+nuisance) to identify
 (\eqn{L <= Q2_max <= T}). Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
@@ -73,16 +73,16 @@ will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
-\item{kappa_init}{Starting value for kappa.  If \code{NULL}, starting value 
+\item{kappa_init}{Starting value for kappa.  If \code{NULL}, starting value
 will be determined automatically. Default: 0.4.}
 
-\item{write_dir}{Where should any output files be written? \code{NULL} 
+\item{write_dir}{Where should any output files be written? \code{NULL}
 (default) will write them to the current working directory.}
 }
 \value{
-A list containing the subject IC estimates (class \code{"xifti"}), the 
- subject IC variance estimates (class \code{"xifti"}), and the result of the model 
- call to \code{diagnosticICA} (class \code{"dICA"}).
+A list containing the subject IC estimates (class \code{"xifti"}), the
+subject IC variance estimates (class \code{"xifti"}), and the result of the model
+call to \code{diagnosticICA} (class \code{"dICA"}).
 }
 \description{
 Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template

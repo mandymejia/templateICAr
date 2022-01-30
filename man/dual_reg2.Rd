@@ -22,15 +22,15 @@ dual_reg2(
 }
 \arguments{
 \item{BOLD, BOLD2}{Subject-level fMRI data in one of the following formats:
- a CIFTI file path, a \code{"xifti"} object, a NIFTI file path, a \code{"nifti"} object, or
- \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
- \eqn{T} is the number of timepoints.
+a CIFTI file path, a \code{"xifti"} object, a NIFTI file path, a \code{"nifti"} object, or
+\eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
+\eqn{T} is the number of timepoints.
 
- If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
- \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
+If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
+\code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
 
- If \code{BOLD2} is not provided, \code{BOLD} will be split in half;
- the first half will be the test data and the second half will be the retest data.}
+If \code{BOLD2} is not provided, \code{BOLD} will be split in half;
+the first half will be the test data and the second half will be the retest data.}
 
 \item{format}{Expected format of \code{BOLD} and \code{BOLD2}. Should be one
 of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
@@ -53,19 +53,19 @@ regression estimates? Default: \code{FALSE} (not recommended). Note that the
 product \eqn{A \times S} remains the same with either option.}
 
 \item{Q2, Q2_max}{Obtain dual regression estimates after denoising? Denoising is
- based on modeling and removing nuisance ICs. It may result in a cleaner
- estimate for smaller datasets, but it may be unnecessary (and time-consuming)
- for larger datasets.
+based on modeling and removing nuisance ICs. It may result in a cleaner
+estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+for larger datasets.
 
- Set \code{Q2} to control denoising: use a positive integer to specify the
- number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
- estimated by PESEL, or zero (default) to skip denoising.
+Set \code{Q2} to control denoising: use a positive integer to specify the
+number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+estimated by PESEL, or zero (default) to skip denoising.
 
- If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
- nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
- than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
- each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
- (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
+each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
+(default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
 Character vector indicating which brain structure(s)
@@ -84,7 +84,7 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 The dual regression S matrices.
 }
 \description{
-Wrapper to \code{dual_reg} used by `estimate_template`. The format of `BOLD`
- (and `BOLD2`) must be provided, and `GICA` must be vectorized if applicable.
+Wrapper to \code{dual_reg} used by \code{estimate_template}. The format of \code{BOLD}
+(and \code{BOLD2}) must be provided, and \code{GICA} must be vectorized if applicable.
 }
 \keyword{internal}

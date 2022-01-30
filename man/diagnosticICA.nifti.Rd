@@ -20,9 +20,9 @@ diagnosticICA.nifti(
 \item{BOLD}{File path of NIFTI BOLD timeseries data}
 
 \item{templates}{Set of templates, each the result of call to
- \code{\link{estimate_template.nifti}}.
+\code{\link{estimate_template.nifti}}.
 (one template for each group). Either a list of objects of class
- \code{"template.nifti"}.}
+\code{"template.nifti"}.}
 
 \item{scale}{Should BOLD data be scaled by the spatial standard deviation
 before model fitting? Default: \code{TRUE}. If done when estimating
@@ -41,13 +41,13 @@ will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.}
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 
 \item{out_fname}{The path and base name prefix of the NIFTI files to write.
-Will be appended with "_subjICmean.nii" for IC mean maps and 
+Will be appended with "_subjICmean.nii" for IC mean maps and
 "_subjICse.nii" for IC variance maps.}
 }
 \value{
 A list containing the subject IC estimates (class 'nifti'), the
- subject IC variance estimates (class 'nifti'), and the result of the model
- call to \code{diagnosticICA} (class 'dICA')
+subject IC variance estimates (class 'nifti'), and the result of the model
+call to \code{diagnosticICA} (class 'dICA')
 }
 \description{
 Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template

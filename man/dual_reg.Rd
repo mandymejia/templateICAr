@@ -34,8 +34,8 @@ product \eqn{A \times S} remains the same with either option.}
 }
 \value{
 A list containing
- the subject-level independent components \strong{S} (\eqn{V \times Q}),
- and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
+the subject-level independent components \strong{S} (\eqn{V \times Q}),
+and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 }
 \description{
 Dual Regression

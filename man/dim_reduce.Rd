@@ -9,21 +9,21 @@ dim_reduce(X, Q = NULL, Q_max = 100)
 \arguments{
 \item{X}{\eqn{V \times T} fMRI timeseries data matrix, centered by columns.}
 
-\item{Q}{Number of latent dimensions to estimate. If not specified, 
+\item{Q}{Number of latent dimensions to estimate. If not specified,
 estimated using PESEL (Sobczyka et al. 2020).}
 
-\item{Q_max}{Maximal number of principal components for automatic 
+\item{Q_max}{Maximal number of principal components for automatic
 dimensionality selection with PESEL. Default: \code{100}}
 }
 \value{
-A list containing the dimension-reduced data (data_reduced, a 
- \eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
- matrix) and its (pseudo-)inverse (Hinv, a \eqn{TxQ} matrix), the noise variance 
- (sigma_sq), the correlation matrix of the dimension-reduced data 
- (C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
+A list containing the dimension-reduced data (data_reduced, a
+\eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT}
+matrix) and its (pseudo-)inverse (Hinv, a \eqn{TxQ} matrix), the noise variance
+(sigma_sq), the correlation matrix of the dimension-reduced data
+(C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
 }
 \description{
-Performs dimension reduction and prewhitening based on probabilistic PCA using 
- SVD. If dimensionality is not specified, it is estimated using the method 
- described in Minka (2008).
+Performs dimension reduction and prewhitening based on probabilistic PCA using
+SVD. If dimensionality is not specified, it is estimated using the method
+described in Minka (2008).
 }

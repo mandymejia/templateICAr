@@ -23,8 +23,8 @@ compute_mu_s(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag)
 }
 \value{
 A list containing the posterior mean \eqn{\mu} (mu) and precision
- \eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m,
- where \eqn{\mu = \Omega^{-1}m}.
+\eqn{\Omega} (Omega) of s=(s1,...,sQ), along with the supporting vector m,
+where \eqn{\mu = \Omega^{-1}m}.
 }
 \description{
 Compute posterior mean and precision matrix of s

@@ -34,7 +34,7 @@ If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate.}
 The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it
 }
 \description{
-Subtract estimated nuisance ICs from data matrix. If the number of nuisance ICs is not provided, 
- will estimate using PESEL (the nuisance ICs are a rotation of the nuisance PCs).
+Subtract estimated nuisance ICs from data matrix. If the number of nuisance ICs is not provided,
+will estimate using PESEL (the nuisance ICs are a rotation of the nuisance PCs).
 }
 \keyword{internal}

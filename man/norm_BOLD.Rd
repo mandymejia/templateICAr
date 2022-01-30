@@ -15,8 +15,8 @@ norm_BOLD(
 \arguments{
 \item{BOLD}{fMRI numeric data matrix (\eqn{V \times T})}
 
-\item{center_rows, center_cols}{Center BOLD data across rows (each data 
-location's time series) or columns (each time point's image)? Default: 
+\item{center_rows, center_cols}{Center BOLD data across rows (each data
+location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
 \item{scale}{A logical value indicating whether the fMRI timeseries should be
@@ -30,16 +30,16 @@ Normalized BOLD data matrix (\eqn{V \times T})
 }
 \description{
 Center the data across space and/or time, scale, and detrend, in that order.
- For dual regression, row centering is required and column centering is not
- recommended. Scaling and detrending depend on the user preference.
+For dual regression, row centering is required and column centering is not
+recommended. Scaling and detrending depend on the user preference.
 }
 \details{
 In order to ensure that all fMRI data share the same scale, the BOLD
- data can also be scaled by the global image standard deviation, equal to
- \deqn{\sqrt{\frac{1}{T}\sum_{t=1}^T \sigma^2_t}}, where \eqn{\sigma^2_t} is
- the standard deviation across all voxels at time point \eqn{t}. If scaling 
- is applied to the BOLD timeseries used in template estimation, it should 
- also be applied to the BOLD timeseries being analyzed with template ICA 
- using the resulting templates to ensure compatibility of scale. The scale is
- computed after detrending.
+data can also be scaled by the global image standard deviation, equal to
+\deqn{\sqrt{\frac{1}{T}\sum_{t=1}^T \sigma^2_t}}, where \eqn{\sigma^2_t} is
+the standard deviation across all voxels at time point \eqn{t}. If scaling
+is applied to the BOLD timeseries used in template estimation, it should
+also be applied to the BOLD timeseries being analyzed with template ICA
+using the resulting templates to ensure compatibility of scale. The scale is
+computed after detrending.
 }

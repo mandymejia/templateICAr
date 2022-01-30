@@ -62,23 +62,23 @@ to use or \code{TRUE}, which will use the number on the PC minus two.}
 }
 \value{
 A list: theta (list of final parameter estimates), subICmean
- (estimates of subject-level ICs), subICvar (variance of subject-level ICs,
- for non-spatial model) or subjICcov (covariance matrix of subject-level ICs,
- for spatial model -- note that only diagonal and values for neighbors are
- computed), and success (flag indicating convergence (\code{TRUE}) or not
- (\code{FALSE}))
+(estimates of subject-level ICs), subICvar (variance of subject-level ICs,
+for non-spatial model) or subjICcov (covariance matrix of subject-level ICs,
+for spatial model -- note that only diagonal and values for neighbors are
+computed), and success (flag indicating convergence (\code{TRUE}) or not
+(\code{FALSE}))
 }
 \description{
 EM Algorithms for Template ICA Models
 }
 \details{
 \code{EM_templateICA.spatial} implements the expectation-maximization
- (EM) algorithm described in Mejia et al. (2019+) for estimating the
- subject-level ICs and unknown parameters in the template ICA model with
- spatial priors on subject effects.
+(EM) algorithm described in Mejia et al. (2019+) for estimating the
+subject-level ICs and unknown parameters in the template ICA model with
+spatial priors on subject effects.
 
- In both models, if original fMRI timeseries has covariance
- \eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying
- by (\eqn{QxT}) matrix \eqn{H} from PCA has diagonal covariance
- \eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
+In both models, if original fMRI timeseries has covariance
+\eqn{\sigma^2 I_T}, the prewhitened timeseries achieved by premultiplying
+by (\eqn{QxT}) matrix \eqn{H} from PCA has diagonal covariance
+\eqn{\sigma^2HH'}, so C_diag is \eqn{diag(HH')}.
 }

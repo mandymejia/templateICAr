@@ -12,10 +12,10 @@ PCA(X, center = TRUE, Q = NULL, Q_max = 100, nv = 0)
 \item{center}{Center the columns of \code{X}? Default: \code{TRUE}. Set to
 \code{FALSE} if already centered.}
 
-\item{Q}{Number of latent dimensions to estimate. If not specified, 
+\item{Q}{Number of latent dimensions to estimate. If not specified,
 estimated using PESEL (Sobczyka et al. 2020).}
 
-\item{Q_max}{Maximal number of principal components for automatic 
+\item{Q_max}{Maximal number of principal components for automatic
 dimensionality selection with PESEL. Default: \code{100}}
 
 \item{nv}{Number of principal directions to obtain. Default: \code{0}. Can
@@ -29,5 +29,5 @@ The SVD decomposition
 }
 \description{
 Efficient PCA for a tall matrix (much more rows than columns). Uses the SVD
- of the covariance matrix.
+of the covariance matrix.
 }

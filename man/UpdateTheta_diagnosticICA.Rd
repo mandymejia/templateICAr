@@ -73,8 +73,8 @@ probabilities of \code{z}.}
 }
 \value{
 An updated list of parameter estimates, theta, OR if \code{return_MAP=TRUE},
- the posterior mean and precision of the latent fields and posterior
- probabilities of group membership.
+the posterior mean and precision of the latent fields and posterior
+probabilities of group membership.
 }
 \description{
 Parameter Estimates in EM Algorithm for Diagnostic ICA Model

@@ -10,17 +10,17 @@ make_mesh(surf = NULL, inds_data = NULL, inds_mesh = NULL)
 \item{surf}{Object of class \code{"surf"}. See
 \code{\link[ciftiTools]{make_surf}} and \code{\link[ciftiTools]{is.surf}}.}
 
-\item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial 
+\item{inds_data}{Subset of vertices to include in analysis, e.g. non-medial
 wall locations.}
 
-\item{inds_mesh}{Subset of vertices to retain in mesh, e.g. non-medial wall 
+\item{inds_mesh}{Subset of vertices to retain in mesh, e.g. non-medial wall
 locations. Must be a superset of \code{inds_data}.}
 }
 \value{
-List containing INLA mesh, observation weight matrix \strong{A} for 
- translating between mesh locations and original data locations, the brain 
- mask used to create the mesh, and the number of original and mesh data 
- locations.
+List containing INLA mesh, observation weight matrix \strong{A} for
+translating between mesh locations and original data locations, the brain
+mask used to create the mesh, and the number of original and mesh data
+locations.
 }
 \description{
 Create INLA mesh and observation weight matrix based on a \code{"surf"} object

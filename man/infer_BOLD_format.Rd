@@ -13,7 +13,7 @@ infer_BOLD_format(BOLD, verbose = FALSE)
 }
 \value{
 The format: \code{"CIFTI"} file path, \code{"xifti"} object,
- \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
+\code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
 }
 \description{
 Infer fMRI data format
