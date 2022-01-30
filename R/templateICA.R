@@ -140,6 +140,7 @@ templateICA <- function(
   stopifnot(is.logical(usePar) && length(usePar)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
   xii1 <- NULL
+  var_method <- NULL
 
   # `usePar`
   if (!isFALSE(usePar)) {
@@ -256,6 +257,7 @@ templateICA <- function(
         template_mean, resamp_res=resamp_res,
         brainstructures=brainstructures
       )
+      if (is.null(var_method)) { var_method <- template_mean$meta$cifti$misc$var_method }
       template_var <- ciftiTools::read_xifti(
         template_var, resamp_res=resamp_res,
         brainstructures=brainstructures
@@ -322,6 +324,9 @@ templateICA <- function(
   } else {
     nI <- nV <- nrow(template_mean)
   }
+
+  # Valid?
+  if (is.null(var_method)) { var_method <- ifelse(min(template_var)==0, "unbiased", "non-negative") }
 
   # `spatial_model` ------------------------------------------------------------
   do_spatial <- !is.null(spatial_model)
@@ -661,6 +666,28 @@ templateICA <- function(
   #   resultEM$template_var <- template_var_orig
   # }
 
+  # Params, formatted as length-one character vectors to put in "xifti" metadata
+  tICA_params <- list(
+    time_inds=time_inds, center_Bcols=center_Bcols,
+    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    Q2=Q2, Q2_max=Q2_max,
+    brainstructures=brainstructures,
+    var_method=var_method,
+    spatial_model=do_spatial,
+    rm_mwall=rm_mwall,
+    reduce_dim=reduce_dim,
+    maxiter=maxiter,
+    epsilon=epsilon,
+    kappa_init=kappa_init
+  )
+  tICA_params <- lapply(
+    tICA_params,
+    function(x) {
+      if (is.null(x)) { x <- "NULL"};
+      paste0(as.character(x), collapse=" ")
+    }
+  )
+
   # Format output.
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
     resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
@@ -692,5 +719,6 @@ templateICA <- function(
     class(resultEM) <- 'templateICA.nifti'
   }
 
+  resultEM$params <- tICA_params
   resultEM
 }

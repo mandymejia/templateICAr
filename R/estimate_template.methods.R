@@ -192,9 +192,10 @@ print.summary.template.data <- function(x, ...) {
   cat("A normalization: ", x$normA, "\n")
   cat("Variance method: ", x$var_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("-------------------------------------\n")
   cat("Dimensions:      \n")
-  cat("  # Locations:   ", x$nL, "\n")
-  cat("  # Template ICs:", x$nV, "\n")
+  cat("# Locations:     ", x$nL, "\n")
+  cat("# Template ICs:  ", x$nV, "\n")
   cat("\n")
 
   invisible(NULL)
