@@ -2,7 +2,7 @@
 % Please edit documentation in R/activations.R
 \name{activations.cifti}
 \alias{activations.cifti}
-\title{Activations of (s)tICA}
+\title{Activations of (s)tICA for CIFTI data}
 \usage{
 activations.cifti(
   result,

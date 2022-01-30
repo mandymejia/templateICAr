@@ -20,9 +20,12 @@
 #'
 activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
+  is_tICA <- inherits(result, "tICA") || inherits(result, "tICA.cifti") || inherits(result, "tICA.nifti")
+  is_stICA <- inherits(result, "stICA") || inherits(result, "stICA.cifti") || inherits(result, "stICA.nifti")
+
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
-  if(!(class(result) %in% c('stICA','tICA'))) stop("result must be of class stICA or tICA")
+  if (!(is_tICA || is_stICA)) stop("result must be of class stICA or tICA")
 
   L <- ncol(result$A)
   if(is.null(which.ICs)) which.ICs <- 1:L
@@ -31,7 +34,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
   template_mean <- result$template_mean
   template_var <- result$template_var
 
-  if (inherits(result, "stICA")) {
+  if (is_stICA) {
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
 
@@ -70,7 +73,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     result <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, vars=vars, u = u, alpha = alpha, type = type, deviation=deviation)
   }
 
-  if (inherits(result, "tICA")) {
+  if (is_tICA) {
 
     if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
 
@@ -106,7 +109,7 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
   return(result)
 }
 
-#' Activations of (s)tICA
+#' Activations of (s)tICA for CIFTI data
 #'
 #' Identify areas of activation in each independent component map
 #'
@@ -128,11 +131,12 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 #'
 activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  if( (!inherits(result, "tICA")) && (!inherits(result, "stICA")) ) stop("result must be of class stICA or tICA")
+  is_tICA <- inherits(result, "tICA.cifti")
+  is_stICA <- inherits(result, "stICA.cifti")
 
   # Select stICA or tICA
-  if (is.null(spatial_model)) { spatial_model <- inherits(result, "stICA") }
-  if (isTRUE(spatial_model) && inherits(result, "tICA")) {
+  if (is.null(spatial_model)) { spatial_model <- is_stICA }
+  if (isTRUE(spatial_model) && is_tICA) {
     warning(
       'spatial_model set to TRUE but class of model result is tICA. ', 
       'Setting spatial_model = FALSE, performing inference using standard ', 
@@ -140,7 +144,7 @@ activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=
     )
     spatial_model <- FALSE
   }
-  if (isFALSE(spatial_model) && inherits(result, "stICA")) {
+  if (isFALSE(spatial_model) && is_stICA) {
     result <- result$result_tICA
   } 
 
@@ -158,39 +162,41 @@ activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=
     rownames(activations_result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
   }
 
-  class(activations_result) <- "tICA_activations"
+  class(activations_result) <- "tICA_act.cifti"
 
   activations_result
 }
 
-#' Summarize a \code{"tICA_activations"} object
+#' Summarize a \code{"tICA_act.cifti"} object
 #'
-#' Summary method for class \code{"tICA_activations"}
+#' Summary method for class \code{"tICA_act.cifti"}
 #'
-#' @param object Object of class \code{"tICA_activations"}. 
+#' @param object Object of class \code{"tICA_act.cifti"}. 
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary tICA_activations
-summary.tICA_activations <- function(object, ...) {
+#' @method summary tICA_act.cifti
+summary.tICA_act.cifti <- function(object, ...) {
   act_counts <- colSums(as.matrix(object$active), na.rm=TRUE)
 
   x <- c(
-    summary(object$vars),
+    summary(object$active),
     list(act_counts=act_counts),
     object[c("u", "alpha", "method_p", "deviation")]
   )
 
-  class(x) <- "summary.tICA_activations"
+  class(x) <- "summary.tICA_act.cifti"
   return(x)
 }
 
-#' @rdname summary.tICA_activations
+#' @rdname summary.tICA_act.cifti
 #' @export
 #' 
 #' @param x The activations from \code{activations.cifti}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.tICA_activations
-print.summary.tICA_activations <- function(x, ...) {
+#' @method print summary.tICA_act.cifti
+print.summary.tICA_act.cifti <- function(x, ...) {
+
+  mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
   
   cat("====ACTIVATIONS STATS================\n")
   cat("Threshold:       ", x$u, "\n")
@@ -207,19 +213,19 @@ print.summary.tICA_activations <- function(x, ...) {
   )
   cat("p-val method:    ", pm_nice, "\n")
   cat("Deviation:       ", x$deviation, "\n")
-  # [TO DO]: add activation counts
+  cat("Mean # active:   ", round(mean(x$act_counts)), mapct, "\n")
   cat("\n")
 
   class(x) <- "summary.xifti"
   print(x) 
 }
 
-#' @rdname summary.tICA_activations
+#' @rdname summary.tICA_act.cifti
 #' @export
 #' 
-#' @method print tICA_activations
-print.tICA_activations <- function(x, ...) {
-  print.summary.tICA_activations(summary(x))
+#' @method print tICA_act.cifti
+print.tICA_act.cifti <- function(x, ...) {
+  print.summary.tICA_act.cifti(summary(x))
 }
 
 #' Plot activations
@@ -231,14 +237,62 @@ print.tICA_activations <- function(x, ...) {
 #' @return The plot
 #' @export
 #' @importFrom ciftiTools view_xifti
-#' @method plot tICA_activations
-plot.tICA_activations <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "vars"), ...) {
-  stopifnot(inherits(x, "tICA_activations"))
-  stat <- match.arg(stat, c("active", "pvals", "pvals_adj", "tstats", "vars"))
+#' @method plot tICA_act.cifti
+plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "se"), ...) {
+  stopifnot(inherits(x, "tICA_act.cifti"))
+
+  # Check `...`
+  args <- list(...)
+  has_title <- "title" %in% names(args)
+  has_idx <- "idx" %in% names(args)
+  has_fname <- "fname" %in% names(args)
+
+  stat <- match.arg(stat, c("active", "pvals", "pvals_adj", "tstats", "se"))
+  
+  # Print message saying what's happening.
+  msg1 <- ifelse(has_idx,
+    "Plotting the",
+    "Plotting the first component's"
+  )
+  msg2 <- switch(stat,
+    active="activation maps.",
+    pvals="p values.",
+    pvals_adj="adjusted p values.",
+    tstats="t statistics.",
+    se="standard errors."
+  )
+  cat(msg1, msg2, "\n")
+  
   if (stat == "active") {
     x <- x$active
   } else {
-    x <- newdata_xifti(x$vars, as.matrix(x[[stat]]))
+    x <- newdata_xifti(x$se, as.matrix(x[[stat]]))
   }
-  view_xifti(x, ...)
+
+  ss <- stat # to match `plot.template.cifti`
+  args_ss <- args
+  # Handle title and idx
+  if (!has_title && !has_idx) {
+    c1name <- if (!is.null(x$meta$cifti$names)) {
+      x$meta$cifti$names[1]
+    } else {
+      "First component"
+    }
+    args_ss$title <- paste0(c1name, " (", ss, ")")
+  } else if (!has_idx) {
+    args_ss$title <- paste0(args_ss$title, "(", ss, ")")
+  }
+  # Handle fname
+  if (has_fname) {
+    fext <- if (grepl("html$", args_ss$fname[1])) {
+      "html"
+    } else if (grepl("pdf$", args_ss$fname[1])) {
+      "pdf"
+    } else {
+      "png"
+    }
+    args_ss$fname <- gsub(paste0(".", fext), "", args_ss$fname, fixed=TRUE)
+    args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
+  }
+  do.call(view_xifti, c(list(x), args_ss))
 }
