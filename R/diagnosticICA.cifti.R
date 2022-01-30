@@ -51,7 +51,7 @@
 #'  subject IC variance estimates (class \code{"xifti"}), and the result of the model 
 #'  call to \code{diagnosticICA} (class \code{"dICA"}).
 #' 
-#' @export
+#' @keywords internal
 #'
 diagnosticICA.cifti <- function(cifti_fname,
                               templates,

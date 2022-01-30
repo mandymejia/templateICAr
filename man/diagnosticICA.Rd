@@ -68,3 +68,4 @@ the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixi
 \description{
 Perform diagnostic independent component analysis (ICA) using expectation-maximization (EM)
 }
+\keyword{internal}

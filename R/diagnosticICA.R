@@ -44,7 +44,7 @@
 #'  the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix
 #'  \strong{A} (a \eqn{TxL} matrix), the number of nuisance ICs estimated (Q_nuis)
 #'
-#' @export
+#' @keywords internal
 #'
 diagnosticICA <- function(template_mean,
                         template_var,

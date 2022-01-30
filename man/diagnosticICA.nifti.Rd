@@ -52,3 +52,4 @@ call to \code{diagnosticICA} (class 'dICA')
 \description{
 Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template
 }
+\keyword{internal}

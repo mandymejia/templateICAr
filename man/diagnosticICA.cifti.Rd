@@ -87,3 +87,4 @@ call to \code{diagnosticICA} (class \code{"dICA"}).
 \description{
 Run diagnostic ICA based on CIFTI-format BOLD data and CIFTI-based template
 }
+\keyword{internal}

@@ -27,7 +27,7 @@
 #'  subject IC variance estimates (class 'nifti'), and the result of the model
 #'  call to \code{diagnosticICA} (class 'dICA')
 #'
-#' @export
+#' @keywords internal
 #'
 diagnosticICA.nifti <- function(BOLD,
                               templates,
