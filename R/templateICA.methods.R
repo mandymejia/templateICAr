@@ -1,28 +1,28 @@
-#' Summarize a \code{"templateICA.cifti"} object
+#' Summarize a \code{"tICA.cifti"} object
 #'
-#' Summary method for class \code{"templateICA.cifti"}
+#' Summary method for class \code{"tICA.cifti"}
 #'
-#' @param object Object of class \code{"templateICA.cifti"}.
+#' @param object Object of class \code{"tICA.cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary templateICA.cifti
-summary.templateICA.cifti <- function(object, ...) {
+#' @method summary tICA.cifti
+summary.tICA.cifti <- function(object, ...) {
   x <- c(
     summary(object$subjICmean),
     object$params
   )
 
-  class(x) <- "summary.templateICA.cifti"
+  class(x) <- "summary.tICA.cifti"
   return(x)
 }
 
-#' @rdname summary.templateICA.cifti
+#' @rdname summary.tICA.cifti
 #' @export
 #'
 #' @param x The result of \code{templateICA} with CIFTI data
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.templateICA.cifti
-print.summary.templateICA.cifti <- function(x, ...) {
+#' @method print summary.tICA.cifti
+print.summary.tICA.cifti <- function(x, ...) {
   # Get DCT output.
   dct <- x$detrend_DCT
   if (!is.null(dct)) {
@@ -59,12 +59,12 @@ print.summary.templateICA.cifti <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.templateICA.cifti
+#' @rdname summary.tICA.cifti
 #' @export
 #'
-#' @method print templateICA.cifti
-print.templateICA.cifti <- function(x, ...) {
-  print.summary.templateICA.cifti(summary(x))
+#' @method print tICA.cifti
+print.tICA.cifti <- function(x, ...) {
+  print.summary.tICA.cifti(summary(x))
 }
 
 #' Plot template
@@ -75,9 +75,9 @@ print.templateICA.cifti <- function(x, ...) {
 #' @return The plot
 #' @export
 #' @importFrom ciftiTools view_xifti
-#' @method plot templateICA.cifti
-plot.templateICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
-  stopifnot(inherits(x, "templateICA.cifti"))
+#' @method plot tICA.cifti
+plot.tICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
+  stopifnot(inherits(x, "tICA.cifti"))
 
   # Check `...`
   args <- list(...)

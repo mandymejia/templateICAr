@@ -17,7 +17,7 @@ activations.cifti(
 )
 }
 \arguments{
-\item{result}{Result of templateICA.cifti model call}
+\item{result}{Result of tICA.cifti model call}
 
 \item{spatial_model}{Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.}
 

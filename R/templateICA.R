@@ -696,7 +696,7 @@ templateICA <- function(
       resultEM$result_tICA$subjICmean <- newdata_xifti(xii1, resultEM$result_tICA$subjICmean)
       resultEM$result_tICA$subjICse <- newdata_xifti(xii1, resultEM$result_tICA$subjICse)
     }
-    class(resultEM) <- 'templateICA.cifti'
+    class(resultEM) <- 'tICA.cifti'
 
   } else if (FORMAT == "NIFTI") {
     subjICmean_nifti <- subjICvar_nifti <- template_mean
@@ -716,7 +716,7 @@ templateICA <- function(
       resultEM$subjICvar <- newdata_nii(resultEM$subjICvar, mask, template_mean)
     }
     resultEM$mask <- mask
-    class(resultEM) <- 'templateICA.nifti'
+    class(resultEM) <- 'tICA.nifti'
   }
 
   resultEM$params <- tICA_params
