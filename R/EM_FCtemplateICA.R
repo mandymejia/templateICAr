@@ -26,6 +26,7 @@
 #' @details \code{EM_FCtemplateICA} implements the expectation-maximization
 #'  (EM) algorithm for the functional connectivity (FC) template ICA model
 #'
+#' @keywords internal
 #'
 EM_FCtemplateICA <- function(template_mean,
                              template_var,
