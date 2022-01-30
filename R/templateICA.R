@@ -68,9 +68,9 @@
 #'
 #'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
 #'  (see \code{\link{make_mesh}}).
-#' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data, and only recommended
-#'  for spatial modeling. The target resolution for resampling (number of
-#'  cortical surface vertices per hemisphere). A value less than 10000 is recommended for computational
+#' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data. 
+#'  The target resolution for resampling (number of cortical surface vertices 
+#'  per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default), do not perform resampling.
 #' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
 #'  If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.
