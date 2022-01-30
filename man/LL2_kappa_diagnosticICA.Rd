@@ -52,3 +52,4 @@ This is the function to be maximized in order to determine the MLE for \eqn{\kap
 template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
 the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
 }
+\keyword{internal}

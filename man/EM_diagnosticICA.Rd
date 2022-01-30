@@ -82,3 +82,4 @@ EM Algorithms for Diagnostic ICA Models
 of group membership, subject-level ICs and unknown parameters in the
 diagnostic ICA model with spatial priors on subject effects.
 }
+\keyword{internal}

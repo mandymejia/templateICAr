@@ -49,7 +49,7 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-#' @export
+#' @keywords internal
 #'
 EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
 
@@ -187,7 +187,7 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
 
 #' @rdname EM_diagnosticICA
 #'
-#' @export
+#' @keywords internal
 #'
 EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
 
@@ -325,7 +325,7 @@ NULL
 # @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix bdiag Diagonal
 #'
-#' @export
+#' @keywords internal
 #'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
@@ -689,7 +689,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
 #' @rdname UpdateTheta_diagnosticICA
 #'
-#' @export
+#' @keywords internal
 #'
 UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
@@ -919,7 +919,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
 #'
 #' @return Value of log-likelihood at logkappa
 #'
-#' @export
+#' @keywords internal
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes

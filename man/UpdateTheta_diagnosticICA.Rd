@@ -79,3 +79,4 @@ probabilities of group membership.
 \description{
 Parameter Estimates in EM Algorithm for Diagnostic ICA Model
 }
+\keyword{internal}
