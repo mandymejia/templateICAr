@@ -158,7 +158,7 @@ dual_reg2 <- function(
     if (is.xifti(BOLD)) { BOLD <- as.matrix(BOLD) }
     stopifnot(is.matrix(BOLD))
     if (retest) {
-      BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures)
+      if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
       if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
@@ -166,7 +166,7 @@ dual_reg2 <- function(
     if (is.character(BOLD)) { BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE) }
     stopifnot(length(dim(BOLD)) > 1)
     if (retest) {
-      BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE)
+      if (is.character(BOLD2)) { BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE) }
       stopifnot(length(dim(BOLD2)) > 1)
     }
   } else {
@@ -197,7 +197,8 @@ dual_reg2 <- function(
     }
   }
 
-  # [TO DO]: Check for `NA` values?
+  # [TO DO]: Support?
+  if (any(is.na(BOLD) || any(is.na(BOLD2)))) { stop("`NA` values in BOLD data not supported.") }
 
   # Normalize BOLD (and BOLD2) -------------------------------------------------
   # (Center, scale, and detrend)
