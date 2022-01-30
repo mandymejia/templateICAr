@@ -4,7 +4,7 @@
 \alias{plot.template_cifti}
 \title{Plot template}
 \usage{
-\method{plot}{template_cifti}(x, stat = c("mean", "var"), ...)
+\method{plot}{template_cifti}(x, stat = c("both", "mean", "var"), ...)
 }
 \arguments{
 \item{x}{The template from \code{estimate_template.cifti}}

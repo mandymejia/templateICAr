@@ -175,7 +175,6 @@ templateICA <- function(
   # Determine the format of `BOLD`.
   # same for NIFTI
   format <- infer_BOLD_format(BOLD)
-  if (verbose) { cat("Data input format:             ", format, "\n") }
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -474,6 +473,7 @@ templateICA <- function(
   nTmin <- min(nT)
 
   if (verbose) {
+    cat("Data input format:             ", format, "\n")
     cat('Number of data locations:      ', nV, "\n")
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of BOLD scans:          ', nN, "\n")
