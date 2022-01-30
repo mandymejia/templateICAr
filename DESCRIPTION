@@ -10,7 +10,7 @@ Authors@R: c(
     person(given = "Damon",
            family = "Pham",
            email = "damondpham@gmail.com",
-           role = c("ctb"),
+           role = c("aut"),
            comment = c(ORCID = "0000-0001-7563-4727"))
     )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
@@ -45,7 +45,7 @@ Suggests:
     INLA,
     parallel,
     testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
-Config/testthat/edition: 3
