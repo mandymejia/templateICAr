@@ -40,25 +40,31 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=FALSE, scale=FALSE, de
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
 
+  # NA values
+  # [TO DO]: check for NA?
+  # maskNA <- is.na(BOLD) | is.nan(BOLD)
+  # rowNA <- apply(maskNA, 1, any)
+  # colNA <- apply(maskNA, 2, any)
+
   # Center. 
   voxMeans <- NULL # for detrending without centering
   if (center_rows || center_cols) {
     # `BOLD` is transposed twice.
     # Center each voxel time series (across time).
     if (center_rows) {
-      BOLD <- t(BOLD - rowMeans(BOLD)) 
+      BOLD <- t(BOLD - rowMeans(BOLD, na.rm=TRUE)) 
     } else {
-      if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD) }
+      if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD, na.rm=TRUE) }
       BOLD <- t(BOLD)
     }
     # Center each image (across space).
     if (center_cols) {
-      BOLD <- t(BOLD - rowMeans(BOLD)) 
+      BOLD <- t(BOLD - rowMeans(BOLD, na.rm=TRUE)) 
     } else {
       BOLD <- t(BOLD)
     }
   } else {
-    if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD) }
+    if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD, na.rm=TRUE) }
   }
 
   # Detrend.
@@ -69,7 +75,8 @@ norm_BOLD <- function(BOLD, center_rows=TRUE, center_cols=FALSE, scale=FALSE, de
 
   # Scale by global SD.
   if (scale) { 
-    sig <- sqrt(mean(rowVars(BOLD)))
+    sig <- rowVars(BOLD, na.rm=TRUE)
+    sig <- sqrt(mean(sig, na.rm=TRUE))
     if (sig < 1e-8) {
       warning("Estimated scale is near zero. Skipping scaling.")
     } else {

@@ -365,6 +365,8 @@ estimate_template <- function(
     nL <- nQ
   }
 
+  # [TO DO]: NA in GICA?
+
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
   # Check `GICA` and `mask` dimensions match.

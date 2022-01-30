@@ -54,7 +54,7 @@ dual_reg <- function(
 
   # Estimate A (IC timeseries).
   # We need to center `BOLD` across space because the linear model has no intercept.
-  A <- ((BOLD - rowMeans(BOLD)) %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
+  A <- ((BOLD - rowMeans(BOLD, na.rm=TRUE)) %*% GICA) %*% chol2inv(chol(crossprod(GICA)))
 
   # Center each subject IC timecourse across time.
   # (Redundant. Since BOLD is column-centered, A is already column-centered.)
