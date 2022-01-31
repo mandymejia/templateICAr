@@ -66,7 +66,7 @@ diagnosticICA.cifti <- function(cifti_fname,
                               maxiter=100,
                               epsilon=0.01,
                               verbose=TRUE,
-                              kappa_init=0.4,
+                              kappa_init=0.2,
                               write_dir=NULL){
 
   if (is.null(write_dir)) { write_dir <- getwd() }

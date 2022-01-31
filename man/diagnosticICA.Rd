@@ -15,7 +15,7 @@ diagnosticICA(
   maxiter = 100,
   epsilon = 0.01,
   verbose = TRUE,
-  kappa_init = 0.5
+  kappa_init = 0.2
 )
 }
 \arguments{

@@ -18,7 +18,7 @@ diagnosticICA.cifti(
   maxiter = 100,
   epsilon = 0.01,
   verbose = TRUE,
-  kappa_init = 0.4,
+  kappa_init = 0.2,
   write_dir = NULL
 )
 }
