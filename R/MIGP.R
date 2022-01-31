@@ -91,7 +91,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
     if (nrow(W) > nM) {
       W <- W - rowMeans(W)
       z <- svd(tcrossprod(W), nu=nM, nv=nM)
-      W <- tcrossprod(diag(z$d), z$v)
+      W <- crossprod(z$u, W)
     }
   }
 
