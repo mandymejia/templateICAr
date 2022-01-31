@@ -182,7 +182,6 @@ groupICA.cifti <- function(
 
     # Read in BOLD data.
     BOLD_ii <- lapply(fnames_ii, read_cifti, brainstructures=brainstructures)
-    print(fnames_ii)
     # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
     BOLD_ii <- lapply(BOLD_ii, function(x){
       newdata_xifti(x, norm_BOLD(

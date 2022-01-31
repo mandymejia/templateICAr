@@ -19,27 +19,12 @@
 #' @param nP The number of final group PCA components to obtain. If 
 #'  \code{NULL} (default), will be set to \code{nM}.
 #' @param verbose Occasional updates?
-MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
+MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL){
   # Arg checks -----------------------------------------------------------------
   stopifnot(is.list(dat))
   stopifnot(is.function(datProcFUN))
 
   nN <- length(dat)
-
-  stopifnot(is.numeric(nM))
-  stopifnot(length(nM)==1)
-  if (nM <= nT) {warning(
-    "`nM` should be larger than the ",
-    "typical number of timepoints per subject."
-  ) }
-
-  if (is.null(nP)) { 
-    nP <- nM
-  } else {
-    stopifnot(is.numeric(nP))
-    stopifnot(length(nP)==1)
-    stopifnot(nP > 1)
-  }
 
   # First subject --------------------------------------------------------------
   # Read in and process.
@@ -61,6 +46,25 @@ MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
     if (max(colMeans(dn)) > 1e-8) { 
       stop("First subject's data columns are not demeaned.")
     }
+  }
+
+  # Set nM and nP
+  if (is.null(nM)) {
+    nM <- nT * 2
+  } else {
+    stopifnot(is.numeric(nM))
+    stopifnot(length(nM)==1)
+    if (nM <= nT) {warning(
+      "`nM` should be larger than the ",
+      "typical number of timepoints per subject."
+    ) }
+  }
+  if (is.null(nP)) { 
+    nP <- nM
+  } else {
+    stopifnot(is.numeric(nP))
+    stopifnot(length(nP)==1)
+    stopifnot(nP > 1)
   }
 
   # Initialize W, the running estimate of the final group-average eigenvectors
@@ -96,4 +100,44 @@ MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
   }
 
   W[seq(min(nM, nrow(W))),,drop=FALSE]
+}
+
+#' CIFTI data processing function for MIGP
+#' 
+datProcFUN.cifti <- function(
+  dat, brainstructures=c("left", "right"),
+  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0){
+  
+  # Simple argument checks.
+  stopifnot(is.logical(scale) && length(scale)==1)
+  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
+  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
+  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
+  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
+
+  brainstructures <- match.arg(
+    brainstructures, 
+    c("left", "right", "subcortical", "all"), 
+    several.ok=TRUE
+  )
+
+  # Read in data.
+  if (is.character(dat)) {
+    dat <- lapply(dat, read_xifti, brainstructures=brainstructures)
+  }
+  stopifnot(all(lapply(dat, is.xifti, messages=FALSE)))
+
+  # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
+  dat <- lapply(dat, function(x){
+    newdata_xifti(x, norm_BOLD(
+      as.matrix(x), center_cols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT
+    ))
+  })
+
+  # Concatenate and convert to matrix.
+  # `merge_xifti` will check that voxels and vertices align;
+  #   i.e. that the resolutions are the same.
+  dat <- as.matrix(merge_xifti(xifti_list=dat))
+
+  t(dat) # Return TxV matrix
 }
