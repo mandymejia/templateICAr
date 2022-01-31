@@ -95,5 +95,5 @@ MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
     }
   }
 
-  W[seq(nMm),,drop=FALSE]
+  W[seq(min(nM, nrow(W))),,drop=FALSE]
 }
