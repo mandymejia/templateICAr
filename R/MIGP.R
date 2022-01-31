@@ -86,9 +86,13 @@ MIGP <- function(dat, datProcFUN, checkColCentered, nM, nP=NULL){
 
     # Concatenate
     W <- cbind(W, dn)
-    nMm <- min(nM, nrow(W))
-    z <- svd(tcrossprod(W), nu=nMm, nv=nMm)
-    W <- tcrossprod(diag(z$d), z$v)
+
+    # PCA
+    if (nrow(W) > nM) {
+      W <- W - rowMeans(W)
+      z <- svd(tcrossprod(W), nu=nM, nv=nM)
+      W <- tcrossprod(diag(z$d), z$v)
+    }
   }
 
   W[seq(nMm),,drop=FALSE]
