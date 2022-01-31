@@ -7,6 +7,7 @@
 datProcFUN.cifti(
   dat,
   brainstructures = c("left", "right"),
+  resamp_res = NULL,
   center_Bcols = FALSE,
   scale = TRUE,
   detrend_DCT = 0

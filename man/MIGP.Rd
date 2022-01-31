@@ -4,7 +4,15 @@
 \alias{MIGP}
 \title{MIGP}
 \usage{
-MIGP(dat, datProcFUN, checkColCentered = TRUE, nM = NULL, nP = NULL)
+MIGP(
+  dat,
+  datProcFUN,
+  checkColCentered = TRUE,
+  nM = NULL,
+  nP = NULL,
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{dat}{The files or data to compute PCA for, in list format, with each
@@ -24,7 +32,9 @@ typical number of timepoints in each individual dataset, \eqn{T}. If
 \item{nP}{The number of final group PCA components to obtain. If
 \code{NULL} (default), will be set to \code{nM}.}
 
-\item{verbose}{Occasional updates?}
+\item{verbose}{Occasional updates? Default: \code{TRUE}.}
+
+\item{...}{Additional arguments to \code{datProcFUN}}
 }
 \description{
 Melodic's Incremental Group PCA
