@@ -602,6 +602,7 @@ templateICA <- function(
       # theta0$nu0_sq = dat_list$sigma_sq
       # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
     } else {
+      # [TO DO]: what if just compute eigenvalues? faster, right?
       err_var <- dim_reduce(BOLD, nL)$sigma_sq
       BOLD2 <- BOLD; rm(BOLD)
       theta0 <- list(A = BOLD_DR$A)

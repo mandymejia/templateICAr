@@ -39,7 +39,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
   if (verbose) { cat(nT, " timepoints.\n") }
 
   # Checks
-  if (nV > nT) { warning(
+  if (nT > nV) { warning(
     "Data should be TxV after processing, ",
     "but for the first scan there are more rows than columns."
   )}
