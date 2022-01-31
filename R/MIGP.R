@@ -109,6 +109,19 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
 
 #' CIFTI data processing function for MIGP
 #'
+#' @param dat The CIFTI data 
+#' @param brainstructures Character vector indicating which brain structure(s)
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
+#'  Default: \code{c("left","right")} (cortical surface only).
+#' @param resamp_res The target resolution for resampling (number of cortical
+#'  surface vertices per hemisphere).
+#' @param center_Bcols,scale,detrend_DCT Center BOLD columns, scale by mean spatial
+#'  deviation, and detrend voxel timecourses? See \code{\link{norm_BOLD}}.
+#'  Normalization is applied separately to each scan.
+#' 
+#' @keywords internal
 datProcFUN.cifti <- function(
   dat, brainstructures=c("left", "right"), resamp_res=NULL,
   center_Bcols=FALSE, scale=TRUE, detrend_DCT=0){

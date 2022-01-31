@@ -13,6 +13,23 @@ datProcFUN.cifti(
   detrend_DCT = 0
 )
 }
+\arguments{
+\item{dat}{The CIFTI data}
+
+\item{brainstructures}{Character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
+
+\item{resamp_res}{The target resolution for resampling (number of cortical
+surface vertices per hemisphere).}
+
+\item{center_Bcols, scale, detrend_DCT}{Center BOLD columns, scale by mean spatial
+deviation, and detrend voxel timecourses? See \code{\link{norm_BOLD}}.
+Normalization is applied separately to each scan.}
+}
 \description{
 CIFTI data processing function for MIGP
 }
+\keyword{internal}
