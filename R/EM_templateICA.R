@@ -21,7 +21,7 @@
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two.
-#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return  A list: theta (list of final parameter estimates), subICmean
@@ -51,7 +51,7 @@ NULL
 #'
 EM_templateICA.spatial <- function(
   template_mean, template_var, meshes, BOLD,
-  theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
+  theta0, C_diag, maxiter=100, epsilon=0.01, verbose=FALSE){
 
   INLA_check()
 
@@ -212,7 +212,7 @@ EM_templateICA.spatial <- function(
 }
 
 #' @rdname EM_templateICA
-EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, usePar=FALSE, verbose){
+EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 

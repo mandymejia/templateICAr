@@ -12,7 +12,7 @@
 #' @param AS_init (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.001.
+#' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return  A list:
@@ -31,11 +31,11 @@
 EM_FCtemplateICA <- function(template_mean,
                              template_var,
                              template_FC,
-                             prior_params=c(0.001,0.001),
+                             prior_params=c(0.001, 0.001),
                              BOLD,
                              AS_init,
                              maxiter=100,
-                             epsilon=0.001,
+                             epsilon=0.01,
                              verbose){
 
   #get initial values for A and S with dual regression - DONE

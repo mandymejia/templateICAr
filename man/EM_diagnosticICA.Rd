@@ -14,7 +14,7 @@ EM_diagnosticICA.spatial(
   theta0,
   C_diag,
   maxiter = 100,
-  epsilon = 0.001,
+  epsilon = 0.01,
   verbose = TRUE,
   ignore_determinant = TRUE
 )
@@ -26,7 +26,7 @@ EM_diagnosticICA.independent(
   theta0,
   C_diag,
   maxiter = 100,
-  epsilon = 0.001,
+  epsilon = 0.01,
   verbose = TRUE
 )
 }
@@ -51,7 +51,7 @@ and (for spatial model only) kappa (SPDE smoothness parameter)}
 
 \item{maxiter}{maximum number of EM iterations}
 
-\item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
 
 \item{verbose}{If \code{TRUE} (default), display progress of algorithm.}
 

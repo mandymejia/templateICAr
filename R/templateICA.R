@@ -78,7 +78,7 @@
 #'  Skipping dimension reduction will slow the model estimation, but may result in
 #'  more accurate results.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
+#' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
 #' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two.
@@ -108,7 +108,7 @@ templateICA <- function(
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
   reduce_dim=TRUE,
   maxiter=100,
-  epsilon=0.001,
+  epsilon=0.01,
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=FALSE,

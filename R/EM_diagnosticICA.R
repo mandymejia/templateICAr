@@ -16,7 +16,7 @@
 #'  and (for spatial model only) kappa (SPDE smoothness parameter)
 #' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
 #' @param maxiter maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
 #'  ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
@@ -51,7 +51,7 @@ NULL
 #'
 #' @keywords internal
 #'
-EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
+EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, verbose=TRUE, ignore_determinant=TRUE){
 
   INLA_check()
 
@@ -189,7 +189,7 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
 #'
 #' @keywords internal
 #'
-EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
+EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, verbose=TRUE){
 
   nvox <- nrow(BOLD) #number of brain locations
   L <- ncol(template_mean[[1]]) #number of ICs

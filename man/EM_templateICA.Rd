@@ -14,7 +14,7 @@ EM_templateICA.spatial(
   theta0,
   C_diag,
   maxiter = 100,
-  epsilon = 0.001,
+  epsilon = 0.01,
   verbose = FALSE
 )
 
@@ -25,7 +25,7 @@ EM_templateICA.independent(
   theta0,
   C_diag,
   maxiter = 100,
-  epsilon = 0.001,
+  epsilon = 0.01,
   usePar = FALSE,
   verbose
 )
@@ -53,7 +53,7 @@ same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 
