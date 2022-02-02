@@ -394,9 +394,9 @@ estimate_template <- function(
     stopifnot(length(dim(GICA)) %in% c(2, length(nI)+1))
     if (length(dim(GICA)) == length(nI)+1) {
       if (length(dim(GICA)) != 2) {
-        stopifnot(all(dim(GICA)[length(dim(GICA))-1] == nI))
+        stopifnot(all(dim(GICA)[seq(length(dim(GICA))-1)] == nI))
       }
-      if (all(dim(GICA)[length(dim(GICA))-1] == nI)) {
+      if (all(dim(GICA)[seq(length(dim(GICA))-1)] == nI)) {
         GICA <- matrix(GICA[rep(mask, nQ)], ncol=nQ)
         stopifnot(nrow(GICA) == nV)
       }
@@ -413,6 +413,9 @@ estimate_template <- function(
   if (verbose) {
     cat("Data input format:             ", format, "\n")
     cat('Number of data locations:      ', nV, "\n")
+    if (FORMAT == "NIFTI") {
+      cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
+    }
     cat('Number of original group ICs:  ', nQ, "\n")
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of training subjects:   ', nN, "\n")
@@ -448,7 +451,6 @@ estimate_template <- function(
     }
   }
   rm(DR_ii)
-  mask2 <- NULL # [TO DO]: fix for NIFTI data.
 
   # Aggregate results, and compute templates. ----------------------------------
   # Vectorize components and locations
@@ -557,29 +559,15 @@ estimate_template <- function(
       saveRDS(var_decomp, out_fname[3])
     }
   } else if (FORMAT == "NIFTI") {
-    # GICA@.Data <- GICA@.Data[,,,inds]
-    # GICA@dim_[5] <- length(inds)
-    # img_tmp <- mask2
-    # for(l in 1:L){
-    #   img_tmp[mask2==1] <- template_mean[,l]
-    #   template_mean_nifti@.Data[,,,l] <- img_tmp
-    #   img_tmp[mask2==1] <- template_var[,l]
-    #   template_var_nifti@.Data[,,,l] <- img_tmp
-    # }
-    nii_temp <- array(mask, dim=c(dim(mask), nL))
-    nii_temp[nii_temp[]] <- GICA
-    GICA <- nii_temp
-    nii_temp <- array(mask, dim=c(dim(mask), nL))
-    nii_temp[nii_temp[]] <- template$mean
-    template$mean <- nii_temp
-    nii_temp <- array(mask, dim=c(dim(mask), nL))
-    nii_temp[nii_temp[]] <- template$var
-    template$var <- nii_temp
+    for (tname in c("mean", "varUB", "varNN")) {
+      template[[tname]] <- RNifti::asNifti(
+        unmask_subcortex(t(template[[tname]]), mask, fill=0)
+      )
+    }
     if (!is.null(out_fname)) {
       if (verbose) { cat("\nWriting result to files.\n") }
       writeNIfTI(template$mean, out_fname[1])
-      writeNIfTI(template$var, out_fname[2])
-      writeNIfTI(mask2, 'mask2') # [TO DO] fix
+      writeNIfTI(template[[var_name]], out_fname[2])
       saveRDS(var_decomp, out_fname[3])
     }
   } else {

@@ -68,8 +68,8 @@
 #'
 #'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
 #'  (see \code{\link{make_mesh}}).
-#' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data. 
-#'  The target resolution for resampling (number of cortical surface vertices 
+#' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
+#'  The target resolution for resampling (number of cortical surface vertices
 #'  per hemisphere). A value less than 10000 is recommended for computational
 #'  feasibility. If \code{NULL} (default), do not perform resampling.
 #' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
@@ -313,9 +313,9 @@ templateICA <- function(
     stopifnot(length(dim(template_mean)) %in% c(2, length(nI)+1))
     if (length(dim(template_mean)) == length(nI)+1) {
       if (length(dim(template_mean)) != 2) {
-        stopifnot(all(dim(template_mean)[length(dim(template_mean))-1] == nI))
+        stopifnot(all(dim(template_mean)[seq(length(dim(template_mean))-1)] == nI))
       }
-      if (all(dim(template_mean)[length(dim(template_mean))-1] == nI)) {
+      if (all(dim(template_mean)[seq(length(dim(template_mean))-1)] == nI)) {
         template_mean <- matrix(template_mean[rep(mask, nL)], ncol=nL)
         template_var <- matrix(template_var[rep(mask, nL)], ncol=nL)
         stopifnot(nrow(template_mean) == nV)
@@ -480,6 +480,9 @@ templateICA <- function(
   if (verbose) {
     cat("Data input format:             ", format, "\n")
     cat('Number of data locations:      ', nV, "\n")
+    if (FORMAT == "NIFTI") {
+      cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
+    }
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of BOLD scans:          ', nN, "\n")
     cat('Total number of timepoints:    ', sum(nT), "\n")
@@ -494,7 +497,7 @@ templateICA <- function(
   if (FORMAT=="NIFTI") {
     for (bb in seq(nN)) {
       BOLD[[bb]] <- matrix(BOLD[[bb]][rep(mask, dBOLD[ldB])], ncol=nT)
-      stopifnot(nrow(BOLD[[bb]]) != nV)
+      stopifnot(nrow(BOLD[[bb]]) == nV)
     }
   }
 
@@ -610,7 +613,7 @@ templateICA <- function(
     }
 
     #2) Template ICA -----------------------------------------------------------
-    if (verbose) { 
+    if (verbose) {
       if (do_spatial) { cat("Initializing with standard Template ICA.\n") }
       if (!do_spatial) { cat("Computing Template ICA.\n") }
     }
@@ -647,7 +650,7 @@ templateICA <- function(
 
       #organize estimates and variances in matrix form
       resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=nL)
-      resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=nL)
+      resultEM$subjICse <- sqrt(matrix(diag(resultEM$subjICcov), ncol=nL))
       resultEM$A <- Hinv %*% resultEM$theta_MLE$A
 
       resultEM$result_tICA <- resultEM_tICA
@@ -709,23 +712,21 @@ templateICA <- function(
     class(resultEM) <- 'tICA.cifti'
 
   } else if (FORMAT == "NIFTI") {
-    subjICmean_nifti <- subjICvar_nifti <- template_mean
-    newdata_nii <- function(dat, mask, nii_temp) {
-      nL <- ncol(dat)
-      for (qq in seq(nL)) {
-        z <- mask
-        z[mask] <- dat[,qq]
-        nii_temp@.Data[,,,qq] <- z
-      }
-      nii_temp
+    resultEM$subjICmean <- RNifti::asNifti(
+      unmask_subcortex(resultEM$subjICmean, mask, fill=0)
+    )
+    resultEM$subjICse <- RNifti::asNifti(
+      unmask_subcortex(resultEM$subjICse, mask, fill=0)
+    )
+    if (do_spatial) {
+      resultEM$result_tICA$subjICmean <- RNifti::asNifti(
+        unmask_subcortex(resultEM$result_tICA$subjICmean, mask, fill=0)
+      )
+      resultEM$result_tICA$subjICse <- RNifti::asNifti(
+        unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=0)
+      )
     }
-    resultEM$subjICmean <- newdata_nii(resultEM$subjICmean, mask, template_mean)
-    resultEM$subjICvar <- newdata_nii(resultEM$subjICvar, mask, template_mean)
-    if (spatial_model) {
-      resultEM$subjICmean <- newdata_nii(resultEM$subjICmean, mask, template_mean)
-      resultEM$subjICvar <- newdata_nii(resultEM$subjICvar, mask, template_mean)
-    }
-    resultEM$mask <- mask
+    # resultEM$mask <- mask
     class(resultEM) <- 'tICA.nifti'
   }
 
