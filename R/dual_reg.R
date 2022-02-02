@@ -162,6 +162,7 @@ dual_reg2 <- function(
       if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
+    nI <- nV <- nrow(GICA)
   } else if (format == "NIFTI") {
     if (is.character(BOLD)) { BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE) }
     stopifnot(length(dim(BOLD)) > 1)
@@ -169,9 +170,12 @@ dual_reg2 <- function(
       if (is.character(BOLD2)) { BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE) }
       stopifnot(length(dim(BOLD2)) > 1)
     }
+    stopifnot(!is.null(mask))
+    nI <- dim(mask); nV <- sum(mask)
   } else {
     stopifnot(is.matrix(BOLD))
     if (retest) { stopifnot(is.matrix(BOLD2)) }
+    nI <- nV <- nrow(GICA)
   }
   dBOLD <- dim(BOLD)
   ldB <- length(dim(BOLD))
