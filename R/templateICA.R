@@ -726,6 +726,7 @@ templateICA <- function(
         unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=0)
       )
     }
+    resultEM$mask <- mask
     # resultEM$mask <- mask
     class(resultEM) <- 'tICA.nifti'
   }
