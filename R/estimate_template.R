@@ -592,6 +592,8 @@ estimate_template <- function(
   if (!is.null(out_fname)) { result$saved_files <- out_fname }
   # Add DR if applicable.
   if (keep_DR) { result$DR <- DR0 }
+  # Add mask if applicable
+  if (FORMAT == "NIFTI") { result$mask <- mask }
 
   # Return results.
   class(result) <- paste0("template.", tolower(FORMAT))

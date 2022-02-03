@@ -17,6 +17,48 @@ summary.template.cifti <- function(object, ...) {
   return(x)
 }
 
+#' Summarize a \code{"template.nifti"} object
+#'
+#' Summary method for class \code{"template.nifti"}
+#'
+#' @param object Object of class \code{"template.nifti"}.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary template.nifti
+summary.template.nifti <- function(object, ...) {
+  x <- c(
+    list(
+      mask_dims=dim(object$mask),
+      nV=sum(object$mask), 
+      nL=dim(object$template_mean)[length(dim(object$template_mean))]
+    ),
+    list(has_DR="DR" %in% names(object)),
+    object$params
+  )
+
+  class(x) <- "summary.template.nifti"
+  return(x)
+}
+
+#' Summarize a \code{"template.data"} object
+#'
+#' Summary method for class \code{"template.data"}
+#'
+#' @param object Object of class \code{"template.data"}.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+#' @method summary template.data
+summary.template.data <- function(object, ...) {
+  x <- c(
+    list(has_DR="DR" %in% names(object)),
+    list(nV=nrow(object$template_mean), nL=ncol(object$template_mean)),
+    object$params
+  )
+
+  class(x) <- "summary.template.data"
+  return(x)
+}
+
 #' @rdname summary.template.cifti
 #' @export
 #'
@@ -52,12 +94,99 @@ print.summary.template.cifti <- function(x, ...) {
   invisible(NULL)
 }
 
+#' @rdname summary.template.nifti
+#' @export
+#'
+#' @param x The template from \code{estimate_template.nifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.template.nifti
+print.summary.template.nifti <- function(x, ...) {
+  # Get DCT output.
+  dct <- x$detrend_DCT
+  if (!is.null(dct)) {
+    dct <- as.numeric(x$detrend_DCT)
+    dct <- if (dct>1) {
+      paste(dct, "DCT bases")
+    } else if (dct > 0) {
+      paste(dct, "DCT basis")
+    } else {
+      "None"
+    }
+  }
+
+  cat("====TEMPLATE INFO====================\n")
+  cat("Detrending:      ", dct, "\n")
+  cat("Spatial scaling: ", x$scale, "\n")
+  cat("A normalization: ", x$normA, "\n")
+  cat("Variance method: ", x$var_method, "\n")
+  cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("-------------------------------------\n")
+  cat("Mask dims:       ", paste0(x$mask_dims, collapse=" x "), "\n")
+  cat("Vectorized dims:\n")
+  cat("# Locations:     ", x$nV, "\n")
+  cat("# Template ICs:  ", x$nL, "\n")
+  cat("\n")
+
+  invisible(NULL)
+}
+
+#' @rdname summary.template.data
+#' @export
+#'
+#' @param x The template from \code{estimate_template.cifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.template.data
+print.summary.template.data <- function(x, ...) {
+  # Get DCT output.
+  dct <- x$detrend_DCT
+  if (!is.null(dct)) {
+    dct <- as.numeric(x$detrend_DCT)
+    dct <- if (dct>1) {
+      paste(dct, "DCT bases")
+    } else if (dct > 0) {
+      paste(dct, "DCT basis")
+    } else {
+      "None"
+    }
+  }
+
+  cat("====TEMPLATE INFO====================\n")
+  cat("Detrending:      ", dct, "\n")
+  cat("Spatial scaling: ", x$scale, "\n")
+  cat("A normalization: ", x$normA, "\n")
+  cat("Variance method: ", x$var_method, "\n")
+  cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("-------------------------------------\n")
+  cat("Dimensions:      \n")
+  cat("# Locations:     ", x$nV, "\n")
+  cat("# Template ICs:  ", x$nL, "\n")
+  cat("\n")
+
+  invisible(NULL)
+}
+
 #' @rdname summary.template.cifti
 #' @export
 #'
 #' @method print template.cifti
 print.template.cifti <- function(x, ...) {
   print.summary.template.cifti(summary(x))
+}
+
+#' @rdname summary.template.nifti
+#' @export
+#'
+#' @method print template.nifti
+print.template.nifti <- function(x, ...) {
+  print.summary.template.nifti(summary(x))
+}
+
+#' @rdname summary.template.data
+#' @export
+#'
+#' @method print template.data
+print.template.data <- function(x, ...) {
+  print.summary.template.data(summary(x))
 }
 
 #' Plot template
@@ -148,64 +277,24 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"), ...) {
   invisible(out)
 }
 
-#' Summarize a \code{"template.data"} object
+#' Plot template
 #'
-#' Summary method for class \code{"template.data"}
-#'
-#' @param object Object of class \code{"template.data"}.
-#' @param ... further arguments passed to or from other methods.
+#' @param x The template from \code{estimate_template.nifti}
+#' @param ... Additional arguments
+#' @return The plot
 #' @export
-#' @method summary template.data
-summary.template.data <- function(object, ...) {
-  x <- c(
-    list(has_DR="DR" %in% names(object)),
-    list(nV=nrow(object$template_mean), nL=ncol(object$template_mean)),
-    object$params
-  )
-
-  class(x) <- "summary.template.data"
-  return(x)
+#' @method plot template.nifti
+plot.template.nifti <- function(x, ...) {
+  stop("Not supported yet.")
 }
 
-#' @rdname summary.template.data
-#' @export
+#' Plot template
 #'
-#' @param x The template from \code{estimate_template.cifti}
-#' @param ... further arguments passed to or from other methods.
-#' @method print summary.template.data
-print.summary.template.data <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
-  }
-
-  cat("====TEMPLATE INFO====================\n")
-  cat("Detrending:      ", dct, "\n")
-  cat("Spatial scaling: ", x$scale, "\n")
-  cat("A normalization: ", x$normA, "\n")
-  cat("Variance method: ", x$var_method, "\n")
-  cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
-  cat("-------------------------------------\n")
-  cat("Dimensions:      \n")
-  cat("# Locations:     ", x$nL, "\n")
-  cat("# Template ICs:  ", x$nV, "\n")
-  cat("\n")
-
-  invisible(NULL)
-}
-
-#' @rdname summary.template.data
+#' @param x The template from \code{estimate_template.data}
+#' @param ... Additional arguments
+#' @return The plot
 #' @export
-#'
-#' @method print template.data
-print.template.data <- function(x, ...) {
-  print.summary.template.data(summary(x))
+#' @method plot template.data
+plot.template.data <- function(x, ...) {
+  stop("Not supported yet.")
 }
