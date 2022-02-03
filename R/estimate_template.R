@@ -561,7 +561,7 @@ estimate_template <- function(
   } else if (FORMAT == "NIFTI") {
     for (tname in c("mean", "varUB", "varNN")) {
       template[[tname]] <- RNifti::asNifti(
-        unmask_subcortex(t(template[[tname]]), mask, fill=0)
+        unmask_subcortex(t(template[[tname]]), mask, fill=NA)
       )
     }
     if (!is.null(out_fname)) {
