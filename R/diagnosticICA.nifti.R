@@ -39,6 +39,8 @@ diagnosticICA.nifti <- function(BOLD,
                               verbose=TRUE,
                               out_fname=NULL){
 
+  # [TO DO]: replace `oro.nifti` with `RNifti`
+
   G <- length(templates)
   if(G>5) stop(paste0('Length of templates is ',G,' which is a large number of groups. Check that the templates argument is formatted correctly.'))
   cat(paste0('Number of group templates provided: ',G,'\n'))

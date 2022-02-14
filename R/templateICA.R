@@ -185,6 +185,12 @@ templateICA <- function(
   )
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
 
+  if (FORMAT == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
   # [TO DO] if FORMAT=="NIFTI", take intersection of template mask and provided mask.
 
   # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
@@ -233,7 +239,7 @@ templateICA <- function(
   } else if (format == "NIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
-        BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE)
+        BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]])
       }
       # [TO DO] check?
     }
@@ -284,8 +290,8 @@ templateICA <- function(
           stop("Could not infer `template_var` file path; please provide it.")
         }
       }
-      template_mean <- oro.nifti::readNIfTI(template_mean, reorient=FALSE)
-      template_var <- oro.nifti::readNIfTI(template_var, reorient=FALSE)
+      template_mean <- RNifti::readNifti(template_mean)
+      template_var <- RNifti::readNifti(template_var)
     }
     stopifnot(length(dim(template_mean)) > 1)
     stopifnot(length(dim(template_var)) > 1)
@@ -303,7 +309,7 @@ templateICA <- function(
   # Vectorize templates.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
-    if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask, reorient=FALSE) }
+    if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
       cat("Coercing `mask` to a logical array with `as.logical`.\n")
@@ -438,7 +444,7 @@ templateICA <- function(
     }
   } else if (FORMAT == "NIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- oro.nifti::readNIfTI(BOLD[[bb]], reorient=FALSE) }
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]]) }
       stopifnot(length(dim(BOLD[[bb]])) > 1)
     }
   } else {

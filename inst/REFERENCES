@@ -21,5 +21,3 @@ Sobczyk, P., Josse, J., & Bogdan, M. (2020). pesel: Automatic Estimation of Numb
 Varadhan, R. (2021). SQUAREM: Squared Extrapolation Methods for Accelerating EM-Like Monotone Algorithms. https://coah.jhu.edu/people/Faculty_personal_Pages/%0A%20%20%20%20Varadhan.html 
 
 Whitcher, B., Schmid, V. J., & Thornton, A. (2011). Working with the DICOM and NIfTI Data Standards in R. Journal of Statistical Software, 44(6), 1–28. https://www.jstatsoft.org/v44/i06/ 
-
-Whitcher, B., Schmid, V., Thornton, A., & Muschelli, J. (2020). oro.nifti: Rigorous - NIfTI + ANALYZE + AFNI : Input / Output. https://CRAN.R-project.org/package=oro.nifti 

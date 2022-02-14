@@ -71,18 +71,18 @@ estimate_template_from_DR <- function(
 #' Legacy version of \code{\link{estimate_template_from_DR}}
 #'
 #' @param DR1,DR2 the test and retest dual regression estimates (\eqn{N \times L \times V})
-#' @param var_method \code{"unbiased"} (default) or \code{"non-negative"}
+#' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #'
 #' @return List of two elements: the mean and variance templates
 #' @keywords internal
 estimate_template_from_DR_two <- function(
-  DR1, DR2, var_method=c("unbiased", "non-negative")){
+  DR1, DR2, var_method=c("non-negative", "unbiased")){
 
   # Check arguments.
   stopifnot(length(dim(DR1)) == length(dim(DR2)))
   stopifnot(all(dim(DR1) == dim(DR2)))
   N <- dim(DR1)[1]
-  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
+  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
 
   template <- list(mean=NULL, var=NULL)
 
@@ -169,8 +169,8 @@ estimate_template_from_DR_two <- function(
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param var_method Method for estimating the template variance: \code{"unbiased"}
-#'  (default) or \code{"non-negative"}. The unbiased template variance is
+#' @param var_method Method for estimating the template variance: \code{"non-negative"}
+#'  (default) or \code{"unbiased"}. The unbiased template variance is
 #'  based on the assumed mixed effects/ANOVA model, whereas the non-negative template
 #'  variance adds to it to account for greater potential between-subjects variation.
 #'  (The template mean is the same for either choice of \code{var_method}.)
@@ -225,7 +225,7 @@ estimate_template <- function(
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
@@ -240,10 +240,10 @@ estimate_template <- function(
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
-  var_method <- match.arg(var_method, c("unbiased", "non-negative"))
+  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
   # if (var_method=="both") { stop("`var_method=='both' not supported yet.") }
-  var_name <- c(unbiased="varUB", `non-negative`="varNN")[var_method]
-  var_name_alt <- c(unbiased="varNN", `non-negative`="varUB")[var_method]
+  var_name <- c(`non-negative`="varNN", unbiased="varUB")[var_method]
+  var_name_alt <- c(`non-negative`="varUB", unbiased="varNN")[var_method]
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
@@ -291,6 +291,12 @@ estimate_template <- function(
   )
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
   nN <- length(BOLD)
+
+  if (FORMAT == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   # Ensure `BOLD2` is the same length.
   if (real_retest) {
@@ -360,7 +366,7 @@ estimate_template <- function(
     }
     stopifnot(is.matrix(GICA))
   } else if (FORMAT == "NIFTI") {
-    if (is.character(GICA)) { GICA <- oro.nifti::readNIfTI(GICA, reorient=FALSE) }
+    if (is.character(GICA)) { GICA <- RNifti::readNifti(GICA) }
     stopifnot(length(dim(GICA)) > 1)
   } else {
     stopifnot(is.matrix(GICA))
@@ -384,7 +390,7 @@ estimate_template <- function(
   # Vectorize `GICA`.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
-    if (is.character(mask)) { mask <- oro.nifti::readNIfTI(mask, reorient=FALSE) }
+    if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
       cat("Coercing `mask` to a logical array with `as.logical`.\n")
@@ -607,7 +613,7 @@ estimate_template.cifti <- function(
   GICA, inds=NULL,
   scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=0, brainstructures=c("left", "right"),
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
@@ -633,7 +639,7 @@ estimate_template.nifti <- function(
   GICA, inds=NULL,
   scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=0, mask=NULL,
-  var_method=c("unbiased", "non-negative"),
+  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,

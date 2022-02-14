@@ -37,6 +37,7 @@ Imports:
     SQUAREM,
     stats
 Suggests:
+    RNifti,
     covr,
     doParallel,
     foreach,

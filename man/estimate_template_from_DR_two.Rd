@@ -7,13 +7,13 @@
 estimate_template_from_DR_two(
   DR1,
   DR2,
-  var_method = c("unbiased", "non-negative")
+  var_method = c("non-negative", "unbiased")
 )
 }
 \arguments{
 \item{DR1, DR2}{the test and retest dual regression estimates (\eqn{N \times L \times V})}
 
-\item{var_method}{\code{"unbiased"} (default) or \code{"non-negative"}}
+\item{var_method}{\code{"non-negative"} (default) or \code{"unbiased"}}
 }
 \value{
 List of two elements: the mean and variance templates

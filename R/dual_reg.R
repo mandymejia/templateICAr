@@ -152,6 +152,12 @@ dual_reg2 <- function(
   nQ <- ncol(GICA)
   nI <- nV <- nrow(GICA)
 
+  if (format == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
@@ -164,10 +170,10 @@ dual_reg2 <- function(
     }
     nI <- nV <- nrow(GICA)
   } else if (format == "NIFTI") {
-    if (is.character(BOLD)) { BOLD <- oro.nifti::readNIfTI(BOLD, reorient=FALSE) }
+    if (is.character(BOLD)) { BOLD <- RNifti::readNifti(BOLD) }
     stopifnot(length(dim(BOLD)) > 1)
     if (retest) {
-      if (is.character(BOLD2)) { BOLD2 <- oro.nifti::readNIfTI(BOLD2, reorient=FALSE) }
+      if (is.character(BOLD2)) { BOLD2 <- RNifti::readNifti(BOLD2) }
       stopifnot(length(dim(BOLD2)) > 1)
     }
     stopifnot(!is.null(mask))
