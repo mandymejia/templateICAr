@@ -23,6 +23,9 @@ estimate_template(
   keep_DR = FALSE,
   out_fname = NULL,
   FC = FALSE,
+  varTol = 1e-06,
+  maskTol = 0.1,
+  maskTolAll = 0.1,
   verbose = TRUE
 )
 
@@ -152,6 +155,29 @@ and \code{"rds"} for data input.}
 
 \item{FC}{Include the functional connectivity template? Default: \code{FALSE}
 (work in progress, not available yet).}
+
+\item{varTol}{Tolerance for variance of each data location. For each scan,
+locations which do not meet this threshold are masked out of the analysis.
+Default: \code{1e-6}.}
+
+\item{maskTol}{For computing the dual regression results for each subject:
+tolerance for number of locations masked out due to low
+variance or missing values. If more than this many locations are masked out,
+a subject is skipped without calculating dual regression. \code{maskTol}
+can be specified either as a proportion of the number of locations (between
+zero and one), or as a number of locations (integers greater than one).
+Default: \code{.1}, i.e. up to 10\\% of locations can be masked out.
+
+If \code{BOLD2} is provided, masks are calculated for both scans and then
+the intersection of the masks is used, for each subject.}
+
+\item{maskTolAll}{For computing the variance decomposition across all subjects:
+tolerance for number of subjects masked out due to low variance or missing
+values at a given location. If more than this many subjects are masked out,
+the location's value will be \code{NA} in the templates. \code{maskTolAll}
+can be specified either as a proportion of the number of locations (between
+zero and one), or as a number of locations (integers greater than one).
+Default: \code{.1}, i.e. up to 10\\% of subjects can be masked out.}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }

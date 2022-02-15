@@ -15,8 +15,11 @@ dual_reg2(
   normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
+  NA_limit = 0.1,
   brainstructures = c("left", "right"),
   mask = NULL,
+  varTol = 1e-06,
+  maskTol = 0.1,
   verbose = TRUE
 )
 }
@@ -78,10 +81,25 @@ Default: \code{c("left","right")} (cortical surface only).}
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
+\item{varTol}{Tolerance for variance of each data location. Locations which
+do not meet this threshold are masked out of the analysis. Default:
+\code{1e-6}.}
+
+\item{maskTol}{Tolerance for number of locations masked out due to low
+variance or missing values. If more than this many locations are masked out,
+this subject is skipped without calculating dual regression. \code{maskTol}
+can be specified either as a proportion of the number of locations (between
+zero and one), or as a number of locations (integers greater than one).
+Default: \code{.1}, i.e. up to 10\\% of locations can be masked out.
+
+If \code{BOLD2} is provided, masks are calculated for each scan and then
+the intersection of the masks is used.}
+
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \value{
-The dual regression S matrices.
+The dual regression S matrices, or \code{NULL} if dual regression
+was skipped due to too many masked data locations.
 }
 \description{
 Wrapper to \code{dual_reg} used by \code{estimate_template}. The format of \code{BOLD}

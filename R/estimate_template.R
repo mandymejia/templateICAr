@@ -57,7 +57,7 @@ estimate_template_from_DR <- function(
   # Format as matrix if applicable.
   if (!is.null(LV)) {
     template <- lapply(template, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
-    vd[names(vd)!="num_subjects"] <- lapply(vd[names(vd)!="num_subjects"], 
+    vd[names(vd)!="num_subjects"] <- lapply(vd[names(vd)!="num_subjects"],
       function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) }
     )
   }
@@ -200,14 +200,34 @@ estimate_template_from_DR_two <- function(
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param out_fname Length-3 character vector of file path(s) to save the output to:
 #'  the mean template, the variance template, and the variance decomposition,
-#'  in that order. If one file name is provided, it will be appended with 
+#'  in that order. If one file name is provided, it will be appended with
 #'  \code{"_mean.[file_ext]"} for the template mean map,
-#'  \code{"_var.[file_ext]"} for the template variance map, and 
+#'  \code{"_var.[file_ext]"} for the template variance map, and
 #'  \code{"_varDecomp.rds"} for the variance decomposition, where \code{[file_ext]}
 #'  will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
 #'  and \code{"rds"} for data input.
 #' @param FC Include the functional connectivity template? Default: \code{FALSE}
 #'  (work in progress, not available yet).
+#' @param varTol Tolerance for variance of each data location. For each scan,
+#'  locations which do not meet this threshold are masked out of the analysis.
+#'  Default: \code{1e-6}.
+#' @param maskTol For computing the dual regression results for each subject:
+#'  tolerance for number of locations masked out due to low
+#'  variance or missing values. If more than this many locations are masked out,
+#'  a subject is skipped without calculating dual regression. \code{maskTol}
+#'  can be specified either as a proportion of the number of locations (between
+#'  zero and one), or as a number of locations (integers greater than one).
+#'  Default: \code{.1}, i.e. up to 10\% of locations can be masked out.
+#'
+#'  If \code{BOLD2} is provided, masks are calculated for both scans and then
+#'  the intersection of the masks is used, for each subject.
+#' @param maskTolAll For computing the variance decomposition across all subjects:
+#'  tolerance for number of subjects masked out due to low variance or missing
+#'  values at a given location. If more than this many subjects are masked out,
+#'  the location's value will be \code{NA} in the templates. \code{maskTolAll}
+#'  can be specified either as a proportion of the number of locations (between
+#'  zero and one), or as a number of locations (integers greater than one).
+#'  Default: \code{.1}, i.e. up to 10\% of subjects can be masked out.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
@@ -229,6 +249,7 @@ estimate_template <- function(
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
+  varTol=1e-6, maskTol=.1, maskTolAll=.1,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
@@ -246,6 +267,8 @@ estimate_template <- function(
   var_name_alt <- c(`non-negative`="varUB", unbiased="varNN")[var_method]
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
+  stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
+  stopifnot(is.numeric(maskTolAll) && length(maskTolAll)==1 && maskTolAll >= 0)
   stopifnot(is.logical(verbose) && length(verbose)==1)
   real_retest <- !is.null(BOLD2)
 
@@ -341,11 +364,11 @@ estimate_template <- function(
         gsub(FORMAT_extn, paste0("_varDecomp.rds"), out_fname)
       )
     } else if (length(out_fname) == 3) {
-      if (!all(endsWith(out_fname[seq(2)], FORMAT_extn))) { 
+      if (!all(endsWith(out_fname[seq(2)], FORMAT_extn))) {
         out_fname[seq(2)] <- paste0(out_fname[seq(2)], FORMAT_extn)
       }
-      if (!endsWith(out_fname[3], ".rds")) { 
-        out_fname[3] <- paste0(out_fname[3], ".rds") 
+      if (!endsWith(out_fname[3], ".rds")) {
+        out_fname[3] <- paste0(out_fname[3], ".rds")
       }
     } else {
       stop(
@@ -446,19 +469,35 @@ estimate_template <- function(
       normA=normA,
       Q2=Q2, Q2_max=Q2_max,
       brainstructures=brainstructures, mask=mask,
+      varTol=varTol, maskTol=maskTol,
       verbose=verbose
     )
 
-    DR0[1,ii,,] <- DR_ii$test[inds,]
-    DR0[2,ii,,] <- DR_ii$retest[inds,]
-    if(FC) {
-      FC0[1,ii,,] <- cov(DR_ii$test[,inds])
-      FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+    # Add results if this subject was not skipped.
+    # (Subjects are skipped if too many locations are masked out.)
+    if (!is.null(DR_ii)) {
+      DR0[1,ii,,] <- DR_ii$test[inds,]
+      DR0[2,ii,,] <- DR_ii$retest[inds,]
+      if(FC) {
+        FC0[1,ii,,] <- cov(DR_ii$test[,inds])
+        FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+      }
     }
   }
   rm(DR_ii)
 
   # Aggregate results, and compute templates. ----------------------------------
+
+  # Mask out locations for which too many subjects do not have data
+  if (maskTolAll < 1) { maskTolAll <- maskTolAll * nV }
+  # Assume is.na(DR0[mm,,,]) is the same for all mm
+  # Assume is.na(DR0[,,ll,]) is the same for all ll
+  NA_counts <- apply(is.na(DR0[1,,1,]), 2, sum)
+  maskAll <- NA_counts < maskTolAll
+  use_mask <- !all(maskAll)
+  if (use_mask) { DR0 <- DR0[,,,maskAll,drop=FALSE] }
+  # Note that `NA` values will still exist in `DR0`.
+
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nV))
   # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
@@ -470,6 +509,18 @@ estimate_template <- function(
   template <- x$template
   var_decomp <- x$var_decomp
   rm(x)
+
+  # Unmask the templates.
+  if (use_mask) {
+    unmask <- function(S, mask) {
+      S2 <- matrix(NA, nrow=length(mask), ncol=ncol(S))
+      S2[mask,] <- S
+      S2
+    }
+    for (tname in c("mean", "varUB", "varNN")) {
+      template[[tname]] <- unmask(template[[tname]], mask=maskAll)
+    }
+  }
 
   # Estimate FC template
   if(FC){
@@ -585,12 +636,16 @@ estimate_template <- function(
     }
   }
 
+  # If no masking was performed, remove unnecessary metadata.
+  if (!use_mask) { maskAll <- NULL }
+
   # Results list.
   result <- list(
     template_mean=template$mean,
     template_var=template[[var_name]],
     # template_FC=template$FC,
     var_decomp=var_decomp,
+    mask=maskAll,
     params=tparams
   )
 

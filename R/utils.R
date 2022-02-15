@@ -67,7 +67,51 @@ match_input <- function(
   invisible(NULL)
 }
 
+#' Create a mask based on vertices that are invalid
+#'
+#' @param BOLD A \eqn{V \times T} numeric matrix. Each row is a location.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
+#'  do not meet these thresholds are masked out of the analysis. Defaults: 
+#'  \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for {varTol}.
+#' @param verbose Print messages counting how many locations are removed?
+#'
+#' @importFrom matrixStats colVars
+#' @return A logical vector indicating valid vertices
+#'
+#' @keywords internal
+make_mask <- function(BOLD, meanTol=-Inf, varTol=1e-6, verbose=TRUE){
+  stopifnot(is.matrix(BOLD))
 
+  mask_na <- mask_mean <- mask_var <- rep(TRUE, ncol(BOLD))
+  # Mark columns with any NA or NaN values for removal.
+  mask_na[apply(is.na(BOLD) | is.nan(BOLD), 2, any)] <- FALSE
+  # Calculate means and variances of columns, except those with any NA or NaN.
+  # Mark columns with mean/var falling under the thresholds for removal.
+  mask_mean[mask_na][colMeans(BOLD[,mask_na,drop=FALSE]) < meanTol] <- FALSE
+  mask_var[mask_na][matrixStats::colVars(BOLD[,mask_na,drop=FALSE]) < varTol] <- FALSE
+
+  # Print counts of locations removed, for each reason.
+  if (verbose) {
+    warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
+    warn_part2 <- if (length(BOLD) > 1) { " in at least one scan.\n" } else { ".\n" }
+    if (any(!mask_na)) {
+      cat("\t", sum(!mask_na), paste0("locations removed due to NA or NaN values", warn_part2))
+    }
+    # Do not include NA locations in count.
+    mask_mean2 <- mask_mean | (!mask_na)
+    if (any(!mask_mean2)) {
+      cat("\t", sum(!mask_mean2), warn_part1, paste0("removed due to low mean", warn_part2))
+    }
+    # Do not include NA or low-mean locations in count.
+    mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
+    if (any(!mask_var2)) {
+      cat("\t", sum(!mask_var2), warn_part1, paste0("removed due to low variance", warn_part2))
+    }
+  }
+
+  # Return composite mask.
+  mask_na & mask_mean & mask_var
+}
 
 #' Kappa log-likelihood
 #'

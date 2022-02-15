@@ -29,6 +29,9 @@ dual_reg <- function(
   stopifnot(is.logical(scale) && length(scale)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
 
+  if (any(is.na(BOLD))) { stop("`NA` values in `BOLD` not supported with DR.") }
+  if (any(is.na(GICA))) { stop("`NA` values in `GICA` not supported with DR.") }
+
   nV <- nrow(BOLD) #number of data locations
   nT <- ncol(BOLD) #length of timeseries
   if(nV < nT) warning('More time points than voxels. Are you sure?')
@@ -123,9 +126,22 @@ dual_reg <- function(
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#' @param varTol Tolerance for variance of each data location. Locations which
+#'  do not meet this threshold are masked out of the analysis. Default: 
+#'  \code{1e-6}.
+#' @param maskTol Tolerance for number of locations masked out due to low
+#'  variance or missing values. If more than this many locations are masked out,
+#'  this subject is skipped without calculating dual regression. \code{maskTol}
+#'  can be specified either as a proportion of the number of locations (between
+#'  zero and one), or as a number of locations (integers greater than one).
+#'  Default: \code{.1}, i.e. up to 10\% of locations can be masked out.
+#' 
+#'  If \code{BOLD2} is provided, masks are calculated for each scan and then
+#'  the intersection of the masks is used.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
-#' @return The dual regression S matrices.
+#' @return The dual regression S matrices, or \code{NULL} if dual regression
+#'  was skipped due to too many masked data locations.
 #'
 #' @keywords internal
 dual_reg2 <- function(
@@ -133,8 +149,9 @@ dual_reg2 <- function(
   format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
   GICA, scale=TRUE, detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
-  Q2=0, Q2_max=NULL,
+  Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures=c("left", "right"), mask=NULL,
+  varTol=1e-6, maskTol=.1,
   verbose=TRUE){
 
   # Prepare output.
@@ -207,10 +224,38 @@ dual_reg2 <- function(
     }
   }
 
-  # [TO DO]: Support?
   if (any(is.na(BOLD) || any(is.na(BOLD2)))) { stop("`NA` values in BOLD data not supported.") }
 
-  # Normalize BOLD (and BOLD2) -------------------------------------------------
+  # Check for missing values. --------------------------------------------------
+  nV0 <- nV # not used
+  mask <- make_mask(BOLD, varTol=varTol)
+  if (retest) { mask <- mask & make_mask(BOLD2, varTol=varTol) }
+  use_mask <- !all(mask)
+  if (use_mask) {
+    # Coerce `maskTol` to number of locations.
+    stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
+    if (maskTol < 1) { maskTol <- maskTol * nV }
+    # Skip this scan if `maskTol` is surpassed.
+    if (sum(!mask) < maskTol) {
+      if (verbose) { 
+        warning("Skipping subject: too many masked locations (", sum(!mask), ").")
+        return(NULL)
+      }
+    }
+    # Mask out the locations.
+    BOLD <- BOLD[mask,,drop=FALSE]
+    if (retest) { BOLD2 <- BOLD2[mask,,drop=FALSE] }
+    nV <- nrow(BOLD)
+
+    # For later
+    unmask <- function(S, mask) {
+      S2 <- matrix(NA, nrow=length(mask), ncol=ncol(S))
+      S2[mask,] <- S
+      S2
+    }
+  }
+
+  # Normalize BOLD (and BOLD2). ------------------------------------------------
   # (Center, scale, and detrend)
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
@@ -244,6 +289,10 @@ dual_reg2 <- function(
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
     out$test <- out$test$S
     out$retest <- out$retest$S
+    if (use_mask) {
+      out$test <- unmask(out$test)
+      out$retest <- unmask(out$retest)
+    }
     return(out)
   }
 
@@ -285,6 +334,13 @@ dual_reg2 <- function(
     BOLD2, GICA, scale=FALSE,
     center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )$S
+
+  if (use_mask) {
+    out$test_preclean <- unmask(out$test_preclean)
+    out$retest_preclean <- unmask(out$retest_preclean)
+    out$test <- unmask(out$test)
+    out$retest <- unmask(out$retest)
+  }
 
   out
 }
