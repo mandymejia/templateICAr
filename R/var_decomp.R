@@ -13,12 +13,12 @@ var_decomp <- function(x, verbose=FALSE) {
 	nM <- d[1]
   nS <- d[2]
 
-  # Handle missing values: for each var, remove subjects without complete data
-  na_mask <- apply(is.na(x), seq(2, 3), any)
-  if (any(na_mask)) {
-    message("`NA`s detected. For each variable, removing subjects w/o complete data.\n")
-    x[rep(na_mask, each=nM)] <- NA
-  }
+  # # Handle missing values: for each var, remove subjects without complete data
+  # na_mask <- apply(is.na(x), seq(2, 3), any)
+  # if (any(na_mask)) {
+  #   message("`NA`s detected. For each variable, removing subjects w/o complete data.\n")
+  #   x[rep(na_mask, each=nM)] <- NA
+  # }
 
   # Variance decomposition
   if (verbose) { cat("\tCalculating means.\n") }

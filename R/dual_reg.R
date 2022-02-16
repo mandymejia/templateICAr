@@ -127,7 +127,7 @@ dual_reg <- function(
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param varTol Tolerance for variance of each data location. Locations which
-#'  do not meet this threshold are masked out of the analysis. Default: 
+#'  do not meet this threshold are masked out of the analysis. Default:
 #'  \code{1e-6}.
 #' @param maskTol Tolerance for number of locations masked out due to low
 #'  variance or missing values. If more than this many locations are masked out,
@@ -135,7 +135,7 @@ dual_reg <- function(
 #'  can be specified either as a proportion of the number of locations (between
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10\% of locations can be masked out.
-#' 
+#'
 #'  If \code{BOLD2} is provided, masks are calculated for each scan and then
 #'  the intersection of the masks is used.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
@@ -186,7 +186,7 @@ dual_reg2 <- function(
       stopifnot(is.matrix(BOLD2))
     }
     nI <- nV <- nrow(GICA)
-  } else if (format == "NIFTI") {
+  } else if (FORMAT == "NIFTI") {
     if (is.character(BOLD)) { BOLD <- RNifti::readNifti(BOLD) }
     stopifnot(length(dim(BOLD)) > 1)
     if (retest) {
@@ -224,8 +224,6 @@ dual_reg2 <- function(
     }
   }
 
-  if (any(is.na(BOLD) || any(is.na(BOLD2)))) { stop("`NA` values in BOLD data not supported.") }
-
   # Check for missing values. --------------------------------------------------
   nV0 <- nV # not used
   mask <- make_mask(BOLD, varTol=varTol)
@@ -236,21 +234,22 @@ dual_reg2 <- function(
     stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
     if (maskTol < 1) { maskTol <- maskTol * nV }
     # Skip this scan if `maskTol` is surpassed.
-    if (sum(!mask) < maskTol) {
-      if (verbose) { 
+    if (sum(!mask) > maskTol) {
+      if (verbose) {
         warning("Skipping subject: too many masked locations (", sum(!mask), ").")
         return(NULL)
       }
     }
     # Mask out the locations.
     BOLD <- BOLD[mask,,drop=FALSE]
+    GICA <- GICA[mask,,drop=FALSE]
     if (retest) { BOLD2 <- BOLD2[mask,,drop=FALSE] }
     nV <- nrow(BOLD)
 
     # For later
     unmask <- function(S, mask) {
-      S2 <- matrix(NA, nrow=length(mask), ncol=ncol(S))
-      S2[mask,] <- S
+      S2 <- matrix(NA, nrow=nrow(S), ncol=length(mask))
+      S2[,mask] <- S
       S2
     }
   }
@@ -290,8 +289,8 @@ dual_reg2 <- function(
     out$test <- out$test$S
     out$retest <- out$retest$S
     if (use_mask) {
-      out$test <- unmask(out$test)
-      out$retest <- unmask(out$retest)
+      out$test <- unmask(out$test, mask)
+      out$retest <- unmask(out$retest, mask)
     }
     return(out)
   }
@@ -304,7 +303,7 @@ dual_reg2 <- function(
     BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   } else {
     BOLD_DR <- dual_reg(
-      BOLD, GICA, scale=FALSE, 
+      BOLD, GICA, scale=FALSE,
       center_Bcols=FALSE, detrend_DCT=0, normA=normA
     )
     BOLD <- rm_nuisIC(BOLD, DR=BOLD_DR, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
@@ -336,10 +335,10 @@ dual_reg2 <- function(
   )$S
 
   if (use_mask) {
-    out$test_preclean <- unmask(out$test_preclean)
-    out$retest_preclean <- unmask(out$retest_preclean)
-    out$test <- unmask(out$test)
-    out$retest <- unmask(out$retest)
+    out$test_preclean <- unmask(out$test_preclean, mask)
+    out$retest_preclean <- unmask(out$retest_preclean, mask)
+    out$test <- unmask(out$test, mask)
+    out$retest <- unmask(out$retest, mask)
   }
 
   out

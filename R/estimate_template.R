@@ -489,23 +489,31 @@ estimate_template <- function(
   # Aggregate results, and compute templates. ----------------------------------
 
   # Mask out locations for which too many subjects do not have data
-  if (maskTolAll < 1) { maskTolAll <- maskTolAll * nV }
+  nVm <- nV # Number of locations after data masking.
+  if (maskTolAll < 1) { maskTolAll <- maskTolAll * nN }
   # Assume is.na(DR0[mm,,,]) is the same for all mm
-  # Assume is.na(DR0[,,ll,]) is the same for all ll
-  NA_counts <- apply(is.na(DR0[1,,1,]), 2, sum)
+  # Assume is.na(DR0[,,cc,]) is the same for all cc
+  NA_counts <- colSums(is.na(DR0[1,,1,]))
   maskAll <- NA_counts < maskTolAll
   use_mask <- !all(maskAll)
-  if (use_mask) { DR0 <- DR0[,,,maskAll,drop=FALSE] }
-  # Note that `NA` values will still exist in `DR0`.
+  if (use_mask) {
+    if (all(!maskAll)) { stop(
+      "No locations meet the minimum number of subjects with data (",
+      round(maskTolAll, digits=3), "). Check `maskTol` and `maskTolAll`."
+    ) }
+    DR0 <- DR0[,,,maskAll,drop=FALSE]
+    nVm <- sum(maskAll)
+  }
+  # Note that `NA` values may still exist in `DR0`.
 
   # Vectorize components and locations
-  DR0 <- array(DR0, dim=c(nM, nN, nL*nV))
+  DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
   # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
 
   if (verbose) { cat("\nEstimating template.\n") }
   # Estimate the mean and variance templates.
   # Also obtain the variance decomposition.
-  x <- estimate_template_from_DR(DR0, c(nL, nV))
+  x <- estimate_template_from_DR(DR0, c(nL, nVm))
   template <- x$template
   var_decomp <- x$var_decomp
   rm(x)
@@ -513,8 +521,8 @@ estimate_template <- function(
   # Unmask the templates.
   if (use_mask) {
     unmask <- function(S, mask) {
-      S2 <- matrix(NA, nrow=length(mask), ncol=ncol(S))
-      S2[mask,] <- S
+      S2 <- matrix(NA, nrow=nrow(S), ncol=length(mask))
+      S2[,mask] <- S
       S2
     }
     for (tname in c("mean", "varUB", "varNN")) {
@@ -567,7 +575,15 @@ estimate_template <- function(
   # Format and save template ---------------------------------------------------
   # Keep DR
   if (!isFALSE(keep_DR)) {
-    DR0 <- array(DR0, dim=c(nM, nN, nL, nV)) # Undo vectorize
+    DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
+    if (use_mask) {
+      unmask <- function(D, mask) {
+        D2 <- array(NA, dim=c(dim(D)[seq(3)], length(mask)))
+        D2[,,,mask] <- D
+        D2
+      }
+      DR0 <- unmask(DR0, maskAll)
+    }
     if (is.character(keep_DR)) {
       saveRDS(DR0, keep_DR)
       keep_DR <- FALSE # no longer need it.
@@ -636,8 +652,15 @@ estimate_template <- function(
     }
   }
 
+  # If masking was performed, and if verbose, report the NA count in templates.
   # If no masking was performed, remove unnecessary metadata.
-  if (!use_mask) { maskAll <- NULL }
+  if (use_mask) {
+    if (verbose) {
+      cat("Number of template locations with missing values:", sum(!maskAll), "\n")
+    }
+  } else {
+    maskAll <- NULL
+  }
 
   # Results list.
   result <- list(
@@ -666,23 +689,29 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
-  Q2=0, Q2_max=0, brainstructures=c("left", "right"),
+  scale=TRUE, detrend_DCT=0,
+  center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=NULL,
+  brainstructures=c("left","right"),
   var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
+  varTol=1e-6, maskTol=.1, maskTolAll=.1,
   verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, brainstructures=brainstructures,
+    scale=scale, detrend_DCT=detrend_DCT, 
+    center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max, 
+    brainstructures=brainstructures,
     var_method=var_method,
     keep_DR=keep_DR,
     out_fname=out_fname,
     FC=FC,
+    varTol=varTol, maskTol=maskTol, maskTolAll=maskTolAll,
     verbose=verbose
   )
 }
@@ -692,23 +721,29 @@ estimate_template.cifti <- function(
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE,
-  Q2=0, Q2_max=0, mask=NULL,
+  scale=TRUE, detrend_DCT=0,
+  center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=NULL,
+  mask=NULL,
   var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
+  varTol=1e-6, maskTol=.1, maskTolAll=.1,
   verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, mask=mask,
+    scale=scale, detrend_DCT=detrend_DCT, 
+    center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max, 
+    mask=mask,
     var_method=var_method,
     keep_DR=keep_DR,
     out_fname=out_fname,
     FC=FC,
+    varTol=varTol, maskTol=maskTol, maskTolAll=maskTolAll,
     verbose=verbose
   )
 }

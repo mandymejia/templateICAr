@@ -39,12 +39,15 @@ estimate_template.cifti(
   center_Bcols = FALSE,
   normA = FALSE,
   Q2 = 0,
-  Q2_max = 0,
+  Q2_max = NULL,
   brainstructures = c("left", "right"),
   var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
   out_fname = NULL,
   FC = FALSE,
+  varTol = 1e-06,
+  maskTol = 0.1,
+  maskTolAll = 0.1,
   verbose = TRUE
 )
 
@@ -58,12 +61,15 @@ estimate_template.nifti(
   center_Bcols = FALSE,
   normA = FALSE,
   Q2 = 0,
-  Q2_max = 0,
+  Q2_max = NULL,
   mask = NULL,
   var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
   out_fname = NULL,
   FC = FALSE,
+  varTol = 1e-06,
+  maskTol = 0.1,
+  maskTolAll = 0.1,
   verbose = TRUE
 )
 }
