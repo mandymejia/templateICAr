@@ -210,7 +210,8 @@ estimate_template_from_DR_two <- function(
 #'  (work in progress, not available yet).
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
-#'  Default: \code{1e-6}.
+#'  Default: \code{1e-6}. Variance is calculated on the original data, before
+#'  any normalization.
 #' @param maskTol For computing the dual regression results for each subject:
 #'  tolerance for number of locations masked out due to low
 #'  variance or missing values. If more than this many locations are masked out,
