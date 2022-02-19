@@ -11,7 +11,8 @@ estimate_template(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -34,7 +35,8 @@ estimate_template.cifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -56,7 +58,8 @@ estimate_template.nifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -97,8 +100,14 @@ dual regression, not before. This is because removing the ICs prior to dual
 regression would leave unmodelled signals in the data, which could bias the
 templates.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be
-scaled by the image standard deviation. Default: \code{TRUE}.}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the image standard
+deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
+
+\item{scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
+smooth the standard deviation estimates used for local scaling, provide the
+smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
@@ -173,7 +182,7 @@ variance or missing values. If more than this many locations are masked out,
 a subject is skipped without calculating dual regression. \code{maskTol}
 can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
-Default: \code{.1}, i.e. up to 10\\% of locations can be masked out.
+Default: \code{.1}, i.e. up to 10 percent of locations can be masked out.
 
 If \code{BOLD2} is provided, masks are calculated for both scans and then
 the intersection of the masks is used, for each subject.}
@@ -184,13 +193,14 @@ values at a given location. If more than this many subjects are masked out,
 the location's value will be \code{NA} in the templates. \code{maskTolAll}
 can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
-Default: \code{.1}, i.e. up to 10\\% of subjects can be masked out.}
+Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \value{
-A list with two entries, \code{"template_mean"} and \code{"template_var"}. There
-may be more entries too, depending on the function arguments.
+A list with \code{"template_mean"} and \code{"template_var"}, as well
+as the \code{var_decomp}, \code{mask}, and \code{params}. The dual
+regression results are included too if \code{keep_DR}.
 }
 \description{
 Estimate template for Template or Diagnostic ICA based on fMRI data

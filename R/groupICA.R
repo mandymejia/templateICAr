@@ -19,14 +19,16 @@
 #' @param num_PCs Maximum number of PCs to retain in initial subject-level PCA
 #' @param num_ICs Number of independent components to identify.
 #' @param max_rows_GPCA The maximum number of rows for the matrix on which group
-#' level PCA will be performed.  This matrix is the result of temporal concatenation
-#' and contains \code{length(cifti_fnames) * num_PCs} rows.
-#' @param center_Bcols,scale,detrend_DCT Center BOLD columns, scale by mean spatial
-#'  deviation, and detrend voxel timecourses? See \code{\link{norm_BOLD}}.
-#'  Normalization is applied separately to each scan.
+#'  level PCA will be performed.  This matrix is the result of temporal concatenation
+#'  and contains \code{length(cifti_fnames) * num_PCs} rows.
+#' @param center_Bcols,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
+#'  standard deviation, and detrend voxel timecourses? See 
+#'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
+#'  Defaults: Center BOLD columns, scale by the global standard deviation, but
+#'  do not detrend.
 #' @param verbose If \code{TRUE}, display progress updates
 #' @param out_fname (Optional) If not specified, a xifti object will be returned but
-#' the GICA maps will not be written to a CIFTI file.
+#'  the GICA maps will not be written to a CIFTI file.
 #' @param surfL (Optional) File path to a surface GIFTI for the left cortex.
 #'  If provided, will be part of xifti result object for visualization in R.
 #'  Will also be used to perform any smoothing.
@@ -55,7 +57,9 @@ groupICA.cifti <- function(
   num_PCs=100,
   num_ICs,
   max_rows_GPCA=10000,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0,
+  center_Bcols=FALSE, 
+  scale=c("global", "local", "none"), scale_sm_FWHM=2,
+  detrend_DCT=0,
   verbose=TRUE,
   out_fname=NULL,
   surfL=NULL,
@@ -185,7 +189,9 @@ groupICA.cifti <- function(
     # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
     BOLD_ii <- lapply(BOLD_ii, function(x){
       newdata_xifti(x, norm_BOLD(
-        as.matrix(x), center_cols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT
+        as.matrix(x), center_cols=center_Bcols, 
+        scale=scale, scale_sm_xifti=select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
+        detrend_DCT=detrend_DCT
       ))
     })
 

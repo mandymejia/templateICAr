@@ -5,8 +5,15 @@
 #' @param GICA Group-level independent components (\eqn{V \times Q})
 #' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
 #'  (not recommended).
-#' @param scale A logical value indicating whether the fMRI timeseries should be
-#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
+#'  Global scaling will divide the entire data matrix by the image standard 
+#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+#'  data location's time series by its estimated standard deviation. 
+#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
+#'  smooth the standard deviation estimates used for local scaling, provide a 
+#'  \code{"xifti"} object with data locations in alignment with 
+#'  \code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"} 
+#'  object is provided (default), do not smooth.
 #' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
 #'  to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual
@@ -22,11 +29,23 @@
 #' @export
 #'
 dual_reg <- function(
-  BOLD, GICA, scale=TRUE, detrend_DCT=0, center_Bcols=FALSE, normA=FALSE){
+  BOLD, GICA,
+  scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
+  detrend_DCT=0, center_Bcols=FALSE, normA=FALSE){
 
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
-  stopifnot(is.logical(scale) && length(scale)==1)
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) { 
+    warning(
+      "Setting `scale='global'`. Use `'global'` or `'local'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "global"
+  }
+  scale <- match.arg(scale, c("global", "local", "none"))
+  if (!is.null(scale_sm_xifti)) { stopifnot(is.xifti(scale_sm_xifti)) }
+  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
 
   if (any(is.na(BOLD))) { stop("`NA` values in `BOLD` not supported with DR.") }
@@ -48,7 +67,8 @@ dual_reg <- function(
   # Transpose it: now `BOLD` is TxV.
   BOLD <- t(norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT
+    scale=scale, scale_sm_xifti=scale_sm_xifti, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT
   ))
 
   # Center each group IC across space. (Used to be a function argument.)
@@ -91,8 +111,13 @@ dual_reg <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps as a (vectorized) numeric matrix
 #'  (\eqn{V \times Q}). Its columns will be centered.
-#' @param scale A logical value indicating whether the fMRI timeseries should be
-#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
+#'  Global scaling will divide the entire data matrix by the image standard 
+#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+#'  data location's time series by its estimated standard deviation. 
+#' @param scale_sm_FWHM Only applies if \code{scale=="local"} and if \code{BOLD}
+#'  represents surface data. To smooth the standard deviation estimates used for
+#'  local scaling, provide the smoothing FWHM (default: \code{2}).
 #' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
 #'  to use for detrending. If \code{0} (default), do not detrend.
 #' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
@@ -145,14 +170,18 @@ dual_reg <- function(
 #'
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL,
-  format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
-  GICA, scale=TRUE, detrend_DCT=0,
+  BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"), 
+  GICA, 
+  scale=c("global", "local", "none"), scale_sm_FWHM=2,
+  detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures=c("left", "right"), mask=NULL,
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
+
+  # No arg checks: check the args before calling this function.
+  xii1 <- NULL
 
   # Prepare output.
   out <- list(test = NULL, retest = NULL)
@@ -178,7 +207,14 @@ dual_reg2 <- function(
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
-    if (is.xifti(BOLD)) { BOLD <- as.matrix(BOLD) }
+    if (is.xifti(BOLD)) {
+      if (scale == "local") {
+        xii1 <- convert_xifti(select_xifti(BOLD, 1), "dscalar") * 0
+      }
+      BOLD <- as.matrix(BOLD)
+    } else if (scale == "local") {
+      stop("`scale=='local'` requires `BOLD` to be a CIFTI file or `'xifti'` object.")
+    }
     stopifnot(is.matrix(BOLD))
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
@@ -244,6 +280,11 @@ dual_reg2 <- function(
     BOLD <- BOLD[mask,,drop=FALSE]
     GICA <- GICA[mask,,drop=FALSE]
     if (retest) { BOLD2 <- BOLD2[mask,,drop=FALSE] }
+    if (!is.null(xii1)) {
+      xiitmp <- as.matrix(xii1)
+      xiitmp[!mask,] <- NA
+      xii1 <- move_to_mwall(newdata_xifti(xii1, xiitmp))
+    }
     nV <- nrow(BOLD)
 
     # For later
@@ -258,12 +299,14 @@ dual_reg2 <- function(
   # (Center, scale, and detrend)
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT
   )
   if (retest) {
     BOLD2 <- norm_BOLD(
       BOLD2, center_rows=TRUE, center_cols=center_Bcols,
-      scale=scale, detrend_DCT=detrend_DCT
+      scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+      detrend_DCT=detrend_DCT
     )
   }
 
@@ -276,12 +319,14 @@ dual_reg2 <- function(
 
   out$test <- dual_reg(
     if (retest) { BOLD } else { BOLD[, part1, drop=FALSE] },
-    GICA, scale=FALSE,
+    GICA, 
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )
   out$retest <- dual_reg(
     if (retest) { BOLD2 } else { BOLD[, part2, drop=FALSE] },
-    GICA, scale=FALSE,
+    GICA, 
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )
 
@@ -303,7 +348,8 @@ dual_reg2 <- function(
     BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   } else {
     BOLD_DR <- dual_reg(
-      BOLD, GICA, scale=FALSE,
+      BOLD, GICA, 
+      scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
       center_Bcols=FALSE, detrend_DCT=0, normA=normA
     )
     BOLD <- rm_nuisIC(BOLD, DR=BOLD_DR, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
@@ -315,22 +361,24 @@ dual_reg2 <- function(
   # Center and scale `BOLD` (and `BOLD2`) again, but do not detrend again. -----
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=0
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=0
   )
   BOLD2 <- norm_BOLD(
     BOLD2, center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=0
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=0
   )
 
   # Do DR again. ---------------------------------------------------------------
   out$test_preclean <- out$test$S
   out$test <- dual_reg(
-    BOLD, GICA, scale=FALSE,
+    BOLD, GICA, scale="none",
     center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )$S
   out$retest_preclean <- out$retest$S
   out$retest <- dual_reg(
-    BOLD2, GICA, scale=FALSE,
+    BOLD2, GICA, scale="none",
     center_Bcols=FALSE, detrend_DCT=0, normA=normA
   )$S
 

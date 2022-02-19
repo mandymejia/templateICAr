@@ -9,7 +9,8 @@ templateICA(
   template_mean,
   template_var = NULL,
   template_FC = NULL,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -50,7 +51,14 @@ is a file path, will be inferred by substituting \code{"_mean"} in the file name
 
 \code{template_FC} is not yet supported.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the image standard
+deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
+
+\item{scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
+smooth the standard deviation estimates used for local scaling, provide the
+smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.}
 

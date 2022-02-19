@@ -21,7 +21,13 @@
 #'
 #'  \code{template_FC} is not yet supported.
 #' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
-#' @param scale A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation).
+#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
+#'  Global scaling will divide the entire data matrix by the image standard 
+#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+#'  data location's time series by its estimated standard deviation. 
+#' @param scale_sm_FWHM Only applies if \code{scale=="local"}. To
+#'  smooth the standard deviation estimates used for local scaling, provide the 
+#'  smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.
 #' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression
 #'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
@@ -101,7 +107,8 @@
 templateICA <- function(
   BOLD,
   template_mean, template_var=NULL, template_FC=NULL,
-  scale=TRUE, detrend_DCT=0,
+  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=NULL, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
@@ -117,7 +124,16 @@ templateICA <- function(
   # Check arguments ------------------------------------------------------------
 
   # Simple argument checks.
-  stopifnot(is.logical(scale) && length(scale)==1)
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) { 
+    warning(
+      "Setting `scale='global'`. Use `'global'` or `'local'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "global"
+  }
+  scale <- match.arg(scale, c("global", "local", "none"))
+  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
@@ -541,7 +557,8 @@ templateICA <- function(
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM, 
+    detrend_DCT=detrend_DCT
   )
 
   # Concatenate the data.
@@ -554,7 +571,8 @@ templateICA <- function(
   # Center and scale `BOLD` again, but do not detrend again. -------------------
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
-    scale=scale, detrend_DCT=FALSE
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM, 
+    detrend_DCT=FALSE
   )
 
   # Initialize with the dual regression-based estimate -------------------------

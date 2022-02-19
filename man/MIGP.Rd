@@ -36,6 +36,9 @@ typical number of timepoints in each individual dataset, \eqn{T}. If
 
 \item{...}{Additional arguments to \code{datProcFUN}}
 }
+\value{
+The dimension-reduced data
+}
 \description{
 Melodic's Incremental Group PCA
 }

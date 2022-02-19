@@ -8,7 +8,9 @@ norm_BOLD(
   BOLD,
   center_rows = TRUE,
   center_cols = FALSE,
-  scale = FALSE,
+  scale = c("global", "local", "none"),
+  scale_sm_xifti = NULL,
+  scale_sm_FWHM = 2,
   detrend_DCT = 0
 )
 }
@@ -19,8 +21,16 @@ norm_BOLD(
 location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be
-scaled by the image standard deviation. Default: \code{FALSE}.}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the image standard
+deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
+
+\item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
+smooth the standard deviation estimates used for local scaling, provide a
+\code{"xifti"} object with data locations in alignment with
+\code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
+object is provided (default) or if \code{scale_sm_FWHM=0}, do not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use
 for detrending. If \code{0} (default), do not detrend.}

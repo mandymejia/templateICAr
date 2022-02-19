@@ -20,12 +20,17 @@
 #'  \code{NULL} (default), will be set to \code{nM}.
 #' @param verbose Occasional updates? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{datProcFUN}
+#' 
+#' @return The dimension-reduced data
+#' 
+#' @export
 MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbose=TRUE, ...){
   # Arg checks -----------------------------------------------------------------
   stopifnot(is.list(dat))
   stopifnot(is.function(datProcFUN))
 
   nN <- length(dat)
+  cat('Number of subjects:            ', nN, "\n")
 
   # First subject --------------------------------------------------------------
   # Read in and process.
@@ -33,7 +38,6 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
   dn <- datProcFUN(dn, ...)
   nT <- nrow(dn)
   nV <- ncol(dn)
-  cat('Number of subjects:            ', nN, "\n")
   cat('Number of data locations:      ', nV, "\n")
   if (verbose) { cat("Subject 1: ") }
   if (verbose) { cat(nT, " timepoints.\n") }
@@ -97,12 +101,20 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
       if (verbose) { cat(paste0(" Doing PCA.\n")) }
       W <- W - rowMeans(W)
       Wu <- svd(tcrossprod(W), nu=nM, nv=0)$u
+      # U'W = U'UDV' = DV'
       W <- crossprod(Wu, W)[seq(nM),,drop=FALSE]
     } else {
       if (verbose) { cat("\n") }
     }
     cat("\t", nn, "~", dim(W)[1], ",", dim(W)[2], "\n")
   }
+
+  # Move this into Group ICA code
+  # Possible [TO DO]:
+  # https://www.humanconnectome.org/study/hcp-young-adult/document/mound-and-moat-effect
+  # Fit a Wishart ('pure noise') eigenspectrum to the tail of the estimated 
+  # eigenspectrum and adjust the estimated eigenspectrum by subtracting the 
+  # noise part. This process is referred to as ROW ('roll-off Wishart').
 
   W[seq(min(nP, nrow(W))),,drop=FALSE]
 }
@@ -117,17 +129,33 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param resamp_res The target resolution for resampling (number of cortical
 #'  surface vertices per hemisphere).
-#' @param center_Bcols,scale,detrend_DCT Center BOLD columns, scale by mean spatial
-#'  deviation, and detrend voxel timecourses? See \code{\link{norm_BOLD}}.
-#'  Normalization is applied separately to each scan.
+#' @param center_Bcols,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
+#'  standard deviation, and detrend voxel timecourses? See 
+#'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
+#'  Defaults: Center BOLD columns, scale by the local standard deviation, but
+#'  do not detrend.
+#' 
+#'  Note that elsewhere in \code{templateICAr} global scaling is used, but 
+#'  to match the MELODIC/MIGP default local scaling is used here.
 #' 
 #' @keywords internal
 datProcFUN.cifti <- function(
   dat, brainstructures=c("left", "right"), resamp_res=NULL,
-  center_Bcols=FALSE, scale=TRUE, detrend_DCT=0){
+  center_Bcols=FALSE, 
+  scale=c("local", "global", "none"), scale_sm_FWHM=2,
+  detrend_DCT=0){
 
   # Simple argument checks.
-  stopifnot(is.logical(scale) && length(scale)==1)
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) { 
+    warning(
+      "Setting `scale='local'`. Use `'local'` or `'global'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "local"
+  }
+  scale <- match.arg(scale, c("local", "global", "none"))
+  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
@@ -151,7 +179,9 @@ datProcFUN.cifti <- function(
   # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
   dat <- lapply(dat, function(x){
     newdata_xifti(x, norm_BOLD(
-      as.matrix(x), center_cols=center_Bcols, scale=scale, detrend_DCT=detrend_DCT
+      as.matrix(x), center_cols=center_Bcols, 
+      scale=scale, scale_sm_xifti=select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM, 
+      detrend_DCT=detrend_DCT
     ))
   })
 

@@ -9,7 +9,8 @@ scale_BOLD(BOLD, scale = FALSE)
 \arguments{
 \item{BOLD}{fMRI numeric data matrix (\eqn{V \times T})}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be scaled by the image standard deviation. Default: \code{FALSE}.}
+\item{scale}{A logical value indicating whether the fMRI timeseries should
+be scaled by the image standard deviation. Default: \code{FALSE}.}
 }
 \description{
 Scale BOLD (legacy version of \code{norm_BOLD}) that centers both ways.

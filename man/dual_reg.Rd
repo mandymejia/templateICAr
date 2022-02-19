@@ -7,7 +7,9 @@
 dual_reg(
   BOLD,
   GICA,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_xifti = NULL,
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE
@@ -19,8 +21,16 @@ centered.}
 
 \item{GICA}{Group-level independent components (\eqn{V \times Q})}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be
-scaled by the image standard deviation. Default: \code{TRUE}.}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the image standard
+deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
+
+\item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
+smooth the standard deviation estimates used for local scaling, provide a
+\code{"xifti"} object with data locations in alignment with
+\code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
+object is provided (default), do not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}

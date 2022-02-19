@@ -9,7 +9,8 @@ dual_reg2(
   BOLD2 = NULL,
   format = c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
   GICA,
-  scale = TRUE,
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -42,8 +43,14 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 \item{GICA}{Group ICA maps as a (vectorized) numeric matrix
 (\eqn{V \times Q}). Its columns will be centered.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should be
-scaled by the image standard deviation. Default: \code{TRUE}.}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the image standard
+deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
+
+\item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
+represents surface data. To smooth the standard deviation estimates used for
+local scaling, provide the smoothing FWHM (default: \code{2}).}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}

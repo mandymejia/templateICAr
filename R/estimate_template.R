@@ -151,8 +151,13 @@ estimate_template_from_DR_two <- function(
 #'  dual regression, not before. This is because removing the ICs prior to dual
 #'  regression would leave unmodelled signals in the data, which could bias the
 #'  templates.
-#' @param scale A logical value indicating whether the fMRI timeseries should be
-#'  scaled by the image standard deviation. Default: \code{TRUE}.
+#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
+#'  Global scaling will divide the entire data matrix by the image standard 
+#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+#'  data location's time series by its estimated standard deviation. 
+#' @param scale_sm_FWHM Only applies if \code{scale=="local"}. To
+#'  smooth the standard deviation estimates used for local scaling, provide the 
+#'  smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.
 #' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
 #'  to use for detrending. If \code{0} (default), do not detrend.
 #' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
@@ -218,7 +223,7 @@ estimate_template_from_DR_two <- function(
 #'  a subject is skipped without calculating dual regression. \code{maskTol}
 #'  can be specified either as a proportion of the number of locations (between
 #'  zero and one), or as a number of locations (integers greater than one).
-#'  Default: \code{.1}, i.e. up to 10\% of locations can be masked out.
+#'  Default: \code{.1}, i.e. up to 10 percent of locations can be masked out.
 #'
 #'  If \code{BOLD2} is provided, masks are calculated for both scans and then
 #'  the intersection of the masks is used, for each subject.
@@ -228,21 +233,23 @@ estimate_template_from_DR_two <- function(
 #'  the location's value will be \code{NA} in the templates. \code{maskTolAll}
 #'  can be specified either as a proportion of the number of locations (between
 #'  zero and one), or as a number of locations (integers greater than one).
-#'  Default: \code{.1}, i.e. up to 10\% of subjects can be masked out.
+#'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
 #' @importFrom ciftiTools read_xifti is.xifti write_cifti
 #'
-#' @return A list with two entries, \code{"template_mean"} and \code{"template_var"}. There
-#'  may be more entries too, depending on the function arguments.
+#' @return A list with \code{"template_mean"} and \code{"template_var"}, as well
+#'  as the \code{var_decomp}, \code{mask}, and \code{params}. The dual 
+#'  regression results are included too if \code{keep_DR}.
 #'
 #' @export
 #'
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=TRUE, detrend_DCT=0,
+  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
@@ -257,7 +264,16 @@ estimate_template <- function(
 
   # Simple argument checks.
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
-  stopifnot(is.logical(scale) && length(scale)==1)
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) { 
+    warning(
+      "Setting `scale='global'`. Use `'global'` or `'local'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "global"
+  }
+  scale <- match.arg(scale, c("global", "local", "none"))
+  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
@@ -466,7 +482,8 @@ estimate_template <- function(
       format=format,
       GICA=GICA,
       center_Bcols=center_Bcols,
-      scale=scale, detrend_DCT=detrend_DCT,
+      scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+      detrend_DCT=detrend_DCT,
       normA=normA,
       Q2=Q2, Q2_max=Q2_max,
       brainstructures=brainstructures, mask=mask,
@@ -521,13 +538,10 @@ estimate_template <- function(
 
   # Unmask the templates.
   if (use_mask) {
-    unmask <- function(S, mask) {
-      S2 <- matrix(NA, nrow=nrow(S), ncol=length(mask))
-      S2[,mask] <- S
-      S2
-    }
     for (tname in c("mean", "varUB", "varNN")) {
-      template[[tname]] <- unmask(template[[tname]], mask=maskAll)
+      ttemp <- matrix(NA, nrow=nrow(template[[tname]]), ncol=length(maskAll))
+      ttemp[,maskAll] <- template[[tname]]
+      template[[tname]] <- ttemp
     }
   }
 
@@ -578,12 +592,9 @@ estimate_template <- function(
   if (!isFALSE(keep_DR)) {
     DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
     if (use_mask) {
-      unmask <- function(D, mask) {
-        D2 <- array(NA, dim=c(dim(D)[seq(3)], length(mask)))
-        D2[,,,mask] <- D
-        D2
-      }
-      DR0 <- unmask(DR0, maskAll)
+      DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(maskAll)))
+      DR0temp[,,,maskAll] <- DR0
+      DR0 <- DR0temp
     }
     if (is.character(keep_DR)) {
       saveRDS(DR0, keep_DR)
@@ -690,7 +701,8 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=TRUE, detrend_DCT=0,
+  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
@@ -704,7 +716,8 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, detrend_DCT=detrend_DCT, 
+    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT, 
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
     brainstructures=brainstructures,
@@ -722,7 +735,8 @@ estimate_template.cifti <- function(
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=TRUE, detrend_DCT=0,
+  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
@@ -736,7 +750,8 @@ estimate_template.nifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, detrend_DCT=detrend_DCT, 
+    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT, 
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
     mask=mask,

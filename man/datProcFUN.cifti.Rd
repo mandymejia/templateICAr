@@ -9,7 +9,8 @@ datProcFUN.cifti(
   brainstructures = c("left", "right"),
   resamp_res = NULL,
   center_Bcols = FALSE,
-  scale = TRUE,
+  scale = c("local", "global", "none"),
+  scale_sm_FWHM = 2,
   detrend_DCT = 0
 )
 }
@@ -25,9 +26,14 @@ Default: \code{c("left","right")} (cortical surface only).}
 \item{resamp_res}{The target resolution for resampling (number of cortical
 surface vertices per hemisphere).}
 
-\item{center_Bcols, scale, detrend_DCT}{Center BOLD columns, scale by mean spatial
-deviation, and detrend voxel timecourses? See \code{\link{norm_BOLD}}.
-Normalization is applied separately to each scan.}
+\item{center_Bcols, scale, scale_sm_FWHM, detrend_DCT}{Center BOLD columns, scale by the
+standard deviation, and detrend voxel timecourses? See
+\code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
+Defaults: Center BOLD columns, scale by the local standard deviation, but
+do not detrend.
+
+Note that elsewhere in \code{templateICAr} global scaling is used, but
+to match the MELODIC/MIGP default local scaling is used here.}
 }
 \description{
 CIFTI data processing function for MIGP
