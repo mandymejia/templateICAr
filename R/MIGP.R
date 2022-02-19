@@ -18,13 +18,16 @@
 #'  \code{NULL} (default), set to \code{T*2}.
 #' @param nP The number of final group PCA components to obtain. If
 #'  \code{NULL} (default), will be set to \code{nM}.
+#' @param initW The initial \eqn{D \times V^t} matrix, for example from a previous
+#'  call to MIGP. This argument could be used to iteratively build an MIGP result
+#'  across many fMRI scans. Default: \code{NULL} (no prior data).
 #' @param verbose Occasional updates? Default: \code{TRUE}.
 #' @param ... Additional arguments to \code{datProcFUN}
 #' 
 #' @return The dimension-reduced data
 #' 
 #' @export
-MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbose=TRUE, ...){
+MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW=NULL, verbose=TRUE, ...){
   # Arg checks -----------------------------------------------------------------
   stopifnot(is.list(dat))
   stopifnot(is.function(datProcFUN))
@@ -73,8 +76,8 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, verbo
   }
 
   # Initialize W, the running estimate of the final group-average eigenvectors
-  W <- dn # TxV
-
+  W <- if (is.null(initW)) { dn } else { rbind(W, dn) }
+  
   # All other subjects ---------------------------------------------------------
   for (nn in seq(2, nN)) {
     if (verbose) { cat(paste0("Subject ", nn, ": ")) }

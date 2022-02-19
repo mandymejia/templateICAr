@@ -10,6 +10,7 @@ MIGP(
   checkColCentered = TRUE,
   nM = NULL,
   nP = NULL,
+  initW = NULL,
   verbose = TRUE,
   ...
 )
@@ -31,6 +32,10 @@ typical number of timepoints in each individual dataset, \eqn{T}. If
 
 \item{nP}{The number of final group PCA components to obtain. If
 \code{NULL} (default), will be set to \code{nM}.}
+
+\item{initW}{The initial \eqn{D \times V^t} matrix, for example from a previous
+call to MIGP. This argument could be used to iteratively build an MIGP result
+across many fMRI scans. Default: \code{NULL} (no prior data).}
 
 \item{verbose}{Occasional updates? Default: \code{TRUE}.}
 
