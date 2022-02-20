@@ -76,7 +76,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
   }
 
   # Initialize W, the running estimate of the final group-average eigenvectors
-  W <- if (is.null(initW)) { dn } else { rbind(W, dn) }
+  W <- if (is.null(initW)) { dn } else { rbind(initW, dn) }
   
   # All other subjects ---------------------------------------------------------
   for (nn in seq(2, nN)) {
