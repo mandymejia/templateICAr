@@ -227,10 +227,10 @@ estimate_template_from_DR_two <- function(
 #'
 #'  If \code{BOLD2} is provided, masks are calculated for both scans and then
 #'  the intersection of the masks is used, for each subject.
-#' @param maskTolAll For computing the variance decomposition across all subjects:
+#' @param missingTol For computing the variance decomposition across all subjects:
 #'  tolerance for number of subjects masked out due to low variance or missing
 #'  values at a given location. If more than this many subjects are masked out,
-#'  the location's value will be \code{NA} in the templates. \code{maskTolAll}
+#'  the location's value will be \code{NA} in the templates. \code{missingTol}
 #'  can be specified either as a proportion of the number of locations (between
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.
@@ -257,7 +257,7 @@ estimate_template <- function(
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
-  varTol=1e-6, maskTol=.1, maskTolAll=.1,
+  varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
@@ -285,7 +285,7 @@ estimate_template <- function(
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
-  stopifnot(is.numeric(maskTolAll) && length(maskTolAll)==1 && maskTolAll >= 0)
+  stopifnot(is.numeric(missingTol) && length(missingTol)==1 && missingTol >= 0)
   stopifnot(is.logical(verbose) && length(verbose)==1)
   real_retest <- !is.null(BOLD2)
 
@@ -508,16 +508,16 @@ estimate_template <- function(
 
   # Mask out locations for which too many subjects do not have data
   nVm <- nV # Number of locations after data masking.
-  if (maskTolAll < 1) { maskTolAll <- maskTolAll * nN }
+  if (missingTol < 1) { missingTol <- missingTol * nN }
   # Assume is.na(DR0[mm,,,]) is the same for all mm
   # Assume is.na(DR0[,,cc,]) is the same for all cc
   NA_counts <- colSums(is.na(DR0[1,,1,]))
-  maskAll <- NA_counts < maskTolAll
+  maskAll <- NA_counts < missingTol
   use_mask <- !all(maskAll)
   if (use_mask) {
     if (all(!maskAll)) { stop(
       "No locations meet the minimum number of subjects with data (",
-      round(maskTolAll, digits=3), "). Check `maskTol` and `maskTolAll`."
+      round(missingTol, digits=3), "). Check `maskTol` and `missingTol`."
     ) }
     DR0 <- DR0[,,,maskAll,drop=FALSE]
     nVm <- sum(maskAll)
@@ -710,7 +710,7 @@ estimate_template.cifti <- function(
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
-  varTol=1e-6, maskTol=.1, maskTolAll=.1,
+  varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
   estimate_template(
@@ -725,7 +725,7 @@ estimate_template.cifti <- function(
     keep_DR=keep_DR,
     out_fname=out_fname,
     FC=FC,
-    varTol=varTol, maskTol=maskTol, maskTolAll=maskTolAll,
+    varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose
   )
 }
@@ -744,7 +744,7 @@ estimate_template.nifti <- function(
   keep_DR=FALSE,
   out_fname=NULL,
   FC=FALSE,
-  varTol=1e-6, maskTol=.1, maskTolAll=.1,
+  varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
   estimate_template(
@@ -759,7 +759,7 @@ estimate_template.nifti <- function(
     keep_DR=keep_DR,
     out_fname=out_fname,
     FC=FC,
-    varTol=varTol, maskTol=maskTol, maskTolAll=maskTolAll,
+    varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose
   )
 }

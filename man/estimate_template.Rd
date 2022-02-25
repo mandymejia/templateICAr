@@ -26,7 +26,7 @@ estimate_template(
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 
@@ -49,7 +49,7 @@ estimate_template.cifti(
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 
@@ -72,7 +72,7 @@ estimate_template.nifti(
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 }
@@ -187,10 +187,10 @@ Default: \code{.1}, i.e. up to 10 percent of locations can be masked out.
 If \code{BOLD2} is provided, masks are calculated for both scans and then
 the intersection of the masks is used, for each subject.}
 
-\item{maskTolAll}{For computing the variance decomposition across all subjects:
+\item{missingTol}{For computing the variance decomposition across all subjects:
 tolerance for number of subjects masked out due to low variance or missing
 values at a given location. If more than this many subjects are masked out,
-the location's value will be \code{NA} in the templates. \code{maskTolAll}
+the location's value will be \code{NA} in the templates. \code{missingTol}
 can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
 Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.}
