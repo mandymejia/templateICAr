@@ -272,9 +272,9 @@ dual_reg2 <- function(
     # Skip this scan if `maskTol` is surpassed.
     if (sum(!mask) > maskTol) {
       if (verbose) {
-        warning("Skipping subject: too many masked locations (", sum(!mask), ").")
-        return(NULL)
+        cat("Skipping subject: too many masked locations (", sum(!mask), ").\n")
       }
+      return(NULL)
     }
     # Mask out the locations.
     BOLD <- BOLD[mask,,drop=FALSE]
