@@ -20,9 +20,7 @@ estimate_template(
   Q2_max = NULL,
   brainstructures = c("left", "right"),
   mask = NULL,
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -43,9 +41,7 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -66,9 +62,7 @@ estimate_template.nifti(
   Q2 = 0,
   Q2_max = NULL,
   mask = NULL,
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -145,28 +139,10 @@ Default: \code{c("left","right")} (cortical surface only).}
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
-\item{var_method}{Method for estimating the template variance: \code{"non-negative"}
-(default) or \code{"unbiased"}. The unbiased template variance is
-based on the assumed mixed effects/ANOVA model, whereas the non-negative template
-variance adds to it to account for greater potential between-subjects variation.
-(The template mean is the same for either choice of \code{var_method}.)
-
-In either case, both variance template version will be returned in matrix
-form in the \code{var_decomp} entry of the output.}
-
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
 returned too. If a single file path, save the DR estimates as an RDS file at
 that location rather than returning them.}
-
-\item{out_fname}{Length-3 character vector of file path(s) to save the output to:
-the mean template, the variance template, and the variance decomposition,
-in that order. If one file name is provided, it will be appended with
-\code{"_mean.[file_ext]"} for the template mean map,
-\code{"_var.[file_ext]"} for the template variance map, and
-\code{"_varDecomp.rds"} for the variance decomposition, where \code{[file_ext]}
-will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
-and \code{"rds"} for data input.}
 
 \item{FC}{Include the functional connectivity template? Default: \code{FALSE}
 (work in progress, not available yet).}

@@ -71,7 +71,7 @@ match_input <- function(
 #'
 #' @param BOLD A \eqn{V \times T} numeric matrix. Each row is a location.
 #' @param meanTol,varTol Tolerance for mean and variance of each data location. Locations which
-#'  do not meet these thresholds are masked out of the analysis. Defaults: 
+#'  do not meet these thresholds are masked out of the analysis. Defaults:
 #'  \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for {varTol}.
 #' @param verbose Print messages counting how many locations are removed?
 #'
@@ -333,4 +333,16 @@ Q2_max_check <- function(Q2_max, nQ, nT){
   }
 
   Q2_max
+}
+
+#' Unmask a matrix
+#'
+#' @param dat The data
+#' @param mask The mask
+#' @keywords internal
+unmask_mat <- function(dat, mask){
+  stopifnot(nrow(dat) == sum(mask))
+  mdat <- matrix(NA, nrow=length(mask), ncol=ncol(dat))
+  mdat[mask,] <- dat
+  mdat
 }

@@ -44,22 +44,15 @@ estimate_template_from_DR <- function(
   )
 
   # Format `vd`
-  vd$nM <- vd$grand_mean <- NULL # Get rid of redundant entries
-  names(vd)[names(vd) == "nS"] <- "num_subjects"
-  # Add the variance templates in matrix form to `vd`.
-  vd$tmean <- template$mean
-  vd$tvarUB <- template$varUB
-  vd$tvarNN <- template$varNN
+  vd$nM <- vd$nS <- vd$grand_mean <- NULL # Get rid of redundant entries
 
-  # Format `template`: clamp var est above zero.
-  template$varNN <- pmax(0, template$varNN)
+  ## Format `template`: clamp var est above zero.
+  # template$varUB <- pmax(0, template$varUB)
 
-  # Format as matrix if applicable.
+  # Format as matrix.
   if (!is.null(LV)) {
     template <- lapply(template, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
-    vd[names(vd)!="num_subjects"] <- lapply(vd[names(vd)!="num_subjects"],
-      function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) }
-    )
+    vd <- lapply(vd, function(x){ matrix(x, nrow=LV[1], ncol=LV[2]) })
   }
 
   # Return
@@ -71,18 +64,15 @@ estimate_template_from_DR <- function(
 #' Legacy version of \code{\link{estimate_template_from_DR}}
 #'
 #' @param DR1,DR2 the test and retest dual regression estimates (\eqn{N \times L \times V})
-#' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #'
 #' @return List of two elements: the mean and variance templates
 #' @keywords internal
-estimate_template_from_DR_two <- function(
-  DR1, DR2, var_method=c("non-negative", "unbiased")){
+estimate_template_from_DR_two <- function(DR1, DR2){
 
   # Check arguments.
   stopifnot(length(dim(DR1)) == length(dim(DR2)))
   stopifnot(all(dim(DR1) == dim(DR2)))
   N <- dim(DR1)[1]
-  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
 
   template <- list(mean=NULL, var=NULL)
 
@@ -91,35 +81,31 @@ estimate_template_from_DR_two <- function(
 
   # Variance.
   SSB <- 2 * colSums(((DR1 + DR2)/2 - rep(t(template$mean), each=N))^2, na.rm=TRUE)
-  MSB_div2 <- t(SSB / (N-1)) / 2
-  if (var_method == "unbiased") {
-    # 1. Fastest method.
-    var_noise <- t( (1/2) * apply(DR1 - DR2, c(2,3), var, na.rm=TRUE) )
-    template$var <- MSB_div2 - var_noise/2
+  template$var_nn <- t(SSB / (N-1)) / 2 # MSB/2
+  # Unbiased.
+  # 1. Fastest method.
+  var_noise <- t( (1/2) * apply(DR1 - DR2, c(2,3), var, na.rm=TRUE) )
+  template$var_ub <- template$var_nn - var_noise/2
 
-    # # 2. Previous, equivalent calculation.
-    # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
-    # var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
-    # var_tot <- t((var_tot1 + var_tot2)/2)
-    # # noise (within-subject) variance
-    # DR_diff <- DR1 - DR2;
-    # var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
-    # # signal (between-subject) variance
-    # template$var <- var_tot - var_noise
-    #
-    # # 3. Another equivalent calculation.
-    # template$var <- t(apply(
-    #   abind::abind(DR1, DR2, along=1),
-    #   seq(2, 3),
-    #   function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
-    # ))
+  # # 2. Previous, equivalent calculation.
+  # var_tot1 <- apply(DR1, c(2,3), var, na.rm=TRUE)
+  # var_tot2 <- apply(DR2, c(2,3), var, na.rm=TRUE)
+  # var_tot <- t((var_tot1 + var_tot2)/2)
+  # # noise (within-subject) variance
+  # DR_diff <- DR1 - DR2;
+  # var_noise <- t((1/2)*apply(DR_diff, c(2,3), var, na.rm=TRUE))
+  # # signal (between-subject) variance
+  # template$var <- var_tot - var_noise
+  #
+  # # 3. Another equivalent calculation.
+  # template$var <- t(apply(
+  #   abind::abind(DR1, DR2, along=1),
+  #   seq(2, 3),
+  #   function(q){ cov(q[seq(N)], q[seq(N+1, 2*N)], use="complete.obs") }
+  # ))
 
-    # Make negative estimates equal to zero.
-    template$var[template$var < 0] <- 0
-
-  } else {
-    template$var <- MSB_div2
-  }
+  # Make negative estimates equal to zero.
+  template$var_ub[template$var_ub < 0] <- 0
 
   template
 }
@@ -174,14 +160,6 @@ estimate_template_from_DR_two <- function(
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param var_method Method for estimating the template variance: \code{"non-negative"}
-#'  (default) or \code{"unbiased"}. The unbiased template variance is
-#'  based on the assumed mixed effects/ANOVA model, whereas the non-negative template
-#'  variance adds to it to account for greater potential between-subjects variation.
-#'  (The template mean is the same for either choice of \code{var_method}.)
-#'
-#'  In either case, both variance template version will be returned in matrix
-#'  form in the \code{var_decomp} entry of the output.
 #' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save the DR
 #'  estimates and only return the templates. If \code{TRUE}, the DR estimates are
 #'  returned too. If a single file path, save the DR estimates as an RDS file at
@@ -203,14 +181,6 @@ estimate_template_from_DR_two <- function(
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param out_fname Length-3 character vector of file path(s) to save the output to:
-#'  the mean template, the variance template, and the variance decomposition,
-#'  in that order. If one file name is provided, it will be appended with
-#'  \code{"_mean.[file_ext]"} for the template mean map,
-#'  \code{"_var.[file_ext]"} for the template variance map, and
-#'  \code{"_varDecomp.rds"} for the variance decomposition, where \code{[file_ext]}
-#'  will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
-#'  and \code{"rds"} for data input.
 #' @param FC Include the functional connectivity template? Default: \code{FALSE}
 #'  (work in progress, not available yet).
 #' @param varTol Tolerance for variance of each data location. For each scan,
@@ -253,9 +223,7 @@ estimate_template <- function(
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
-  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
-  out_fname=NULL,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
@@ -278,10 +246,6 @@ estimate_template <- function(
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(normA) && length(normA)==1)
-  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
-  # if (var_method=="both") { stop("`var_method=='both' not supported yet.") }
-  var_name <- c(`non-negative`="varNN", unbiased="varUB")[var_method]
-  var_name_alt <- c(`non-negative`="varUB", unbiased="varNN")[var_method]
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
   stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
@@ -309,9 +273,6 @@ estimate_template <- function(
       # if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
     }
   }
-
-  # `xii1` will be used to format the output
-  xii1 <- NULL
 
   # `BOLD` and `BOLD2` ---------------------------------------------------------
   # Determine the format of `BOLD` and `BOLD2`.
@@ -369,40 +330,20 @@ estimate_template <- function(
     }
   }
 
-  # `out_fname` ----------------------------------------------------------------
-  if (!is.null(out_fname)) {
-    out_fname <- as.character(out_fname)
-    if (!all(dir.exists(dirname(out_fname)))) { stop('Directory part of `out_fname` does not exist.') }
-    if (length(out_fname) == 1) {
-      if (!endsWith(out_fname, FORMAT_extn)) { out_fname <- paste0(out_fname, FORMAT_extn) }
-      out_fname <- c(
-        gsub(FORMAT_extn, paste0("_mean", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_var", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_varDecomp.rds"), out_fname)
-      )
-    } else if (length(out_fname) == 3) {
-      if (!all(endsWith(out_fname[seq(2)], FORMAT_extn))) {
-        out_fname[seq(2)] <- paste0(out_fname[seq(2)], FORMAT_extn)
-      }
-      if (!endsWith(out_fname[3], ".rds")) {
-        out_fname[3] <- paste0(out_fname[3], ".rds")
-      }
-    } else {
-      stop(
-        "`out_fname` should be a length 1 or 3 character vector giving the ",
-        "names for:\n\tThe mean template,\n\tThe variance template,",
-        "\n\tand the variance decomposition.\n"
-      )
-    }
-  }
-
   # `GICA` ---------------------------------------------------------------------
   # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_xifti(GICA, brainstructures=brainstructures) }
-    if (is.xifti(GICA)) {
+    if (is.xifti(GICA, messages=FALSE)) {
       xii1 <- select_xifti(GICA, 1) # for formatting output
       GICA <- as.matrix(GICA)
+    } else {
+      # Get `xii1` from first data entry.
+      xii1 <- BOLD[[1]]
+      if (is.character(xii1)) {
+        xii1 <- ciftiTools::read_cifti(xii1, brainstructures=brainstructures, idx=1)
+      }
+      xii1 <- convert_xifti(select_xifti(xii1, 1), "dscalar")
     }
     stopifnot(is.matrix(GICA))
   } else if (FORMAT == "NIFTI") {
@@ -456,8 +397,9 @@ estimate_template <- function(
   if (center_Gcols) { GICA <- colCenter(GICA) }
 
   # Process each scan ----------------------------------------------------------
+  format2 <- if (format == "data") { "numeric matrix" } else { format }
   if (verbose) {
-    cat("Data input format:             ", format, "\n")
+    cat("Data input format:             ", format2, "\n")
     cat('Number of data locations:      ', nV, "\n")
     if (FORMAT == "NIFTI") {
       cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
@@ -528,21 +470,18 @@ estimate_template <- function(
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
   # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
 
-  if (verbose) { cat("\nEstimating template.\n") }
+  if (verbose) { cat("\nCalculating template.\n") }
   # Estimate the mean and variance templates.
   # Also obtain the variance decomposition.
   x <- estimate_template_from_DR(DR0, c(nL, nVm))
-  template <- x$template
-  var_decomp <- x$var_decomp
+  template <- lapply(x$template, t)
+  var_decomp <- lapply(x$var_decomp, t)
   rm(x)
 
-  # Unmask the templates.
+  # Unmask the data matrices.
   if (use_mask) {
-    for (tname in c("mean", "varUB", "varNN")) {
-      ttemp <- matrix(NA, nrow=nrow(template[[tname]]), ncol=length(maskAll))
-      ttemp[,maskAll] <- template[[tname]]
-      template[[tname]] <- ttemp
-    }
+    template <- lapply(template, unmask_mat, mask=maskAll)
+    var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)
   }
 
   # Estimate FC template
@@ -587,7 +526,7 @@ estimate_template <- function(
     template_FC <- NULL
   }
 
-  # Format and save template ---------------------------------------------------
+  # Format result ---------------------------------------------------
   # Keep DR
   if (!isFALSE(keep_DR)) {
     DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
@@ -614,7 +553,7 @@ estimate_template <- function(
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
-    var_method=var_method,
+    varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     pseudo_retest=!real_retest
   )
   tparams <- lapply(
@@ -624,45 +563,6 @@ estimate_template <- function(
       paste0(as.character(x), collapse=" ")
     }
   )
-
-  # Save
-  if (FORMAT == "CIFTI" && !is.null(xii1)) {
-    # Format template as "xifti"s
-    GICA <- newdata_xifti(select_xifti(xii1, rep(1, nL)), GICA[,inds])
-    GICA$meta$cifti$names <- paste0("IC ", inds)
-    for (tname in c("mean", "varUB", "varNN")) {
-      template[[tname]] <- newdata_xifti(GICA, t(template[[tname]]))
-      template[[tname]]$meta$cifti$misc <- c(
-        list(template=tname), tparams
-      )
-    }
-    # Save
-    if (!is.null(out_fname)) {
-      if (verbose) { cat("\nWriting result to files.\n") }
-      write_cifti(template$mean, out_fname[1], verbose=verbose)
-      write_cifti(template[[var_name]], out_fname[2], verbose=verbose)
-      saveRDS(var_decomp, out_fname[3])
-    }
-  } else if (FORMAT == "NIFTI") {
-    for (tname in c("mean", "varUB", "varNN")) {
-      template[[tname]] <- RNifti::asNifti(
-        unmask_subcortex(t(template[[tname]]), mask, fill=NA)
-      )
-    }
-    if (!is.null(out_fname)) {
-      if (verbose) { cat("\nWriting result to files.\n") }
-      writeNIfTI(template$mean, out_fname[1])
-      writeNIfTI(template[[var_name]], out_fname[2])
-      saveRDS(var_decomp, out_fname[3])
-    }
-  } else {
-    if (!is.null(out_fname)) {
-      if (verbose) { cat("\nWriting result to files.\n") }
-      saveRDS(template$mean, out_fname[1])
-      saveRDS(template$var, out_fname[2])
-      saveRDS(var_decomp, out_fname[3])
-    }
-  }
 
   # If masking was performed, and if verbose, report the NA count in templates.
   # If no masking was performed, remove unnecessary metadata.
@@ -674,18 +574,21 @@ estimate_template <- function(
     maskAll <- NULL
   }
 
-  # Results list.
-  result <- list(
-    template_mean=template$mean,
-    template_var=template[[var_name]],
-    # template_FC=template$FC,
-    var_decomp=var_decomp,
-    mask=maskAll,
-    params=tparams
+  dat_struct <- switch(FORMAT,
+    CIFTI = newdata_xifti(xii1, 0),
+    NIFTI = mask,
+    DATA = NULL
   )
 
-  # Add paths to written files if applicable.
-  if (!is.null(out_fname)) { result$saved_files <- out_fname }
+  # Results list.
+  result <- list(
+    template=template,
+    var_decomp=var_decomp,
+    mask=maskAll,
+    params=tparams,
+    dat_struct=dat_struct
+  )
+
   # Add DR if applicable.
   if (keep_DR) { result$DR <- DR0 }
   # Add mask if applicable
@@ -706,9 +609,7 @@ estimate_template.cifti <- function(
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
-  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
-  out_fname=NULL,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
@@ -721,9 +622,7 @@ estimate_template.cifti <- function(
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
     brainstructures=brainstructures,
-    var_method=var_method,
     keep_DR=keep_DR,
-    out_fname=out_fname,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose
@@ -740,9 +639,7 @@ estimate_template.nifti <- function(
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
-  var_method=c("non-negative", "unbiased"),
   keep_DR=FALSE,
-  out_fname=NULL,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
@@ -755,9 +652,7 @@ estimate_template.nifti <- function(
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
     mask=mask,
-    var_method=var_method,
     keep_DR=keep_DR,
-    out_fname=out_fname,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose

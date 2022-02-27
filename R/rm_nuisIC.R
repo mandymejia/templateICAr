@@ -11,12 +11,15 @@
 #' @param Q2_max If \code{Q2} is \code{NULL}, PESEL's estimate will be less than or equal to \code{Q2_max}.
 #'  If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate. 
 #' @param checkRowCenter Check row means, and raise an error if they are nonzero? Default: \code{TRUE}.
-#' @param verbose If \code{TRUE}, display progress updates
+#' @param verbose If \code{TRUE}, display progress updates.
+#' @param return_Q2 Return (estimated) \code{Q2} too? Default: \code{FALSE}.
 #' 
-#' @return The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it
+#' @return The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it.
+#'  If \code{return_Q2}, a list of length two: the second entry will be \code{Q2}.
 #' 
 #' @keywords internal 
-rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, checkRowCenter=TRUE, verbose=FALSE){
+rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, 
+  checkRowCenter=TRUE, verbose=FALSE, return_Q2=FALSE){
 
   stopifnot(is.matrix(BOLD))
   if (checkRowCenter) { stopifnot(all(rowMeans(BOLD) < 1e-8)) }
@@ -32,7 +35,11 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, c
 
   if ( (!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0) ) {
     # if (verbose) { cat("`Q2` and/or `Q2_max` specifies no nuisance ICs. Skipping denoising.\n") }
-    return(BOLD)
+    if (return_Q2) {
+      return(list(BOLD=BOLD, Q2=0))
+    } else {
+      return(BOLD)
+    }
   }
 
   # i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
@@ -55,7 +62,14 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, c
     if(verbose) cat(paste0(Q2,'\n'))
   }
 
-  if (Q2 == 0) { return(BOLD) } # Not sure if this actually happens?
+  # Not sure if this actually happens?
+  if (Q2 == 0) {
+    if (return_Q2) {
+      return(list(BOLD=BOLD, Q2=Q2))
+    } else {
+      return(BOLD)
+    }
+  }
 
   # iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
   #   if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2,' NUISANCE COMPONENTS\n'))
@@ -69,5 +83,11 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, c
   #   Y2 * Y2' = U * D^2 * U'
   #   V' = (1/D) * U' * Y2
   #   UDV' = U * U' * Y2
-  BOLD - (BOLD2 %*% tcrossprod(svd(crossprod(BOLD2), nu=Q2, nv=0)$u))
+  BOLD2 <- BOLD - (BOLD2 %*% tcrossprod(svd(crossprod(BOLD2), nu=Q2, nv=0)$u))
+
+  if (return_Q2) {
+    return(list(BOLD=BOLD2, Q2=Q2))
+  } else {
+    return(BOLD2)
+  }
 }
