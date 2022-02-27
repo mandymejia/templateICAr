@@ -48,7 +48,7 @@ diagnosticICA.nifti <- function(BOLD,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(BOLD)) stop(paste0('The BOLD timeseries file ',BOLD,' does not exist.'))
-  BOLD_nifti <- readNIfTI(BOLD, reorient=FALSE)
+  BOLD_nifti <- readNIfTI(BOLD)
 
   # GET TEMPLATE MEAN AND VARIANCE FOR EACH GROUP
   template_class <- sapply(templates, class)
