@@ -142,7 +142,7 @@ templateICA <- function(
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
-  stopifnot(is.numeric(varTol) && length(varTol)==1)
+  stopifnot(is.numeric(varTol) && length(varTol)==1 && varTol > 0)
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
     stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
@@ -207,8 +207,6 @@ templateICA <- function(
       stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
     }
   }
-
-  # [TO DO] if FORMAT=="NIFTI", take intersection of template mask and provided mask.
 
   # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
   if (format %in% c("CIFTI", "NIFTI")) {
@@ -295,6 +293,7 @@ templateICA <- function(
   # Get `nI`, `nL`, and `nV`.
   # Check brainstructures and resamp_res if CIFTI, where applicable.
   # Check mask if NIFTI.
+  xii1 <- NULL
   if (FORMAT == "CIFTI") {
     xii1 <- template$dat_struct
     # Check brainstructures.
@@ -324,6 +323,7 @@ templateICA <- function(
     nI <- nrow(template$template$mean)
 
   } else if (FORMAT == "NIFTI") {
+    # Check `mask`
     if (is.null(mask)) { stop("`mask` is required.") }
     if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
@@ -332,23 +332,26 @@ templateICA <- function(
       mask[] <- as.logical(mask)
     }
     nI <- dim(mask)
+    # Check its compatibility with the template
     stopifnot(length(dim(template$dat_struct)) == length(nI))
     stopifnot(all(dim(template$dat_struct) == nI))
-
   } else {
     nI <- nrow(template$template$mean)
   }
-  template <- template$template
+
+  # Get the data mask based on missing values, & low variance locations
+  mask2 <- template$mask
+  use_mask2 <- (!is.null(mask2)) && (!all(mask2))
+  # Get the selected variance.
+  template <- list(
+    mean = template$template$mean,
+    var = template$template[[tvar_name]]
+  )
+  # Get the template dimensions.
   nV <- nrow(template$mean)
   nL <- ncol(template$mean)
 
-  # Get the selected variance.
-  template <- list(
-    mean = template$mean,
-    var = template[[tvar_name]]
-  )
-
-  # `spatial_model` ------------------------------------------------------------
+  # `spatial_model` meshes -----------------------------------------------------
   do_spatial <- !is.null(spatial_model)
   if (isTRUE(spatial_model)) { spatial_model <- NULL }
   meshes <- spatial_model
@@ -513,12 +516,17 @@ templateICA <- function(
   stopifnot(ldB-1 == length(nI))
   stopifnot(all(dBOLD[seq(ldB-1)] == nI))
 
-  # Vectorize `BOLD`.
-  if (FORMAT=="NIFTI") {
-    for (bb in seq(nN)) {
+  # Vectorize `BOLD` and apply `mask2`.
+  for (bb in seq(nN)) {
+    if (FORMAT == "NIFTI") {
       BOLD[[bb]] <- matrix(BOLD[[bb]][rep(mask, dBOLD[ldB])], ncol=nT)
       stopifnot(nrow(BOLD[[bb]]) == nV)
     }
+    if (use_mask2) { BOLD[[bb]] <- BOLD[[bb]][mask2,,drop=FALSE] }
+  }
+  if (use_mask2) {
+    template$mean <- template$mean[mask2,,drop=FALSE]
+    template$var <- template$var[mask2,,drop=FALSE]
   }
 
   # Check that numbers of data locations (nV), time points (nT) and ICs (nL) makes sense, relatively
@@ -526,19 +534,17 @@ templateICA <- function(
   if (nL > nV) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of `BOLD` and `template`.')
   if (nL > sum(nT)) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of `BOLD` and `template`.')
 
-  ### IDENTIFY AND REMOVE ANY BAD VOXELS/VERTICES
-  keep <- rep(TRUE, nV)
-  keep[rowSums(is.nan(template$mean)) > 0] <- FALSE
-  keep[rowSums(is.na(template$mean)) > 0] <- FALSE
-  keep[rowSums(is.nan(template$var)) > 0] <- FALSE
-  keep[rowSums(is.na(template$var)) > 0] <- FALSE
-  for (bb in seq(nN)) {
-    keep[rowSums(is.nan(BOLD[[bb]])) > 0] <- FALSE
-    keep[rowSums(is.na(BOLD[[bb]])) > 0] <- FALSE
-    keep[rowVars(BOLD[[bb]]) == 0] <- FALSE
-  }
-  if(sum(!keep) > 0){
-    stop('flat or NA voxels detected in data or templates')
+  # Check that no NA or NaN values remain in template after masking.
+  if (any(is.na(template$mean))) { stop("`NA` values in template mean.") }
+  if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
+  if (any(is.na(template$var))) { stop("`NA` values in template var.") }
+  if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
+
+  # Mask out additional locations due to data mask.
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+
+  if(sum(!mask3) > 0){
+    stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
     # For this part, would need to also update "A" matrix (projection from mesh to data locations)
     # template_mean_orig <- template_mean
     # template_var_orig <- template_var
@@ -727,6 +733,10 @@ templateICA <- function(
   )
 
   # Format output.
+  resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
+  resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
+
+
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
     resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
     resultEM$subjICse <- newdata_xifti(xii1, resultEM$subjICse)
@@ -751,11 +761,12 @@ templateICA <- function(
         unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=NA)
       )
     }
-    resultEM$mask <- mask
+    resultEM$mask_nii <- mask
     # resultEM$mask <- mask
     class(resultEM) <- 'tICA.nifti'
   }
 
+  resultEM$mask <- mask2
   resultEM$params <- tICA_params
   resultEM
 }

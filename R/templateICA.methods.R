@@ -187,6 +187,14 @@ print.tICA.cifti <- function(x, ...) {
   print.summary.tICA.cifti(summary(x))
 }
 
+#' @rdname summary.tICA.nifti
+#' @export
+#'
+#' @method print tICA.nifti
+print.tICA.nifti <- function(x, ...) {
+  print.summary.tICA.nifti(summary(x))
+}
+
 #' @rdname summary.tICA
 #' @export
 #'

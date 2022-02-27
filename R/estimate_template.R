@@ -249,6 +249,7 @@ estimate_template <- function(
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
+  stopifnot(is.numeric(varTol) && length(varTol)==1 && varTol > 0)
   stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
   stopifnot(is.numeric(missingTol) && length(missingTol)==1 && missingTol >= 0)
   stopifnot(is.logical(verbose) && length(verbose)==1)
@@ -592,8 +593,6 @@ estimate_template <- function(
 
   # Add DR if applicable.
   if (keep_DR) { result$DR <- DR0 }
-  # Add mask if applicable
-  if (FORMAT == "NIFTI") { result$mask <- mask }
 
   # Return results.
   class(result) <- paste0("template.", tolower(FORMAT))

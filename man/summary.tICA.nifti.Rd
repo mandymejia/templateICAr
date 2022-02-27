@@ -3,11 +3,14 @@
 \name{summary.tICA.nifti}
 \alias{summary.tICA.nifti}
 \alias{print.summary.tICA.nifti}
+\alias{print.tICA.nifti}
 \title{Summarize a \code{"tICA.nifti"} object}
 \usage{
 \method{summary}{tICA.nifti}(object, ...)
 
 \method{print}{summary.tICA.nifti}(x, ...)
+
+\method{print}{tICA.nifti}(x, ...)
 }
 \arguments{
 \item{object}{Object of class \code{"tICA.nifti"}.}
