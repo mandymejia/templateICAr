@@ -723,9 +723,10 @@ templateICA <- function(
   )
 
   # Format output.
-  resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
-  resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
-
+  if (use_mask2) {
+    resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
+    resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
+  }
 
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
     resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)

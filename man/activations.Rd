@@ -5,7 +5,7 @@
 \title{Activations of (s)tICA}
 \usage{
 activations(
-  result,
+  tICA,
   u = 0,
   alpha = 0.01,
   type = ">",
@@ -16,7 +16,7 @@ activations(
 )
 }
 \arguments{
-\item{result}{Fitted stICA or tICA model object (of class stICA or tICA)}
+\item{tICA}{Fitted stICA or tICA model object (of class stICA or tICA)}
 
 \item{u}{Activation threshold, default = 0}
 
@@ -24,7 +24,7 @@ activations(
 
 \item{type}{Type of region.  Default is '>' (positive excursion region).}
 
-\item{method_p}{If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
+\item{method_p}{If tICA is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 

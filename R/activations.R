@@ -2,11 +2,11 @@
 #'
 #' Identify areas of activation in each independent component map
 #'
-#' @param result Fitted stICA or tICA model object (of class stICA or tICA)
+#' @param tICA Fitted stICA or tICA model object (of class stICA or tICA)
 #' @param u Activation threshold, default = 0
 #' @param alpha Significance level for joint PPM, default = 0.1
 #' @param type Type of region.  Default is '>' (positive excursion region).
-#' @param method_p If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
+#' @param method_p If tICA is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
 #' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
@@ -17,36 +17,63 @@
 #'
 #' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
+#' @importFrom ciftiTools unmask_subcortex
 #'
-activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+activations <- function(tICA, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  if (inherits(result, "tICA.cifti") || inherits(result, "stICA.cifti")) {
-    return(activations.cifti(
-      result=result, u=u, alpha=alpha, type=type, method_p=method_p,
-      verbose=verbose, which.ICs=which.ICs, deviation=deviation
-    ))
-  }
+  # Setup ----------------------------------------------------------------------
+  is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
+  is_stICA <- inherits(tICA, "stICA") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
+  if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
 
-  is_tICA <- inherits(result, "tICA") || inherits(result, "tICA.nifti")
-  is_stICA <- inherits(result, "stICA") || inherits(result, "stICA.nifti")
+  FORMAT <- class(tICA)[grepl("tICA", class(tICA))]
+  if (length(FORMAT) != 1) { stop("Not a tICA.") }
+  FORMAT <- switch(FORMAT,
+    tICA.cifti = "CIFTI",
+    tICA.nifti = "NIFTI",
+    tICA = "DATA",
+    stICA.cifti = "CIFTI",
+    stICA.nifti = "NIFTI",
+    stICA = "DATA"
+  )
 
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
-  if (!(is_tICA || is_stICA)) stop("result must be of class stICA or tICA")
 
-  L <- ncol(result$A)
+  L <- ncol(tICA$A)
   if(is.null(which.ICs)) which.ICs <- 1:L
   if(min((which.ICs) %in% (1:L))==0) stop('Invalid entries in which.ICs')
 
-  template_mean <- result$template_mean
-  template_var <- result$template_var
+  # Get needed metadata from `tICA`.
+  Q <- tICA$omega
+  mask <- tICA$mask
 
+  # Vectorize data.
+  if (FORMAT == "CIFTI") {
+    xii1 <- newdata_xifti(select_xifti(tICA$subjICmean,1), 0)
+    tICA$subjICmean <- as.matrix(tICA$subjICmean)
+    tICA$subjICse <- as.matrix(tICA$subjICse)
+  } else if (FORMAT == "NIFTI") {
+    mask_nii <- tICA$mask_nii
+    tICA$subjICmean <- matrix(tICA$subjICmean[rep(mask_nii, L)], ncol=L)
+    tICA$subjICse <- matrix(tICA$subjICse[rep(mask_nii, L)], ncol=L)
+  }
+  tICA <- tICA[c("template_mean", "template_var", "subjICmean", "subjICse")]
+  names(tICA) <- c("t_mean", "t_var", "s_mean", "s_se")
+
+  # Apply data mask.
+  use_mask <- (!is.null(mask)) && (!all(mask))
+  if (use_mask) {
+    tICA$s_mean <- tICA$s_mean[mask,]
+    tICA$s_se <- tICA$s_se[mask,]
+  }
+
+  # Compute activations. -------------------------------------------------------
   if (is_stICA) {
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
 
-    nvox <- nrow(result$subjICmean)
-    L <- ncol(result$subjICmean)
+    nvox <- nrow(tICA$s_mean)
 
     #identify areas of activation in each IC
     active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=L)
@@ -55,20 +82,20 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
       if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
       inds_q <- (1:nvox) + (q-1)*nvox
       if(deviation){
-        Dinv_mu_s <-  (as.vector(result$subjICmean) - as.vector(template_mean) - u)/as.vector(sqrt(template_var))
+        Dinv_mu_s <-  (as.vector(tICA$s_mean) - as.vector(tICA$t_mean) - u)/as.vector(sqrt(tICA$t_var))
       } else {
-        Dinv_mu_s <- (as.vector(result$subjICmean) - u)/as.vector(sqrt(template_var))
+        Dinv_mu_s <- (as.vector(tICA$s_mean) - u)/as.vector(sqrt(tICA$t_var))
       }
 
       if(q==which.ICs[1]) {
         #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
         #we subtract u first since rescaling by D^(-1) would affect u too
         #save rho from first time running excursions, pass into excursions for other ICs
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = 0, ind = inds_q))
         if(verbose) print(tmp)
         rho <- res_q$rho
       } else {
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q, rho=rho))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = 0, ind = inds_q, rho=rho))
         if(verbose) print(tmp)
       }
       active[,q] <- res_q$E[inds_q]
@@ -87,12 +114,12 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
 
     if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
 
-    nvox <- nrow(result$subjICmean)
-    L <- ncol(result$subjICmean)
+    nvox <- nrow(tICA$s_mean)
+    L <- ncol(tICA$s_mean)
     if(deviation){
-      t_stat <- (as.matrix(result$subjICmean) - template_mean - u) / as.matrix(result$subjICse)
+      t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u) / as.matrix(tICA$s_se)
     } else {
-      t_stat <- (as.matrix(result$subjICmean) - u) / as.matrix(result$subjICse)
+      t_stat <- (as.matrix(tICA$s_mean) - u) / as.matrix(tICA$s_se)
     }
 
     if(type=='>') pvals <- 1-pnorm(t_stat)
@@ -111,74 +138,30 @@ activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbos
     result <- list(
       active = active,
       pvals = pvals, pvals_adj = pvals_adj,
-      se = result$subjICse, tstats = t_stat,
+      se = tICA$s_se, tstats = t_stat,
       alpha = alpha, method_p = method_p,
       type=type, u = u, deviation=deviation
     )
   }
 
-  class(result) <- "tICA_act"
-  return(result)
-}
+  # Format result. -------------------------------------------------------------
+  # Unmask data.
+  if (use_mask) { result$active <- unmask_mat(result$active, mask) }
 
-#' Activations of (s)tICA for CIFTI data
-#'
-#' Identify areas of activation in each independent component map
-#'
-#' @param result Result of templateICA.cifti model call
-#' @param spatial_model Should spatial model result be used, if available?  If FALSE, will use standard template ICA result. If NULL, use spatial model result if available.
-#' @param u Activation threshold, default = 0
-#' @param alpha Significance level for joint PPM, default = 0.1
-#' @param type Type of region.  Default is '>' (positive excursion region).
-#' @param method_p Type of multiple comparisons correction to use for p-values for standard template ICA, or NULL for no correction.  See \code{help(p.adjust)}.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
-#'
-#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
-#'
-#' @importFrom ciftiTools newdata_xifti transform_xifti
-#' @keywords internal
-#'
-#'
-activations.cifti <- function(result, spatial_model=NULL, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
-
-  # This function is now internal because you can just use `activations` directly.
-
-  is_tICAc <- inherits(result, "tICA.cifti")
-  is_stICAc <- inherits(result, "stICA.cifti")
-  if (!is_tICAc && !is_stICAc) { stop("Not a CIFTI Template ICA result.") }
-  class(result) <- if (is_stICAc) { "stICA" } else { "tICA" } # avoid infinite loop
-
-  # Select stICA or tICA
-  if (is.null(spatial_model)) { spatial_model <- is_stICAc }
-  if (isTRUE(spatial_model) && is_tICAc) {
-    warning(
-      'spatial_model set to TRUE but class of model result is tICA. ',
-      'Setting spatial_model = FALSE, performing inference using standard ',
-      'template ICA.'
-    )
-    spatial_model <- FALSE
-  }
-  if (isFALSE(spatial_model) && is_stICAc) {
-    result <- result$result_tICA
+  # Un-vectorize data.
+  if (FORMAT == "CIFTI") {
+    result$active <- newdata_xifti(xii1, as.numeric(result$active))
+    result$active <- convert_xifti(result$active, "dlabel", values=c(0, 1), colors="red")
+    for (ii in seq(ncol(result$active))) {
+      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
+    }
+    class(result) <- "tICA_act.cifti"
+  } else if (FORMAT == "NIFTI") {
+    result$active <- unmask_subcortex(result$active, mask_nii, fill=NA)
+    class(result) <- "tICA_act.nifti"
+  } else {
+    class(result) <- "tICA_act"
   }
 
-  #run activations function
-  out <- activations(
-    result, u=u, alpha=alpha, type=type, method_p=method_p,
-    verbose=verbose, which.ICs=which.ICs, deviation=deviation
-  )
-
-  out$active <- newdata_xifti(
-    result$subjICmean, as.numeric(out$active)
-  )
-  out$active <- convert_xifti(out$active, "dlabel", values=c(0, 1), colors="red")
-
-  for (ii in seq(ncol(out$active))) {
-    rownames(out$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
-  }
-
-  class(out) <- "tICA_act.cifti"
-  out
+  result
 }
