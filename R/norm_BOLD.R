@@ -92,7 +92,7 @@ norm_BOLD <- function(
   # Scale by global or local SD.
   if (scale == "global") {
     sig <- rowVars(BOLD, na.rm=TRUE)
-    sig <- sqrt(mean(sig, na.rm=TRUE))
+    sig <- mean(sqrt(sig), na.rm=TRUE)
     if (sig < 1e-8) {
       warning("Estimated scale is near zero. Skipping scaling.")
     } else {

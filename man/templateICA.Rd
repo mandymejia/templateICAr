@@ -6,9 +6,8 @@
 \usage{
 templateICA(
   BOLD,
-  template_mean,
-  template_var = NULL,
-  template_FC = NULL,
+  template,
+  tvar_method = c("non-negative", "unbiased"),
   scale = c("global", "local", "none"),
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
@@ -19,6 +18,7 @@ templateICA(
   brainstructures = c("left", "right"),
   mask = NULL,
   time_inds = NULL,
+  varTol = 1e-06,
   spatial_model = NULL,
   resamp_res = NULL,
   rm_mwall = TRUE,
@@ -39,17 +39,14 @@ CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objec
 If multiple BOLD data are provided, they will be independently centered, scaled, and detrended (if applicable),
 and then they will be concatenated together prior to denoising (if applicable) and computing the initial dual regression estimate.}
 
-\item{template_mean, template_var, template_FC}{Template estimates in a format
-compatible with \code{BOLD}.
+\item{template}{Template estimates in a format compatible with \code{BOLD}, from
+\code{\link{estimate_template}}.}
 
-\code{template_mean} gives the mean of the empirical population prior for each of the \eqn{L} independent components.
-Its vectorized dimensions should be \eqn{V \times L}.
-
-\code{template_var} gives the between-subject variance of the empirical population prior for each of the \eqn{L} independent components.
-Its vectorized dimensions should be \eqn{V \times L}. If not provided and \code{template_mean}
-is a file path, will be inferred by substituting \code{"_mean"} in the file name with \code{"_var"}.
-
-\code{template_FC} is not yet supported.}
+\item{tvar_method}{Which calculation of the template variance to use: \code{"non-negative"}
+(default) or \code{"unbiased"}. The unbiased template variance is
+based on the assumed mixed effects/ANOVA model, whereas the non-negative template
+variance adds to it to account for greater potential between-subjects variation.
+(The template mean is the same for either choice of \code{tvar_method}.)}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
 Global scaling will divide the entire data matrix by the image standard
@@ -96,6 +93,11 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 \item{time_inds}{Subset of fMRI BOLD volumes to include in analysis.
 If \code{NULL} (default), use all volumes. Subsetting is performed before
 any centering, scaling, detrending, and denoising.}
+
+\item{varTol}{Tolerance for variance of each data location. For each scan,
+locations which do not meet this threshold are masked out of the analysis.
+Default: \code{1e-6}. Variance is calculated on the original data, before
+any normalization.}
 
 \item{spatial_model}{Should spatial modeling be performed? If \code{NULL}, assume
 spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on

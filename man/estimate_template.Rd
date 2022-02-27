@@ -20,13 +20,10 @@ estimate_template(
   Q2_max = NULL,
   brainstructures = c("left", "right"),
   mask = NULL,
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 
@@ -43,13 +40,10 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 
@@ -66,13 +60,10 @@ estimate_template.nifti(
   Q2 = 0,
   Q2_max = NULL,
   mask = NULL,
-  var_method = c("non-negative", "unbiased"),
   keep_DR = FALSE,
-  out_fname = NULL,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
-  maskTolAll = 0.1,
+  missingTol = 0.1,
   verbose = TRUE
 )
 }
@@ -145,31 +136,10 @@ Default: \code{c("left","right")} (cortical surface only).}
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
-\item{var_method}{Method for estimating the template variance: \code{"non-negative"}
-(default) or \code{"unbiased"}. The unbiased template variance is
-based on the assumed mixed effects/ANOVA model, whereas the non-negative template
-variance adds to it to account for greater potential between-subjects variation.
-(The template mean is the same for either choice of \code{var_method}.)
-
-In either case, both variance template version will be returned in matrix
-form in the \code{var_decomp} entry of the output.}
-
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
 returned too. If a single file path, save the DR estimates as an RDS file at
 that location rather than returning them.}
-
-\item{out_fname}{Length-3 character vector of file path(s) to save the output to:
-the mean template, the variance template, and the variance decomposition,
-in that order. If one file name is provided, it will be appended with
-\code{"_mean.[file_ext]"} for the template mean map,
-\code{"_var.[file_ext]"} for the template variance map, and
-\code{"_varDecomp.rds"} for the variance decomposition, where \code{[file_ext]}
-will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
-and \code{"rds"} for data input.}
-
-\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
-(work in progress, not available yet).}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -187,10 +157,10 @@ Default: \code{.1}, i.e. up to 10 percent of locations can be masked out.
 If \code{BOLD2} is provided, masks are calculated for both scans and then
 the intersection of the masks is used, for each subject.}
 
-\item{maskTolAll}{For computing the variance decomposition across all subjects:
+\item{missingTol}{For computing the variance decomposition across all subjects:
 tolerance for number of subjects masked out due to low variance or missing
 values at a given location. If more than this many subjects are masked out,
-the location's value will be \code{NA} in the templates. \code{maskTolAll}
+the location's value will be \code{NA} in the templates. \code{missingTol}
 can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
 Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.}

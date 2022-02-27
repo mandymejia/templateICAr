@@ -7,8 +7,9 @@
 #' @export
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
+  tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$params)
   x <- c(
-    summary(object$template_mean),
+    summary(tmean),
     list(has_DR="DR" %in% names(object)),
     object$params
   )
@@ -28,11 +29,11 @@ summary.template.cifti <- function(object, ...) {
 summary.template.nifti <- function(object, ...) {
   x <- c(
     list(
-      mask_dims=dim(object$mask),
-      nV=sum(object$mask), 
-      nL=dim(object$template_mean)[length(dim(object$template_mean))]
+      mask_dims=dim(object$dat_struct),
+      nV=nrow(object$template$mean), 
+      nL=ncol(object$template$mean),
+      hasDR="DR" %in% names(object)
     ),
-    list(has_DR="DR" %in% names(object)),
     object$params
   )
 
@@ -50,8 +51,11 @@ summary.template.nifti <- function(object, ...) {
 #' @method summary template.data
 summary.template.data <- function(object, ...) {
   x <- c(
-    list(has_DR="DR" %in% names(object)),
-    list(nV=nrow(object$template_mean), nL=ncol(object$template_mean)),
+    list(
+      nV=nrow(object$template$mean), 
+      nL=ncol(object$template$mean),
+      hasDR="DR" %in% names(object)
+    ),
     object$params
   )
 
@@ -84,7 +88,6 @@ print.summary.template.cifti <- function(x, ...) {
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
-  cat("Variance method: ", x$var_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
   cat("\n")
@@ -118,7 +121,6 @@ print.summary.template.nifti <- function(x, ...) {
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
-  cat("Variance method: ", x$var_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("-------------------------------------\n")
   cat("Mask dims:       ", paste0(x$mask_dims, collapse=" x "), "\n")
@@ -154,7 +156,6 @@ print.summary.template.data <- function(x, ...) {
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
-  cat("Variance method: ", x$var_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("-------------------------------------\n")
   cat("Dimensions:      \n")
@@ -193,13 +194,17 @@ print.template.data <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default)
+#' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
 #' @importFrom ciftiTools view_xifti
 #' @method plot template.cifti
-plot.template.cifti <- function(x, stat=c("both", "mean", "var"), ...) {
+plot.template.cifti <- function(x, stat=c("both", "mean", "var"), 
+  var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.cifti"))
+
+  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
 
   # Check `...`
   args <- list(...)
@@ -245,17 +250,26 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"), ...) {
   out <- list(mean=NULL, var=NULL)
   if (stat == "both") { stat <- c("mean", "var") }
   for (ss in stat) {
+    ssname <- if (ss == "mean") {
+      ss
+    } else if (var_method=="non-negative") { 
+      "varNN"
+    } else {
+      "varUB"
+    }
+    if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
+    tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$params)
     args_ss <- args
     # Handle title and idx
     if (!has_title && !has_idx) {
-      c1name <- if (!is.null(x$template_mean$meta$cifti$names)) {
-        x$template_mean$meta$cifti$names[1]
+      c1name <- if (!is.null(tss$meta$cifti$names)) {
+        tss$meta$cifti$names[1]
       } else {
         "First component"
       }
-      args_ss$title <- paste0(c1name, " (", ss, ")")
+      args_ss$title <- paste0(c1name, " (", ssname, ")")
     } else if (!has_idx) {
-      args_ss$title <- paste0(args_ss$title, "(", ss, ")")
+      args_ss$title <- paste0(args_ss$title, "(", ssname, ")")
     }
     # Handle fname
     if (has_fname) {
@@ -270,7 +284,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"), ...) {
       args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
     }
     out[[ss]] <- do.call(
-      view_xifti, c(list(x[[paste0("template_", ss)]]), args_ss)
+      view_xifti, c(list(tss), args_ss)
     )
   }
 

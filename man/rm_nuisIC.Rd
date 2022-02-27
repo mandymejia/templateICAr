@@ -11,7 +11,8 @@ rm_nuisIC(
   Q2 = NULL,
   Q2_max = NULL,
   checkRowCenter = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  return_Q2 = FALSE
 )
 }
 \arguments{
@@ -28,10 +29,13 @@ If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate.}
 
 \item{checkRowCenter}{Check row means, and raise an error if they are nonzero? Default: \code{TRUE}.}
 
-\item{verbose}{If \code{TRUE}, display progress updates}
+\item{verbose}{If \code{TRUE}, display progress updates.}
+
+\item{return_Q2}{Return (estimated) \code{Q2} too? Default: \code{FALSE}.}
 }
 \value{
-The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it
+The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it.
+If \code{return_Q2}, a list of length two: the second entry will be \code{Q2}.
 }
 \description{
 Subtract estimated nuisance ICs from data matrix. If the number of nuisance ICs is not provided,

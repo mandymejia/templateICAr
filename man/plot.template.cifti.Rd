@@ -4,12 +4,19 @@
 \alias{plot.template.cifti}
 \title{Plot template}
 \usage{
-\method{plot}{template.cifti}(x, stat = c("both", "mean", "var"), ...)
+\method{plot}{template.cifti}(
+  x,
+  stat = c("both", "mean", "var"),
+  var_method = c("non-negative", "unbiased"),
+  ...
+)
 }
 \arguments{
 \item{x}{The template from \code{estimate_template.cifti}}
 
 \item{stat}{\code{"mean"}, \code{"var"}, or \code{"both"} (default)}
+
+\item{var_method}{\code{"non-negative"} (default) or \code{"unbiased"}}
 
 \item{...}{Additional arguments to \code{view_xifti}}
 }
