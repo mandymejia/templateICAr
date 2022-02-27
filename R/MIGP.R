@@ -46,6 +46,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
   if (verbose) { cat(nT, " timepoints.\n") }
 
   # Checks
+  stopifnot(all(!is.na(dn)))
   if (nT > nV) { warning(
     "Data should be TxV after processing, ",
     "but for the first scan there are more rows than columns."
@@ -87,6 +88,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
     if (verbose) { cat(nrow(dn), " timepoints.") }
 
     # Checks
+    stopifnot(all(!is.na(dn)))
     if (ncol(dn) != nV) {
       stop("Subject ", nn, " has ", ncol(dn), " locations (", nV, " expected).")
     }
