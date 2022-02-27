@@ -21,7 +21,6 @@ estimate_template(
   brainstructures = c("left", "right"),
   mask = NULL,
   keep_DR = FALSE,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -42,7 +41,6 @@ estimate_template.cifti(
   Q2_max = NULL,
   brainstructures = c("left", "right"),
   keep_DR = FALSE,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -63,7 +61,6 @@ estimate_template.nifti(
   Q2_max = NULL,
   mask = NULL,
   keep_DR = FALSE,
-  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -143,9 +140,6 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 estimates and only return the templates. If \code{TRUE}, the DR estimates are
 returned too. If a single file path, save the DR estimates as an RDS file at
 that location rather than returning them.}
-
-\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
-(work in progress, not available yet).}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.

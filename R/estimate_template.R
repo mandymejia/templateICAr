@@ -181,8 +181,8 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param FC Include the functional connectivity template? Default: \code{FALSE}
-#'  (work in progress, not available yet).
+# @param FC Include the functional connectivity template? Default: \code{FALSE}
+#  (work in progress, not available yet).
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -207,7 +207,7 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
-#' @importFrom ciftiTools read_xifti is.xifti write_cifti
+#' @importFrom ciftiTools read_cifti is.xifti write_cifti
 #'
 #' @return A list with \code{"template_mean"} and \code{"template_var"}, as well
 #'  as the \code{var_decomp}, \code{mask}, and \code{params}. The dual 
@@ -224,11 +224,12 @@ estimate_template <- function(
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
-  FC=FALSE,
+  #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
+  FC <- FALSE
 
   # Simple argument checks.
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
@@ -333,7 +334,7 @@ estimate_template <- function(
   # `GICA` ---------------------------------------------------------------------
   # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
-    if (is.character(GICA)) { GICA <- ciftiTools::read_xifti(GICA, brainstructures=brainstructures) }
+    if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
     if (is.xifti(GICA, messages=FALSE)) {
       xii1 <- select_xifti(GICA, 1) # for formatting output
       GICA <- as.matrix(GICA)
@@ -610,7 +611,7 @@ estimate_template.cifti <- function(
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
   keep_DR=FALSE,
-  FC=FALSE,
+  #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
@@ -623,7 +624,7 @@ estimate_template.cifti <- function(
     Q2=Q2, Q2_max=Q2_max, 
     brainstructures=brainstructures,
     keep_DR=keep_DR,
-    FC=FC,
+    #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose
   )
@@ -640,7 +641,7 @@ estimate_template.nifti <- function(
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
-  FC=FALSE,
+  #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   verbose=TRUE) {
 
@@ -653,7 +654,7 @@ estimate_template.nifti <- function(
     Q2=Q2, Q2_max=Q2_max, 
     mask=mask,
     keep_DR=keep_DR,
-    FC=FC,
+    #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     verbose=verbose
   )

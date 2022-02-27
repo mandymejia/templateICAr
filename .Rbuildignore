@@ -10,7 +10,8 @@
 ^R/ignore\.R$
 ^R/EM_FCtemplateICA\.R$
 ^R/groupICA\.R$
-^EM_diagnosticICA\.R$
-^diagnosticICA\.nifti\.R$
-^diagnosticICA\.R$
-^diagnosticICA\.cifti\.R$
+^R/EM_diagnosticICA\.R$
+^R/diagnosticICA\.nifti\.R$
+^R/diagnosticICA\.R$
+^R/diagnosticICA\.cifti\.R$
+^R/MIGP\.R$

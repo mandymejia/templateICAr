@@ -246,7 +246,7 @@ templateICA <- function(
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
-        BOLD[[bb]] <- ciftiTools::read_xifti(
+        BOLD[[bb]] <- ciftiTools::read_cifti(
           BOLD[[bb]], resamp_res=resamp_res,
           brainstructures=brainstructures
         )
@@ -452,7 +452,7 @@ templateICA <- function(
   # Get each entry of `BOLD` as a data matrix or array.
   if (FORMAT == "CIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_xifti(BOLD[[bb]], brainstructures=brainstructures) }
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_cifti(BOLD[[bb]], brainstructures=brainstructures) }
       if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
       stopifnot(is.matrix(BOLD[[bb]]))
     }

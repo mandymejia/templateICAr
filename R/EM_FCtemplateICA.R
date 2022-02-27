@@ -97,8 +97,8 @@ EM_FCtemplateICA <- function(template_mean,
     if(verbose) print(Sys.time() - t00)
 
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
-
-    post_sums <- Gibbs_AS_posterior(..., final=FALSE)
+    tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
+    post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
 
 
   #   ### Compute change in parameters
@@ -129,7 +129,7 @@ EM_FCtemplateICA <- function(template_mean,
   #
   ### Compute final posterior means and variances of A and S
 
-  post_AS <- Gibbs_AS_posterior(..., final=TRUE)
+  post_AS <- Gibbs_AS_posterior(tricolon, final=TRUE)
 
   #
   # result <- list(subjICmean=miu_s,

@@ -173,7 +173,7 @@ datProcFUN.cifti <- function(
   # Read in data.
   if (is.character(dat)) {
     dat <- lapply(
-      dat, read_xifti,
+      dat, read_cifti,
       brainstructures=brainstructures, resamp_res=resamp_res
     )
   }

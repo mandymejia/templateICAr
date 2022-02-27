@@ -110,8 +110,11 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
       write_cifti(x$template$mean, out_fname[1])
       write_cifti(x$template$var, out_fname[2])
     } else if (FORMAT == "NIFTI") {
-      writeNIfTI(x$template$mean, out_fname[1])
-      writeNIfTI(x$template$var, out_fname[2])
+      if (!requireNamespace("RNifti", quietly = TRUE)) {
+        stop("Package \"RNifti\" needed to write NIFTI data. Please install it.", call. = FALSE)
+      }
+      RNifti::writeNifti(x$template$mean, out_fname[1])
+      RNifti::writeNifti(x$template$var, out_fname[2])
     } else {
       saveRDS(x$template$mean, out_fname[1])
       saveRDS(x$template$var, out_fname[2])
