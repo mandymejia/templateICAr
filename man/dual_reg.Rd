@@ -22,8 +22,8 @@ centered.}
 \item{GICA}{Group-level independent components (\eqn{V \times Q})}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the image standard
-deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
@@ -35,8 +35,8 @@ object is provided (default), do not smooth.}
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE}
-(not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? Default:
+\code{FALSE} (not recommended).}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the

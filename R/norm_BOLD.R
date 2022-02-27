@@ -8,17 +8,13 @@
 #' @param center_rows,center_cols Center BOLD data across rows (each data
 #'  location's time series) or columns (each time point's image)? Default:
 #'  \code{TRUE} for row centering, and \code{FALSE} for column centering.
-#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
-#'  Global scaling will divide the entire data matrix by the image standard
-#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
-#'  data location's time series by its estimated standard deviation.
+#' @inheritParams scale_Param
 #' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
 #'  smooth the standard deviation estimates used for local scaling, provide a
 #'  \code{"xifti"} object with data locations in alignment with
 #'  \code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
 #'  object is provided (default) or if \code{scale_sm_FWHM=0}, do not smooth.
-#' @param detrend_DCT Detrend the data? This is the number of DCT bases to use
-#'  for detrending. If \code{0} (default), do not detrend.
+#' @inheritParams detrend_DCT_Param
 #'
 #' @return Normalized BOLD data matrix (\eqn{V \times T})
 #'

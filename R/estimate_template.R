@@ -137,20 +137,11 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  dual regression, not before. This is because removing the ICs prior to dual
 #'  regression would leave unmodelled signals in the data, which could bias the
 #'  templates.
-#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
-#'  Global scaling will divide the entire data matrix by the image standard 
-#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
-#'  data location's time series by its estimated standard deviation. 
-#' @param scale_sm_FWHM Only applies if \code{scale=="local"}. To
-#'  smooth the standard deviation estimates used for local scaling, provide the 
-#'  smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.
-#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
-#'  to use for detrending. If \code{0} (default), do not detrend.
-#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE}
-#'  (not recommended).
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual
-#'  regression estimates? Default: \code{FALSE} (not recommended). Note that the
-#'  product \eqn{A \times S} remains the same with either option.
+#' @inheritParams scale_Param
+#' @inheritParams scale_sm_FWHM_Param
+#' @inheritParams detrend_DCT_Param
+#' @inheritParams center_Bcols_Param
+#' @inheritParams normA_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right

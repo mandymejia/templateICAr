@@ -92,19 +92,20 @@ regression would leave unmodelled signals in the data, which could bias the
 templates.}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the image standard
-deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
-\item{scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
-smooth the standard deviation estimates used for local scaling, provide the
-smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.}
+\item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
+represents surface data. To smooth the standard deviation estimates used for
+local scaling, provide the smoothing FWHM (default: \code{2}). As the FWHM
+becomes large, local scaling approaches global scaling.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE}
-(not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? Default:
+\code{FALSE} (not recommended).}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the

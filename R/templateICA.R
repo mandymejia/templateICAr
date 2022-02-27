@@ -16,18 +16,11 @@
 #'  based on the assumed mixed effects/ANOVA model, whereas the non-negative template
 #'  variance adds to it to account for greater potential between-subjects variation.
 #'  (The template mean is the same for either choice of \code{tvar_method}.)
-#' @param center_Bcols Center BOLD across columns (each image)? Default: \code{FALSE} (recommended).
-#' @param scale \code{"global"} (default), \code{"local"}, or \code{"none"}.
-#'  Global scaling will divide the entire data matrix by the image standard
-#'  deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
-#'  data location's time series by its estimated standard deviation.
-#' @param scale_sm_FWHM Only applies if \code{scale=="local"}. To
-#'  smooth the standard deviation estimates used for local scaling, provide the
-#'  smoothing FWHM (default: \code{2}). if \code{0}, do not smooth.
-#' @param detrend_DCT Detrend the data? This is the number of DCT bases to use for detrending. If \code{0} (default), do not detrend.
-#' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual regression
-#'  estimates? Default: \code{FALSE}. (The opposite scaling will be applied to \eqn{S}
-#'  such that the product \eqn{A \times S} remains the same).
+#' @inheritParams center_Bcols_Param
+#' @inheritParams scale_Param
+#' @inheritParams scale_sm_FWHM_Param
+#' @inheritParams detrend_DCT_Param
+#' @inheritParams normA_Param
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
 #'  removing nuisance ICs. It may result in a cleaner estimate for smaller
 #'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
@@ -70,10 +63,7 @@
 #'
 #'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
 #'  (see \code{\link{make_mesh}}).
-#' @param varTol Tolerance for variance of each data location. For each scan,
-#'  locations which do not meet this threshold are masked out of the analysis.
-#'  Default: \code{1e-6}. Variance is calculated on the original data, before
-#'  any normalization.
+#' @inheritParams varTol_Param
 #' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
 #'  The target resolution for resampling (number of cortical surface vertices
 #'  per hemisphere). A value less than 10000 is recommended for computational

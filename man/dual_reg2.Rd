@@ -44,19 +44,20 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 (\eqn{V \times Q}). Its columns will be centered.}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the image standard
-deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
 represents surface data. To smooth the standard deviation estimates used for
-local scaling, provide the smoothing FWHM (default: \code{2}).}
+local scaling, provide the smoothing FWHM (default: \code{2}). As the FWHM
+becomes large, local scaling approaches global scaling.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default: \code{FALSE}
-(not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? Default:
+\code{FALSE} (not recommended).}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the
@@ -88,9 +89,10 @@ Default: \code{c("left","right")} (cortical surface only).}
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
-\item{varTol}{Tolerance for variance of each data location. Locations which
-do not meet this threshold are masked out of the analysis. Default:
-\code{1e-6}.}
+\item{varTol}{Tolerance for variance of each data location. For each scan,
+locations which do not meet this threshold are masked out of the analysis.
+Default: \code{1e-6}. Variance is calculated on the original data, before
+any normalization.}
 
 \item{maskTol}{Tolerance for number of locations masked out due to low
 variance or missing values. If more than this many locations are masked out,

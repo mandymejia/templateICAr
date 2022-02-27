@@ -22,8 +22,8 @@ location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the image standard
-deviation (\code{sqrt(mean(rowVars(BOLD)))}). Local scaling will divide each
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
@@ -32,8 +32,8 @@ smooth the standard deviation estimates used for local scaling, provide a
 \code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
 object is provided (default) or if \code{scale_sm_FWHM=0}, do not smooth.}
 
-\item{detrend_DCT}{Detrend the data? This is the number of DCT bases to use
-for detrending. If \code{0} (default), do not detrend.}
+\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
+to use for detrending. If \code{0} (default), do not detrend.}
 }
 \value{
 Normalized BOLD data matrix (\eqn{V \times T})
