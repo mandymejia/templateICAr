@@ -15,3 +15,5 @@
 ^R/diagnosticICA\.R$
 ^R/diagnosticICA\.cifti\.R$
 ^R/MIGP\.R$
+^CRAN-SUBMISSION$
+^cran-comments\.md$
