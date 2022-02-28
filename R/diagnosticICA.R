@@ -6,7 +6,7 @@
 #'  estimates for each group \eqn{1} to \eqn{G}.
 #' @param template_var (A list of G matrices, each \eqn{VxL}) template variance
 #'  estimates for each group \eqn{1} to \eqn{G}.
-#' @param BOLD (\eqn{VxT} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
+#' @param BOLD (\eqn{V \times T} matrix) BOLD fMRI data matrix, where \eqn{T} is the number
 #'  of volumes (time points) and \eqn{V} is the number of brain locations
 #' @param scale Should BOLD data be scaled by the spatial standard deviation
 #'  before model fitting? Default: \code{TRUE}. If done when estimating
@@ -14,10 +14,20 @@
 #' @param meshes Either \code{NULL} (assume spatial independence) or a list of objects
 #'  of type \code{templateICA_mesh} created by \code{make_mesh} (each list element
 #'  corresponds to one brain structure)
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default),
-#'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify
-#'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param Q2,Q2_max Obtain dual regression estimates after denoising? Denoising is
+#'  based on modeling and removing nuisance ICs. It may result in a cleaner 
+#'  estimate for smaller datasets, but it may be unnecessary (and time-consuming)
+#'  for larger datasets. 
+#'  
+#'  Set \code{Q2} to control denoising: use a positive integer to specify the
+#'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+#'  estimated by PESEL, or zero (default) to skip denoising. 
+#' 
+#'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+#'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in each 
+#'  fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
@@ -34,33 +44,26 @@
 #'  the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix
 #'  \strong{A} (a \eqn{TxL} matrix), the number of nuisance ICs estimated (Q_nuis)
 #'
-#' @export
+#' @keywords internal
 #'
 diagnosticICA <- function(template_mean,
                         template_var,
                         BOLD,
                         scale=TRUE,
                         meshes=NULL,
-                        Q2 = NULL,
-                        maxQ=NULL,
+                        Q2 = 0,
+                        Q2_max=NULL,
                         maxiter=100,
                         epsilon=0.01,
                         verbose=TRUE,
-                        kappa_init=0.5){
+                        kappa_init=0.2){
 
   do_spatial <- !is.null(meshes)
 
   if(do_spatial){
-    if (!requireNamespace("INLA", quietly = TRUE)) { 
-      stop(
-        paste0(
-          "Package \"INLA\" needed to for spatial modeling.",
-          "Please install it at http://www.r-inla.org/download.", 
-        ), call. = FALSE
-      ) 
-    }
+    INLA_check()
     flag <- INLA::inla.pardiso.check()
-    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
+    if(any(grepl('FAILURE',flag))) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
     INLA::inla.setOption(smtp='pardiso')
   }
 
@@ -111,18 +114,6 @@ diagnosticICA <- function(template_mean,
 
   if(round(maxiter) != maxiter | maxiter <= 0) stop('maxiter must be a positive integer')
 
-  #check that maxQ makes sense
-  if(!is.null(maxQ)){ if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number') }
-  if(is.null(maxQ)) maxQ <- ntime
-  if(maxQ < L){
-    warning('maxQ must be at least L.  Setting maxQ=L.')
-    maxQ <- L
-  }
-  if(maxQ > ntime){
-    warning('maxQ must be no more than T.  Setting maxQ = T.')
-    maxQ <- ntime
-  }
-
   if(class(scale) != 'logical' | length(scale) != 1) stop('scale must be a logical value')
 
 
@@ -153,14 +144,14 @@ diagnosticICA <- function(template_mean,
   }
 
 
-  ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
+  ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS
 
   template_mean_avg <- apply(abind(template_mean, along=3), c(1,2), mean)
 
-  if(maxQ > L){
+  if (!is.null(Q2) || Q2 > 0) {
 
     #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    BOLD1 <- scale_BOLD(BOLD, scale=scale)
+    BOLD1 <- norm_BOLD(BOLD, scale=scale)
     DR1 <- dual_reg(BOLD1, template_mean_avg)
 
     #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
@@ -172,8 +163,7 @@ diagnosticICA <- function(template_mean,
     #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
     if(is.null(Q2)){
       if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homo')
-      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
+      Q2 <- suppressWarnings(pesel(BOLD2, npc.max=Q2_max, method='homo'))$nPCs #estimated number of nuisance ICs
       if(verbose) cat(paste0(Q2,'\n'))
     }
 
@@ -195,7 +185,7 @@ diagnosticICA <- function(template_mean,
   } else {
 
     # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-    BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
+    BOLD3 <- norm_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
 
   }
 
@@ -363,7 +353,7 @@ diagnosticICA <- function(template_mean,
 
     #organize estimates and variances in matrix form
     resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
-    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
+    resultEM$subjICse <- matrix(diag(sqrt(resultEM$subjICcov)), ncol=L)
   }
 
   resultEM$A <- Hinv %*% resultEM$theta_MLE$A

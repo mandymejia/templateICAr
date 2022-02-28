@@ -10,7 +10,7 @@
 #'  \code{expected} using \code{\link{match.arg}}.
 #' @param expected Character vector of expected/allowed values.
 #' @param fail_action If any value in \code{user} could not be
-#'  matched, or repeated matches occured, what should happen? Possible values
+#'  matched, or repeated matches occurred, what should happen? Possible values
 #'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
 #'  \code{"nothing"}.
 #' @param user_value_label How to refer to the user input in a stop or warning
@@ -67,7 +67,51 @@ match_input <- function(
   invisible(NULL)
 }
 
+#' Create a mask based on vertices that are invalid
+#'
+#' @param BOLD A \eqn{V \times T} numeric matrix. Each row is a location.
+#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
+#'  Locations which do not meet these thresholds are masked out of the analysis.
+#'  Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for 
+#'  {varTol}.
+#' @param verbose Print messages counting how many locations are removed?
+#'
+#' @importFrom matrixStats rowVars
+#' @return A logical vector indicating valid vertices
+#'
+#' @keywords internal
+make_mask <- function(BOLD, meanTol=-Inf, varTol=1e-6, verbose=TRUE){
+  stopifnot(is.matrix(BOLD))
 
+  mask_na <- mask_mean <- mask_var <- rep(TRUE, nrow(BOLD))
+  # Mark columns with any NA or NaN values for removal.
+  mask_na[apply(is.na(BOLD) | is.nan(BOLD), 1, any)] <- FALSE
+  # Calculate means and variances of columns, except those with any NA or NaN.
+  # Mark columns with mean/var falling under the thresholds for removal.
+  mask_mean[mask_na][rowMeans(BOLD[mask_na,,drop=FALSE]) < meanTol] <- FALSE
+  mask_var[mask_na][matrixStats::rowVars(BOLD[mask_na,,drop=FALSE]) < varTol] <- FALSE
+
+  # Print counts of locations removed, for each reason.
+  if (verbose) {
+    warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
+    if (any(!mask_na)) {
+      cat("\t", sum(!mask_na), paste0("locations removed due to NA/NaN values.\n"))
+    }
+    # Do not include NA locations in count.
+    mask_mean2 <- mask_mean | (!mask_na)
+    if (any(!mask_mean2)) {
+      cat("\t", sum(!mask_mean2), warn_part1, paste0("removed due to low mean.\n"))
+    }
+    # Do not include NA or low-mean locations in count.
+    mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
+    if (any(!mask_var2)) {
+      cat("\t", sum(!mask_var2), warn_part1, paste0("removed due to low variance.\n"))
+    }
+  }
+
+  # Return composite mask.
+  mask_na & mask_mean & mask_var
+}
 
 #' Kappa log-likelihood
 #'
@@ -90,15 +134,7 @@ match_input <- function(
 #'
 loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
-
+  INLA_check()
   kappa <- exp(par[1]) #log kappa -> kappa
   sigma_sq <- exp(par[2]) #log variance -> variance
   #kappa <- exp(log_kappa)
@@ -170,11 +206,144 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
 }
 
-#TRY TO REPLACE USE OF THIS WITH REPLACE_XIFTI_DATA
-clear_data <- function(x){
-  if(!is.null(x$data$cortex_left)) x$data$cortex_left <- matrix(0, nrow(x$data$cortex_left), 1)
-  if(!is.null(x$data$cortex_right)) x$data$cortex_right <- matrix(0, nrow(x$data$cortex_right), 1)
-  if(!is.null(x$data$subcort)) x$data$subcort <- matrix(0, nrow(x$data$subcort), 1)
-  return(x)
+#' Positive skew?
+#'
+#' Does the vector have a positive skew?
+#'
+#' @param x The numeric vector for which to calculate the skew. Can also be a matrix,
+#'  in which case the skew of each column will be calculated.
+#' @return \code{TRUE} if the skew is positive or zero. \code{FALSE} if the skew is negative.
+#' @keywords internal
+#'
+#' @importFrom stats median
+skew_pos <- function(x){
+  x <- as.matrix(x)
+  apply(x, 2, median, na.rm=TRUE) <= colMeans(x, na.rm=TRUE)
 }
 
+#' Sign match ICA results
+#'
+#' Flips all source signal estimates (S) to positive skew
+#'
+#' @param x The ICA results with entries \code{S} and \code{M}
+#' @return \code{x} but with positive skew source signals
+#' @keywords internal
+#'
+sign_flip <- function(x){
+  stopifnot(is.list(x))
+  stopifnot(("S" %in% names(x)) & ("M" %in% names(x)))
+  spos <- skew_pos(x$M)
+  x$M[,!spos] <- -x$M[,!spos]
+  x$S[,!spos] <- x$S[,!spos]
+  x
+}
+
+#' Center cols
+#'
+#' Efficiently center columns of a matrix. (Faster than \code{scale})
+#'
+#' @param X The data matrix. Its columns will be centered
+#' @return The centered data
+#' @keywords internal
+colCenter <- function(X) {
+  X - rep(colMeans(X), rep.int(nrow(X), ncol(X)))
+}
+
+#' Infer fMRI data format
+#'
+#' @param BOLD The fMRI data
+#' @param verbose Print the format? Default: \code{FALSE}.
+#' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object,
+#'  \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
+#' @keywords internal
+infer_BOLD_format <- function(BOLD, verbose=FALSE){
+
+  # Character vector: CIFTI or NIFTI
+  if (is.character(BOLD)) {
+    format <- ifelse(
+      endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"),
+      "CIFTI", "NIFTI"
+    )
+    if (length(unique(format)) == 1) {
+      format <- format[1]
+    } else {
+      if (all(endsWith(BOLD, ".nii"))) {
+        stop("BOLD format seems to be a mix of CIFTI files and NIFTI files. Use the same format or rename the files.")
+      } else {
+        stop("BOLD format seems to be a mix of CIFTI files and something else. Use the same format or rename the files.")
+      }
+    }
+
+  } else if (inherits(BOLD, "xifti")) {
+    format <- "xifti"
+  } else if (inherits(BOLD, "nifti")) {
+    format <- "nifti"
+
+  # Non-character vector: xifti, nifti, or data
+  } else if (inherits(BOLD[[1]], "xifti")) {
+    if (all(vapply(BOLD, inherits, what="xifti", FALSE))) {
+      format <- "xifti"
+    } else {
+      stop("BOLD format seems to be a mix of `xifti` files and something else. Use the same format for all.")
+    }
+  } else if (inherits(BOLD[[1]], "nifti")) {
+    if (all(vapply(BOLD, inherits, what="nifti", FALSE))) {
+      format <- "nifti"
+    } else {
+      stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
+    }
+  } else {
+    if (!is.list(BOLD)) { BOLD <- list(BOLD) }
+    BOLD_dims <- lapply(BOLD, dim)
+    BOLD_dims_lens <- sort(unique(vapply(BOLD_dims, length, 0)))
+    if (length(BOLD_dims_lens) > 1) {
+      stop("BOLD data have inconsistent dimension lengths. fMRI data should be provided as matrices, not vectors or arrays.")
+    } else if (BOLD_dims_lens==4) {
+      format <- "nifti" # 4D array: treat as a "nifti"
+    } else if (BOLD_dims_lens!=2) {
+      stop("BOLD data should be provided as matrices, not vectors or arrays.")
+    } else {
+      format <- "data"
+    }
+  }
+  if (verbose) { cat("Inferred input format:", format, "\n") }
+  format
+}
+
+#' Check \code{Q2_max}
+#'
+#' Check \code{Q2_max} and set it if \code{NULL}.
+#'
+#' @param Q2_max,nQ,nT The args
+#' @return \code{Q2_max}, clamped to acceptable range of values.
+#' @keywords internal
+Q2_max_check <- function(Q2_max, nQ, nT){
+  if (!is.null(Q2_max)) {
+    if (round(Q2_max) != Q2_max || Q2_max <= 0) {
+      stop('`Q2_max` must be `NULL` or a non-negative integer.')
+    }
+  } else {
+    Q2_max <- pmax(round(nT*.50 - nQ), 1)
+  }
+
+  # This is to avoid the area of the pesel objective function that spikes close
+  #   to rank(X), which often leads to nPC close to rank(X)
+  if (Q2_max > round(nT*.75 - nQ)) {
+    warning('`Q2_max` too high, setting to 75% of T.')
+    Q2_max <- round(nT*.75 - nQ)
+  }
+
+  Q2_max
+}
+
+#' Unmask a matrix
+#'
+#' @param dat The data
+#' @param mask The mask
+#' @keywords internal
+unmask_mat <- function(dat, mask){
+  stopifnot(nrow(dat) == sum(mask))
+  mdat <- matrix(NA, nrow=length(mask), ncol=ncol(dat))
+  mdat[mask,] <- dat
+  mdat
+}

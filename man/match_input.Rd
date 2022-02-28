@@ -18,7 +18,7 @@ match_input(
 \item{expected}{Character vector of expected/allowed values.}
 
 \item{fail_action}{If any value in \code{user} could not be
-matched, or repeated matches occured, what should happen? Possible values
+matched, or repeated matches occurred, what should happen? Possible values
 are \code{"stop"} (default; raises an error), \code{"warning"}, and
 \code{"nothing"}.}
 
@@ -30,9 +30,9 @@ The matched user inputs.
 }
 \description{
 Match each user input to an expected/allowed value. Raise a warning if either
- several user inputs match the same expected value, or at least one could not
- be matched to any expected value. \code{ciftiTools} uses this function to
- match keyword arguments for a function call. Another use is to match
- brainstructure labels ("left", "right", or "subcortical").
+several user inputs match the same expected value, or at least one could not
+be matched to any expected value. \code{ciftiTools} uses this function to
+match keyword arguments for a function call. Another use is to match
+brainstructure labels ("left", "right", or "subcortical").
 }
 \keyword{internal}

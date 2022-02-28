@@ -3,13 +3,13 @@
 #'
 #' @title EM Algorithms for Template ICA Models
 #'
-#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template,
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \code{\link{make_mesh}}) for each brain structure.
-#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
+#' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param theta0 (list) initial guess at parameter values: A (\eqn{QxQ} mixing matrix),
 #'  nu0_sq (residual variance from first level) and (for spatial model only)
 #'  kappa (SPDE smoothness parameter for each IC map)
@@ -19,7 +19,9 @@
 #'  of the spatial template ICA model, which assumes that all IC's have the
 #'  same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
+#'  to use or \code{TRUE}, which will use the number on the PC minus two.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return  A list: theta (list of final parameter estimates), subICmean
@@ -47,16 +49,11 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=FALSE){
+EM_templateICA.spatial <- function(
+  template_mean, template_var, meshes, BOLD,
+  theta0, C_diag, maxiter=100, epsilon=0.01, verbose=FALSE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -160,7 +157,18 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
-  result_squarem <- squarem(par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM, control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter), template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE)
+  saveRDS(list(
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
+    tmean=template_mean, tvar=template_var, meshes=meshes,
+    BOLD=BOLD, C_diag=C_diag, s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=TRUE
+  ), "tICA_spatial_pre_squarem1")
+  result_squarem <- squarem(
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
+    template_mean, template_var, meshes,
+    BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE
+  )
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
@@ -204,7 +212,7 @@ EM_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, th
 }
 
 #' @rdname EM_templateICA
-EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose){
+EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -233,14 +241,14 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 
     ### Compute change in parameters
 
-    A_old <- theta$A
-    A_new <- theta_new$A
+    # A_old <- theta$A
+    # A_new <- theta_new$A
     #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    A_change <- norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
+    A_change <- norm(as.vector(theta_new$A - theta$A), type="2") / norm(as.vector(theta$A), type="2")
 
-    nu0_sq_old <- theta$nu0_sq
-    nu0_sq_new <- theta_new$nu0_sq
-    nu0_sq_change <- abs(nu0_sq_new - nu0_sq_old)/nu0_sq_old
+    # nu0_sq_old <- theta$nu0_sq
+    # nu0_sq_new <- theta_new$nu0_sq
+    nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
 
     change <- c(A_change, nu0_sq_change)
     err <- max(change)
@@ -260,21 +268,43 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
   ### Compute final posterior mean of subject ICs
 
   #A = theta$A
-  At_nu0Cinv <- t(theta$A) %*% diag(1/(C_diag*theta$nu0_sq))
+  At_nu0Cinv <- crossprod(theta$A, diag(1/(C_diag*theta$nu0_sq)))
   At_nu0Cinv_A <- At_nu0Cinv %*% theta$A
-  miu_s <- matrix(NA, nrow=nvox, ncol=Q)
-  var_s <- matrix(NA, nrow=nvox, ncol=Q)
-  for(v in 1:nvox){
-    y_v <- BOLD[v,]
-    s0_v <- template_mean[v,]
-    E_v_inv <- diag(1/template_var[v,])
-    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
-    miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-    var_s[v,] <- diag(Sigma_s_v)
+
+  if (usePar) {
+
+    if (!requireNamespace("foreach", quietly = TRUE)) {
+      stop(
+        "Package \"foreach\" needed to parallel loop over voxels. Please install it.",
+        call. = FALSE
+      )
+    }
+
+    `%dopar%` <- foreach::`%dopar%`
+    q <- foreach::foreach(v = seq(nvox), .combine=rbind) %dopar% {
+      y_v <- BOLD[v,]
+      s0_v <- template_mean[v,]
+      E_v_inv <- diag(1/template_var[v,])
+      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+      c(Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v), diag(Sigma_s_v))
+    }
+    miu_s <- q[,seq(Q)]
+    var_s <- q[,seq(Q+1, Q*2)]
+  } else {
+    miu_s <- matrix(NA, nrow=nvox, ncol=Q)
+    var_s <- matrix(NA, nrow=nvox, ncol=Q)
+    for (v in seq(nvox)) {
+      y_v <- BOLD[v,]
+      s0_v <- template_mean[v,]
+      E_v_inv <- diag(1/template_var[v,])
+      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+      miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
+      var_s[v,] <- diag(Sigma_s_v)
+    }
   }
 
   result <- list(subjICmean=miu_s,
-                 subjICvar=var_s,
+                 subjICse=sqrt(var_s),
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,
@@ -290,12 +320,12 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
 #'
 #' @title Parameter Estimates in EM Algorithm for Template ICA Model
 #'
-#' @param template_mean (\eqn{VxQ} matrix) mean maps for each IC in template
-#' @param template_var (\eqn{VxQ} matrix) between-subject variance maps for each IC in template
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template
+#' @param template_var (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \code{\link{make_mesh}}) for each brain structure.
-#' @param BOLD  (\eqn{VxQ} matrix) dimension-reduced fMRI data
+#' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param theta (list) current parameter estimates
 #' @param C_diag \eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction
 #' @param s0_vec Vectorized template means
@@ -318,14 +348,7 @@ NULL
 #' @importFrom Matrix Matrix sparseMatrix
 UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec, D, Dinv_s0, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   Q <- ncol(template_mean)
   nvox <- nrow(BOLD)
@@ -637,49 +660,49 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 #' @rdname UpdateTheta_templateICA
 UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose){
 
-  Q <- ncol(BOLD)
-  nvox <- nrow(BOLD)
+  nQ <- ncol(template_mean)
+  nV <- nrow(BOLD)
+  nT <- ncol(BOLD)
 
   #initialize new objects
-  theta_new <- list(A = matrix(NA, Q, Q), nu0_sq = NA)
-  A_part1 <- A_part2 <- matrix(0, Q, Q) #two parts of product for A-hat (construct each looping over voxels)
+  theta_new <- list(A = matrix(NA, nT, nQ), nu0_sq = NA)
+  #two parts of product for A-hat (construct each looping over voxels)
+  A_part1 <- matrix(0, nT, nQ)
+  A_part2 <- matrix(0, nQ, nQ)
 
-
-  A <- theta$A
-  nu0_sq <- theta$nu0_sq
-  nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code
-  At_nu0Cinv <- t(A) %*% nu0C_inv
-  At_nu0Cinv_A <- At_nu0Cinv %*% A
+  A <- theta$A # TxQ
+  nu0_sq <- theta$nu0_sq # const
+  nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code # TxT
+  At_nu0Cinv <- crossprod(A, nu0C_inv) # QxT
+  At_nu0Cinv_A <- At_nu0Cinv %*% A # QxQ
 
   if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
-  miu_s <- matrix(NA, nrow=nvox, ncol=Q)
-  miu_ssT <- array(NA, dim=c(nvox, Q, Q))
+  # miu_s <- matrix(NA, nrow=nV, ncol=nQ) # not used anymore
+  # miu_ssT <- array(NA, dim=c(nV, nQ, nQ)) # not used anymore
 
-  for(v in 1:nvox){
-
-    y_v <- BOLD[v,]
-    s0_v <- template_mean[v,]
+  for (vv in 1:nV) {
+    y_v <- BOLD[vv,] # T
+    s0_v <- template_mean[vv,] # Q
 
     ##########################################
     ### E-STEP FOR A AND nu0^2: POSTERIOR MOMENTS OF s_i(v)
     ##########################################
 
-    E_v_inv <- diag(1/template_var[v,])
-    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+    E_v_inv <- diag(1/template_var[vv,]) # QxQ
+    Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A) # QxQ
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-    miu_ssT_v <- (miu_s_v %*% t(miu_s_v)) + Sigma_s_v #QxQ
-    miu_s[v,] <- miu_s_v #save for M-step of nu0_sq
-    miu_ssT[v,,] <- miu_ssT_v #save for M-step of nu0_sq
+    miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
+    # miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
+    # miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
     ##########################################
 
-    A_part1 <- A_part1 + y_v %*% t(miu_s_v) #QxQ
+    A_part1 <- A_part1 + tcrossprod(as.matrix(y_v), miu_s_v) #TxQ + (Tx1)*(1xQ)
     A_part2 <- A_part2 + miu_ssT_v #QxQ
-
   }
 
   #A_hat <- orthonorm(A_part1 %*% solve(A_part2))
@@ -698,21 +721,19 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   # At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
   # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
   #
-  # for(v in 1:nvox){
+  # for(vv in 1:nV){
   #
-  #   y_v <- BOLD[,v]
+  #   y_v <- BOLD[,vv]
   #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,v]
-  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,v]))
+  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,vv]
+  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,vv]))
   # }
   #
-  # nu0sq_hat <- 1/(Q*nvox)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-
+  # nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
   nu0sq_hat <- theta$nu0_sq
 
 
   # RETURN NEW PARAMETER ESTIMATES
-
   theta_new$A <- A_hat
   theta_new$nu0_sq <- nu0sq_hat[1]
   return(theta_new)
@@ -743,14 +764,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 #'
 compute_mu_s <- function(y_vec, D, Dinv_s0, R_inv, theta, P, C_diag){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   # ntime <- length(C_diag) # not used
   Q <- ncol(theta$A)
@@ -950,13 +964,15 @@ bdiag_m <- function(lmat) {
 #'
 UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, s0_vec, D, Dinv_s0, verbose){
 
+  ntime <- ncol(BOLD) #length of timeseries
+  nvox <- nrow(BOLD) #number of data locations
   Q <- ncol(template_mean)
 
   #convert theta vector to list format
-  A <- theta_vec[1:(Q^2)]
+  A <- theta_vec[1:(Q*ntime)]
   #nu0_sq <- theta_vec[(Q^2)+1]
-  kappa <- theta_vec[(Q^2)+(1:Q)]
-  theta <- list(A = matrix(A, nrow=Q, ncol=Q),
+  kappa <- theta_vec[(Q*ntime)+(1:Q)]
+  theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
                 #nu0_sq = nu0_sq,
                 kappa = kappa)
 

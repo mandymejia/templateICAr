@@ -4,22 +4,48 @@
 \alias{dual_reg}
 \title{Dual Regression}
 \usage{
-dual_reg(dat, GICA, normA = FALSE, scale = FALSE)
+dual_reg(
+  BOLD,
+  GICA,
+  scale = c("global", "local", "none"),
+  scale_sm_xifti = NULL,
+  scale_sm_FWHM = 2,
+  detrend_DCT = 0,
+  center_Bcols = FALSE,
+  normA = FALSE
+)
 }
 \arguments{
-\item{dat}{Subject-level fMRI data (\eqn{VxT})}
+\item{BOLD}{Subject-level fMRI data matrix (\eqn{V \times T}). Rows will be
+centered.}
 
-\item{GICA}{Group-level independent components (\eqn{VxQ})}
+\item{GICA}{Group-level independent components (\eqn{V \times Q})}
 
-\item{normA}{Normalize the A matrix (spatial maps)?}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
 
-\item{scale}{A logical value indicating whether the fMRI timeseries should 
-be scaled by the image standard deviation.}
+\item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
+smooth the standard deviation estimates used for local scaling, provide a
+\code{"xifti"} object with data locations in alignment with
+\code{BOLD} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
+object is provided (default), do not smooth.}
+
+\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
+to use for detrending. If \code{0} (default), do not detrend.}
+
+\item{center_Bcols}{Center BOLD across columns (each image)? Default:
+\code{FALSE} (not recommended).}
+
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
+regression estimates? Default: \code{FALSE} (not recommended). Note that the
+product \eqn{A \times S} remains the same with either option.}
 }
 \value{
-A list containing the subject-level independent components \strong{S} (\eqn{VxQ}), 
- subject-level mixing matrix \strong{A} (\eqn{TxQ}), and the row- and column- centered fMRI 
- data (\eqn{VxT}).
+A list containing
+the subject-level independent components \strong{S} (\eqn{V \times Q}),
+and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 }
 \description{
 Dual Regression

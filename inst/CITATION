@@ -12,7 +12,7 @@ templateICAr_citations <- c(
 			as.person("Ying Guo")
 		),
 		journal      = "Journal of the American Statistical Association",
-		year         = "2019",
+		year         = "2020",
 		volume       = "115",
 		number       = "531",
 		pages        = "1151--1177",

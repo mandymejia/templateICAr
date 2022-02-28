@@ -1,43 +1,45 @@
 #' Diagnostic ICA for NIFTI
-#' 
+#'
 #' Run diagnostic ICA based on NIFTI-format BOLD data and NIFTI-based template
 #'
-#' @param nifti_fname File path of NIFTI BOLD timeseries data
-#' @param templates Set of templates, each the result of call to 
+#' @param BOLD File path of NIFTI BOLD timeseries data
+#' @param templates Set of templates, each the result of call to
 #'  \code{\link{estimate_template.nifti}}.
-#' (one template for each group). Either a list of objects of class 
+#' (one template for each group). Either a list of objects of class
 #'  \code{"template.nifti"}.
-#' @param scale Should BOLD data be scaled by the spatial standard deviation 
-#'  before model fitting? Default: \code{TRUE}. If done when estimating 
+#' @param scale Should BOLD data be scaled by the spatial standard deviation
+#'  before model fitting? Default: \code{TRUE}. If done when estimating
 #'  templates, should be done here too.
-#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default), 
-#'  will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify 
-#'  (\eqn{L <= maxQ <= T}). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
+#' @param Q2 The number of nuisance ICs to identify. If \code{NULL} (default),
+#'  will be estimated. Only provide \eqn{Q2} or \eqn{Q2_max} but not both.
+#' @param Q2_max Maximum number of ICs (template+nuisance) to identify
+#'  (\eqn{L <= Q2_max <= T}). Only provide \eqn{Q2} or \eqn{Q2_max} but not both.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param out_fname The path and base name prefix of the NIFTI files to write.
 #'  Will be appended with "_subjICmean.nii" for IC mean maps and 
-#'  "_subjICvar.nii" for IC variance maps.
+#'  "_subjICse.nii" for IC variance maps.
 #'
 #' @importFrom oro.nifti readNIfTI writeNIfTI
 #'
-#' @return A list containing the subject IC estimates (class 'xifti'), the 
-#'  subject IC variance estimates (class 'xifti'), and the result of the model
+#' @return A list containing the subject IC estimates (class 'nifti'), the
+#'  subject IC variance estimates (class 'nifti'), and the result of the model
 #'  call to \code{diagnosticICA} (class 'dICA')
-#' 
-#' @export
 #'
-diagnosticICA.nifti <- function(nifti_fname,
+#' @keywords internal
+#'
+diagnosticICA.nifti <- function(BOLD,
                               templates,
                               scale=TRUE,
                               Q2=NULL,
-                              maxQ=100,
+                              Q2_max=100,
                               maxiter=100,
                               epsilon=0.01,
                               verbose=TRUE,
                               out_fname=NULL){
+
+  # [TO DO]: replace `oro.nifti` with `RNifti`
 
   G <- length(templates)
   if(G>5) stop(paste0('Length of templates is ',G,' which is a large number of groups. Check that the templates argument is formatted correctly.'))
@@ -45,8 +47,8 @@ diagnosticICA.nifti <- function(nifti_fname,
 
 
   # READ IN BOLD TIMESERIES DATA
-  if(!file.exists(nifti_fname)) stop(paste0('The BOLD timeseries file ',nifti_fname,' does not exist.'))
-  BOLD_nifti <- readNIfTI(nifti_fname, reorient=FALSE)
+  if(!file.exists(BOLD)) stop(paste0('The BOLD timeseries file ',BOLD,' does not exist.'))
+  BOLD_nifti <- readNIfTI(BOLD)
 
   # GET TEMPLATE MEAN AND VARIANCE FOR EACH GROUP
   template_class <- sapply(templates, class)
@@ -91,7 +93,7 @@ diagnosticICA.nifti <- function(nifti_fname,
                             BOLD = BOLD_mat,
                             scale = scale,
                             Q2 = Q2,
-                            maxQ = maxQ,
+                            Q2_max = Q2_max,
                             maxiter = maxiter,
                             epsilon = epsilon,
                             verbose = verbose)
@@ -99,24 +101,23 @@ diagnosticICA.nifti <- function(nifti_fname,
   L <- ncol(result$subjICmean)
   BOLD_nifti@.Data <- BOLD_nifti@.Data[,,,1:L] #remove non-template ICs
   BOLD_nifti@dim_[5] <- L
-  subjICmean_nifti <- subjICvar_nifti <- BOLD_nifti #copy over header information from GICA
+  subjICmean_nifti <- subjICse_nifti <- BOLD_nifti #copy over header information from GICA
   img_tmp <- mask_all
   for(l in 1:L){
     img_tmp[mask_all==1] <- result$subjICmean[,l]
     subjICmean_nifti@.Data[,,,l] <- img_tmp
-    img_tmp[mask_all==1] <- result$subjICvar[,l]
-    subjICvar_nifti@.Data[,,,l] <- img_tmp
+    img_tmp[mask_all==1] <- result$subjICse[,l]
+    subjICse_nifti@.Data[,,,l] <- img_tmp
   }
 
   if(!is.null(out_fname)){
     out_fname_mean <- paste0(out_fname, '_subjICmean')
-    out_fname_var <- paste0(out_fname, '_subjICvar')
+    out_fname_var <- paste0(out_fname, '_subjICse')
     writeNIfTI(subjICmean_nifti, out_fname_mean)
-    writeNIfTI(subjICvar_nifti, out_fname_var)
+    writeNIfTI(subjICse_nifti, out_fname_var)
     writeNIfTI(mask_all, 'mask_all')
   }
 
   return(result)
 
 }
-

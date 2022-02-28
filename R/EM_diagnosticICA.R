@@ -16,7 +16,7 @@
 #'  and (for spatial model only) kappa (SPDE smoothness parameter)
 #' @param C_diag (\eqn{Lx1}) diagonal elements of residual covariance after dimension reduction
 #' @param maxiter maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE} (default), display progress of algorithm.
 #' @param ignore_determinant For spatial model only. If \code{TRUE} (default),
 #'  ignore the normalizing constant in \eqn{p(y\|z)} when computing posterior
@@ -49,18 +49,11 @@ NULL
 #' @importFrom Matrix Diagonal
 #' @importFrom SQUAREM squarem
 #'
-#' @export
+#' @keywords internal
 #'
-EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE, ignore_determinant=TRUE){
+EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, verbose=TRUE, ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   nvox <- nrow(BOLD) #number of brain locations
   if(ncol(BOLD) > nvox) warning('More time points than data locations. Are you sure the data is oriented properly?')
@@ -194,9 +187,9 @@ EM_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, 
 
 #' @rdname EM_diagnosticICA
 #'
-#' @export
+#' @keywords internal
 #'
-EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.001, verbose=TRUE){
+EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, verbose=TRUE){
 
   nvox <- nrow(BOLD) #number of brain locations
   L <- ncol(template_mean[[1]]) #number of ICs
@@ -277,7 +270,7 @@ EM_diagnosticICA.independent <- function(template_mean, template_var, BOLD, thet
 
   result <- list(group_probs = MAP$group_probs,
                  subjICmean=MAP$ICmean,
-                 subjICvar=MAP$ICvar,
+                 subjICse=sqrt(MAP$ICvar),
                  theta_MLE=theta,
                  success_flag=success,
                  error=err,
@@ -332,18 +325,11 @@ NULL
 # @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix bdiag Diagonal
 #'
-#' @export
+#' @keywords internal
 #'
 UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, s0_vec_list, D_list, Dinv_s0_list, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A'), ignore_determinant=TRUE){
 
-  if (!requireNamespace("INLA", quietly = TRUE)) {
-    stop(
-      paste0(
-        "Package \"INLA\" needed to for spatial modeling.",
-        "Please install it at http://www.r-inla.org/download.",
-      ), call. = FALSE
-    )
-  }
+  INLA_check()
 
   nvox <- nrow(BOLD)
   L <- ncol(BOLD)
@@ -703,7 +689,7 @@ UpdateTheta_diagnosticICA.spatial <- function(template_mean, template_var, meshe
 
 #' @rdname UpdateTheta_diagnosticICA
 #'
-#' @export
+#' @keywords internal
 #'
 UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, template_var_max, BOLD, theta, C_diag, return_MAP=FALSE, verbose=TRUE){
 
@@ -933,7 +919,7 @@ UpdateTheta_diagnosticICA.independent <- function(template_mean, template_var, t
 #'
 #' @return Value of log-likelihood at logkappa
 #'
-#' @export
+#' @keywords internal
 #'
 #' @details This is the function to be maximized in order to determine the MLE for \eqn{\kappa} or the \eqn{\kappa_q}'s in the M-step of the EM algorithm in spatial
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes

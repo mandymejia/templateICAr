@@ -5,50 +5,165 @@
 \title{Template ICA}
 \usage{
 templateICA(
-  template_mean,
-  template_var,
   BOLD,
-  scale = TRUE,
+  template,
+  tvar_method = c("non-negative", "unbiased"),
+  scale = c("global", "local", "none"),
+  scale_sm_FWHM = 2,
+  detrend_DCT = 0,
+  center_Bcols = FALSE,
   normA = FALSE,
-  meshes = NULL,
   Q2 = NULL,
-  maxQ = NULL,
+  Q2_max = NULL,
+  brainstructures = c("left", "right"),
+  mask = NULL,
+  time_inds = NULL,
+  varTol = 1e-06,
+  spatial_model = NULL,
+  resamp_res = NULL,
+  rm_mwall = TRUE,
+  reduce_dim = TRUE,
   maxiter = 100,
-  epsilon = 0.001,
-  verbose = TRUE,
-  kappa_init = 0.2
+  epsilon = 0.01,
+  kappa_init = 0.2,
+  usePar = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
-\item{template_mean}{(VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components}
+\item{BOLD}{Vector of subject-level fMRI data in one of the following
+formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
+\code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
+is the number of data locations and \eqn{T} is the number of timepoints.
 
-\item{template_var}{(VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs}
+If multiple BOLD data are provided, they will be independently centered,
+scaled, and detrended (if applicable), and then they will be concatenated
+together followed by denoising (if applicable) and computing the initial
+dual regression estimate.}
 
-\item{BOLD}{(VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations}
+\item{template}{Template estimates in a format compatible with \code{BOLD},
+from \code{\link{estimate_template}}.}
 
-\item{scale}{Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.}
+\item{tvar_method}{Which calculation of the template variance to use:
+\code{"non-negative"} (default) or \code{"unbiased"}. The unbiased template
+variance is based on the assumed mixed effects/ANOVA model, whereas the
+non-negative template variance adds to it to account for greater potential
+between-subjects variation. (The template mean is the same for either choice
+of \code{tvar_method}.)}
 
-\item{normA}{Normalize the A matrix (spatial maps)?}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
 
-\item{meshes}{Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
-created by \code{make_mesh} (spatial priors are assumed on each independent component).
-Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)}
+\item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
+represents surface data. To smooth the standard deviation estimates used for
+local scaling, provide the smoothing FWHM (default: \code{2}). As the FWHM
+becomes large, local scaling approaches global scaling.}
 
-\item{Q2}{The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
+to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{maxQ}{Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.}
+\item{center_Bcols}{Center BOLD across columns (each image)? Default:
+\code{FALSE} (not recommended).}
 
-\item{maxiter}{Maximum number of EM iterations}
+\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
+regression estimates? Default: \code{FALSE} (not recommended). Note that the
+product \eqn{A \times S} remains the same with either option.}
 
-\item{epsilon}{Smallest proportion change between iterations (e.g. .01)}
+\item{Q2, Q2_max}{Denoise the BOLD data? Denoising is based on modeling and
+removing nuisance ICs. It may result in a cleaner estimate for smaller
+datasets, but it may be unnecessary (and time-consuming) for larger datasets.
 
-\item{verbose}{If \code{TRUE}. display progress of algorithm}
+Set \code{Q2} to control denoising: use a positive integer to specify the
+number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+estimated by PESEL (default), or zero to skip denoising.
 
-\item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
+If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
+and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+\code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
+file paths. This is a character vector indicating which brain structure(s)
+to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+gray matter). Can also be \code{"all"} (obtain all three brain structures).
+Default: \code{c("left","right")} (cortical surface only).}
+
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
+file paths or \code{"nifti"} objects. This is a brain map formatted as a
+binary array of the same spatial dimensions as the fMRI data, with
+\code{TRUE} corresponding to in-mask voxels.}
+
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis.
+If \code{NULL} (default), use all volumes. Subsetting is performed before
+any centering, scaling, detrending, and denoising.}
+
+\item{varTol}{Tolerance for variance of each data location. For each scan,
+locations which do not meet this threshold are masked out of the analysis.
+Default: \code{1e-6}. Variance is calculated on the original data, before
+any normalization.}
+
+\item{spatial_model}{Should spatial modeling be performed? If \code{NULL}, assume
+spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
+each independent component. Each should represent a brain structure, between which
+spatial independence can be assumed.
+
+If \code{BOLD} represents CIFTI-format data, \code{spatial_model} should give the left and
+right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
+objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
+the subcortex. This argument can also be \code{TRUE}, in which case spatial modeling
+will be performed with the surfaces included in the first entry of \code{BOLD} if it is a
+\code{"xifti"} object, or if those are not present available, the default inflated
+surfaces from \code{ciftiTools}.
+
+If \code{BOLD} represents NIFTI-format data, spatial modeling is not yet available.
+
+If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
+(see \code{\link{make_mesh}}).}
+
+\item{resamp_res}{Only applies if \code{BOLD} represents CIFTI-format data.
+The target resolution for resampling (number of cortical surface vertices
+per hemisphere). For spatial modelling, a value less than 10000 is
+recommended for computational feasibility. If \code{NULL} (default), do not
+perform resampling.}
+
+\item{rm_mwall}{Only applies if \code{BOLD} represents CIFTI-format data.
+Should medial wall (missing data) locations be removed from the mesh?
+If \code{TRUE}, faster computation but less accurate estimates at the
+boundary of wall.}
+
+\item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
+Default: \code{TRUE}. Skipping dimension reduction will slow the model
+estimation, but may result in more accurate results.}
+
+\item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
+
+\item{epsilon}{Smallest proportion change between iterations. Default: \code{.01}.}
+
+\item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
+
+\item{usePar}{Parallelize the computation over data locations? Default:
+\code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
+use the number on the PC minus two.}
+
+\item{verbose}{If \code{TRUE}, display progress of algorithm}
 }
 \value{
-A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+A (spatial) template ICA object, which is a list containing:
+\code{subjICmean}, the \eqn{V \times L} estimated independent components
+\strong{S}; \code{subjICse}, the standard errors of \strong{S}; the
+\code{mask} of locations without template values due to too many low
+variance or missing values; and the function \code{params} such as
+the type of scaling and detrending performed.
+
+If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
+\code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}
+objects, respectively.
 }
 \description{
-Perform template independent component analysis (ICA) using expectation-maximization (EM)
+Perform template independent component analysis (ICA) using
+expectation-maximization (EM).
 }

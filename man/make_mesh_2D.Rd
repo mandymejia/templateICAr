@@ -10,16 +10,16 @@ make_mesh_2D(mask)
 \item{mask}{Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}).}
 }
 \value{
-List containing INLA mesh, observation weight matrix \strong{A} for 
- translating between mesh locations and original data locations, the brain 
- mask used to create the mesh, and the number of original and mesh data 
- locations.
+List containing INLA mesh, observation weight matrix \strong{A} for
+translating between mesh locations and original data locations, the brain
+mask used to create the mesh, and the number of original and mesh data
+locations.
 }
 \description{
 Create INLA mesh and observation weight matrix based on a binary brain mask
 }
 \details{
-This function requires the \code{INLA} package, which is not a CRAN 
- package. See \url{http://www.r-inla.org/download} for easy installation 
- instructions.
+This function requires the \code{INLA} package, which is not a CRAN
+package. See \url{http://www.r-inla.org/download} for easy installation
+instructions.
 }

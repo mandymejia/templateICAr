@@ -1,437 +1,779 @@
 #' Template ICA
 #'
-#' Perform template independent component analysis (ICA) using expectation-maximization (EM)
+#' Perform template independent component analysis (ICA) using 
+#'  expectation-maximization (EM).
 #'
-#' @param template_mean (VxL matrix) template mean estimates, i.e. mean of empirical population prior for each of L independent components
-#' @param template_var (VxL matrix) template variance estimates, i.e. between-subject variance of empirical population prior for each of L ICs
-#' @param BOLD (VxT matrix) BOLD fMRI data matrix, where T is the number of volumes (time points) and V is the number of brain locations
-#' @param scale Logical indicating whether BOLD data should be scaled by the spatial standard deviation before model fitting. If done when estimating templates, should be done here too.
-#' @param normA Normalize the A matrix (spatial maps)?
-#' @param meshes Either NULL (assume spatial independence) or a list of objects of type \code{templateICA_mesh}
-#' created by \code{make_mesh} (spatial priors are assumed on each independent component).
-#' Each list element represents a brain structure, between which spatial independence is assumed (e.g. left and right hemispheres)
-#' @param Q2 The number of nuisance ICs to identify. If NULL, will be estimated. Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxQ Maximum number of ICs (template+nuisance) to identify (L <= maxQ <= T). Only provide \eqn{Q2} or \eqn{maxQ} but not both.
-#' @param maxiter Maximum number of EM iterations
-#' @param epsilon Smallest proportion change between iterations (e.g. .01)
-#' @param verbose If \code{TRUE}. display progress of algorithm
-# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
-#' @param kappa_init Starting value for kappa.  Default: \code{0.2}.
+#' @param BOLD Vector of subject-level fMRI data in one of the following 
+#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
+#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
+#'  is the number of data locations and \eqn{T} is the number of timepoints.
 #'
-#' @return A list containing the estimated independent components S (a VxL matrix), their mixing matrix A (a TxL matrix), and the number of nuisance ICs estimated (Q_nuis)
+#'  If multiple BOLD data are provided, they will be independently centered, 
+#'  scaled, and detrended (if applicable), and then they will be concatenated 
+#'  together followed by denoising (if applicable) and computing the initial 
+#'  dual regression estimate.
+#' @param template Template estimates in a format compatible with \code{BOLD}, 
+#'  from \code{\link{estimate_template}}.
+#' @param tvar_method Which calculation of the template variance to use: 
+#'  \code{"non-negative"} (default) or \code{"unbiased"}. The unbiased template
+#'  variance is based on the assumed mixed effects/ANOVA model, whereas the 
+#'  non-negative template variance adds to it to account for greater potential
+#'  between-subjects variation. (The template mean is the same for either choice
+#'  of \code{tvar_method}.)
+#' @inheritParams center_Bcols_Param
+#' @inheritParams scale_Param
+#' @inheritParams scale_sm_FWHM_Param
+#' @inheritParams detrend_DCT_Param
+#' @inheritParams normA_Param
+#' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
+#'  removing nuisance ICs. It may result in a cleaner estimate for smaller
+#'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
+#'
+#'  Set \code{Q2} to control denoising: use a positive integer to specify the
+#'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
+#'  estimated by PESEL (default), or zero to skip denoising.
+#'
+#'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
+#'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
+#'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
+#'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
+#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI 
+#'  file paths. This is a character vector indicating which brain structure(s)
+#'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
+#'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
+#'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
+#'  Default: \code{c("left","right")} (cortical surface only).
+#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
+#'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
+#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  \code{TRUE} corresponding to in-mask voxels.
+#' @param time_inds Subset of fMRI BOLD volumes to include in analysis.
+#'  If \code{NULL} (default), use all volumes. Subsetting is performed before
+#'  any centering, scaling, detrending, and denoising.
+#' @param spatial_model Should spatial modeling be performed? If \code{NULL}, assume
+#'  spatial independence. Otherwise, provide meshes specifying the spatial priors assumed on
+#'  each independent component. Each should represent a brain structure, between which
+#'  spatial independence can be assumed.
+#'
+#'  If \code{BOLD} represents CIFTI-format data, \code{spatial_model} should give the left and
+#'  right cortex surface geometries (whichever one(s) are being used) as \code{"surf"}
+#'  objects or GIFTI surface geometry file paths. Spatial modeling is not yet available for
+#'  the subcortex. This argument can also be \code{TRUE}, in which case spatial modeling
+#'  will be performed with the surfaces included in the first entry of \code{BOLD} if it is a
+#'  \code{"xifti"} object, or if those are not present available, the default inflated
+#'  surfaces from \code{ciftiTools}.
+#'
+#'  If \code{BOLD} represents NIFTI-format data, spatial modeling is not yet available.
+#'
+#'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
+#'  (see \code{\link{make_mesh}}).
+#' @inheritParams varTol_Param
+#' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
+#'  The target resolution for resampling (number of cortical surface vertices
+#'  per hemisphere). For spatial modelling, a value less than 10000 is 
+#'  recommended for computational feasibility. If \code{NULL} (default), do not
+#'  perform resampling.
+#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. 
+#'  Should medial wall (missing data) locations be removed from the mesh?
+#'  If \code{TRUE}, faster computation but less accurate estimates at the 
+#'  boundary of wall.
+#' @param reduce_dim Reduce the temporal dimension of the data using PCA? 
+#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model 
+#'  estimation, but may result in more accurate results.
+#' @param maxiter Maximum number of EM iterations. Default: \code{100}.
+#' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
+#' @param kappa_init Starting value for kappa. Default: \code{0.2}.
+#' @param usePar Parallelize the computation over data locations? Default: 
+#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
+#'  use the number on the PC minus two.
+#' @param verbose If \code{TRUE}, display progress of algorithm
+# @param common_smoothness If \code{TRUE}. use the common smoothness version
+#  of the spatial template ICA model, which assumes that all IC's have the same
+#  smoothness parameter, \eqn{\kappa}
+#'
+#' @return A (spatial) template ICA object, which is a list containing: 
+#'  \code{subjICmean}, the \eqn{V \times L} estimated independent components 
+#'  \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the 
+#'  \code{mask} of locations without template values due to too many low 
+#'  variance or missing values; and the function \code{params} such as
+#'  the type of scaling and detrending performed. 
+#' 
+#'  If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
+#'  \code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}
+#'  objects, respectively. 
 #'
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom pesel pesel
+#' @import ciftiTools
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
-templateICA <- function(template_mean,
-                        template_var,
-                        BOLD,
-                        scale=TRUE,
-                        normA=FALSE,
-                        meshes=NULL,
-                        Q2=NULL,
-                        maxQ=NULL,
-                        maxiter=100,
-                        epsilon=0.001,
-                        verbose=TRUE,
-                        #common_smoothness=TRUE,
-                        kappa_init=0.2){
+templateICA <- function(
+  BOLD, template, tvar_method=c("non-negative", "unbiased"),
+  scale=c("global", "local", "none"), scale_sm_FWHM=2,
+  detrend_DCT=0,
+  center_Bcols=FALSE, normA=FALSE,
+  Q2=NULL, Q2_max=NULL,
+  brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
+  varTol=1e-6,
+  spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
+  reduce_dim=TRUE,
+  maxiter=100,
+  epsilon=0.01,
+  kappa_init=0.2,
+  #common_smoothness=TRUE,
+  usePar=FALSE,
+  verbose=TRUE){
 
-  if(!is.null(meshes)){
-    if (!requireNamespace("INLA", quietly = TRUE)) {
+  # Check arguments ------------------------------------------------------------
+
+  # Simple argument checks.
+  tvar_method <- match.arg(tvar_method, c("non-negative", "unbiased"))
+  tvar_name <- switch(tvar_method, `non-negative`="varNN", unbiased="varUB")
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) {
+    warning(
+      "Setting `scale='global'`. Use `'global'` or `'local'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "global"
+  }
+  scale <- match.arg(scale, c("global", "local", "none"))
+  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
+  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
+  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
+  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
+  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
+  stopifnot(is.logical(normA) && length(normA)==1)
+  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
+  stopifnot(is.numeric(varTol) && length(varTol)==1 && varTol > 0)
+  if (isFALSE(spatial_model)) { spatial_model <- NULL }
+  if (!is.null(resamp_res)) {
+    stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
+    stopifnot(round(resamp_res) == resamp_res && resamp_res >= 0)
+  }
+  stopifnot(is.logical(rm_mwall) && length(rm_mwall)==1)
+  stopifnot(is.numeric(maxiter) && length(maxiter)==1)
+  stopifnot(round(maxiter) == maxiter && maxiter >= 0)
+  stopifnot(is.numeric(epsilon) && length(epsilon)==1)
+  if (!is.null(kappa_init)) {
+    stopifnot(is.numeric(kappa_init) && length(kappa_init)==1)
+    if(kappa_init <= 0) stop('kappa_init must be a positive scalar or `NULL`.')
+  }
+  stopifnot(is.logical(usePar) && length(usePar)==1)
+  stopifnot(is.logical(verbose) && length(verbose)==1)
+
+  # `usePar`
+  if (!isFALSE(usePar)) {
+    parPkgs <- c("parallel", "doParallel")
+    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
+    if (any(parPkgs_missing)) {
+      if (all(parPkgs_missing)) {
+        stop(paste0(
+          "Packages `parallel` and `doParallel` needed ",
+          "for `usePar` to loop over voxels. Please install them."), call.=FALSE
+        )
+      } else {
+        stop(paste0(
+          "Package `", parPkgs[parPkgs_missing], "` needed ",
+          "for `usePar` to loop over voxels. Please install it."), call.=FALSE
+        )
+      }
+    }
+
+    cores <- parallel::detectCores()
+    if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
+    if (nCores < 2) {
+      usePar <- FALSE
+    } else {
+      cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(cluster)
+    }
+  }
+
+  # `out_fname`?
+
+  # `BOLD` ---------------------------------------------------------------------
+  # Determine the format of `BOLD`.
+  # same for NIFTI
+  format <- infer_BOLD_format(BOLD)
+  FORMAT <- switch(format,
+    CIFTI = "CIFTI",
+    xifti = "CIFTI",
+    NIFTI = "NIFTI",
+    nifti = "NIFTI",
+    data = "DATA"
+  )
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
+
+  if (FORMAT == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
+  # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
+  if (format %in% c("CIFTI", "NIFTI")) {
+    missing_BOLD <- !file.exists(BOLD)
+    if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
+    if (any(missing_BOLD)) {
+      warning('There are ', missing_BOLD, ' scans in `BOLD` that do not exist. These scans will be excluded from template estimation.')
+      BOLD <- BOLD[!missing_BOLD]
+    }
+  }
+
+  # Make `BOLD` a list.
+  if (is.character(BOLD)) {
+    BOLD <- as.list(BOLD)
+  } else if (!is.list(BOLD)) {
+    BOLD <- list(BOLD)
+  } else if (format == "xifti" && inherits(BOLD, "xifti")) {
+    BOLD <- list(BOLD)
+  } else if (format == "nifti" && inherits(BOLD, "nifti")) {
+    BOLD <- list(BOLD)
+  }
+  nN <- length(BOLD)
+
+  # `brainstructures`
+  if (FORMAT == "CIFTI") {
+    brainstructures <- match.arg(brainstructures, c("left", "right", "subcortical", "all"), several.ok=TRUE)
+    if ("all" %in% brainstructures) { brainstructures <- c("left", "right", "subcortical") }
+    do_left <- "left" %in% brainstructures
+    do_right <- "right" %in% brainstructures
+    do_sub <- "subcortical" %in% brainstructures
+  }
+
+  # Read in CIFTI or NIFTI files.
+  # (Need to do now rather than later, so that CIFTI resolution info can be used.)
+  if (format == "CIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- ciftiTools::read_cifti(
+          BOLD[[bb]], resamp_res=resamp_res,
+          brainstructures=brainstructures
+        )
+      }
+      stopifnot(is.xifti(BOLD[[bb]]))
+    }
+  } else if (format == "NIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]])
+      }
+      # [TO DO] check?
+    }
+  }
+
+  # templates ------------------------------------------------------------------
+  if (is.character(template)) { template <- readRDS(template) }
+
+  # Check template format matches BOLD format.
+  TFORMAT <- class(template)[grepl("template", class(template))]
+  if (length(TFORMAT) != 1) { stop("`template` is not a template.") }
+  TFORMAT <- toupper(gsub("template.", "", TFORMAT, fixed=TRUE))
+  if (TFORMAT != FORMAT) {
+    stop("The BOLD format is '", FORMAT, ",' but the template format is '", TFORMAT, ".'")
+  }
+
+  # Check that parameters match.
+  pmatch <- c(
+    scale=scale, #scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT,
+    center_Bcols=center_Bcols, normA=normA,
+    # Q2=Q2, Q2_max=Q2_max,
+    varTol=varTol
+  )
+  for (pp in seq(length(pmatch))) {
+    pname <- names(pmatch)[pp]
+    if (pmatch[pname] != template$params[[pname]]) {
+      warning(paste0(
+        "The `", pname, "` parameter was ",
+        template$params[[pname]], " for the template, but is ",
+        pmatch[pname], " here. These should match. (Proceeding anyway.)\n"
+      ))
+    }
+  }
+
+  # Get `nI`, `nL`, and `nV`.
+  # Check brainstructures and resamp_res if CIFTI, where applicable.
+  # Check mask if NIFTI.
+  xii1 <- NULL
+  if (FORMAT == "CIFTI") {
+    xii1 <- template$dat_struct
+    # Check brainstructures.
+    tbs <- names(xii1$data)[!vapply(xii1$data, is.null, FALSE)]
+    bs2 <- c(left="cortex_left", right="cortex_right", subcortical="subcort")[brainstructures]
+    if (!all(bs2 %in% tbs)) {
+      bs_missing <- bs2[!(bs2 %in% tbs)]
+      stop(paste0(
+        ifelse(length(bs_missing) > 1, "These brain structures are", "This brain structure is"),
+        " not included in the template: ",
+        paste(bs_missing, collapse=", "), ". Adjust the `brainstructure` argument accordingly."
+      ))
+    } else if (!all(tbs %in% bs2)) {
+      bs_missing <- tbs[!(tbs %in% bs2)]
+      if (verbose) {
+        cat(paste0(
+          "Ignoring ", ifelse(length(bs_missing) > 1, "these brain structures", "This brain structure"),
+          " in the template:", paste(bs_missing, collapse=", "), "."
+        ))
+      }
+      template <- removebs_template(template, bs_missing)
+    }
+    # Check `resamp_res`.
+    if (!is.null(resamp_res)) {
+      template <- resample_template(template, resamp_res=resamp_res)
+    }
+    nI <- nrow(template$template$mean)
+
+  } else if (FORMAT == "NIFTI") {
+    # Check `mask`
+    if (is.null(mask)) { stop("`mask` is required.") }
+    if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
+    if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
+    if (is.numeric(mask)) {
+      cat("Coercing `mask` to a logical array with `as.logical`.\n")
+      mask[] <- as.logical(mask)
+    }
+    nI <- dim(mask)
+    # Check its compatibility with the template
+    stopifnot(length(dim(template$dat_struct)) == length(nI))
+    stopifnot(all(dim(template$dat_struct) == nI))
+  } else {
+    nI <- nrow(template$template$mean)
+  }
+
+  # Get the data mask based on missing values, & low variance locations
+  mask2 <- template$mask
+  use_mask2 <- (!is.null(mask2)) && (!all(mask2))
+  # Get the selected variance.
+  template <- list(
+    mean = template$template$mean,
+    var = template$template[[tvar_name]]
+  )
+  # Get the template dimensions.
+  nV <- nrow(template$mean)
+  nL <- ncol(template$mean)
+
+  # `spatial_model` meshes -----------------------------------------------------
+  do_spatial <- !is.null(spatial_model)
+  if (isTRUE(spatial_model)) { spatial_model <- NULL }
+  meshes <- spatial_model
+  if (do_spatial) {
+    # Check that `BOLD` format is compatible with the spatial model
+    if (FORMAT == "NIFTI") { stop("`spatial_model` not available for NIFTI BOLD.") }
+    if (FORMAT == "CIFTI") {
+      if ("subcortical" %in% brainstructures) {
+        stop("Subcortex not compatible with `spatial_model.`")
+      }
+    }
+
+    # INLA
+    INLA_check()
+    flag <- INLA::inla.pardiso.check()
+    if (any(grepl('FAILURE',flag))) {
       stop(
-        paste0(
-          "Package \"INLA\" needed to for spatial modeling.",
-          "Please install it at http://www.r-inla.org/download.",
-        ), call. = FALSE
+        'PARDISO IS NOT INSTALLED OR NOT WORKING. ',
+        'PARDISO for R-INLA is required for computational efficiency. ',
+        'If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again. ',
+        'If not, run inla.pardiso() to obtain a license.'
       )
     }
-    flag <- INLA::inla.pardiso.check()
-    if(grepl('FAILURE',flag)) stop('PARDISO IS NOT INSTALLED OR NOT WORKING. PARDISO for R-INLA is required for computational efficiency. If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again.  If not, run inla.pardiso() to obtain a license.')
     INLA::inla.setOption(smtp='pardiso')
-  }
 
-  ntime <- ncol(BOLD) #length of timeseries
-  nvox <- nrow(BOLD) #number of data locations
-  L <- ncol(template_mean) #number of ICs
+    if (verbose) {
+      mesh_name <- ifelse(is.null(meshes), "the default inflated surface", "the provided mesh")
+      cat(paste0(
+        "Fitting a spatial model based on ", mesh_name, ". ",
+        "Note that computation time and memory demands may be high.\n"
+      ))
+    }
 
-  #check that the number of data locations (nvox), time points (ntime) and ICs (L) makes sense
-  if(ntime > nvox) warning('More time points than voxels. Are you sure?')
-  if(L > nvox) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of template_mean, template_var and BOLD.')
-  if(L > ntime) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of template_mean, template_var and BOLD.')
-
-  #check that all arguments have consistent number of data locations (nvox) and ICs (L)
-  if(nrow(template_mean) != nvox | nrow(template_var) != nvox) stop('template_mean, template_var and BOLD must have same number of data locations, but they do not.')
-  if(ncol(template_var) != L) stop('template_mean and template_var must have the same number of ICs (rows), but they do not.')
-
-  #check that the supplied mesh object is of type templateICA_mesh
-  do_spatial <- !is.null(meshes)
-  if(do_spatial){
-    if(verbose) cat('Fitting a spatial model based on the mesh provided.  Note that computation time and memory demands may be high.\n')
-    if(!is.list(meshes)) stop('meshes argument must be a list.')
-    mesh_classes <- sapply(meshes, 'class')
-    if(any(mesh_classes != 'templateICA_mesh')) stop('Each element of meshes argument should be of class templateICA_mesh. See help(make_mesh).')
+    if (FORMAT == "CIFTI") {
+      if (is.null(meshes)) {
+        if (is.null(resamp_res)) {
+          res <- ciftiTools::infer_resolution(BOLD[[1]])
+        } else {
+          res <- resamp_res
+        }
+        if (do_left) {
+          surf <- BOLD[[1]]$surf$cortex_left
+          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
+            wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$left
+            if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
+            wall_mask <- which(wall_mask)
+          } else {
+            wall_mask <- NULL
+          }
+          if (rm_mwall) {
+            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+          } else {
+            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+          }
+          meshes <- c(meshes, list(left=mesh))
+        }
+        if (do_right) {
+          surf <- BOLD[[1]]$surf$cortex_right
+          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+          if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
+            wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$right
+            if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
+            wall_mask <- which(wall_mask)
+          } else {
+            wall_mask <- NULL
+          }
+          if (rm_mwall) {
+            mesh <- make_mesh(surf = surf, inds_mesh = wall_mask) #remove wall for greater computational efficiency
+          } else {
+            mesh <- make_mesh(surf = surf, inds_data = wall_mask) #retain wall in mesh for more accuracy along boundary with wall
+          }
+          meshes <- c(meshes, list(right=mesh))
+        }
+      }
+    } else {
+      if (is.null(meshes)) {
+        stop("`meshes` must be provided if the input format is not CIFTI.")
+      }
+    }
+    if (!is.list(meshes)) stop('`meshes` must be a list.')
+    if (!all(vapply(meshes, inherits, what="templateICA_mesh", FALSE))) {
+      stop('Each element of `meshes` should be of class `"templateICA_mesh"`. See `help(make_mesh)`.')
+    }
+    ndat_mesh <- sum(vapply(meshes, function(x){sum(x$A)}, 0))
+    if (ndat_mesh != nV) {
+      stop(
+        "Total number of data locations in `meshes` (", ndat_mesh,
+        ") does not match that of the templates (", nV, ")."
+      )
+    }
+    # [TO-DO]: Check that numbers of data locations on meshes (column sums of A) add up to match the number of data locations.
     #if(class(common_smoothness) != 'logical' | length(common_smoothness) != 1) stop('common_smoothness must be a logical value')
-  }
-  #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
-
-  if(round(maxiter) != maxiter | maxiter <= 0) stop('maxiter must be a positive integer')
-
-  if(!is.null(kappa_init)){
-    if(length(kappa_init) != 1 | kappa_init <= 0) stop('kappa_init must be a positive scalar or NULL')
+    #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
   }
 
-  #check that maxQ makes sense
-  if (!is.null(Q2)) { maxQ <- L + Q2 }
-  if(!is.null(maxQ)){ if(round(maxQ) != maxQ | maxQ <= 0) stop('maxQ must be NULL or a round positive number') }
-  if(is.null(maxQ)) maxQ <- round(ntime/2)
-  if(maxQ < L){
-    warning('maxQ must be at least L.  Setting maxQ=L.')
-    maxQ <- L
+  #TO DO: Define do_FC, pass in FC template
+  do_FC <- FALSE
+
+  # Process the scan -----------------------------------------------------------
+  # Get each entry of `BOLD` as a data matrix or array.
+  if (FORMAT == "CIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_cifti(BOLD[[bb]], brainstructures=brainstructures) }
+      if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
+      stopifnot(is.matrix(BOLD[[bb]]))
+    }
+  } else if (FORMAT == "NIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]]) }
+      stopifnot(length(dim(BOLD[[bb]])) > 1)
+    }
+  } else {
+    for (bb in seq(nN)) {
+      stopifnot(is.matrix(BOLD[[bb]]))
+    }
   }
-  #this is to avoid the area of the pesel objective function that spikes close to rank(X), which often leads to nPC close to rank(X)
-  if(maxQ > 0.75*ntime){
-    warning('maxQ too high, setting to 75% of T.')
-    maxQ <- round(ntime*0.75)
+
+  # If `BOLD` is a list, ensure that all dimensions are the same.
+  dBOLDs <- lapply(BOLD, dim)
+  if (length(unique(vapply(dBOLDs, length, 0))) > 1) {
+    stop("`BOLD` do not have the same dimensions.")
+  }
+  dBOLD <- dBOLDs[[1]]
+  ldB <- length(dBOLD)
+  if (nN > 1) {
+    for (bb in seq(2, nN)) {
+      stopifnot(all(dBOLD[seq(ldB-1)] == dBOLDs[[bb]][seq(ldB-1)]))
+    }
+  }
+  nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
+
+  # `time_inds`
+  if (!is.null(time_inds)) {
+    for (bb in seq(nN)) {
+      if (!all(time_inds %in% seq(nT))) {
+        warning('Not all `time_inds` available.') # [TO DO]: improve
+        time_inds_bb <- intersect(time_inds, seq(nT))
+      } else {
+        time_inds_bb <- time_inds
+      }
+      BOLD[[bb]] <- BOLD[[bb]][,time_inds_bb,drop=FALSE]
+    }
+  }
+  dBOLDs <- lapply(BOLD, dim)
+  nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
+  nTmin <- min(nT)
+
+  if (verbose) {
+    cat("Data input format:             ", format, "\n")
+    cat('Number of data locations:      ', nV, "\n")
+    if (FORMAT == "NIFTI") {
+      cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
+    }
+    cat('Number of template ICs:        ', nL, "\n")
+    cat('Number of BOLD scans:          ', nN, "\n")
+    cat('Total number of timepoints:    ', sum(nT), "\n")
+    cat('\n')
   }
 
-  if(!is.logical(scale) | length(scale) != 1) stop('scale must be a logical value')
+  # Check `BOLD` dimensions correspond with template and `mask`.
+  stopifnot(ldB-1 == length(nI))
+  stopifnot(all(dBOLD[seq(ldB-1)] == nI))
 
+  # Vectorize `BOLD` and apply `mask2`.
+  for (bb in seq(nN)) {
+    if (FORMAT == "NIFTI") {
+      BOLD[[bb]] <- matrix(BOLD[[bb]][rep(mask, dBOLD[ldB])], ncol=nT)
+      stopifnot(nrow(BOLD[[bb]]) == nV)
+    }
+    if (use_mask2) { BOLD[[bb]] <- BOLD[[bb]][mask2,,drop=FALSE] }
+  }
+  if (use_mask2) {
+    template$mean <- template$mean[mask2,,drop=FALSE]
+    template$var <- template$var[mask2,,drop=FALSE]
+  }
 
-  ### IDENTIFY AND REMOVE ANY BAD VOXELS/VERTICES
+  # Check that numbers of data locations (nV), time points (nT) and ICs (nL) makes sense, relatively
+  if (sum(nT) > nV) warning('More time points than voxels. Are you sure?')
+  if (nL > nV) stop('The arguments you supplied suggest that you want to estimate more ICs than you have data locations.  Please check the orientation and size of `BOLD` and `template`.')
+  if (nL > sum(nT)) stop('The arguments you supplied suggest that you want to estimate more ICs than you have time points.  Please check the orientation and size of `BOLD` and `template`.')
 
-  keep <- rep(TRUE, nvox)
-  keep[rowSums(is.nan(template_mean)) > 0] <- FALSE
-  keep[rowSums(is.na(template_mean)) > 0] <- FALSE
-  keep[rowSums(is.nan(template_var)) > 0] <- FALSE
-  keep[rowSums(is.na(template_var)) > 0] <- FALSE
-  keep[rowSums(is.nan(BOLD)) > 0] <- FALSE
-  keep[rowSums(is.na(BOLD)) > 0] <- FALSE
-  keep[rowVars(BOLD) == 0] <- FALSE
+  # Check that no NA or NaN values remain in template after masking.
+  if (any(is.na(template$mean))) { stop("`NA` values in template mean.") }
+  if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
+  if (any(is.na(template$var))) { stop("`NA` values in template var.") }
+  if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
-  if(sum(!keep) > 0){
-    stop('flat or NA voxels detected in data or templates')
+  # Mask out additional locations due to data mask.
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+
+  if(sum(!mask3) > 0){
+    stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
     # For this part, would need to also update "A" matrix (projection from mesh to data locations)
     # template_mean_orig <- template_mean
     # template_var_orig <- template_var
-    # nvox <- sum(keep)
+    # nV <- sum(keep)
     # if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
     # template_mean <- template_mean[keep,]
     # template_var <- template_var[keep,]
     # BOLD <- BOLD[keep,]
   }
 
-  ### 1. ESTIMATE AND DEAL WITH NUISANCE ICS (unless maxQ = L)
+  # Normalize BOLD -------------------------------------------------------------
+  # (Center, scale, and detrend)
+  if (verbose) { cat("Pre-processing BOLD data.\n") }
 
-  if(maxQ > L){
+  BOLD <- lapply(BOLD, norm_BOLD,
+    center_rows=TRUE, center_cols=center_Bcols,
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT
+  )
 
-    #i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-    BOLD1 <- scale_BOLD(BOLD, scale=scale)
-    DR1 <- dual_reg(BOLD1, template_mean, normA=normA)
+  # Concatenate the data.
+  BOLD <- do.call(cbind, BOLD)
+  nT <- sum(nT)
 
-    #ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
-    fit <- t(DR1$S) %*% t(DR1$A)
-    BOLD2 <- BOLD1 - fit #data without template ICs
+  # Estimate and deal with nuisance ICs ----------------------------------------
+  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  BOLD <- x$BOLD
+  Q2_est <- x$Q2
+  rm(x)
 
-    #iii. ESTIMATE THE NUMBER OF REMAINING ICS
-    #pesel function expects nxp data and will determine asymptotic framework
-    #here, we consider n=T (volumes) and p=V (vertices), and will use p-asymptotic framework
-    if(is.null(Q2)){
-      if(verbose) cat(paste0('DETERMINING NUMBER OF NUISANCE COMPONENTS.... '))
-      pesel_BOLD2 <- pesel(BOLD2, npc.max=maxQ-L, method='homogenous')
-      Q2 <- pesel_BOLD2$nPCs #estimated number of nuisance ICs
-      if(verbose) cat(paste0(Q2,'\n'))
-    }
+  # Center and scale `BOLD` again, but do not detrend again. -------------------
+  BOLD <- norm_BOLD(
+    BOLD, center_rows=TRUE, center_cols=center_Bcols,
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=FALSE
+  )
 
-    #iv. ESTIMATE THE NUISANCE ICS USING GIFT/INFOMAX
-    #if(verbose) cat(paste0('ESTIMATING AND REMOVING ',Q2,' NUISANCE COMPONENTS\n'))
-    #ICA_BOLD2 <- icaimax(BOLD2, nc=Q2, center=TRUE)
-    #fit <- ICA_BOLD2$M %*% t(ICA_BOLD2$S)
+  # Initialize with the dual regression-based estimate -------------------------
+  if (verbose) { cat("Computing DR.\n") }
 
-    #iv. INSTEAD OF ESTIMATING ICS, JUST ESTIMATE PCS!
-    #THE RESIDUAL (BOLD3) IS THE EXACT SAME BECAUSE THE ICS ARE JUST A ROTATION OF THE PCS
-    #IF THE NUISANCE ICS ARE NOT OF INTEREST, CAN TAKE THIS APPROACH
-    svd_BOLD2 <- svd(t(BOLD2) %*% BOLD2, nu=Q2, nv=0)
-    vmat <- diag(1/svd_BOLD2$d[1:Q2]) %*% t(svd_BOLD2$u) %*% t(BOLD2)
-    fit <- svd_BOLD2$u %*% diag(svd_BOLD2$d[1:Q2]) %*% vmat
+  BOLD_DR <- dual_reg(
+    BOLD, template$mean, center_Bcols=FALSE,
+    scale=FALSE, detrend_DCT=0, normA=normA
+  )
 
-    #v. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD3
-    BOLD3 <- BOLD1 - t(fit) #original data without nuisance ICs
+  # ----------------------------------------------------------------------------
+  # EM -------------------------------------------------------------------------
+  #Three algorithms to choose from:
+  #1) FC Template ICA (new)
+  #2) Template ICA
+  #3) Spatial Template ICA (initialize with standard Template ICA)
+  # ----------------------------------------------------------------------------
 
+  #1) FC Template ICA ----------------------------------------------------------
+  if(do_FC) {
+    if (verbose) { cat("Computing FC.\n") }
+
+    ## TO DO: FILL IN HERE
+    prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
+    template$FC <- NULL
+    EM_FCtemplateICA <- function(...){NULL}
+    resultEM <- EM_FCtemplateICA(
+      template$mean, template$var, template$FC,
+      prior_params, #for prior on tau^2
+      BOLD=BOLD,
+      AS_init = BOLD_DR, #initial values for A and S
+      maxiter=maxiter, epsilon=epsilon,
+      verbose=verbose
+    )
   } else {
 
-  # USE ORIGINAL DATA, SCALED, SINCE WE ARE ASSUMING NO NUISANCE COMPONENTS
-   BOLD3 <- scale_BOLD(BOLD, scale=scale) #center, and if scale=TRUE, scale
+    if (reduce_dim) {
+      if (verbose) { cat("Reducing data dimensions.\n") }
+      # Reduce data dimensions
+      BOLD <- dim_reduce(BOLD, nL)
+      err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
+      BOLD2 <- BOLD$data_reduced
+      H <- BOLD$H
+      Hinv <- BOLD$H_inv
+      # In original template ICA model nu^2 is separate
+      #   for spatial template ICA it is part of C
+      C_diag <- BOLD$C_diag
+      if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
+      rm(BOLD)
+      # Apply dimension reduction
+      HA <- H %*% BOLD_DR$A
+      theta0 <- list(A = HA)
+      # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
+      # theta0$nu0_sq = dat_list$sigma_sq
+      # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+    } else {
+      # [TO DO]: what if just compute eigenvalues? faster, right?
+      err_var <- dim_reduce(BOLD, nL)$sigma_sq
+      BOLD2 <- BOLD; rm(BOLD)
+      theta0 <- list(A = BOLD_DR$A)
+      C_diag <- rep(1, nT)
+    }
 
+    #2) Template ICA -----------------------------------------------------------
+    if (verbose) {
+      if (do_spatial) { cat("Initializing with standard Template ICA.\n") }
+      if (!do_spatial) { cat("Computing Template ICA.\n") }
+    }
+    theta00 <- theta0
+    theta00$nu0_sq <- err_var
+    resultEM <- EM_templateICA.independent(template$mean,
+                                           template$var,
+                                           BOLD=BOLD2,
+                                           theta0=theta00,
+                                           C_diag=C_diag,
+                                           maxiter=maxiter,
+                                           epsilon=epsilon,
+                                           verbose=verbose)
+    if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
+    class(resultEM) <- 'tICA'
+
+    #3) Spatial Template ICA ---------------------------------------------------
+    if(do_spatial){
+      resultEM_tICA <- resultEM
+      theta0$kappa <- rep(kappa_init, nL)
+      if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
+      t000 <- Sys.time()
+      resultEM <- EM_templateICA.spatial(template$mean,
+                                         template$var,
+                                         meshes,
+                                         BOLD=BOLD2,
+                                         theta0,
+                                         C_diag,
+                                         maxiter=maxiter,
+                                         epsilon=epsilon,
+                                         verbose=verbose)
+      #common_smoothness=common_smoothness)
+      print(Sys.time() - t000)
+
+      #organize estimates and variances in matrix form
+      resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=nL)
+      resultEM$subjICse <- sqrt(matrix(diag(resultEM$subjICcov), ncol=nL))
+      resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+
+      resultEM$result_tICA <- resultEM_tICA
+      class(resultEM) <- 'stICA'
+    }
   }
 
-  ### 2. PERFORM DIMENSION REDUCTION --> BOLD4
+  # Return DR estimates.
+  resultEM$result_DR <- BOLD_DR
 
-  if(verbose) cat('PERFORMING DIMENSION REDUCTION \n')
-
-  dat_list <- dim_reduce(BOLD3, L)
-
-  BOLD4 <- dat_list$data_reduced
-  H <- dat_list$H
-  Hinv <- dat_list$H_inv
-  C_diag <- dat_list$C_diag #in original template ICA model nu^2 is separate, for spatial template ICA it is part of C
-  if(do_spatial) C_diag <- C_diag * (dat_list$sigma_sq) #(nu^2)HH' in paper
-
-  ### 3. SET INITIAL VALUES FOR PARAMETERS
-
-  #initialize mixing matrix (use dual regression-based estimate for starting value)
-  dat_DR <- dual_reg(BOLD3, template_mean, normA=normA)
-  HA <- H %*% dat_DR$A #apply dimension reduction
-  # sd_A <- sqrt(colVars(Hinv %*% HA)) #get scale of A (after reverse-prewhitening)
-  # HA <- HA %*% diag(1/sd_A) #standardize scale of A
-  theta0 <- list(A = HA)
-  #if(!do_spatial) theta0$nu0_sq = dat_list$sigma_sq
-
-  # #initialize residual variance
-  # theta0$nu0_sq = dat_list$sigma_sq
-  # if(verbose) print(paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
-
-
-  ### 4. RUN EM ALGORITHM!
-
-  #TEMPLATE ICA
-  if(do_spatial) if(verbose) cat('INITIATING WITH STANDARD TEMPLATE ICA\n')
-  theta00 <- theta0
-  theta00$nu0_sq = dat_list$sigma_sq
-  resultEM <- EM_templateICA.independent(template_mean, template_var, BOLD4, theta00, C_diag=dat_list$C_diag, maxiter=maxiter, epsilon=epsilon, verbose=verbose)
-  resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-  class(resultEM) <- 'tICA'
-
-  #SPATIAL TEMPLATE ICA
-  if(do_spatial){
-
-    resultEM_tICA <- resultEM
-
-    # if(dim_reduce_flag == FALSE){
-    #   BOLD4 <- BOLD3
-    #   C_diag <- rep(1, ntime)
-    #   theta0$A <- dat_DR$A
-    # }
-
-    # #starting value for kappas (use data from one hemisphere for speed)
-    # if(is.null(kappa_init)){
-    #   #kappa_init <- 0.5
-    #
-    #   # #This needs to be generalized to multiple meshes
-    #   if(verbose) print('Using ML on tICA estimates to determine starting value for kappa')
-    #   locs <- meshes[[1]]$mesh$idx$loc[!is.na(meshes[[1]]$mesh$idx$loc)]
-    #   n_mesh1 <- length(locs)
-    #
-    #   #organize data and replicates
-    #   for(q in 1:L){
-    #     #print(paste0('IC ',q,' of ',L))
-    #     d_q <- resultEM$subjICmean[1:n_mesh1,q] - template_mean[1:n_mesh1,q]
-    #     #d_q <- tmp[,q] - template_mean[,q]
-    #     rep_q <- rep(q, length(d_q))
-    #     D_diag_q <- sqrt(template_var[1:n_mesh1,q])
-    #     if(q==1) {
-    #       dev <- d_q
-    #       rep <- rep_q
-    #       D_diag <- D_diag_q
-    #     } else {
-    #       dev <- c(dev, d_q)
-    #       rep <- c(rep, rep_q)
-    #       D_diag <- c(D_diag, D_diag_q)
-    #     }
-    #   }
-    #
-    #   #determine MLE of kappa
-    #   #~50 min with V=5200, L=16
-    #   print(system.time(opt <- optim(par=c(0,-20),
-    #                  fn=loglik_kappa_est,
-    #                  method='L-BFGS-B',
-    #                  lower=c(-5,-20),
-    #                  upper=c(1,Inf), #kappa usually less than 1, log(1)=0
-    #                  delta=dev,
-    #                  D_diag=D_diag,
-    #                  mesh=meshes[[1]],
-    #                  Q=L)))
-    #   kappa_init <- exp(opt$par[1])
-    #
-    #   # data_inla <- list(y = dev, x = rep(locs, L), repl=rep)
-    #   # formula <- y ~ -1 + f(x, model = mesh$spde, replicate = repl)
-    #   # result <- INLA::inla(formula, data = data_inla, verbose = FALSE)
-    #   # result_spde <- INLA::inla.spde.result(result, name='x', spde=mesh$spde)
-    #   # kappa_init <- exp(result_spde$summary.log.kappa$mean)
-    #   if(verbose) print(paste0('Starting value for kappa = ',paste(round(kappa_init,3), collapse=', ')))
-    # }
-
-    theta0$kappa <- rep(kappa_init, L)
-
-    # This would need to be generalized to multiple meshes, but currently data locations and mesh locations are the same when templateICA.cifti used
-    # #project BOLD and templates to mesh locations
-    # Amat <- mesh$A # n_orig x n_mesh matrix
-    # nmesh <- ncol(Amat)
-    # if(nrow(Amat) != nvox) stop('Mesh projection matrix (mesh$A) must have nvox rows (nvox is the number of data locations, the columns of BOLD, template_mean and template_var)')
-
-    if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
-    t000 <- Sys.time()
-    resultEM <- EM_templateICA.spatial(template_mean,
-                                       template_var,
-                                       meshes,
-                                       BOLD=BOLD4,
-                                       theta0,
-                                       C_diag,
-                                       maxiter=maxiter,
-                                       epsilon=epsilon,
-                                       verbose=verbose)
-                                       #common_smoothness=common_smoothness)
-    print(Sys.time() - t000)
-
-    #organize estimates and variances in matrix form
-    resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=L)
-    resultEM$subjICvar <- matrix(diag(resultEM$subjICcov), ncol=L)
-  }
-
-  #if(dim_reduce_flag) {
-    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
-  #}
-
-
-  #for stICA, return tICA estimates also
-  if(do_spatial){
-    resultEM$result_tICA <- resultEM_tICA
-    class(resultEM) <- 'stICA'
-  }
-
-  #return DR estimates
-  resultEM$result_DR <- dat_DR
+  #This part problematic for spatial template ICA, but can bring back
+  #for template ICA and FC template ICA.  When we check for bad locations,
+  #can return an error only for spatial template ICA.
 
   #resultEM$keep <- keep
-
   # #map estimates & templates back to original locations
   # if(sum(!keep)>0){
   #   #estimates
-  #   subjICmean <- subjICvar <- matrix(nrow=length(keep), ncol=L)
+  #   subjICmean <- subjICse <- matrix(nrow=length(keep), ncol=L)
   #   subjICmean[keep,] <- resultEM$subjICmean
-  #   subjICvar[keep,] <- resultEM$subjICvar
+  #   subjICse[keep,] <- resultEM$subjICse
   #   resultEM$subjICmean <- subjICmean
-  #   resultEM$subjICvar <- subjICvar
+  #   resultEM$subjICse <- subjICse
   #   #templates
   #   resultEM$template_mean <- template_mean_orig
   #   resultEM$template_var <- template_var_orig
   # }
 
-  return(resultEM)
-
-}
-
-
-
-
-#' Activations of (s)tICA
-#'
-#' Identify areas of activation in each independent component map
-#'
-#' @param result Fitted stICA or tICA model object (of class stICA or tICA)
-#' @param u Activation threshold, default = 0
-#' @param alpha Significance level for joint PPM, default = 0.1
-#' @param type Type of region.  Default is '>' (positive excursion region).
-#' @param method_p If result is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
-#'
-#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
-#'
-#' @export
-#'
-#' @importFrom excursions excursions
-#' @importFrom stats pnorm p.adjust
-#'
-activations <- function(result, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
-
-  if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
-  if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
-  if(!(class(result) %in% c('stICA','tICA'))) stop("result must be of class stICA or tICA")
-
-  L <- ncol(result$A)
-  if(is.null(which.ICs)) which.ICs <- 1:L
-  if(min((which.ICs) %in% (1:L))==0) stop('Invalid entries in which.ICs')
-
-  template_mean <- result$template_mean
-  template_var <- result$template_var
-
-  if(class(result) == 'stICA'){
-
-    if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
-
-    nvox <- nrow(result$subjICmean)
-    L <- ncol(result$subjICmean)
-
-    #identify areas of activation in each IC
-    active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=L)
-
-     for(q in which.ICs){
-      if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
-      inds_q <- (1:nvox) + (q-1)*nvox
-      if(deviation){
-        Dinv_mu_s <-  (as.vector(result$subjICmean) - as.vector(template_mean) - u)/as.vector(sqrt(template_var))
-      } else {
-        Dinv_mu_s <- (as.vector(result$subjICmean) - u)/as.vector(sqrt(template_var))
-      }
-
-      if(q==which.ICs[1]) {
-        #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
-        #we subtract u first since rescaling by D^(-1) would affect u too
-        #save rho from first time running excursions, pass into excursions for other ICs
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q))
-        if(verbose) print(tmp)
-        rho <- res_q$rho
-      } else {
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = result$Omega, type = type, u = 0, ind = inds_q, rho=rho))
-        if(verbose) print(tmp)
-      }
-      active[,q] <- res_q$E[inds_q]
-      jointPPM[,q] <- res_q$F[inds_q]
-      marginalPPM[,q] <- res_q$rho[inds_q]
-      vars[,q] <- res_q$vars[inds_q]
+  # Params, formatted as length-one character vectors to put in "xifti" metadata
+  tICA_params <- list(
+    time_inds=time_inds, center_Bcols=center_Bcols,
+    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    Q2=Q2, Q2_max=Q2_max, Q2_est = Q2_est,
+    brainstructures=brainstructures,
+    tvar_method=tvar_method,
+    spatial_model=do_spatial,
+    rm_mwall=rm_mwall,
+    reduce_dim=reduce_dim,
+    maxiter=maxiter,
+    epsilon=epsilon,
+    kappa_init=kappa_init
+  )
+  tICA_params <- lapply(
+    tICA_params,
+    function(x) {
+      if (is.null(x)) { x <- "NULL"};
+      paste0(as.character(x), collapse=" ")
     }
+  )
 
-    result <- list(active=active, jointPPM=jointPPM, marginalPPM=marginalPPM, vars=vars, u = u, alpha = alpha, type = type, deviation=deviation)
+  # Format output.
+  if (use_mask2) {
+    resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
+    resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
   }
 
-  if(class(result) == 'tICA'){
-
-    if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
-
-    nvox <- nrow(result$subjICmean)
-    L <- ncol(result$subjICmean)
-
-    if(deviation){
-      t_stat <- as.matrix((result$subjICmean - template_mean - u)/sqrt(result$subjICvar))
-    } else {
-      t_stat <- as.matrix((result$subjICmean - u)/sqrt(result$subjICvar))
+  if (FORMAT=="CIFTI" && !is.null(xii1)) {
+    resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
+    resultEM$subjICse <- newdata_xifti(xii1, resultEM$subjICse)
+    if (do_spatial) {
+      resultEM$result_tICA$subjICmean <- newdata_xifti(xii1, resultEM$result_tICA$subjICmean)
+      resultEM$result_tICA$subjICse <- newdata_xifti(xii1, resultEM$result_tICA$subjICse)
     }
+    class(resultEM) <- 'tICA.cifti'
 
-    if(type=='>') pvals <- 1-pnorm(t_stat)
-    if(type=='<') pvals <- pnorm(t_stat)
-    if(type=='!=') pvals <- 2*(1-pnorm(abs(t_stat)))
-
-    if(verbose) cat(paste0('Correcting for multiple comparisons with method ', method_p))
-
-    pvals_adj <- active <- matrix(NA, nrow=nvox, ncol=L)
-    if(is.null(method_p)) method_p <- 'none'
-    for(q in which.ICs){
-      pvals_adj[,q] <- p.adjust(pvals[,q], method=method_p)
-      active[,q] <- (pvals_adj[,q] < alpha)
-    }
-
-    result <- list(
-      active = active, pvals = pvals, pvals_adj = pvals_adj, tstats = t_stat,
-      vars = result$subjICvar, u = u, alpha = alpha, method_p =
-      method_p, deviation=deviation
+  } else if (FORMAT == "NIFTI") {
+    resultEM$subjICmean <- RNifti::asNifti(
+      unmask_subcortex(resultEM$subjICmean, mask, fill=NA)
     )
+    resultEM$subjICse <- RNifti::asNifti(
+      unmask_subcortex(resultEM$subjICse, mask, fill=NA)
+    )
+    if (do_spatial) {
+      resultEM$result_tICA$subjICmean <- RNifti::asNifti(
+        unmask_subcortex(resultEM$result_tICA$subjICmean, mask, fill=NA)
+      )
+      resultEM$result_tICA$subjICse <- RNifti::asNifti(
+        unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=NA)
+      )
+    }
+    resultEM$mask_nii <- mask
+    # resultEM$mask <- mask
+    class(resultEM) <- 'tICA.nifti'
   }
 
-  return(result)
+  resultEM$mask <- mask2
+  resultEM$params <- tICA_params
+  resultEM
 }

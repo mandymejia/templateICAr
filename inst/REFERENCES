@@ -1,0 +1,23 @@
+Bakka, H., Rue, H., Fuglstad, G.-A., Riebler, A. I., Bolin, D., Illian, J., Krainski, E., Simpson, D. P., & Lindgren, F. K. (2018). Spatial modelling with INLA: A review. WIRES (Invited Extended Review), xx(Feb), xx–xx. http://arxiv.org/abs/1802.06350 
+
+Bolin, D., & Lindgren, F. (2018). Calculating Probabilistic Excursion Sets and Related Quantities Using excursions. Journal of Statistical Software, 86(5), 1–20. https://doi.org/10.18637/jss.v086.i05 
+
+Bolin, D., & Lindgren, F. (2021). excursions: Excursion Sets and Contour Credibility Regions for Random Fields. https://github.com/davidbolin/excursions 
+
+Du, Y., & Varadhan, R. (2020). SQUAREM: An R Package for Off-the-Shelf Acceleration of EM, MM and Other EM-Like Monotone Algorithms. Journal of Statistical Software, 92(7), 1–41. https://doi.org/10.18637/jss.v092.i07 Helwig, N. E. (2018). 
+
+ica: Independent Component Analysis. https://CRAN.R-project.org/package=ica 
+
+Mejia, A., & Pham, D. (2021). ciftiTools: Tools for Reading, Writing, Viewing and Manipulating CIFTI Files. https://github.com/mandymejia/ciftiTools 
+
+Pham, D. D., Muschelli, J., & Mejia, A. F. (2017). Bayesian Dimensionality Reduction With PCA Using Penalized Semi-Integrated Likelihood. Journal of Computational and Graphical Statistics. https://doi.org/10.1080/10618600.2017.1340302 
+
+Pham, D. D., Muschelli, J., & Mejia, A. F. (2021). ciftiTools: A package for reading, writing, visualizing and manipulating CIFTI files in R. https://doi.org/10.1016/j.neuroimage.2022.118877 
+
+Rue, H., Lindgren, F., & Teixeira Krainski, E. (2021). INLA: Full Bayesian Analysis of Latent Gaussian Models using Integrated Nested Laplace Approximations. 
+
+Sobczyk, P., Josse, J., & Bogdan, M. (2020). pesel: Automatic Estimation of Number of Principal Components in PCA. https://github.com/psobczyk/pesel 
+
+Varadhan, R. (2021). SQUAREM: Squared Extrapolation Methods for Accelerating EM-Like Monotone Algorithms. https://coah.jhu.edu/people/Faculty_personal_Pages/%0A%20%20%20%20Varadhan.html 
+
+Whitcher, B., Schmid, V. J., & Thornton, A. (2011). Working with the DICOM and NIfTI Data Standards in R. Journal of Statistical Software, 44(6), 1–28. https://www.jstatsoft.org/v44/i06/ 

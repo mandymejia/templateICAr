@@ -1,12 +1,18 @@
 Package: templateICAr
 Type: Package
 Title: Estimate brain networks using the template ICA model employing empirical population priors
-Version: 0.1.0
-Authors@R: 
+Version: 0.2.2
+Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
            email = "mandy.mejia@gmail.com",
-           role = c("aut", "cre"))
+           role = c("aut", "cre")),
+    person(given = "Damon",
+           family = "Pham",
+           email = "damondpham@gmail.com",
+           role = c("aut"),
+           comment = c(ORCID = "0000-0001-7563-4727"))
+    )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: This package contains functions implementing the template ICA model proposed in Mejia et al. (2019) 
     and the spatial template ICA model proposed in proposed in Mejia et al. (2020+). For both models, subject-level
@@ -18,20 +24,28 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports:
-  abind,
-  ciftiTools,
-  excursions,
-  Matrix,
-  matrixStats,
-  methods,
-  oro.nifti,
-  pesel,
-  SQUAREM,
-  stats
+    abind,
+    ciftiTools (>= 0.8.0),
+    excursions,
+    fMRIscrub,
+    ica,
+    Matrix,
+    matrixStats,
+    methods,
+    pesel,
+    SQUAREM,
+    stats
 Suggests:
+    RNifti,
+    covr,
+    doParallel,
+    foreach,
     knitr,
     rmarkdown,
-    INLA (>= 0.0-1468840039)
+    INLA,
+    parallel,
+    testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
