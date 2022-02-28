@@ -107,8 +107,8 @@ the intersection of the masks is used.}
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \value{
-The dual regression S matrices, or \code{NULL} if dual regression
-was skipped due to too many masked data locations.
+The dual regression \strong{S} matrices, or \code{NULL} if dual
+regression was skipped due to too many masked data locations.
 }
 \description{
 Wrapper to \code{dual_reg} used by \code{estimate_template}. The format of \code{BOLD}

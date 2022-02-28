@@ -18,27 +18,34 @@ rm_nuisIC(
 \arguments{
 \item{BOLD}{the row-centered \eqn{V} by \eqn{T} data}
 
-\item{DR, template_mean}{We need an initial estimate of the group ICs, so that we can avoid removing them
-during removal of the estimated noise ICs. Provide either \code{DR} if dual regression has already
-been calculated, or \code{template_mean} (in this context, equivalent to GICA) if it hasn't. One is required.}
+\item{DR, template_mean}{We need an initial estimate of the group ICs, so
+that we can avoid removing them during removal of the estimated noise ICs.
+Provide either \code{DR} if dual regression has already been calculated, or
+\code{template_mean} (in this context, equivalent to a GICA result) if it
+hasn't. Exactly one must be provided.}
 
-\item{Q2}{the number of nuisance ICs. If \code{NULL} (default) will estimate using PESEL.}
+\item{Q2}{The number of nuisance ICs. If \code{NULL} (default) will estimate
+using PESEL.}
 
-\item{Q2_max}{If \code{Q2} is \code{NULL}, PESEL's estimate will be less than or equal to \code{Q2_max}.
-If \code{Q2_max} is \code{NULL}, do not limit PESEL's estimate.}
+\item{Q2_max}{If \code{Q2} is \code{NULL}, PESEL's estimate will be less than
+or equal to \code{Q2_max}. If \code{Q2_max} is \code{NULL} (default), do not
+limit PESEL's estimate.}
 
-\item{checkRowCenter}{Check row means, and raise an error if they are nonzero? Default: \code{TRUE}.}
+\item{checkRowCenter}{Check row means, and raise an error if they are
+nonzero? Default: \code{TRUE}.}
 
 \item{verbose}{If \code{TRUE}, display progress updates.}
 
 \item{return_Q2}{Return (estimated) \code{Q2} too? Default: \code{FALSE}.}
 }
 \value{
-The \eqn{V} by \eqn{T} data with the estimated nuisance ICs subtracted from it.
-If \code{return_Q2}, a list of length two: the second entry will be \code{Q2}.
+The \eqn{V} by \eqn{T} data with the estimated nuisance ICs
+subtracted from it. If \code{return_Q2}, a list of length two: the second
+entry will be \code{Q2}.
 }
 \description{
-Subtract estimated nuisance ICs from data matrix. If the number of nuisance ICs is not provided,
-will estimate using PESEL (the nuisance ICs are a rotation of the nuisance PCs).
+Subtract estimated nuisance ICs from data matrix. If the number of
+nuisance ICs is not provided, will estimate using PESEL (the nuisance ICs
+are a rotation of the nuisance PCs).
 }
 \keyword{internal}

@@ -1,6 +1,6 @@
 #' Normalize BOLD data
 #'
-#' Center the data across space and/or time, scale, and detrend, in that order.
+#' Center the data across space and/or time, detrend, and scale, in that order.
 #'  For dual regression, row centering is required and column centering is not
 #'  recommended. Scaling and detrending depend on the user preference.
 #'
@@ -19,16 +19,7 @@
 #' @return Normalized BOLD data matrix (\eqn{V \times T})
 #'
 #' @export
-#'
-#' @details In order to ensure that all fMRI data share the same scale, the BOLD
-#'  data can also be scaled by the global image standard deviation, equal to
-#'  \deqn{\sqrt{\frac{1}{T}\sum_{t=1}^T \sigma^2_t}}, where \eqn{\sigma^2_t} is
-#'  the standard deviation across all voxels at time point \eqn{t}. If scaling
-#'  is applied to the BOLD timeseries used in template estimation, it should
-#'  also be applied to the BOLD timeseries being analyzed with template ICA
-#'  using the resulting templates to ensure compatibility of scale. The scale is
-#'  computed after detrending.
-#'
+#' 
 #' @importFrom ciftiTools is.xifti
 #' @importFrom fMRIscrub nuisance_regression dct_bases
 #'
@@ -116,22 +107,4 @@ norm_BOLD <- function(
   }
 
   BOLD
-}
-
-#' Scale BOLD (legacy version of \code{norm_BOLD}) that centers both ways.
-#'
-#' @param BOLD fMRI numeric data matrix (\eqn{V \times T})
-#' @param scale A logical value indicating whether the fMRI timeseries should
-#'  be scaled by the image standard deviation. Default: \code{FALSE}.
-
-scale_BOLD <- function(BOLD, scale=FALSE){
-  warning(
-    "`scale_BOLD` has been renamed to `norm_BOLD`. ",
-    " `scale_BOLD` will be removed in a future version. ",
-    "Please replace instances of `scale_BOLD` with `norm_BOLD`. ",
-    "Also, refer to the documentation of `norm_BOLD` to see the changes."
-  )
-
-  if (isFALSE(scale)) { scale <- "none" }
-  norm_BOLD(BOLD, center_cols=TRUE, scale=scale)
 }

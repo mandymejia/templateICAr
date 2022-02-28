@@ -29,7 +29,7 @@ data location's time series by its estimated standard deviation.}
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
 smooth the standard deviation estimates used for local scaling, provide a
 \code{"xifti"} object with data locations in alignment with
-\code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
+\code{BOLD} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
 object is provided (default), do not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases

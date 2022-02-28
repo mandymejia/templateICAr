@@ -1,12 +1,14 @@
-#' Estimate variance decomposition and templates from DR estimates
+#' Estimate template from DR
+#' 
+#' Estimate variance decomposition and templates from DR estimates.
 #'
-#' @param DR the test/retest(s) dual regression estimates, as an array with
+#' @param DR the test/retest dual regression estimates, as an array with
 #'  dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
 #'  of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
 #'  IC networks, and \eqn{V} is the number of data locations.
 #'
 #'  (\eqn{L} and \eqn{V} are collapsed because they are treated equivalently
-#'  in the context of the variance decomposition).
+#'  in the context of calculating the variance decomposition and templates).
 #' @param LV A length-two integer vector giving the dimensions \eqn{L} and
 #'  \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the
 #'  result).
@@ -14,8 +16,10 @@
 #' @return List of two elements: the templates and the variance decomposition.
 #'
 #'  There are two version of the variance template: \code{varUB} gives the
-#'  unbiased variance estimate with values clamped to above zero, and
-#'  \code{varNN} gives the upwardly-biased non-negative variance estimate.
+#'  unbiased variance estimate, and \code{varNN} gives the upwardly-biased 
+#'  non-negative variance estimate. Values in \code{varUB} will need to be 
+#'  clamped above zero before using in \code{templateICA}.
+#' 
 #' @export
 estimate_template_from_DR <- function(
   DR, LV=NULL){
@@ -112,49 +116,52 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 
 #' Estimate template
 #'
-#' Estimate template for Template or Diagnostic ICA based on fMRI data
+#' Estimate template for Template ICA based on fMRI data
 #'
-#' All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must be in
-#'  the same spatial resolution.
+#' All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
+#'  be in the same spatial resolution.
 #'
-#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following formats:
-#'  CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
-#'  \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
-#'  \eqn{T} is the number of timepoints.
+#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following 
+#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
+#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where 
+#'  \eqn{V} is the number of data locations and \eqn{T} is the number of 
+#'  timepoints.
 #'
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
-#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same subjects in the same order.
-#'  If \code{BOLD2} is not provided, \code{BOLD} will be split in half;
-#'  the first half will be the test data and the second half will be the retest data.
-#' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also be a
-#'  (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.
-#'  Its columns will be centered.
+#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same 
+#'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD} 
+#'  will be split in half; the first half will be the test data and the second
+#'  half will be the retest data.
+#' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
+#'  be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
+#'  \code{BOLD}. Its columns will be centered.
 #' @param inds Numeric indices of the group ICs to include in the template. If
 #'  \code{NULL}, use all group ICs (default).
 #'
-#'  If \code{inds} is provided, the ICs not included will be removed after calculating
-#'  dual regression, not before. This is because removing the ICs prior to dual
-#'  regression would leave unmodelled signals in the data, which could bias the
-#'  templates.
+#'  If \code{inds} is provided, the ICs not included will be removed after 
+#'  calculating dual regression, not before. This is because removing the ICs
+#'  prior to dual regression would leave unmodelled signals in the data, which
+#'  could bias the templates.
 #' @inheritParams scale_Param
 #' @inheritParams scale_sm_FWHM_Param
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams center_Bcols_Param
 #' @inheritParams normA_Param
-#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths.
-#'  Character vector indicating which brain structure(s)
+#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
+#'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("left","right")} (cortical surface only).
-#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-#'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
-#'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
-#' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save the DR
-#'  estimates and only return the templates. If \code{TRUE}, the DR estimates are
-#'  returned too. If a single file path, save the DR estimates as an RDS file at
-#'  that location rather than returning them.
+#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
+#'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
+#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  \code{TRUE} corresponding to in-mask voxels.
+#' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save
+#'  the DR estimates and only return the templates. If \code{TRUE}, the DR 
+#'  estimates are returned too. If a single file path, save the DR estimates as
+#'  an RDS file at that location rather than returning them.
 #   [TO DO] If a list of two vectors of file paths with the same lengths as
 #   \code{BOLD}, save the DR estimates as individual files at these locations in
 #   the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}).
@@ -194,16 +201,25 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  the location's value will be \code{NA} in the templates. \code{missingTol}
 #'  can be specified either as a proportion of the number of locations (between
 #'  zero and one), or as a number of locations (integers greater than one).
-#'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.
+#'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
+#'  at a given location.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
 #' @importFrom ciftiTools read_cifti is.xifti write_cifti
 #'
-#' @return A list with \code{"template_mean"} and \code{"template_var"}, as well
-#'  as the \code{var_decomp}, \code{mask}, and \code{params}. The dual 
-#'  regression results are included too if \code{keep_DR}.
+#' @return A list: the \code{template} and \code{var_decomp} with entries in
+#'  matrix format; the \code{mask} of locations without template values due to 
+#'  too many low variance or missing values; the function \code{params} such as
+#'  the type of scaling and detrending performed; the {dat_struct} which can be
+#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or 
+#'  \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
+#'  and \code{DR} if \code{isTRUE(keep_DR)}.
 #'
+#'  Use \code{summary} to print a description of the template results, and
+#'  for CIFTI-format data use \code{plot} to plot the template mean and variance
+#'  estimates. Use \code{\link{export_template}} to save the templates to 
+#'  individual RDS, CIFTI, or NIFTI files (depending on the \code{BOLD} format).
 #' @export
 #'
 estimate_template <- function(
@@ -599,7 +615,7 @@ estimate_template.cifti <- function(
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"),
+  brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,

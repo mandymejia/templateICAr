@@ -40,6 +40,7 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
+  mask = NULL,
   keep_DR = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -68,28 +69,30 @@ estimate_template.nifti(
 )
 }
 \arguments{
-\item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following formats:
-CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
-\eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
-\eqn{T} is the number of timepoints.
+\item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following
+formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
+\code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where
+\eqn{V} is the number of data locations and \eqn{T} is the number of
+timepoints.
 
 If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
-\code{BOLD2} should be the same length as \code{BOLD} and have the same subjects in the same order.
-If \code{BOLD2} is not provided, \code{BOLD} will be split in half;
-the first half will be the test data and the second half will be the retest data.}
+\code{BOLD2} should be the same length as \code{BOLD} and have the same
+subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD}
+will be split in half; the first half will be the test data and the second
+half will be the retest data.}
 
-\item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also be a
-(vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of \code{BOLD}.
-Its columns will be centered.}
+\item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also
+be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
+\code{BOLD}. Its columns will be centered.}
 
 \item{inds}{Numeric indices of the group ICs to include in the template. If
 \code{NULL}, use all group ICs (default).
 
-If \code{inds} is provided, the ICs not included will be removed after calculating
-dual regression, not before. This is because removing the ICs prior to dual
-regression would leave unmodelled signals in the data, which could bias the
-templates.}
+If \code{inds} is provided, the ICs not included will be removed after
+calculating dual regression, not before. This is because removing the ICs
+prior to dual regression would leave unmodelled signals in the data, which
+could bias the templates.}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
 Global scaling will divide the entire data matrix by the mean image standard
@@ -126,21 +129,22 @@ than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
-\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
-Character vector indicating which brain structure(s)
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
+file paths. This is a character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-\code{"nifti"} objects. This is a brain map formatted as a binary array of the same
-size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
+file paths or \code{"nifti"} objects. This is a brain map formatted as a
+binary array of the same spatial dimensions as the fMRI data, with
+\code{TRUE} corresponding to in-mask voxels.}
 
-\item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save the DR
-estimates and only return the templates. If \code{TRUE}, the DR estimates are
-returned too. If a single file path, save the DR estimates as an RDS file at
-that location rather than returning them.}
+\item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save
+the DR estimates and only return the templates. If \code{TRUE}, the DR
+estimates are returned too. If a single file path, save the DR estimates as
+an RDS file at that location rather than returning them.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -164,19 +168,29 @@ values at a given location. If more than this many subjects are masked out,
 the location's value will be \code{NA} in the templates. \code{missingTol}
 can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
-Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out.}
+Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
+at a given location.}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \value{
-A list with \code{"template_mean"} and \code{"template_var"}, as well
-as the \code{var_decomp}, \code{mask}, and \code{params}. The dual
-regression results are included too if \code{keep_DR}.
+A list: the \code{template} and \code{var_decomp} with entries in
+matrix format; the \code{mask} of locations without template values due to
+too many low variance or missing values; the function \code{params} such as
+the type of scaling and detrending performed; the {dat_struct} which can be
+used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
+\code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
+and \code{DR} if \code{isTRUE(keep_DR)}.
+
+Use \code{summary} to print a description of the template results, and
+for CIFTI-format data use \code{plot} to plot the template mean and variance
+estimates. Use \code{\link{export_template}} to save the templates to
+individual RDS, CIFTI, or NIFTI files (depending on the \code{BOLD} format).
 }
 \description{
-Estimate template for Template or Diagnostic ICA based on fMRI data
+Estimate template for Template ICA based on fMRI data
 }
 \details{
-All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must be in
-the same spatial resolution.
+All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
+be in the same spatial resolution.
 }

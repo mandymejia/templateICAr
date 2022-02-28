@@ -8,7 +8,7 @@
 #' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
 #'  smooth the standard deviation estimates used for local scaling, provide a 
 #'  \code{"xifti"} object with data locations in alignment with 
-#'  \code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"} 
+#'  \code{BOLD} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"} 
 #'  object is provided (default), do not smooth.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
@@ -147,8 +147,8 @@ dual_reg <- function(
 #'  the intersection of the masks is used.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
-#' @return The dual regression S matrices, or \code{NULL} if dual regression
-#'  was skipped due to too many masked data locations.
+#' @return The dual regression \strong{S} matrices, or \code{NULL} if dual 
+#'  regression was skipped due to too many masked data locations.
 #'
 #' @keywords internal
 dual_reg2 <- function(

@@ -4,21 +4,21 @@
 \alias{PCA}
 \title{PCA}
 \usage{
-PCA(X, center = TRUE, Q = NULL, Q_max = 100, nv = 0)
+PCA(X, center = TRUE, Q = NULL, Q_max = 100, nV = 0)
 }
 \arguments{
-\item{X}{\eqn{V \times T} fMRI timeseries data matrix, centered by columns}
+\item{X}{\eqn{V \times T} fMRI timeseries data matrix, centered by columns.}
 
 \item{center}{Center the columns of \code{X}? Default: \code{TRUE}. Set to
 \code{FALSE} if already centered.}
 
-\item{Q}{Number of latent dimensions to estimate. If not specified,
+\item{Q}{Number of latent dimensions to estimate. If \code{NULL} (default),
 estimated using PESEL (Sobczyka et al. 2020).}
 
 \item{Q_max}{Maximal number of principal components for automatic
-dimensionality selection with PESEL. Default: \code{100}}
+dimensionality selection with PESEL. Default: \code{100}.}
 
-\item{nv}{Number of principal directions to obtain. Default: \code{0}. Can
+\item{nV}{Number of principal directions to obtain. Default: \code{0}. Can
 also be \code{"Q"} to set equal to the value of \code{Q}. Note that setting
 this value less than \code{Q} does not speed up computation time, but does
 save on memory. Note that the directions will be with respect to \code{X},
@@ -28,6 +28,6 @@ not its covariance matrix.}
 The SVD decomposition
 }
 \description{
-Efficient PCA for a tall matrix (much more rows than columns). Uses the SVD
+Efficient PCA for a tall matrix (many more rows than columns). Uses the SVD
 of the covariance matrix.
 }

@@ -16,24 +16,37 @@ activations(
 )
 }
 \arguments{
-\item{tICA}{Fitted stICA or tICA model object (of class stICA or tICA)}
+\item{tICA}{Fitted (spatial) template ICA object from \code{\link{templateICA}}.}
 
-\item{u}{Activation threshold, default = 0}
+\item{u}{Activation threshold. Default: \code{0}.}
 
-\item{alpha}{Significance level for joint PPM, default = 0.1}
+\item{alpha}{Significance level for joint PPM. Default: \code{0.1}.}
 
-\item{type}{Type of region.  Default is '>' (positive excursion region).}
+\item{type}{Type of region.  Default: \code{">"} (positive excursion region).}
 
-\item{method_p}{If tICA is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.}
+\item{method_p}{If the input is a \code{"tICA"} model object, the type of
+multiple comparisons correction to use for p-values, or \code{NULL} for no
+correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
+Hochberg, i.e. the false discovery rate).}
 
-\item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
+\item{verbose}{If \code{TRUE}, display progress of algorithm. Default:
+\code{FALSE}.}
 
-\item{which.ICs}{Indices of ICs for which to identify activations.  If NULL, use all ICs.}
+\item{which.ICs}{Indices of ICs for which to identify activations.  If
+\code{NULL} (default), use all ICs.}
 
-\item{deviation}{If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement}
+\item{deviation}{If \code{TRUE} identify significant deviations from the
+template mean, rather than significant areas of engagement. Default:
+\code{FALSE}.}
 }
 \value{
-A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+A list containing activation maps for each IC and the joint and
+marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
+data, then the activations maps will be formatted accordingly.
+
+Use \code{summary} to obtain information about the activations results.
+For CIFTI-format activations, use \code{plot} to visualize the activation
+maps.
 }
 \description{
 Identify areas of activation in each independent component map

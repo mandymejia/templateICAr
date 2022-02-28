@@ -26,6 +26,12 @@ and \code{"rds"} for data input.}
 
 \item{var_method}{\code{"non-negative"} (default) or \code{"unbiased"}}
 }
+\value{
+If \code{is.null(out_fname)}, the templates in data matrix,
+\code{"xifti"}, or \code{"nifti"} format, to match the format of the
+original BOLD data. Otherwise, the paths to the new files specified by
+\code{out_fname}.
+}
 \description{
 Export the templates (mean and variance) as separate files for
 visualization or processing outside of \code{templateICAr}.

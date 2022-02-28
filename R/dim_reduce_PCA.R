@@ -1,19 +1,20 @@
-#' PCA-based Dimension Reduction and Prewhitening for ICA
+#' PCA-based Dimension Reduction and Prewhitening
 #'
 #' Performs dimension reduction and prewhitening based on probabilistic PCA using 
 #'  SVD. If dimensionality is not specified, it is estimated using the method 
 #'  described in Minka (2008).
 #'
 #' @param X \eqn{V \times T} fMRI timeseries data matrix, centered by columns.
-#' @param Q Number of latent dimensions to estimate. If not specified, 
+#' @param Q Number of latent dimensions to estimate. If \code{NULL} (default), 
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
-#'  dimensionality selection with PESEL. Default: \code{100}
-#' @return A list containing the dimension-reduced data (data_reduced, a 
-#'  \eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (H, a \eqn{QxT} 
-#'  matrix) and its (pseudo-)inverse (Hinv, a \eqn{TxQ} matrix), the noise variance 
-#'  (sigma_sq), the correlation matrix of the dimension-reduced data 
-#'  (C_diag, a \eqn{QxQ} matrix), and the dimensionality (\eqn{Q})
+#'  dimensionality selection with PESEL. Default: \code{100}.
+#' @return A list containing the dimension-reduced data (\code{data_reduced}, a 
+#'  \eqn{V \times Q} matrix), prewhitening/dimension reduction matrix (\code{H}, 
+#'  a \eqn{QxT} matrix) and its (pseudo-)inverse (\code{Hinv}, a \eqn{TxQ} 
+#'  matrix), the noise variance (\code{sigma_sq}), the correlation matrix of the
+#'  dimension-reduced data (\code{C_diag}, a \eqn{QxQ} matrix), and the 
+#'  dimensionality (\code{Q}).
 #' 
 #' @export
 #'
@@ -49,27 +50,28 @@ dim_reduce <- function(X, Q=NULL, Q_max=100){
 
 #' PCA
 #' 
-#' Efficient PCA for a tall matrix (much more rows than columns). Uses the SVD
+#' Efficient PCA for a tall matrix (many more rows than columns). Uses the SVD
 #'  of the covariance matrix.
 #' 
-#' @param X \eqn{V \times T} fMRI timeseries data matrix, centered by columns
+#' @param X \eqn{V \times T} fMRI timeseries data matrix, centered by columns.
 #' @param center Center the columns of \code{X}? Default: \code{TRUE}. Set to
 #'  \code{FALSE} if already centered. 
-#' @param Q Number of latent dimensions to estimate. If not specified, 
+#' @param Q Number of latent dimensions to estimate. If \code{NULL} (default), 
 #'  estimated using PESEL (Sobczyka et al. 2020).
 #' @param Q_max Maximal number of principal components for automatic 
-#'  dimensionality selection with PESEL. Default: \code{100}
-#' @param nv Number of principal directions to obtain. Default: \code{0}. Can
+#'  dimensionality selection with PESEL. Default: \code{100}.
+#' @param nV Number of principal directions to obtain. Default: \code{0}. Can
 #'  also be \code{"Q"} to set equal to the value of \code{Q}. Note that setting
 #'  this value less than \code{Q} does not speed up computation time, but does
 #'  save on memory. Note that the directions will be with respect to \code{X},
 #'  not its covariance matrix.
 #' 
 #' @importFrom pesel pesel
+#' @export
 #' 
 #' @return The SVD decomposition
 #' 
-PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nv=0) {
+PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nV=0) {
   nvox <- nrow(X) #number of brain locations
   ntime <- ncol(X) #number of fMRI volumes (reduce this)
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
@@ -86,15 +88,15 @@ PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nv=0) {
   if(is.null(Q)){
     Q <- suppressWarnings(pesel(X, npc.max=Q_max, method='homogenous'))$nPCs
   }
-  if (nv == "Q") { nv <- Q }
-  if (nv > Q) { warning("nv > Q, so setting nv to Q."); nv <- Q }
+  if (nV == "Q") { nV <- Q }
+  if (nV > Q) { warning("nV > Q, so setting nV to Q."); nV <- Q }
 
   # Perform dimension reduction
   out <- svd(crossprod(X) / (nvox-1), nu=Q, nv=0)
 
   # Compute directions. (out$v would have the directions for XtX, not X.)
-  if (nv > 0) {
-    out$v <- X %*% out$u[,seq(nv)] %*% diag(1/out$d[seq(nv)])
+  if (nV > 0) {
+    out$v <- X %*% out$u[,seq(nV)] %*% diag(1/out$d[seq(nV)])
   }
 
   out

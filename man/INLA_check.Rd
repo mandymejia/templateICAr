@@ -12,3 +12,4 @@ INLA_check()
 \description{
 Check for INLA
 }
+\keyword{internal}

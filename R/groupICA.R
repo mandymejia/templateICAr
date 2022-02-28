@@ -229,7 +229,7 @@ groupICA.cifti <- function(
     # } #note: still use SVD to standardize variance
     # TIMER -----------------------------------------
     tick = Sys.time()
-    bigY[,cols_ii] <- PCA(BOLD_ii, Q=num_PCs_ii, nv="Q")$v
+    bigY[,cols_ii] <- PCA(BOLD_ii, Q=num_PCs_ii, nV="Q")$v
     # TIMER -----------------------------------------
     # [TO DO]: if verbose?
     cat("Single subject dimension reduction timer:\n")
@@ -243,7 +243,7 @@ groupICA.cifti <- function(
 
   # PERFORM GROUP-LEVEL PCA FOR DIMENSION REDUCTION
   if (verbose) { cat("Performing group-level PCA.\n") }
-  bigY <- t(PCA(bigY, Q=num_ICs, nv="Q")$v)
+  bigY <- t(PCA(bigY, Q=num_ICs, nV="Q")$v)
 
   # PERFORM GROUP-LEVEL ICA
   if (verbose) { cat("Performing group-level ICA.\n") }

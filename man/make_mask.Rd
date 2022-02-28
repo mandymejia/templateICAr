@@ -9,9 +9,10 @@ make_mask(BOLD, meanTol = -Inf, varTol = 1e-06, verbose = TRUE)
 \arguments{
 \item{BOLD}{A \eqn{V \times T} numeric matrix. Each row is a location.}
 
-\item{meanTol, varTol}{Tolerance for mean and variance of each data location. Locations which
-do not meet these thresholds are masked out of the analysis. Defaults:
-\code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for {varTol}.}
+\item{meanTol, varTol}{Tolerance for mean and variance of each data location.
+Locations which do not meet these thresholds are masked out of the analysis.
+Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for
+{varTol}.}
 
 \item{verbose}{Print messages counting how many locations are removed?}
 }

@@ -2,16 +2,29 @@
 #'
 #' Identify areas of activation in each independent component map
 #'
-#' @param tICA Fitted stICA or tICA model object (of class stICA or tICA)
-#' @param u Activation threshold, default = 0
-#' @param alpha Significance level for joint PPM, default = 0.1
-#' @param type Type of region.  Default is '>' (positive excursion region).
-#' @param method_p If tICA is type tICA, the type of multiple comparisons correction to use for p-values, or NULL for no correction.  See \code{help(p.adjust)}.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If NULL, use all ICs.
-#' @param deviation If \code{TRUE}. identify significant deviations from the template mean, rather than significant areas of engagement
+#' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
+#' @param u Activation threshold. Default: \code{0}.
+#' @param alpha Significance level for joint PPM. Default: \code{0.1}.
+#' @param type Type of region.  Default: \code{">"} (positive excursion region).
+#' @param method_p If the input is a \code{"tICA"} model object, the type of 
+#'  multiple comparisons correction to use for p-values, or \code{NULL} for no 
+#'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini & 
+#'  Hochberg, i.e. the false discovery rate).
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: 
+#'  \code{FALSE}.
+#' @param which.ICs Indices of ICs for which to identify activations.  If 
+#'  \code{NULL} (default), use all ICs.
+#' @param deviation If \code{TRUE} identify significant deviations from the 
+#'  template mean, rather than significant areas of engagement. Default: 
+#'  \code{FALSE}.
 #'
-#' @return A list containing activation maps for each IC and the joint and marginal PPMs for each IC.
+#' @return A list containing activation maps for each IC and the joint and 
+#'  marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
+#'  data, then the activations maps will be formatted accordingly. 
+#' 
+#'  Use \code{summary} to obtain information about the activations results.
+#'  For CIFTI-format activations, use \code{plot} to visualize the activation 
+#'  maps.
 #'
 #' @export
 #'
@@ -19,7 +32,9 @@
 #' @importFrom stats pnorm p.adjust
 #' @importFrom ciftiTools unmask_subcortex
 #'
-activations <- function(tICA, u=0, alpha=0.01, type=">", method_p='BH', verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+activations <- function(
+  tICA, u=0, alpha=0.01, type=">", method_p='BH', 
+  verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
   is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")

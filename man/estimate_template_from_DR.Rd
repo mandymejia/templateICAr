@@ -2,18 +2,18 @@
 % Please edit documentation in R/estimate_template.R
 \name{estimate_template_from_DR}
 \alias{estimate_template_from_DR}
-\title{Estimate variance decomposition and templates from DR estimates}
+\title{Estimate template from DR}
 \usage{
 estimate_template_from_DR(DR, LV = NULL)
 }
 \arguments{
-\item{DR}{the test/retest(s) dual regression estimates, as an array with
+\item{DR}{the test/retest dual regression estimates, as an array with
 dimensions \eqn{M \times N \times (L \times V)}, where \eqn{M} is the number
 of visits (2), \eqn{N} is the number of subjects, \eqn{L} is the number of
 IC networks, and \eqn{V} is the number of data locations.
 
 (\eqn{L} and \eqn{V} are collapsed because they are treated equivalently
-in the context of the variance decomposition).}
+in the context of calculating the variance decomposition and templates).}
 
 \item{LV}{A length-two integer vector giving the dimensions \eqn{L} and
 \eqn{V} to reshape the result. Default: \code{NULL} (do not reshape the
@@ -23,9 +23,10 @@ result).}
 List of two elements: the templates and the variance decomposition.
 
 There are two version of the variance template: \code{varUB} gives the
-unbiased variance estimate with values clamped to above zero, and
-\code{varNN} gives the upwardly-biased non-negative variance estimate.
+unbiased variance estimate, and \code{varNN} gives the upwardly-biased
+non-negative variance estimate. Values in \code{varUB} will need to be
+clamped above zero before using in \code{templateICA}.
 }
 \description{
-Estimate variance decomposition and templates from DR estimates
+Estimate variance decomposition and templates from DR estimates.
 }

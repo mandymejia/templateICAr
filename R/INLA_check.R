@@ -2,6 +2,7 @@
 #' 
 #' @return \code{NULL}, invisibly
 #' 
+#' @keywords internal
 INLA_check <- function(){
   if (!requireNamespace("INLA", quietly = TRUE)) { 
     stop(

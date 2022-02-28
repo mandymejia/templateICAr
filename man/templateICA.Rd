@@ -31,22 +31,25 @@ templateICA(
 )
 }
 \arguments{
-\item{BOLD}{Vector of subject-level fMRI data in one of the following formats:
-CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, \code{"nifti"} objects, or
-\eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
-\eqn{T} is the number of timepoints.
+\item{BOLD}{Vector of subject-level fMRI data in one of the following
+formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
+\code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
+is the number of data locations and \eqn{T} is the number of timepoints.
 
-If multiple BOLD data are provided, they will be independently centered, scaled, and detrended (if applicable),
-and then they will be concatenated together prior to denoising (if applicable) and computing the initial dual regression estimate.}
+If multiple BOLD data are provided, they will be independently centered,
+scaled, and detrended (if applicable), and then they will be concatenated
+together followed by denoising (if applicable) and computing the initial
+dual regression estimate.}
 
-\item{template}{Template estimates in a format compatible with \code{BOLD}, from
-\code{\link{estimate_template}}.}
+\item{template}{Template estimates in a format compatible with \code{BOLD},
+from \code{\link{estimate_template}}.}
 
-\item{tvar_method}{Which calculation of the template variance to use: \code{"non-negative"}
-(default) or \code{"unbiased"}. The unbiased template variance is
-based on the assumed mixed effects/ANOVA model, whereas the non-negative template
-variance adds to it to account for greater potential between-subjects variation.
-(The template mean is the same for either choice of \code{tvar_method}.)}
+\item{tvar_method}{Which calculation of the template variance to use:
+\code{"non-negative"} (default) or \code{"unbiased"}. The unbiased template
+variance is based on the assumed mixed effects/ANOVA model, whereas the
+non-negative template variance adds to it to account for greater potential
+between-subjects variation. (The template mean is the same for either choice
+of \code{tvar_method}.)}
 
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
 Global scaling will divide the entire data matrix by the mean image standard
@@ -82,16 +85,17 @@ than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
 and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
 \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
 
-\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
-Character vector indicating which brain structure(s)
+\item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
+file paths. This is a character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("left","right")} (cortical surface only).}
 
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-\code{"nifti"} objects. This is a brain map formatted as a binary array of the same
-size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
+file paths or \code{"nifti"} objects. This is a brain map formatted as a
+binary array of the same spatial dimensions as the fMRI data, with
+\code{TRUE} corresponding to in-mask voxels.}
 
 \item{time_inds}{Subset of fMRI BOLD volumes to include in analysis.
 If \code{NULL} (default), use all volumes. Subsetting is performed before
@@ -122,32 +126,44 @@ If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of mes
 
 \item{resamp_res}{Only applies if \code{BOLD} represents CIFTI-format data.
 The target resolution for resampling (number of cortical surface vertices
-per hemisphere). A value less than 10000 is recommended for computational
-feasibility. If \code{NULL} (default), do not perform resampling.}
+per hemisphere). For spatial modelling, a value less than 10000 is
+recommended for computational feasibility. If \code{NULL} (default), do not
+perform resampling.}
 
-\item{rm_mwall}{Only applies if \code{BOLD} represents CIFTI-format data. Should medial wall (missing data) locations be removed from the mesh?
-If \code{TRUE}, faster computation but less accurate estimates at the boundary of wall.}
+\item{rm_mwall}{Only applies if \code{BOLD} represents CIFTI-format data.
+Should medial wall (missing data) locations be removed from the mesh?
+If \code{TRUE}, faster computation but less accurate estimates at the
+boundary of wall.}
 
-\item{reduce_dim}{Reduce the temporal dimension of the data using PCA? Default: \code{TRUE}.
-Skipping dimension reduction will slow the model estimation, but may result in
-more accurate results.}
+\item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
+Default: \code{TRUE}. Skipping dimension reduction will slow the model
+estimation, but may result in more accurate results.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default: \code{.01}.}
 
-\item{kappa_init}{Starting value for kappa.  Default: \code{0.2}.}
+\item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
 
-\item{usePar}{Parallelize the computation over data locations? Default: \code{FALSE}. Can be the number of cores
-to use or \code{TRUE}, which will use the number on the PC minus two.}
+\item{usePar}{Parallelize the computation over data locations? Default:
+\code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
+use the number on the PC minus two.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm}
 }
 \value{
-A list containing the estimated independent components S
-(a VxL matrix), their mixing matrix A (a TxL matrix), and the number of
-nuisance ICs estimated (Q_nuis)
+A (spatial) template ICA object, which is a list containing:
+\code{subjICmean}, the \eqn{V \times L} estimated independent components
+\strong{S}; \code{subjICse}, the standard errors of \strong{S}; the
+\code{mask} of locations without template values due to too many low
+variance or missing values; and the function \code{params} such as
+the type of scaling and detrending performed.
+
+If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
+\code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}
+objects, respectively.
 }
 \description{
-Perform template independent component analysis (ICA) using expectation-maximization (EM)
+Perform template independent component analysis (ICA) using
+expectation-maximization (EM).
 }

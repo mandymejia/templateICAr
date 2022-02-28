@@ -44,6 +44,12 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 #'  and \code{"rds"} for data input.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' 
+#' @return If \code{is.null(out_fname)}, the templates in data matrix, 
+#'  \code{"xifti"}, or \code{"nifti"} format, to match the format of the
+#'  original BOLD data. Otherwise, the paths to the new files specified by
+#'  \code{out_fname}.
+#'
+#' @export
 export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unbiased")){
   
   # Check template format.
