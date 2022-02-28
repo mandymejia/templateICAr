@@ -21,14 +21,13 @@ algorithms. Both models employ an expectation-maximization algorithm for
 estimation of the latent brain networks and unknown model parameters.
 
 Template ICA consists of three steps. The main functions associated with
-each step are listed below. Functions ending in `.cifti` or `.nifti` are
-designed to work directly with CIFTI or NIFTI-format fMRI data. 1.
-Template estimation (functions: `estimate_template.cifti` and
-`estimate_template.nifti`) 2. Template ICA model estimation
-(single-subject) (functions: `templateICA`, `templateICA.cifti` and
-`templateICA.nifti`) 3. Identification of areas of engagement in each IC
-(or deviation from the template mean) (functions: `activations`,
-`activations.cifti`)
+each step are listed below.
+
+1.  Template estimation: `estimate_template`. Can export the results
+    with `export_template`.
+2.  Template ICA model estimation (single-subject): `templateICA`.
+3.  Identification of areas of engagement in each IC (or deviation from
+    the template mean): `activations`.
 
 ## Installation
 
