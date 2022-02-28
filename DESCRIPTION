@@ -21,6 +21,7 @@ Description: This package contains functions implementing the template ICA model
     brain networks and unknown model parameters.
 Depends: R (>= 3.6.0)
 License: GPL-3
+Additional_repositories: https://inla.r-inla-download.org/R/testing
 Encoding: UTF-8
 LazyData: true
 Imports:
