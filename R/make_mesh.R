@@ -74,8 +74,8 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' Create INLA mesh and observation weight matrix based on a binary brain mask
 #'
 #' This function requires the \code{INLA} package, which is not a CRAN 
-#'  package. See \url{http://www.r-inla.org/download} for easy installation 
-#'  instructions.
+#'  package. See \url{https://www.r-inla.org/download-install} for easy 
+#'  installation instructions.
 #' 
 #' @param mask Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
 #'

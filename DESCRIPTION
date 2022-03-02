@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
-Title: Estimate brain networks using the template ICA model employing empirical population priors
-Version: 0.2.2
+Title: Estimate Brain Networks using the Template ICA Model Employing Empirical Population Priors
+Version: 0.2.3
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -14,10 +14,12 @@ Authors@R: c(
            comment = c(ORCID = "0000-0001-7563-4727"))
     )
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
-Description: This package contains functions implementing the template ICA model proposed in Mejia et al. (2019) 
-    <doi:10.1080/01621459.2019.1679638> and the spatial template ICA model proposed in proposed in Mejia et al. (2020+). 
-    For both models, subject-level brain networks are estimated as deviations from known population-level networks, 
-    which can be estimated using standard ICA algorithms. Both models employ an expectation-maximization algorithm 
+Description: Functions implementing the template ICA model proposed in Mejia et
+    al. (2019) <doi:10.1080/01621459.2019.1679638> and the spatial template ICA
+    model proposed in proposed in Mejia et al. (2020+). For both models, 
+    subject-level brain networks are estimated as deviations from known 
+    population-level networks, which can be estimated using standard ICA 
+    algorithms. Both models employ an expectation-maximization algorithm 
     for estimation of the latent brain networks and unknown model parameters.
 Depends: R (>= 3.6.0)
 License: GPL-3
