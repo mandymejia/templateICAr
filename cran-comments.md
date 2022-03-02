@@ -6,7 +6,7 @@ R CMD check succeeded
 
 *This will be a new R extension.*
 
-## Response to reviewer comments
+## Resubmission
 
   * Found the following (possibly) invalid URLs:
   
