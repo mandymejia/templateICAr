@@ -5,3 +5,4 @@
 .Ruserdata
 *.pper
 EM_templateICA2.R 
+tests/testWithData/data
