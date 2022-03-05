@@ -229,8 +229,8 @@ dual_reg2 <- function(
   }
 
   # Check BOLD (and BOLD2) dimensions correspond with `GICA` and `mask`.
-  stopifnot(ldB-1 == length(nI))
-  stopifnot(all(dBOLD[seq(ldB-1)] == nI))
+  if(!(ldB-1 == length(nI))) { stop("`GICA` and BOLD spatial dimensions do not match.") }
+  if(!all(dBOLD[seq(ldB-1)] == nI)) { stop("`GICA` and BOLD spatial dimensions do not match.") }
 
   # Vectorize `BOLD` (and `BOLD2`). --------------------------------------------
   if (FORMAT=="NIFTI") {
