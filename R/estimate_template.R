@@ -383,8 +383,8 @@ estimate_template <- function(
     if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
-      cat("Coercing `mask` to a logical array with `as.logical`.\n")
-      mask[] <- as.logical(mask)
+      cat("Coercing `mask` to a logical array.\n")
+      mask <- array(as.logical(mask), dim=dim(mask))
     }
     nI <- dim(mask); nV <- sum(mask)
     stopifnot(length(dim(GICA)) %in% c(2, length(nI)+1))
