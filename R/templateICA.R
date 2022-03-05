@@ -310,7 +310,7 @@ templateICA <- function(
       stop(paste0(
         ifelse(length(bs_missing) > 1, "These brain structures are", "This brain structure is"),
         " not included in the template: ",
-        paste(bs_missing, collapse=", "), ". Adjust the `brainstructure` argument accordingly."
+        paste(bs_missing, collapse=", "), ". Adjust the `brainstructures` argument accordingly."
       ))
     } else if (!all(tbs %in% bs2)) {
       bs_missing <- tbs[!(tbs %in% bs2)]
@@ -345,6 +345,9 @@ templateICA <- function(
     nI <- nrow(template$template$mean)
   }
 
+  # Get IC inds.
+  IC_inds <- template$params$inds
+
   # Get the data mask based on missing values, & low variance locations
   mask2 <- template$mask
   use_mask2 <- (!is.null(mask2)) && (!all(mask2))
@@ -353,6 +356,8 @@ templateICA <- function(
     mean = template$template$mean,
     var = template$template[[tvar_name]]
   )
+  # Make variance values non-negative (for unbiased template.)
+  template$var[] <- pmax(0, template$var)
   # Get the template dimensions.
   nV <- nrow(template$mean)
   nL <- ncol(template$mean)
@@ -745,11 +750,19 @@ templateICA <- function(
   }
 
   if (FORMAT=="CIFTI" && !is.null(xii1)) {
-    resultEM$subjICmean <- newdata_xifti(xii1, resultEM$subjICmean)
-    resultEM$subjICse <- newdata_xifti(xii1, resultEM$subjICse)
+    xiiL <- select_xifti(xii1, rep(1, nL))
+    if (grepl("all", IC_inds)) {
+      IC_inds <- seq(nL)
+    } else {
+      IC_inds <- strsplit(IC_inds, " ")[[1]]
+      if (length(IC_inds) != nL) { IC_inds <- rep("?", nL) } # TO-DO: improve
+    }
+    xiiL$meta$cifti$names <- paste("IC", IC_inds)
+    resultEM$subjICmean <- newdata_xifti(xiiL, resultEM$subjICmean)
+    resultEM$subjICse <- newdata_xifti(xiiL, resultEM$subjICse)
     if (do_spatial) {
-      resultEM$result_tICA$subjICmean <- newdata_xifti(xii1, resultEM$result_tICA$subjICmean)
-      resultEM$result_tICA$subjICse <- newdata_xifti(xii1, resultEM$result_tICA$subjICse)
+      resultEM$result_tICA$subjICmean <- newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
+      resultEM$result_tICA$subjICse <- newdata_xifti(xiiL, resultEM$result_tICA$subjICse)
     }
     class(resultEM) <- 'tICA.cifti'
 
