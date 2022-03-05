@@ -1,10 +1,10 @@
 # Build --> Install and Restart
-ciftiTools.setOption("wb_path", "~/../Desktop/fMRI/workbench")
 
 # Setup ------------------------------------------------------------------------
 # ciftiTools
 library(ciftiTools)
 print(packageVersion("ciftiTools"))
+ciftiTools.setOption("wb_path", "~/../Desktop/fMRI/workbench")
 
 # templateICAr
 library(templateICAr)
@@ -26,18 +26,12 @@ nii_fnames <- c(
   paste0(data_dir, "/", subjects, "_rfMRI_REST2_LR.nii.gz")
 )
 
+# CIFTI ------------------------------------------------------------------------
+
 # Load CIFTI group IC
 cgIC_fname <- file.path(data_dir, "melodic_IC_100.4k.dscalar.nii")
 cgIC <- read_cifti(cgIC_fname)
 xii1 <- select_xifti(cgIC, 1) * 0
-
-# Load NIFTI group IC
-ngIC_fname <- file.path(data_dir, "melodic_IC_sum.nii.gz")
-ngIC <- readNifti(ngIC_fname)
-nmask <- !apply(ngIC==0, seq(3), all)
-RNifti::writeNifti(nmask, file.path(data_dir, "mask.nii.gz"))
-
-# CIFTI ------------------------------------------------------------------------
 
 tm <- estimate_template(
   cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE
@@ -45,6 +39,11 @@ tm <- estimate_template(
 tm
 plot(tm)
 rgl.close(); rgl.close()
+tICA <- templateICA(cii_fnames[5], tm, scale=FALSE, maxiter=7)
+plot(tICA)
+rgl.close()
+plot(activations(tICA))
+rgl.close()
 
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
@@ -83,4 +82,27 @@ tICA
 plot(tICA)
 plot(activations(tICA))
 
-# NIFTI: TO DO
+# NIFTI ------------------------------------------------------------------------
+
+rm(cgIC, xii1)
+
+# Load NIFTI group IC
+ngIC_fname <- file.path(data_dir, "melodic_IC_sum.nii.gz")
+ngIC <- readNifti(ngIC_fname)
+nmask <- apply(ngIC!=0, seq(3), all)
+mask_fname <- file.path(data_dir, "mask.nii.gz")
+RNifti::writeNifti(nmask, mask_fname)
+
+# mask erosion?
+tm <- estimate_template(
+  nii_fnames[seq(4)], GICA=ngIC_fname, scale=FALSE,
+  keep_DR=TRUE, mask=mask_fname, varTol = 500, maskTol=.3, missingTol=.9
+)
+tm
+plot(tm)
+#rgl.close(); rgl.close()
+tICA <- templateICA(nii_fnames[2], tm, scale=FALSE, maxiter=7, mask=mask_fname)
+plot(tICA)
+#rgl.close()
+plot(activations(tICA))
+#rgl.close()
