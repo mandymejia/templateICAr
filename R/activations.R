@@ -32,6 +32,10 @@
 #' @importFrom stats pnorm p.adjust
 #' @importFrom ciftiTools unmask_subcortex
 #'
+#' @examples
+#' \dontrun{
+#'  activations(tICA_result, alpha=.05, deviation=TRUE)
+#' }
 activations <- function(
   tICA, u=0, alpha=0.01, type=">", method_p='BH', 
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){

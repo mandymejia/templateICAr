@@ -168,3 +168,9 @@ objects, respectively.
 Perform template independent component analysis (ICA) using
 expectation-maximization (EM).
 }
+\examples{
+\dontrun{
+ tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
+ templateICA(newcii_fname, tm, spatial_model=TRUE, resamp_res=2000)
+}
+}

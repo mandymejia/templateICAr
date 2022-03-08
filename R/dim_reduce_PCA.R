@@ -21,7 +21,7 @@
 #' nT <- 30
 #' nV <- 400
 #' nQ <- 7
-#' X <- matrix(rnorm(nV*nQ), nrow=nV) %*% diag(seq(nQ, 1)) *%* matrix(rnorm(nQ*nT), nrow=nQ) 
+#' X <- matrix(rnorm(nV*nQ), nrow=nV) %*% diag(seq(nQ, 1)) %*% matrix(rnorm(nQ*nT), nrow=nQ) 
 #' dim_reduce(X, Q=nQ)
 #' 
 dim_reduce <- function(X, Q=NULL, Q_max=100){

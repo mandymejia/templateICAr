@@ -110,6 +110,11 @@
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
+#' @examples
+#' \dontrun{
+#'  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
+#'  templateICA(newcii_fname, tm, spatial_model=TRUE, resamp_res=2000)
+#' }
 templateICA <- function(
   BOLD, template, tvar_method=c("non-negative", "unbiased"),
   scale=c("global", "local", "none"), scale_sm_FWHM=2,
