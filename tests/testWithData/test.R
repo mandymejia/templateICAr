@@ -68,10 +68,12 @@ tm <- estimate_template(
 tm
 rm(cii)
 plot(tm, idx=3)
+rgl.close(); rgl.close()
 
 tICA <- templateICA(cii_fnames[2], tm, brainstructures="left")
 tICA
 plot(tICA)
+rgl.close()
 # plot(activations(tICA))
 
 tICA <- templateICA(
@@ -80,7 +82,14 @@ tICA <- templateICA(
 )
 tICA
 plot(tICA)
+rgl.close()
+# temp:
+tICA$subjICmean$data$cortex_left[is.na(tICA$subjICmean$data$cortex_left)] <- 0
+tICA$subjICse$data$cortex_left[is.na(tICA$subjICse$data$cortex_left)] <- 5
+tICA$mask <- rep(TRUE, length(tICA$mask))
+# -----
 plot(activations(tICA))
+rgl.close()
 
 # NIFTI ------------------------------------------------------------------------
 
@@ -99,10 +108,6 @@ tm <- estimate_template(
   keep_DR=TRUE, mask=mask_fname, varTol = 500, maskTol=.3, missingTol=.9
 )
 tm
-plot(tm)
-#rgl.close(); rgl.close()
 tICA <- templateICA(nii_fnames[2], tm, scale=FALSE, maxiter=7, mask=mask_fname)
-plot(tICA)
-#rgl.close()
-plot(activations(tICA))
-#rgl.close()
+tICA
+activations(tICA)
