@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks Using Empirical Population Priors
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
