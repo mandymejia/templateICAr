@@ -153,7 +153,8 @@ templateICA <- function(
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
-  stopifnot(is.numeric(varTol) && length(varTol)==1 && varTol > 0)
+  stopifnot(is.numeric(varTol) && length(varTol)==1)
+  if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
     stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
