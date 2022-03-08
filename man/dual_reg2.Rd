@@ -92,7 +92,8 @@ size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
 Default: \code{1e-6}. Variance is calculated on the original data, before
-any normalization.}
+any normalization. Set to \code{0} to avoid removing locations due to
+low variance.}
 
 \item{maskTol}{Tolerance for number of locations masked out due to low
 variance or missing values. If more than this many locations are masked out,

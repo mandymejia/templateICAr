@@ -194,3 +194,22 @@ Estimate template for Template ICA based on fMRI data
 All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
 be in the same spatial resolution.
 }
+\examples{
+nT <- 30
+nV <- 400
+nQ <- 7
+mU <- matrix(rnorm(nV*nQ), nrow=nV)
+mS <- mU \%*\% diag(seq(nQ, 1)) \%*\% matrix(rnorm(nQ*nT), nrow=nQ)
+BOLD <- list(B1=mS, B2=mS, B3=mS)
+BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
+GICA <- mU
+estimate_template(BOLD=BOLD, GICA=mU)
+
+\dontrun{
+ estimate_template(
+   run1_cifti_fnames, run2_cifti_fnames, 
+   gICA_cifti_fname, brainstructures="all",
+   scale="local", detrend_DCT=7, Q2=NULL, varTol=10
+ )
+}
+}

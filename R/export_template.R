@@ -50,6 +50,11 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 #'  \code{out_fname}.
 #'
 #' @export
+#' @examples
+#' \dontrun{
+#'  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
+#'  export_template(tm, out_fname="my_template", var_method="unbiased")
+#' }
 export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unbiased")){
   
   # Check template format.

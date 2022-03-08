@@ -222,6 +222,24 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  individual RDS, CIFTI, or NIFTI files (depending on the \code{BOLD} format).
 #' @export
 #'
+#' @examples
+#' nT <- 30
+#' nV <- 400
+#' nQ <- 7
+#' mU <- matrix(rnorm(nV*nQ), nrow=nV)
+#' mS <- mU %*% diag(seq(nQ, 1)) %*% matrix(rnorm(nQ*nT), nrow=nQ)
+#' BOLD <- list(B1=mS, B2=mS, B3=mS)
+#' BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
+#' GICA <- mU
+#' estimate_template(BOLD=BOLD, GICA=mU)
+#' 
+#' \dontrun{
+#'  estimate_template(
+#'    run1_cifti_fnames, run2_cifti_fnames, 
+#'    gICA_cifti_fname, brainstructures="all",
+#'    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
+#'  )
+#' }
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
@@ -256,7 +274,8 @@ estimate_template <- function(
   stopifnot(is.logical(normA) && length(normA)==1)
   if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
   stopifnot(is.logical(FC) && length(FC)==1)
-  stopifnot(is.numeric(varTol) && length(varTol)==1 && varTol > 0)
+  stopifnot(is.numeric(varTol) && length(varTol)==1)
+  if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
   stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
   stopifnot(is.numeric(missingTol) && length(missingTol)==1 && missingTol >= 0)
   stopifnot(is.logical(verbose) && length(verbose)==1)
@@ -383,8 +402,8 @@ estimate_template <- function(
     if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
-      cat("Coercing `mask` to a logical array with `as.logical`.\n")
-      mask[] <- as.logical(mask)
+      cat("Coercing `mask` to a logical array.\n")
+      mask <- array(as.logical(mask), dim=dim(mask))
     }
     nI <- dim(mask); nV <- sum(mask)
     stopifnot(length(dim(GICA)) %in% c(2, length(nI)+1))

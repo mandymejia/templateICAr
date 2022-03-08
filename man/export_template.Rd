@@ -36,3 +36,9 @@ original BOLD data. Otherwise, the paths to the new files specified by
 Export the templates (mean and variance) as separate files for
 visualization or processing outside of \code{templateICAr}.
 }
+\examples{
+\dontrun{
+ tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
+ export_template(tm, out_fname="my_template", var_method="unbiased")
+}
+}

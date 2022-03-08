@@ -51,3 +51,8 @@ maps.
 \description{
 Identify areas of activation in each independent component map
 }
+\examples{
+\dontrun{
+ activations(tICA_result, alpha=.05, deviation=TRUE)
+}
+}

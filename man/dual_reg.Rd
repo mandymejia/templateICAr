@@ -50,3 +50,14 @@ and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 \description{
 Dual Regression
 }
+\examples{
+nT <- 30
+nV <- 400
+nQ <- 7
+mU <- matrix(rnorm(nV*nQ), nrow=nV)
+mS <- mU \%*\% diag(seq(nQ, 1)) \%*\% matrix(rnorm(nQ*nT), nrow=nQ)
+BOLD <- mS + rnorm(nV*nT, sd=.05)
+GICA <- mU
+dual_reg(BOLD=BOLD, GICA=mU, scale="local")
+
+}

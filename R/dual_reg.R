@@ -20,7 +20,16 @@
 #'  and subject-level mixing matrix \strong{A} (\eqn{TxQ}).
 #'
 #' @export
-#'
+#' @examples
+#' nT <- 30
+#' nV <- 400
+#' nQ <- 7
+#' mU <- matrix(rnorm(nV*nQ), nrow=nV)
+#' mS <- mU %*% diag(seq(nQ, 1)) %*% matrix(rnorm(nQ*nT), nrow=nQ)
+#' BOLD <- mS + rnorm(nV*nT, sd=.05)
+#' GICA <- mU
+#' dual_reg(BOLD=BOLD, GICA=mU, scale="local")
+#' 
 dual_reg <- function(
   BOLD, GICA,
   scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
@@ -229,8 +238,8 @@ dual_reg2 <- function(
   }
 
   # Check BOLD (and BOLD2) dimensions correspond with `GICA` and `mask`.
-  stopifnot(ldB-1 == length(nI))
-  stopifnot(all(dBOLD[seq(ldB-1)] == nI))
+  if(!(ldB-1 == length(nI))) { stop("`GICA` and BOLD spatial dimensions do not match.") }
+  if(!all(dBOLD[seq(ldB-1)] == nI)) { stop("`GICA` and BOLD spatial dimensions do not match.") }
 
   # Vectorize `BOLD` (and `BOLD2`). --------------------------------------------
   if (FORMAT=="NIFTI") {

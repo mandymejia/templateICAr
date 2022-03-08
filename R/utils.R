@@ -89,7 +89,9 @@ make_mask <- function(BOLD, meanTol=-Inf, varTol=1e-6, verbose=TRUE){
   # Calculate means and variances of columns, except those with any NA or NaN.
   # Mark columns with mean/var falling under the thresholds for removal.
   mask_mean[mask_na][rowMeans(BOLD[mask_na,,drop=FALSE]) < meanTol] <- FALSE
-  mask_var[mask_na][matrixStats::rowVars(BOLD[mask_na,,drop=FALSE]) < varTol] <- FALSE
+  if (varTol > 0) {
+    mask_var[mask_na][matrixStats::rowVars(BOLD[mask_na,,drop=FALSE]) < varTol] <- FALSE
+  }
 
   # Print counts of locations removed, for each reason.
   if (verbose) {

@@ -76,19 +76,22 @@ norm_BOLD <- function(
     if (!center_rows) { BOLD <- BOLD + voxMeans }
   }
 
-  # Scale by global or local SD.
+  # Scale.
+  # Get scale at each location.
+  sig <- sqrt(rowVars(BOLD, na.rm=TRUE))
+  # Global scaling: take mean scale across all locations, and use that.
   if (scale == "global") {
-    sig <- rowVars(BOLD, na.rm=TRUE)
-    sig <- mean(sqrt(sig), na.rm=TRUE)
+    sig <- mean(sig, na.rm=TRUE)
     if (sig < 1e-8) {
       warning("Estimated scale is near zero. Skipping scaling.")
     } else {
+      # Apply global scaling.
       BOLD <- BOLD / sig
     }
+  # Local scaling: use estimate of scale at each location.
   } else if (scale == "local") {
-    if (is.null(scale_sm_xifti) || (scale_sm_FWHM==0)) {
-      BOLD <- BOLD / sqrt(rowVars(BOLD, na.rm=TRUE))
-    } else {
+    # Smooth estimates, if applicable.
+    if (!is.null(scale_sm_xifti) && (scale_sm_FWHM != 0)) {
       # Check `scale_sm_xifti` is valid.
       if (nV != nrow(scale_sm_xifti)) {
         stop("`scale_sm_xifti` not compatible with `BOLD`: different spatial dimensions.")
@@ -97,13 +100,12 @@ norm_BOLD <- function(
         scale_sm_xifti <- convert_xifti(scale_sm_xifti, "dscalar")
       }
       # Compute and smooth the SD.
-      sig <- sqrt(rowVars(BOLD, na.rm=TRUE))
       sig <- newdata_xifti(select_xifti(scale_sm_xifti, 1), sig)
       sig <- smooth_xifti(sig, surf_FWHM=scale_sm_FWHM, vol_FWHM=scale_sm_FWHM)
-      # Apply the local SD scaling.
       sig <- c(as.matrix(sig))
-      BOLD <- BOLD / sig
     }
+    # Apply local scaling.
+    BOLD <- BOLD / sig
   }
 
   BOLD
