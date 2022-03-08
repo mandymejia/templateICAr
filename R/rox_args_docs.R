@@ -22,7 +22,8 @@ NULL
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
-#'  any normalization.
+#'  any normalization. Set to \code{0} to avoid removing locations due to 
+#'  low variance.
 #' 
 #' @name varTol_Param
 #' @keywords internal
