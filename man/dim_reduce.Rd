@@ -28,3 +28,11 @@ Performs dimension reduction and prewhitening based on probabilistic PCA using
 SVD. If dimensionality is not specified, it is estimated using the method
 described in Minka (2008).
 }
+\examples{
+nT <- 30
+nV <- 400
+nQ <- 7
+X <- matrix(rnorm(nV*nQ), nrow=nV) \%*\% diag(seq(nQ, 1)) *\%* matrix(rnorm(nQ*nT), nrow=nQ) 
+dim_reduce(X, Q=nQ)
+
+}
