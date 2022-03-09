@@ -9,6 +9,8 @@
 [![AppVeyor build
 status](https://ci.appveyor.com/api/projects/status/github/mandymejia/templateICAr?branch=master&svg=true)](https://ci.appveyor.com/project/mandymejia/templateICAr)
 <!-- [![Coveralls test coverage](https://coveralls.io/repos/github/mandymejia/templateICAr/badge.svg)](https://coveralls.io/github/mandymejia/templateICAr) -->
+[![Coveralls test
+coverage](https://coveralls.io/repos/github/mandymejia/templateICAr/badge.svg)](https://coveralls.io/r/mandymejia/templateICAr?branch=master)
 <!-- badges: end -->
 
 This package contains functions implementing the template ICA model
