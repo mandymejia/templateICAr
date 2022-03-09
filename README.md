@@ -8,9 +8,8 @@
 [![R-CMD-check](https://github.com/mandymejia/templateICAr/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/templateICAr/actions)
 [![AppVeyor build
 status](https://ci.appveyor.com/api/projects/status/github/mandymejia/templateICAr?branch=master&svg=true)](https://ci.appveyor.com/project/mandymejia/templateICAr)
-<!-- [![Coveralls test coverage](https://coveralls.io/repos/github/mandymejia/templateICAr/badge.svg)](https://coveralls.io/github/mandymejia/templateICAr) -->
-[![Coveralls test
-coverage](https://coveralls.io/repos/github/mandymejia/templateICAr/badge.svg)](https://coveralls.io/r/mandymejia/templateICAr?branch=master)
+[![Codecov test
+coverage](https://codecov.io/gh/mandymejia/templateICAr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/templateICAr?branch=master)
 <!-- badges: end -->
 
 This package contains functions implementing the template ICA model
