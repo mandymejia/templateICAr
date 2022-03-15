@@ -50,14 +50,12 @@ norm_BOLD <- function(
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
 
   # Center.
-  voxMeans <- NULL # for detrending without centering
   if (center_rows || center_cols) {
     # `BOLD` is transposed twice.
     # Center each voxel time series (across time).
     if (center_rows) {
       BOLD <- t(BOLD - rowMeans(BOLD, na.rm=TRUE))
     } else {
-      if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD, na.rm=TRUE) }
       BOLD <- t(BOLD)
     }
     # Center each image (across space).
@@ -66,19 +64,19 @@ norm_BOLD <- function(
     } else {
       BOLD <- t(BOLD)
     }
-  } else {
-    if (detrend_DCT > 0) { voxMeans <- rowMeans(BOLD, na.rm=TRUE) }
-  }
+  } 
 
   # Detrend.
+  # [NOTE]: If `center_cols`, columns won't be centered anymore after detrending.
   if (detrend_DCT > 0) {
+    if (!center_rows) { voxMeans <- rowMeans(BOLD, na.rm=TRUE) }
     BOLD <- nuisance_regression(BOLD, cbind(1, dct_bases(nT, detrend_DCT)))
     if (!center_rows) { BOLD <- BOLD + voxMeans }
   }
 
   # Scale.
   # Get scale at each location.
-  sig <- sqrt(rowVars(BOLD, na.rm=TRUE))
+  if (scale != "none") { sig <- sqrt(rowVars(BOLD, na.rm=TRUE)) }
   # Global scaling: take mean scale across all locations, and use that.
   if (scale == "global") {
     sig <- mean(sig, na.rm=TRUE)
