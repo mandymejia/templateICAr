@@ -118,10 +118,12 @@ print.summary.template.nifti <- function(x, ...) {
   }
 
   cat("====TEMPLATE INFO====================\n")
+  cat("# Subjects:      ", x$num_subjects, "\n")
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("Pseudo retest:   ", x$pseudo_retest, "\n")
   cat("-------------------------------------\n")
   cat("Mask dims:       ", paste0(x$mask_dims, collapse=" x "), "\n")
   cat("Vectorized dims:\n")
@@ -153,10 +155,12 @@ print.summary.template.data <- function(x, ...) {
   }
 
   cat("====TEMPLATE INFO====================\n")
+  cat("# Subjects:      ", x$num_subjects, "\n")
   cat("Detrending:      ", dct, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("A normalization: ", x$normA, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("Pseudo retest:   ", x$pseudo_retest, "\n")
   cat("-------------------------------------\n")
   cat("Dimensions:      \n")
   cat("# Locations:     ", x$nV, "\n")
