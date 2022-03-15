@@ -9,6 +9,8 @@ templateICA(
   template,
   tvar_method = c("non-negative", "unbiased"),
   scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
@@ -56,10 +58,22 @@ Global scaling will divide the entire data matrix by the mean image standard
 deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
-\item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
-represents surface data. To smooth the standard deviation estimates used for
-local scaling, provide the smoothing FWHM (default: \code{2}). As the FWHM
-becomes large, local scaling approaches global scaling.}
+\item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
+\code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
+smooth the standard deviation estimates used for local scaling, provide the
+surface geometries along which to smooth as GIFTI geometry files or
+\code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+
+If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
+estimates will be performed.
+
+If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
+\code{scale_sm_surfR} are not provided, the default inflated surfaces from
+the HCP will be used.
+
+To create a \code{"surf"} object from data, see
+\code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
+resolution as the \code{BOLD} data.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}

@@ -22,7 +22,22 @@
 #'  of \code{tvar_method}.)
 #' @inheritParams center_Bcols_Param
 #' @inheritParams scale_Param
-#' @inheritParams scale_sm_FWHM_Param
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#'  smooth the standard deviation estimates used for local scaling, provide the
+#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#' 
+#'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
+#'  estimates will be performed.
+#' 
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
+#'  the HCP will be used. 
+#' 
+#'  To create a \code{"surf"} object from data, see 
+#'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
+#'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
@@ -117,7 +132,8 @@
 #' }
 templateICA <- function(
   BOLD, template, tvar_method=c("non-negative", "unbiased"),
-  scale=c("global", "local", "none"), scale_sm_FWHM=2,
+  scale=c("global", "local", "none"), 
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=NULL, Q2_max=NULL,
@@ -575,6 +591,10 @@ templateICA <- function(
   # Normalize BOLD -------------------------------------------------------------
   # (Center, scale, and detrend)
   if (verbose) { cat("Pre-processing BOLD data.\n") }
+
+  if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
+    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+  }
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,

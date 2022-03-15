@@ -144,7 +144,22 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  prior to dual regression would leave unmodelled signals in the data, which
 #'  could bias the templates.
 #' @inheritParams scale_Param
-#' @inheritParams scale_sm_FWHM_Param
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#'  smooth the standard deviation estimates used for local scaling, provide the
+#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#' 
+#'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
+#'  estimates will be performed.
+#' 
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
+#'  the HCP will be used. 
+#' 
+#'  To create a \code{"surf"} object from data, see 
+#'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
+#'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams center_Bcols_Param
 #' @inheritParams normA_Param
@@ -243,7 +258,8 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"), 
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
@@ -452,7 +468,9 @@ estimate_template <- function(
       format=format,
       GICA=GICA,
       center_Bcols=center_Bcols,
-      scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+      scale=scale, 
+      scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR, 
+      scale_sm_FWHM=scale_sm_FWHM, 
       detrend_DCT=detrend_DCT,
       normA=normA,
       Q2=Q2, Q2_max=Q2_max,
