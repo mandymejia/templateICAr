@@ -52,7 +52,13 @@ tm <- estimate_template(
 )
 tm
 plot(tm, "var")
-rgl.close(); rgl.close()
+rgl.close()
+
+tm2 <- estimate_template(
+  cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
+  GICA=cgIC_fname, scale="local", detrend_DCT=3, scale_FWHM=20,
+  normA=TRUE, brainstructures="right", varTol=1, verbose=FALSE
+)
 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="left")
 cii[[1]]$data$cortex_left[3,17] <- NA
@@ -63,12 +69,25 @@ cii[[1]]$data$cortex_left[78,5] <- NA
 cii[[2]]$data$cortex_left[78,seq(10)] <- NA
 cii[[3]]$data$cortex_left[78,] <- NA
 tm <- estimate_template(
-  cii, GICA=read_cifti(cgIC_fname, brainstructures="left"), scale="global", inds=c(1,4,7,11),
+  cii, GICA=read_cifti(cgIC_fname, brainstructures="left"),
+  scale="global", inds=c(1,4,7,11)
 )
 tm
 rm(cii)
 plot(tm, idx=3)
 rgl.close(); rgl.close()
+
+# CIFTI pseudo retest vs data true retest: should get same results.
+tm2 <- estimate_template(
+  lapply(cii, function(x){as.matrix(x)[,seq(600)]}),
+  lapply(cii, function(x){as.matrix(x)[,seq(601,1200)]}),
+  GICA=as.matrix(read_cifti(cgIC_fname, brainstructures="left")),
+  scale="global", inds=c(1,4,7,11),
+)
+stopifnot(
+  max(abs(do.call(c, tm$var_decomp) - do.call(c, tm2$var_decomp)), na.rm=TRUE) < 1e-8
+)
+rm(tm2)
 
 tICA <- templateICA(cii_fnames[2], tm, brainstructures="left")
 tICA
