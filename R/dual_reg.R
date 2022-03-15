@@ -89,7 +89,7 @@ dual_reg <- function(
   if (normA) { A <- scale(A) }
 
   # Estimate S (IC maps).
-  # No worry about the intercept: `BOLD` and `A` are centered across time.
+  # Don't worry about the intercept: `BOLD` and `A` are centered across time.
   S <- solve(a=crossprod(A), b=crossprod(A, BOLD))
 
   #return result
@@ -172,6 +172,8 @@ dual_reg2 <- function(
   verbose=TRUE){
 
   # No arg checks: check the args before calling this function.
+
+  # For `"xifti"` data for handling the medial wall and smoothing.
   xii1 <- NULL
 
   # Prepare output.
@@ -286,41 +288,46 @@ dual_reg2 <- function(
     }
   }
 
-  # Normalize BOLD (and BOLD2). ------------------------------------------------
-  # (Center, scale, and detrend)
-  BOLD <- norm_BOLD(
-    BOLD, center_rows=TRUE, center_cols=center_Bcols,
+  # Helper functions
+  this_norm_BOLD <- function(B){ norm_BOLD(
+    B, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT
-  )
-  if (retest) {
-    BOLD2 <- norm_BOLD(
-      BOLD2, center_rows=TRUE, center_cols=center_Bcols,
-      scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-      detrend_DCT=detrend_DCT
-    )
-  }
+  ) }
 
-  # Perform dual regression on test and retest data. ---------------------------
-  # If no retest data, halve the test data temporarily.
+  dual_reg_yesNorm <- function(B){ dual_reg(
+    B, GICA, 
+    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA
+  ) }
+
+  dual_reg_noNorm <- function(B){ dual_reg(
+    B, GICA, 
+    scale="none", detrend_DCT=0, center_Bcols=FALSE, normA=normA
+  ) }
+
+  # Get the first dual regression results. -------------------------------------
+  # If using pseudo-retest data, compute DR on the halves of `BOLD`.
+  # Do this before normalizating `BOLD` so to avoid normalizing twice.
   if (!retest) {
     part1 <- seq(round(nT/2))
     part2 <- setdiff(seq(nT), part1)
+    out$test <- dual_reg_yesNorm(BOLD[, part1, drop=FALSE])
+    out$retest <- dual_reg_yesNorm(BOLD[, part2, drop=FALSE])
+  } 
+  
+  # Normalize `BOLD`.
+  BOLD <- this_norm_BOLD(BOLD)
+  
+  # If retest, normalize `BOLD2` too and then compute DR. 
+  if (retest) {
+    BOLD2 <- this_norm_BOLD(BOLD2)
+    # (No need to normalize again.)
+    out$test <- dual_reg_noNorm(BOLD)
+    out$retest <- dual_reg_noNorm(BOLD2)
   }
 
-  out$test <- dual_reg(
-    if (retest) { BOLD } else { BOLD[, part1, drop=FALSE] },
-    GICA, 
-    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    center_Bcols=FALSE, detrend_DCT=0, normA=normA
-  )
-  out$retest <- dual_reg(
-    if (retest) { BOLD2 } else { BOLD[, part2, drop=FALSE] },
-    GICA, 
-    scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    center_Bcols=FALSE, detrend_DCT=0, normA=normA
-  )
-
+  # Return these DR results if denoising is not needed. ------------------------
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
     out$test <- out$test$S
     out$retest <- out$retest$S
@@ -334,22 +341,18 @@ dual_reg2 <- function(
   # Estimate and deal with nuisance ICs. ---------------------------------------
   # If !retest, we prefer to estimate nuisance ICs across the full scan
   # and then halve it after.
-  if (retest) {
-    BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
-    BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
-  } else {
-    BOLD_DR <- dual_reg(
-      BOLD, GICA, 
-      scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-      center_Bcols=FALSE, detrend_DCT=0, normA=normA
-    )
+  if (!retest) {
+    BOLD_DR <- dual_reg_noNorm(BOLD)
     BOLD <- rm_nuisIC(BOLD, DR=BOLD_DR, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
     rm(BOLD_DR)
     BOLD2 <- BOLD[, part2, drop=FALSE]
     BOLD <- BOLD[, part1, drop=FALSE]
+  } else {
+    BOLD <- rm_nuisIC(BOLD, DR=out$test, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
+    BOLD2 <- rm_nuisIC(BOLD2, DR=out$retest, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
   }
 
-  # Center and scale `BOLD` (and `BOLD2`) again, but do not detrend again. -----
+  # Center and scale `BOLD` and `BOLD2` (again), but do not detrend again. -----
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
@@ -363,15 +366,9 @@ dual_reg2 <- function(
 
   # Do DR again. ---------------------------------------------------------------
   out$test_preclean <- out$test$S
-  out$test <- dual_reg(
-    BOLD, GICA, scale="none",
-    center_Bcols=FALSE, detrend_DCT=0, normA=normA
-  )$S
+  out$test <- dual_reg_noNorm(BOLD)$S
   out$retest_preclean <- out$retest$S
-  out$retest <- dual_reg(
-    BOLD2, GICA, scale="none",
-    center_Bcols=FALSE, detrend_DCT=0, normA=normA
-  )$S
+  out$retest <- dual_reg_noNorm(BOLD2)$S
 
   if (use_mask) {
     out$test_preclean <- unmask(out$test_preclean, mask)
