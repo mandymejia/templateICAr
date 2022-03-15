@@ -5,11 +5,12 @@
 #' @param GICA Group-level independent components (\eqn{V \times Q})
 #' @inheritParams center_Bcols_Param
 #' @inheritParams scale_Param
-#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
-#'  smooth the standard deviation estimates used for local scaling, provide a 
-#'  \code{"xifti"} object with data locations in alignment with 
-#'  \code{BOLD} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"} 
-#'  object is provided (default), do not smooth.
+#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"} and
+#'  \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
+#'  estimates used for local scaling, provide a \code{"xifti"} object with data
+#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM 
+#'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
+#'  not smooth. 
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #'

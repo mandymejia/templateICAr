@@ -26,11 +26,12 @@ Global scaling will divide the entire data matrix by the mean image standard
 deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
-\item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"}. To
-smooth the standard deviation estimates used for local scaling, provide a
-\code{"xifti"} object with data locations in alignment with
-\code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
-object is provided (default) or if \code{scale_sm_FWHM=0}, do not smooth.}
+\item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"} and
+\code{BOLD} represents CIFTI-format data. To smooth the standard deviation
+estimates used for local scaling, provide a \code{"xifti"} object with data
+locations in alignment with \code{BOLD}, as well as the smoothing FWHM
+(default: \code{2}). If no \code{"xifti"} object is provided (default), do
+not smooth.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
