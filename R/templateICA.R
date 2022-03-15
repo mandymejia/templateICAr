@@ -337,11 +337,11 @@ templateICA <- function(
   } else if (FORMAT == "NIFTI") {
     # Check `mask`
     if (is.null(mask)) { stop("`mask` is required.") }
-    if (is.character(mask)) { mask <- RNifti::readNifti(mask) }
+    if (is.character(mask)) { mask <- RNifti::readNifti(mask); mask <- array(as.logical(mask), dim=dim(mask)) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
-      cat("Coercing `mask` to a logical array with `as.logical`.\n")
-      mask[] <- as.logical(mask)
+      cat("Coercing `mask` to a logical array.\n")
+      mask <- array(as.logical(mask), dim=dim(mask))
     }
     nI <- dim(mask)
     # Check its compatibility with the template
