@@ -648,7 +648,8 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"), 
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
@@ -661,7 +662,8 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+    scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT, 
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
@@ -678,7 +680,7 @@ estimate_template.cifti <- function(
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
@@ -691,7 +693,7 @@ estimate_template.nifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    scale=scale,
     detrend_DCT=detrend_DCT, 
     center_Bcols=center_Bcols, normA=normA,
     Q2=Q2, Q2_max=Q2_max, 
