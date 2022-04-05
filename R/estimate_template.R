@@ -342,10 +342,6 @@ estimate_template <- function(
       }
     }
 
-    if (is.null(wb_path) && FORMAT=="CIFTI") {
-      stop("`wb_path` is required for parallel computation.")
-    }
-
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
     if (nCores < 2) {
@@ -507,6 +503,9 @@ estimate_template <- function(
     q <- foreach::foreach(ii = seq(nN)) %dopar% {
       if (FORMAT=="CIFTI") {
         # Load the workbench.
+        if (is.null(wb_path)) {
+          stop("`wb_path` is required for parallel computation.")
+        }
         requireNamespace("ciftiTools")
         ciftiTools::ciftiTools.setOption("wb_path", wb_path)
       }
