@@ -536,11 +536,11 @@ estimate_template <- function(
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
       if (!is.null(DR_ii)) {
-        out$DR[1,,] <- DR_ii$test[inds,]
-        out$DR[2,,] <- DR_ii$retest[inds,]
+        out$DR[1,,,] <- DR_ii$test[inds,]
+        out$DR[2,,,] <- DR_ii$retest[inds,]
         if(FC) {
-          out$FC[1,,] <- cov(DR_ii$test[,inds])
-          out$FC[2,,] <- cov(DR_ii$retest[,inds])
+          out$FC[1,,,] <- cov(DR_ii$test[,inds])
+          out$FC[2,,,] <- cov(DR_ii$retest[,inds])
         }
       }
       out
