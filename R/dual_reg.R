@@ -329,15 +329,10 @@ dual_reg2 <- function(
   ) }
 
   # Get the first dual regression results. -------------------------------------
-<<<<<<< Updated upstream
-=======
   if (verbose) { cat(" Computing DR...") }
   # If using pseudo-retest data, compute DR on the halves of `BOLD`.
   # Do this before normalizating `BOLD` so to avoid normalizing twice.
->>>>>>> Stashed changes
   if (!retest) {
-    # If using pseudo-retest data, compute DR on the halves of `BOLD`.
-    # Do this before normalizating `BOLD` so to avoid normalizing twice.
     part1 <- seq(round(nT/2))
     part2 <- setdiff(seq(nT), part1)
     out$test <- dual_reg_yesNorm(BOLD[, part1, drop=FALSE])
