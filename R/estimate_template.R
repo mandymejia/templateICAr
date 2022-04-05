@@ -347,7 +347,7 @@ estimate_template <- function(
     if (nCores < 2) {
       usePar <- FALSE
     } else {
-      cluster <- parallel::makeCluster(nCores)
+      cluster <- parallel::makeCluster(nCores, outfile="")
       doParallel::registerDoParallel(cluster)
     }
   }
