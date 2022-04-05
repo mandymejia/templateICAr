@@ -188,6 +188,8 @@ dual_reg2 <- function(
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
 
+  if (verbose) { extime <- Sys.time() }
+
   # No arg checks: check the args before calling this function.
 
   # For `"xifti"` data for handling the medial wall and smoothing.
@@ -215,6 +217,7 @@ dual_reg2 <- function(
   }
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
+  if (verbose) { cat("\tReading and formatting data...") }
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
     if (is.xifti(BOLD)) {
@@ -326,6 +329,12 @@ dual_reg2 <- function(
   ) }
 
   # Get the first dual regression results. -------------------------------------
+<<<<<<< Updated upstream
+=======
+  if (verbose) { cat(" Computing DR...") }
+  # If using pseudo-retest data, compute DR on the halves of `BOLD`.
+  # Do this before normalizating `BOLD` so to avoid normalizing twice.
+>>>>>>> Stashed changes
   if (!retest) {
     # If using pseudo-retest data, compute DR on the halves of `BOLD`.
     # Do this before normalizating `BOLD` so to avoid normalizing twice.
@@ -350,10 +359,13 @@ dual_reg2 <- function(
       out$test <- unmask(out$test, mask)
       out$retest <- unmask(out$retest, mask)
     }
+    cat(" Done!\n")
+    if(verbose) { print(Sys.time() - extime) }
     return(out)
   }
 
   # Estimate and deal with nuisance ICs. ---------------------------------------
+  if (verbose) { cat(" Denoising...") }
   # If !retest, we prefer to estimate nuisance ICs across the full scan
   # and then halve it after.
   if (!retest) {
@@ -381,6 +393,7 @@ dual_reg2 <- function(
   )
 
   # Do DR again. ---------------------------------------------------------------
+  if (verbose) { cat(" Computing DR again...") }
   out$test_preclean <- out$test$S
   out$test <- dual_reg_noNorm(BOLD)$S
   out$retest_preclean <- out$retest$S
@@ -393,5 +406,7 @@ dual_reg2 <- function(
     out$retest <- unmask(out$retest, mask)
   }
 
+  cat(" Done!\n")
+  if(verbose) { print(Sys.time() - extime) }
   out
 }
