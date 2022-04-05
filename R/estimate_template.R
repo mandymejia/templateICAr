@@ -218,8 +218,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 #'  at a given location.
-#' @param usePar Parallelize the DR computations over subjects? Default: \code{FALSE}. Can be the number of cores
-#'  to use or \code{TRUE}, which will use the number on the PC minus two.
+#' @param usePar,wb_path Parallelize the DR computations over subjects? Default: 
+#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will 
+#'  use the number on the PC minus two. If the input data is in CIFTI format, the
+#'  \code{wb_path} must also be provided.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
@@ -270,7 +272,7 @@ estimate_template <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
-  usePar=FALSE,
+  usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
@@ -338,6 +340,10 @@ estimate_template <- function(
           "for `usePar` to loop over subjects. Please install it."), call.=FALSE
         )
       }
+    }
+
+    if (is.null(wb_path) && FORMAT=="CIFTI") {
+      stop("`wb_path` is required for parallel computation.")
     }
 
     cores <- parallel::detectCores()
@@ -499,6 +505,12 @@ estimate_template <- function(
     # Loop over subjects.
     `%dopar%` <- foreach::`%dopar%`
     q <- foreach::foreach(ii = seq(nN)) %dopar% {
+      if (FORMAT=="CIFTI") {
+        # Load the workbench.
+        requireNamespace("ciftiTools")
+        ciftiTools::ciftiTools.setOption("wb_path", wb_path)
+      }
+
       # Initialize output.
       out <- list(DR=array(NA, dim=c(nM, 1, nL, nV)))
       if (FC) { out$FC <- array(NA, dim=c(nM, 1, nL, nL)) }
@@ -744,7 +756,8 @@ estimate_template.cifti <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
-  usePar=FALSE, verbose=TRUE) {
+  usePar=FALSE, wb_path=NULL,
+  verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
@@ -757,7 +770,8 @@ estimate_template.cifti <- function(
     keep_DR=keep_DR,
     #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
-    usePar=usePar, verbose=verbose
+    usePar=usePar, wb_path=wb_path, 
+    verbose=verbose
   )
 }
 
@@ -774,7 +788,8 @@ estimate_template.nifti <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
-  usePar=FALSE, verbose=TRUE) {
+  usePar=FALSE, wb_path=NULL, 
+  verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
@@ -787,6 +802,7 @@ estimate_template.nifti <- function(
     keep_DR=keep_DR,
     #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
-    usePar=usePar, verbose=verbose
+    usePar=usePar, wb_path=wb_path,
+    verbose=verbose
   )
 }
