@@ -502,16 +502,12 @@ estimate_template <- function(
     `%dopar%` <- foreach::`%dopar%`
     q <- foreach::foreach(ii = seq(nN)) %dopar% {
       if (FORMAT=="CIFTI") {
-        print(wb_path)
         # Load the workbench.
         if (is.null(wb_path)) {
           stop("`wb_path` is required for parallel computation.")
         }
-        print("a")
         requireNamespace("ciftiTools")
-        print("b")
         ciftiTools::ciftiTools.setOption("wb_path", wb_path)
-        print("c")
       }
 
       # Initialize output.
