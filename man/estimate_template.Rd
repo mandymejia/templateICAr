@@ -26,6 +26,7 @@ estimate_template(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
   verbose = TRUE
 )
 
@@ -47,6 +48,7 @@ estimate_template.cifti(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
   verbose = TRUE
 )
 
@@ -67,6 +69,7 @@ estimate_template.nifti(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
   verbose = TRUE
 )
 }
@@ -184,6 +187,9 @@ can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
 Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 at a given location.}
+
+\item{usePar}{Parallelize the DR computations over subjects? Default: \code{FALSE}. Can be the number of cores
+to use or \code{TRUE}, which will use the number on the PC minus two.}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
