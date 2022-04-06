@@ -184,7 +184,7 @@ templateICA <- function(
     stopifnot(is.numeric(kappa_init) && length(kappa_init)==1)
     if(kappa_init <= 0) stop('kappa_init must be a positive scalar or `NULL`.')
   }
-  stopifnot(is.logical(usePar) && length(usePar)==1)
+  stopifnot((is.logical(usePar)||is.numeric(usePar)) && length(usePar)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
 
   # `usePar`
