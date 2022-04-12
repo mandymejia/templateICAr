@@ -12,6 +12,8 @@ estimate_template(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
@@ -24,6 +26,8 @@ estimate_template(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
+  wb_path = NULL,
   verbose = TRUE
 )
 
@@ -45,6 +49,8 @@ estimate_template.cifti(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
+  wb_path = NULL,
   verbose = TRUE
 )
 
@@ -65,6 +71,8 @@ estimate_template.nifti(
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
+  usePar = FALSE,
+  wb_path = NULL,
   verbose = TRUE
 )
 }
@@ -99,10 +107,22 @@ Global scaling will divide the entire data matrix by the mean image standard
 deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
-\item{scale_sm_FWHM}{Only applies if \code{scale=="local"} and if \code{BOLD}
-represents surface data. To smooth the standard deviation estimates used for
-local scaling, provide the smoothing FWHM (default: \code{2}). As the FWHM
-becomes large, local scaling approaches global scaling.}
+\item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
+\code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
+smooth the standard deviation estimates used for local scaling, provide the
+surface geometries along which to smooth as GIFTI geometry files or
+\code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+
+If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
+estimates will be performed.
+
+If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
+\code{scale_sm_surfR} are not provided, the default inflated surfaces from
+the HCP will be used.
+
+To create a \code{"surf"} object from data, see
+\code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
+resolution as the \code{BOLD} data.}
 
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
@@ -170,6 +190,11 @@ can be specified either as a proportion of the number of locations (between
 zero and one), or as a number of locations (integers greater than one).
 Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 at a given location.}
+
+\item{usePar, wb_path}{Parallelize the DR computations over subjects? Default:
+\code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
+use the number on the PC minus two. If the input data is in CIFTI format, the
+\code{wb_path} must also be provided.}
 
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }

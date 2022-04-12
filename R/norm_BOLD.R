@@ -9,11 +9,12 @@
 #'  location's time series) or columns (each time point's image)? Default:
 #'  \code{TRUE} for row centering, and \code{FALSE} for column centering.
 #' @inheritParams scale_Param
-#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
-#'  smooth the standard deviation estimates used for local scaling, provide a
-#'  \code{"xifti"} object with data locations in alignment with
-#'  \code{"BOLD"} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"}
-#'  object is provided (default) or if \code{scale_sm_FWHM=0}, do not smooth.
+#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"} and
+#'  \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
+#'  estimates used for local scaling, provide a \code{"xifti"} object with data
+#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM 
+#'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
+#'  not smooth. 
 #' @inheritParams detrend_DCT_Param
 #'
 #' @return Normalized BOLD data matrix (\eqn{V \times T})

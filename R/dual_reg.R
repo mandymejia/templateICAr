@@ -5,11 +5,12 @@
 #' @param GICA Group-level independent components (\eqn{V \times Q})
 #' @inheritParams center_Bcols_Param
 #' @inheritParams scale_Param
-#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"}. To
-#'  smooth the standard deviation estimates used for local scaling, provide a 
-#'  \code{"xifti"} object with data locations in alignment with 
-#'  \code{BOLD} and the smoothing FWHM (default: \code{2}). If no \code{"xifti"} 
-#'  object is provided (default), do not smooth.
+#' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"} and
+#'  \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
+#'  estimates used for local scaling, provide a \code{"xifti"} object with data
+#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM 
+#'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
+#'  not smooth. 
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #'
@@ -114,7 +115,22 @@ dual_reg <- function(
 #' @param GICA Group ICA maps as a (vectorized) numeric matrix
 #'  (\eqn{V \times Q}). Its columns will be centered.
 #' @inheritParams scale_Param
-#' @inheritParams scale_sm_FWHM_Param
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#'  smooth the standard deviation estimates used for local scaling, provide the
+#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#' 
+#'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
+#'  estimates will be performed.
+#' 
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
+#'  the HCP will be used. 
+#' 
+#'  To create a \code{"surf"} object from data, see 
+#'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
+#'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams center_Bcols_Param
 #' @inheritParams normA_Param
@@ -163,13 +179,16 @@ dual_reg <- function(
 dual_reg2 <- function(
   BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"), 
   GICA, 
-  scale=c("global", "local", "none"), scale_sm_FWHM=2,
+  scale=c("global", "local", "none"), 
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures=c("left", "right"), mask=NULL,
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
+
+  if (verbose) { extime <- Sys.time() }
 
   # No arg checks: check the args before calling this function.
 
@@ -198,6 +217,7 @@ dual_reg2 <- function(
   }
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
+  if (verbose) { cat("\tReading and formatting data...") }
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
     if (is.xifti(BOLD)) {
@@ -205,8 +225,6 @@ dual_reg2 <- function(
         xii1 <- convert_xifti(select_xifti(BOLD, 1), "dscalar") * 0
       }
       BOLD <- as.matrix(BOLD)
-    } else if (scale == "local") {
-      stop("`scale=='local'` requires `BOLD` to be a CIFTI file or `'xifti'` object.")
     }
     stopifnot(is.matrix(BOLD))
     if (retest) {
@@ -288,6 +306,10 @@ dual_reg2 <- function(
     }
   }
 
+  if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
+    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+  }
+
   # Helper functions
   this_norm_BOLD <- function(B){ norm_BOLD(
     B, center_rows=TRUE, center_cols=center_Bcols,
@@ -307,6 +329,7 @@ dual_reg2 <- function(
   ) }
 
   # Get the first dual regression results. -------------------------------------
+  if (verbose) { cat(" Computing DR...") }
   # If using pseudo-retest data, compute DR on the halves of `BOLD`.
   # Do this before normalizating `BOLD` so to avoid normalizing twice.
   if (!retest) {
@@ -314,13 +337,9 @@ dual_reg2 <- function(
     part2 <- setdiff(seq(nT), part1)
     out$test <- dual_reg_yesNorm(BOLD[, part1, drop=FALSE])
     out$retest <- dual_reg_yesNorm(BOLD[, part2, drop=FALSE])
-  } 
-  
-  # Normalize `BOLD`.
-  BOLD <- this_norm_BOLD(BOLD)
-  
-  # If retest, normalize `BOLD2` too and then compute DR. 
-  if (retest) {
+  } else {
+    # If retest, normalize `BOLD` and `BOLD2`, and then compute DR. 
+    BOLD <- this_norm_BOLD(BOLD)
     BOLD2 <- this_norm_BOLD(BOLD2)
     # (No need to normalize again.)
     out$test <- dual_reg_noNorm(BOLD)
@@ -335,13 +354,17 @@ dual_reg2 <- function(
       out$test <- unmask(out$test, mask)
       out$retest <- unmask(out$retest, mask)
     }
+    cat(" Done!\n")
+    if(verbose) { print(Sys.time() - extime) }
     return(out)
   }
 
   # Estimate and deal with nuisance ICs. ---------------------------------------
+  if (verbose) { cat(" Denoising...") }
   # If !retest, we prefer to estimate nuisance ICs across the full scan
   # and then halve it after.
   if (!retest) {
+    BOLD <- this_norm_BOLD(BOLD)
     BOLD_DR <- dual_reg_noNorm(BOLD)
     BOLD <- rm_nuisIC(BOLD, DR=BOLD_DR, Q2=Q2, Q2_max=Q2_max, verbose=verbose)
     rm(BOLD_DR)
@@ -365,6 +388,7 @@ dual_reg2 <- function(
   )
 
   # Do DR again. ---------------------------------------------------------------
+  if (verbose) { cat(" Computing DR again...") }
   out$test_preclean <- out$test$S
   out$test <- dual_reg_noNorm(BOLD)$S
   out$retest_preclean <- out$retest$S
@@ -377,5 +401,7 @@ dual_reg2 <- function(
     out$retest <- unmask(out$retest, mask)
   }
 
+  cat(" Done!\n")
+  if(verbose) { print(Sys.time() - extime) }
   out
 }
