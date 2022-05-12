@@ -20,7 +20,7 @@ activations(
 
 \item{u}{Activation threshold. Default: \code{0}.}
 
-\item{alpha}{Significance level for joint PPM. Default: \code{0.1}.}
+\item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
 \item{type}{Type of region.  Default: \code{">"} (positive excursion region).}
 
