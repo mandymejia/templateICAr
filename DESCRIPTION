@@ -44,6 +44,7 @@ Imports:
     stats
 Suggests:
     RNifti,
+    oro.nifti,
     covr,
     doParallel,
     foreach,
