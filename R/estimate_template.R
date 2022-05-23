@@ -624,6 +624,7 @@ estimate_template <- function(
   rm(x)
 
   # Unmask the data matrices.
+  # [TO DO] don't do this. bloats NIFTI-format file sizes!
   if (use_mask) {
     template <- lapply(template, unmask_mat, mask=maskAll)
     var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)

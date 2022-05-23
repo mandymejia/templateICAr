@@ -30,7 +30,7 @@ summary.template.nifti <- function(object, ...) {
   x <- c(
     list(
       mask_dims=dim(object$dat_struct),
-      nV=nrow(object$template$mean), 
+      nV=nrow(object$template$mean),
       nL=ncol(object$template$mean),
       hasDR="DR" %in% names(object)
     ),
@@ -52,7 +52,7 @@ summary.template.nifti <- function(object, ...) {
 summary.template.data <- function(object, ...) {
   x <- c(
     list(
-      nV=nrow(object$template$mean), 
+      nV=nrow(object$template$mean),
       nL=ncol(object$template$mean),
       hasDR="DR" %in% names(object)
     ),
@@ -204,7 +204,7 @@ print.template.data <- function(x, ...) {
 #' @export
 #' @importFrom ciftiTools view_xifti
 #' @method plot template.cifti
-plot.template.cifti <- function(x, stat=c("both", "mean", "var"), 
+plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.cifti"))
 
@@ -256,7 +256,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
   for (ss in stat) {
     ssname <- if (ss == "mean") {
       ss
-    } else if (var_method=="non-negative") { 
+    } else if (var_method=="non-negative") {
       "varNN"
     } else {
       "varUB"
@@ -297,13 +297,136 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
 
 #' Plot template
 #'
+#' Based on \code{oro.nifti::image}.
+#'
+#' Consider using \code{struct_template} to obtain the 3D volumes to plot with a different
+#'  viewer function (e.g. from \code{oro.nifti}) if desired.
+#'
 #' @param x The template from \code{estimate_template.nifti}
-#' @param ... Additional arguments
+#' @param stat \code{"mean"} (default) or \code{"var"}
+#' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
+#' @param plane,n_slices,slices Anatomical plane and which slice indices to show.
+#'  Default: 9 axial slices.
+#' @param ... Additional arguments to \code{oro.nifti::image}
 #' @return The plot
 #' @export
 #' @method plot template.nifti
-plot.template.nifti <- function(x, ...) {
-  stop("Not supported yet.")
+plot.template.nifti <- function(x, stat=c("mean", "var"),
+  plane=c("axial", "sagittal", "coronal"), n_slices=9, slices=NULL,
+  var_method=c("non-negative", "unbiased"), ...) {
+  stopifnot(inherits(x, "template.nifti"))
+
+  if (!requireNamespace("oro.nifti", quietly = TRUE)) {
+    stop("Package \"oro.nifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
+
+  var_method <- match.arg(var_method, c("non-negative", "unbiased"))
+
+  # Check `...`
+  args <- list(...)
+  has_title <- "title" %in% names(args)
+  has_idx <- "idx" %in% names(args)
+  has_fname <- "fname" %in% names(args)
+
+  # Check `idx`
+  if (has_idx) {
+    stopifnot(length(args$idx)==1)
+    stopifnot(is.numeric(args$idx) && args$idx==round(args$idx))
+    stopifnot(args$idx %in% seq(ncol(x$template$mean)))
+  } else {
+    args$idx <- 1
+  }
+  idx <- args$idx; args$idx <- NULL
+
+  # Check `stat`
+  stat <- tolower(stat)
+  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args))) {
+    if (identical(stat, c("mean", "var"))) {
+      stat <- "mean"
+    } else {
+      stat <- match.arg(stat, c("mean", "var"))
+    }
+  }
+  stat <- match.arg(stat, c("mean", "var"))
+
+  # Print message saying what's happening.
+  msg1 <- ifelse(has_idx,
+    "Plotting the",
+    "Plotting the first component's"
+  )
+  msg2 <- switch(stat,
+    mean="mean template.",
+    var="variance template."
+  )
+  cat(msg1, msg2, "\n")
+
+  # Plot
+  out <- list(mean=NULL, var=NULL)
+  ss <- stat
+
+  plane <- match.arg(plane, c("axial", "sagittal", "coronal"))
+  args$plane <- plane
+  plane_dim <- switch(plane, axial=3, coronal=2, sagittal=1)
+  if (is.null(slices)) {
+    if (is.null(n_slices)) { warning("Using 9 slices."); n_slices <- 9 }
+    n_slices <- as.numeric(n_slices)
+    if (length(n_slices) > 1) { warning("Using the first entry of `slice`."); n_slices <- n_slices[1] }
+    # Pick slices that are spaced out, and with many voxels.
+    mask_count <- apply(x$dat_struct, plane_dim, sum)
+    ns_all <- length(mask_count)
+    slices <- seq(ns_all)
+    # Remove slices with zero voxels.
+    slices <- slices[mask_count != 0]
+    mask_count <- mask_count[mask_count != 0]
+    ns_all <- length(mask_count)
+    if (n_slices > length(slices)) {
+      warning(
+        "`n_slices` is larger than the number of non-empty slices (",
+        length(slices), "). Showing all non-empty slices."
+      )
+      n_slices <- length(slices)
+    }
+    # Remove slices with few voxels.
+    if (n_slices < (ns_all / 2)) {
+      slices <- slices[mask_count > quantile(mask_count, .33)]
+    }
+    slices <- slices[round(seq(1, length(slices), length.out=n_slices))]
+  } else {
+    slices <- as.numeric(slices)
+    stopifnot(all(slices %in% seq(dim(x$dat_struct)[plane_dim])))
+  }
+
+  ssname <- if (ss == "mean") {
+    ss
+  } else if (var_method=="non-negative") {
+    "varNN"
+  } else {
+    "varUB"
+  }
+  if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
+  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$params)
+  tss <- tss[,,,idx]
+
+  if (plane=="axial") {
+    tss <- tss[,,slices,drop=FALSE]
+  } else if (plane=="coronal") {
+    tss <- tss[,slices,,drop=FALSE]
+  } else if (plane=="sagittal") {
+    tss <- tss[slices,,,drop=FALSE]
+  } else { stop() }
+
+  args_ss <- args
+  args_ss$plane <- plane
+  # Handle title and idx
+  if (!has_title && !has_idx) {
+    c1name <- "First component"
+  }
+  if (has_title) { stop("Not supported yet.") }
+  if (has_fname) { stop("Not supported yet. Call `pdf` or `png` beforehand, and then `dev.off`.") }
+  do.call(
+    oro.nifti::image,
+    c(list(oro.nifti::as.nifti(tss)), args_ss)
+  )
 }
 
 #' Plot template

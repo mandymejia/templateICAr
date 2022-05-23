@@ -127,6 +127,9 @@ tm <- estimate_template(
   keep_DR=TRUE, mask=mask_fname, varTol = 500, maskTol=.3, missingTol=.9
 )
 tm
-tICA <- templateICA(nii_fnames[2], tm, scale=FALSE, maxiter=7, mask=mask_fname)
+tICA <- templateICA(
+  nii_fnames[2], tm, scale=FALSE,
+  maxiter=1, mask=mask_fname, Q2=0
+)
 tICA
 activations(tICA)

@@ -19,7 +19,7 @@ struct_template <- function(template, FORMAT, dat_struct, params){
       )
     }
   } else if (FORMAT == "NIFTI") {
-    RNifti::asNifti(
+    template <- RNifti::asNifti(
       unmask_subcortex(template, dat_struct, fill=NA)
     )
   }

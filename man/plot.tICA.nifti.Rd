@@ -4,7 +4,14 @@
 \alias{plot.tICA.nifti}
 \title{Plot template}
 \usage{
-\method{plot}{tICA.nifti}(x, ...)
+\method{plot}{tICA.nifti}(
+  x,
+  stat = c("mean", "se"),
+  plane = c("axial", "sagittal", "coronal"),
+  n_slices = 9,
+  slices = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{The result of \code{templateICA} with NIFTI data}
