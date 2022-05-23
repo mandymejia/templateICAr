@@ -29,6 +29,7 @@
 #' @export
 MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW=NULL, verbose=TRUE, ...){
   # Arg checks -----------------------------------------------------------------
+  if (is.character(dat)) { message("Treating each file as a separate subject."); dat <- as.list(dat) }
   stopifnot(is.list(dat))
   stopifnot(is.function(datProcFUN))
 
