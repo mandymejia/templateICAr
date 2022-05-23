@@ -16,6 +16,11 @@
 \arguments{
 \item{x}{The result of \code{templateICA} with NIFTI data}
 
+\item{stat}{\code{"mean"} (default), \code{"se"}}
+
+\item{plane, n_slices, slices}{Anatomical plane and which slice indices to show.
+Default: 9 axial slices.}
+
 \item{...}{Additional arguments}
 }
 \value{

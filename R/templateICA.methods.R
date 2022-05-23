@@ -295,6 +295,9 @@ plot.tICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
 #' Plot template
 #'
 #' @param x The result of \code{templateICA} with NIFTI data
+#' @param stat \code{"mean"} (default), \code{"se"}
+#' @param plane,n_slices,slices Anatomical plane and which slice indices to show.
+#'  Default: 9 axial slices.
 #' @param ... Additional arguments
 #' @return The plot
 #' @export
@@ -304,8 +307,8 @@ plot.tICA.nifti <- function(x, stat=c("mean", "se"),
   ...) {
   stopifnot(inherits(x, "tICA.nifti"))
 
-  if (!requireNamespace("RNifti", quietly = TRUE)) {
-    stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  if (!requireNamespace("oro.nifti", quietly = TRUE)) {
+    stop("Package \"oro.nifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
   }
 
   # Check `...`
