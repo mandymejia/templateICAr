@@ -4,7 +4,7 @@
 #'
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
 #' @param u Activation threshold. Default: \code{0}.
-#' @param alpha Significance level for joint PPM. Default: \code{0.1}.
+#' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
 #' @param method_p If the input is a \code{"tICA"} model object, the type of 
 #'  multiple comparisons correction to use for p-values, or \code{NULL} for no 

@@ -184,7 +184,7 @@ templateICA <- function(
     stopifnot(is.numeric(kappa_init) && length(kappa_init)==1)
     if(kappa_init <= 0) stop('kappa_init must be a positive scalar or `NULL`.')
   }
-  stopifnot(is.logical(usePar) && length(usePar)==1)
+  stopifnot((is.logical(usePar)||is.numeric(usePar)) && length(usePar)==1)
   stopifnot(is.logical(verbose) && length(verbose)==1)
 
   # `usePar`
@@ -693,6 +693,7 @@ templateICA <- function(
                                            theta0=theta00,
                                            C_diag=C_diag,
                                            maxiter=maxiter,
+                                           usePar=usePar,
                                            epsilon=epsilon,
                                            verbose=verbose)
     if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
@@ -711,6 +712,7 @@ templateICA <- function(
                                          theta0,
                                          C_diag,
                                          maxiter=maxiter,
+                                         usePar=usePar,
                                          epsilon=epsilon,
                                          verbose=verbose)
       #common_smoothness=common_smoothness)
@@ -724,6 +726,7 @@ templateICA <- function(
       resultEM$result_tICA <- resultEM_tICA
       class(resultEM) <- 'stICA'
     }
+    if (usePar) { doParallel::stopImplicitCluster() }
   }
 
   # Return DR estimates.

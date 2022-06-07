@@ -20,7 +20,8 @@
 #'  same smoothness parameter, \eqn{\kappa}
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
-#'  to use or \code{TRUE}, which will use the number on the PC minus two.
+#'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
+#'  template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
@@ -51,7 +52,7 @@ NULL
 #'
 EM_templateICA.spatial <- function(
   template_mean, template_var, meshes, BOLD,
-  theta0, C_diag, maxiter=100, epsilon=0.01, verbose=FALSE){
+  theta0, C_diag, maxiter=100,  usePar=FALSE, epsilon=0.01, verbose=FALSE){
 
   INLA_check()
 
@@ -212,7 +213,8 @@ EM_templateICA.spatial <- function(
 }
 
 #' @rdname EM_templateICA
-EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
+EM_templateICA.independent <- function(
+  template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -272,7 +274,6 @@ EM_templateICA.independent <- function(template_mean, template_var, BOLD, theta0
   At_nu0Cinv_A <- At_nu0Cinv %*% theta$A
 
   if (usePar) {
-
     if (!requireNamespace("foreach", quietly = TRUE)) {
       stop(
         "Package \"foreach\" needed to parallel loop over voxels. Please install it.",

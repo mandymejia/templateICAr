@@ -4,10 +4,22 @@
 \alias{plot.tICA.nifti}
 \title{Plot template}
 \usage{
-\method{plot}{tICA.nifti}(x, ...)
+\method{plot}{tICA.nifti}(
+  x,
+  stat = c("mean", "se"),
+  plane = c("axial", "sagittal", "coronal"),
+  n_slices = 9,
+  slices = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{The result of \code{templateICA} with NIFTI data}
+
+\item{stat}{\code{"mean"} (default), \code{"se"}}
+
+\item{plane, n_slices, slices}{Anatomical plane and which slice indices to show.
+Default: 9 axial slices.}
 
 \item{...}{Additional arguments}
 }

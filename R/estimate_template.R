@@ -218,10 +218,15 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 #'  at a given location.
+#' @param usePar,wb_path Parallelize the DR computations over subjects? Default: 
+#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will 
+#'  use the number on the PC minus two. If the input data is in CIFTI format, the
+#'  \code{wb_path} must also be provided.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
 #' @importFrom ciftiTools read_cifti is.xifti write_cifti
+#' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
 #'  matrix format; the \code{mask} of locations without template values due to 
@@ -267,6 +272,7 @@ estimate_template <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
+  usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
@@ -315,6 +321,34 @@ estimate_template <- function(
       #   stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
       # }
       # if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
+    }
+  }
+
+  # `usePar`
+  if (!isFALSE(usePar)) {
+    parPkgs <- c("parallel", "doParallel")
+    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
+    if (any(parPkgs_missing)) {
+      if (all(parPkgs_missing)) {
+        stop(paste0(
+          "Packages `parallel` and `doParallel` needed ",
+          "for `usePar` to loop over subjects. Please install them."), call.=FALSE
+        )
+      } else {
+        stop(paste0(
+          "Package `", parPkgs[parPkgs_missing], "` needed ",
+          "for `usePar` to loop over subjects. Please install it."), call.=FALSE
+        )
+      }
+    }
+
+    cores <- parallel::detectCores()
+    if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
+    if (nCores < 2) {
+      usePar <- FALSE
+    } else {
+      cluster <- parallel::makeCluster(nCores, outfile="")
+      doParallel::registerDoParallel(cluster)
     }
   }
 
@@ -454,43 +488,108 @@ estimate_template <- function(
   }
 
   nM <- 2
-  DR0 <- array(NA, dim=c(nM, nN, nL, nV)) # measurements by subjects by components by locations
-  if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
 
-  for (ii in seq(nN)) {
-    if(verbose) { cat(paste0(
-      '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
-    )) }
-    if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
+  if (usePar) {
+    # Check `foreach`.
+    if (!requireNamespace("foreach", quietly = TRUE)) {
+      stop(
+        "Package \"foreach\" needed to parallel loop over scans. Please install it.",
+        call. = FALSE
+      )
+    }
 
-    DR_ii <- dual_reg2(
-      BOLD[[ii]], BOLD2=B2,
-      format=format,
-      GICA=GICA,
-      center_Bcols=center_Bcols,
-      scale=scale, 
-      scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR, 
-      scale_sm_FWHM=scale_sm_FWHM, 
-      detrend_DCT=detrend_DCT,
-      normA=normA,
-      Q2=Q2, Q2_max=Q2_max,
-      brainstructures=brainstructures, mask=mask,
-      varTol=varTol, maskTol=maskTol,
-      verbose=verbose
-    )
+    # Loop over subjects.
+    `%dopar%` <- foreach::`%dopar%`
+    q <- foreach::foreach(ii = seq(nN)) %dopar% {
+      if (FORMAT=="CIFTI") {
+        # Load the workbench.
+        if (is.null(wb_path)) {
+          stop("`wb_path` is required for parallel computation.")
+        }
+        requireNamespace("ciftiTools")
+        ciftiTools::ciftiTools.setOption("wb_path", wb_path)
+      }
 
-    # Add results if this subject was not skipped.
-    # (Subjects are skipped if too many locations are masked out.)
-    if (!is.null(DR_ii)) {
-      DR0[1,ii,,] <- DR_ii$test[inds,]
-      DR0[2,ii,,] <- DR_ii$retest[inds,]
-      if(FC) {
-        FC0[1,ii,,] <- cov(DR_ii$test[,inds])
-        FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+      # Initialize output.
+      out <- list(DR=array(NA, dim=c(nM, 1, nL, nV)))
+      if (FC) { out$FC <- array(NA, dim=c(nM, 1, nL, nL)) }
+
+      # Dual regression.
+      if(verbose) { cat(paste0(
+        '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+      )) }
+      if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
+      DR_ii <- dual_reg2(
+        BOLD[[ii]], BOLD2=B2,
+        format=format,
+        GICA=GICA,
+        center_Bcols=center_Bcols,
+        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        detrend_DCT=detrend_DCT,
+        normA=normA,
+        Q2=Q2, Q2_max=Q2_max,
+        brainstructures=brainstructures, mask=mask,
+        varTol=varTol, maskTol=maskTol,
+        verbose=verbose
+      )
+
+      # Add results if this subject was not skipped.
+      # (Subjects are skipped if too many locations are masked out.)
+      if (!is.null(DR_ii)) {
+        out$DR[1,,,] <- DR_ii$test[inds,]
+        out$DR[2,,,] <- DR_ii$retest[inds,]
+        if(FC) {
+          out$FC[1,,,] <- cov(DR_ii$test[,inds])
+          out$FC[2,,,] <- cov(DR_ii$retest[,inds])
+        }
+      }
+      out
+    }
+
+    # Aggregate.
+    DR0 <- abind::abind(lapply(q, `[[`, "DR"), along=2)
+    if (FC) { FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2) }
+    
+    doParallel::stopImplicitCluster()
+
+  } else {
+    # Initialize output.
+    DR0 <- array(NA, dim=c(nM, nN, nL, nV)) # measurements by subjects by components by locations
+    if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
+
+    for (ii in seq(nN)) {
+      if(verbose) { cat(paste0(
+        '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+      )) }
+      if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
+
+      DR_ii <- dual_reg2(
+        BOLD[[ii]], BOLD2=B2,
+        format=format,
+        GICA=GICA,
+        center_Bcols=center_Bcols,
+        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        detrend_DCT=detrend_DCT,
+        normA=normA,
+        Q2=Q2, Q2_max=Q2_max,
+        brainstructures=brainstructures, mask=mask,
+        varTol=varTol, maskTol=maskTol,
+        verbose=verbose
+      )
+
+      # Add results if this subject was not skipped.
+      # (Subjects are skipped if too many locations are masked out.)
+      if (!is.null(DR_ii)) {
+        DR0[1,ii,,] <- DR_ii$test[inds,]
+        DR0[2,ii,,] <- DR_ii$retest[inds,]
+        if(FC) {
+          FC0[1,ii,,] <- cov(DR_ii$test[,inds])
+          FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+        }
       }
     }
+    rm(DR_ii)
   }
-  rm(DR_ii)
 
   # Aggregate results, and compute templates. ----------------------------------
 
@@ -525,6 +624,7 @@ estimate_template <- function(
   rm(x)
 
   # Unmask the data matrices.
+  # [TO DO] don't do this. bloats NIFTI-format file sizes!
   if (use_mask) {
     template <- lapply(template, unmask_mat, mask=maskAll)
     var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)
@@ -657,6 +757,7 @@ estimate_template.cifti <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
+  usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   estimate_template(
@@ -671,6 +772,7 @@ estimate_template.cifti <- function(
     keep_DR=keep_DR,
     #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
+    usePar=usePar, wb_path=wb_path, 
     verbose=verbose
   )
 }
@@ -688,6 +790,7 @@ estimate_template.nifti <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
+  usePar=FALSE, wb_path=NULL, 
   verbose=TRUE) {
 
   estimate_template(
@@ -701,6 +804,7 @@ estimate_template.nifti <- function(
     keep_DR=keep_DR,
     #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
+    usePar=usePar, wb_path=wb_path,
     verbose=verbose
   )
 }
