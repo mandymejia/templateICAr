@@ -23,6 +23,7 @@ estimate_template(
   brainstructures = c("left", "right"),
   mask = NULL,
   keep_DR = FALSE,
+  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -37,6 +38,8 @@ estimate_template.cifti(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
@@ -60,7 +63,6 @@ estimate_template.nifti(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
-  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -166,6 +168,8 @@ the DR estimates and only return the templates. If \code{TRUE}, the DR
 estimates are returned too. If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
+\item{FC}{Include the functional connectivity template? Default: \code{FALSE}}
+
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
 Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -232,7 +236,7 @@ estimate_template(BOLD=BOLD, GICA=mU)
 
 \dontrun{
  estimate_template(
-   run1_cifti_fnames, run2_cifti_fnames, 
+   run1_cifti_fnames, run2_cifti_fnames,
    gICA_cifti_fname, brainstructures="all",
    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
  )

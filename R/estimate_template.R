@@ -1,5 +1,5 @@
 #' Estimate template from DR
-#' 
+#'
 #' Estimate variance decomposition and templates from DR estimates.
 #'
 #' @param DR the test/retest dual regression estimates, as an array with
@@ -16,10 +16,10 @@
 #' @return List of two elements: the templates and the variance decomposition.
 #'
 #'  There are two version of the variance template: \code{varUB} gives the
-#'  unbiased variance estimate, and \code{varNN} gives the upwardly-biased 
-#'  non-negative variance estimate. Values in \code{varUB} will need to be 
+#'  unbiased variance estimate, and \code{varNN} gives the upwardly-biased
+#'  non-negative variance estimate. Values in \code{varUB} will need to be
 #'  clamped above zero before using in \code{templateICA}.
-#' 
+#'
 #' @export
 estimate_template_from_DR <- function(
   DR, LV=NULL){
@@ -121,16 +121,16 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
 #'  be in the same spatial resolution.
 #'
-#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following 
-#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
-#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where 
-#'  \eqn{V} is the number of data locations and \eqn{T} is the number of 
+#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following
+#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
+#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where
+#'  \eqn{V} is the number of data locations and \eqn{T} is the number of
 #'  timepoints.
 #'
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
-#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same 
-#'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD} 
+#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same
+#'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD}
 #'  will be split in half; the first half will be the test data and the second
 #'  half will be the retest data.
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
@@ -139,25 +139,25 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @param inds Numeric indices of the group ICs to include in the template. If
 #'  \code{NULL}, use all group ICs (default).
 #'
-#'  If \code{inds} is provided, the ICs not included will be removed after 
+#'  If \code{inds} is provided, the ICs not included will be removed after
 #'  calculating dual regression, not before. This is because removing the ICs
 #'  prior to dual regression would leave unmodelled signals in the data, which
 #'  could bias the templates.
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  surface geometries along which to smooth as GIFTI geometry files or
 #'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -171,10 +171,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
-#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  binary array of the same spatial dimensions as the fMRI data, with
 #'  \code{TRUE} corresponding to in-mask voxels.
 #' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save
-#'  the DR estimates and only return the templates. If \code{TRUE}, the DR 
+#'  the DR estimates and only return the templates. If \code{TRUE}, the DR
 #'  estimates are returned too. If a single file path, save the DR estimates as
 #'  an RDS file at that location rather than returning them.
 #   [TO DO] If a list of two vectors of file paths with the same lengths as
@@ -194,8 +194,7 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-# @param FC Include the functional connectivity template? Default: \code{FALSE}
-#  (work in progress, not available yet).
+#' @param FC Include the functional connectivity template? Default: \code{FALSE}
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -218,8 +217,8 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 #'  at a given location.
-#' @param usePar,wb_path Parallelize the DR computations over subjects? Default: 
-#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will 
+#' @param usePar,wb_path Parallelize the DR computations over subjects? Default:
+#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
 #'  use the number on the PC minus two. If the input data is in CIFTI format, the
 #'  \code{wb_path} must also be provided.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
@@ -229,16 +228,16 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
-#'  matrix format; the \code{mask} of locations without template values due to 
+#'  matrix format; the \code{mask} of locations without template values due to
 #'  too many low variance or missing values; the function \code{params} such as
 #'  the type of scaling and detrending performed; the {dat_struct} which can be
-#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or 
+#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
 #'  \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
 #'  and \code{DR} if \code{isTRUE(keep_DR)}.
 #'
 #'  Use \code{summary} to print a description of the template results, and
 #'  for CIFTI-format data use \code{plot} to plot the template mean and variance
-#'  estimates. Use \code{\link{export_template}} to save the templates to 
+#'  estimates. Use \code{\link{export_template}} to save the templates to
 #'  individual RDS, CIFTI, or NIFTI files (depending on the \code{BOLD} format).
 #' @export
 #'
@@ -252,10 +251,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
 #' GICA <- mU
 #' estimate_template(BOLD=BOLD, GICA=mU)
-#' 
+#'
 #' \dontrun{
 #'  estimate_template(
-#'    run1_cifti_fnames, run2_cifti_fnames, 
+#'    run1_cifti_fnames, run2_cifti_fnames,
 #'    gICA_cifti_fname, brainstructures="all",
 #'    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
 #'  )
@@ -263,25 +262,24 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
-  FC <- FALSE
 
   # Simple argument checks.
   stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
-  if (isTRUE(scale)) { 
+  if (isTRUE(scale)) {
     warning(
       "Setting `scale='global'`. Use `'global'` or `'local'` ",
       "instead of `TRUE`, which has been deprecated."
@@ -524,7 +522,7 @@ estimate_template <- function(
         format=format,
         GICA=GICA,
         center_Bcols=center_Bcols,
-        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        scale=scale, scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
         normA=normA,
         Q2=Q2, Q2_max=Q2_max,
@@ -549,7 +547,7 @@ estimate_template <- function(
     # Aggregate.
     DR0 <- abind::abind(lapply(q, `[[`, "DR"), along=2)
     if (FC) { FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2) }
-    
+
     doParallel::stopImplicitCluster()
 
   } else {
@@ -568,7 +566,7 @@ estimate_template <- function(
         format=format,
         GICA=GICA,
         center_Bcols=center_Bcols,
-        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        scale=scale, scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
         normA=normA,
         Q2=Q2, Q2_max=Q2_max,
@@ -613,7 +611,7 @@ estimate_template <- function(
 
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
-  # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
+  if(FC) FC0 <- array(FC0, dim=c(nM, nN, nL*nL))
 
   if (verbose) { cat("\nCalculating template.\n") }
   # Estimate the mean and variance templates.
@@ -633,37 +631,15 @@ estimate_template <- function(
   # Estimate FC template
   if(FC){
 
-    # [TO DO]: move to a separate function.
+    FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
     mean_FC <- var_FC_tot <- var_FC_within <- NULL
-    # mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
-    # var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
-    # var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
+    mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
+    var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
+    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
     var_FC_between <- var_FC_tot - var_FC_within
     var_FC_between[var_FC_between < 0] <- NA
 
-    #function to minimize w.r.t. k
-    fun <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
-      LHS <- var_ij
-      phi_ij <- xbar_ij*(nu-p-1)
-      phi_ii <- xbar_ii*(nu-p-1)
-      phi_jj <- xbar_jj*(nu-p-1)
-      RHS_numer <- (nu-p+1)*phi_ij^2 + (nu-p-1)*phi_ii*phi_jj
-      RHS_denom <- (nu-p)*((nu-p-1)^2)*(nu-p-3)
-
-      sq_diff <- (LHS - RHS_numer/RHS_denom)^2
-      return(sq_diff)
-    }
-
-    nu_est <- matrix(NA, nL, nL)
-    for(q1 in 1:nL){
-      for(q2 in q1:nL){
-
-        #estimate k = nu - p - 1
-        nu_opt <- optimize(f=fun, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC_between[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
-        nu_est[q1,q2] <- nu_opt$minimum
-      }
-    }
-    nu_est[lower.tri(nu_est, diag=FALSE)] <- NA
+    nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
     nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
 
     template_FC <- list(nu = nu_est1,
@@ -748,8 +724,8 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
@@ -765,14 +741,14 @@ estimate_template.cifti <- function(
     GICA=GICA, inds=inds,
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, 
+    detrend_DCT=detrend_DCT,
     center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, 
+    Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
     #FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
-    usePar=usePar, wb_path=wb_path, 
+    usePar=usePar, wb_path=wb_path,
     verbose=verbose
   )
 }
@@ -790,16 +766,16 @@ estimate_template.nifti <- function(
   keep_DR=FALSE,
   #FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
-  usePar=FALSE, wb_path=NULL, 
+  usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
     scale=scale,
-    detrend_DCT=detrend_DCT, 
+    detrend_DCT=detrend_DCT,
     center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, 
+    Q2=Q2, Q2_max=Q2_max,
     mask=mask,
     keep_DR=keep_DR,
     #FC=FC,
@@ -808,3 +784,66 @@ estimate_template.nifti <- function(
     verbose=verbose
   )
 }
+
+#' Compute theoretical Inverse-Wishart variance of covariance matrix elements
+#'
+#' @param nu Inverse Wishart degrees of freedom parameter
+#' @param p Matrix dimension for IW distribution
+#' @param xbar_ij Empirical mean of covariance matrices at element (i,j)
+#' @param xbar_ii Empirical mean of covariance matrices at the ith diagonal element
+#' @param xbar_jj Empirical mean of covariance matrices at the jth diagonal element
+
+#'
+#' @return Theoretical IW variance for covariance element (i,j)
+#'
+IW_var <- function(nu, p, xbar_ij, xbar_ii, xbar_jj){
+  phi_ij <- xbar_ij*(nu-p-1)
+  phi_ii <- xbar_ii*(nu-p-1)
+  phi_jj <- xbar_jj*(nu-p-1)
+  RHS_numer <- (nu-p+1)*phi_ij^2 + (nu-p-1)*phi_ii*phi_jj
+  RHS_denom <- (nu-p)*((nu-p-1)^2)*(nu-p-3)
+  return(RHS_numer/RHS_denom)
+}
+
+#' Compute the error between empirical and theoretical variance of covariance matrix elements
+#'
+#' @param nu Inverse Wishart degrees of freedom parameter
+#' @param p Matrix dimension for IW distribution
+#' @param var_ij Empirical between-subject variance of covariance matrices at element (i,j)
+#' @param xbar_ij Empirical mean of covariance matrices at element (i,j)
+#' @param xbar_ii Empirical mean of covariance matrices at the ith diagonal element
+#' @param xbar_jj Empirical mean of covariance matrices at the jth diagonal element
+#'
+#' @return Squared difference between the empirical and theoretical IW variance of covariance matrices at element (i,j)
+#'
+var_sq_err <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
+  var_ij_theo <- IW_var(nu, p, xbar_ij, xbar_ii, xbar_jj)
+  sq_diff <- (var_ij - var_ij_theo)^2
+  return(sq_diff)
+}
+
+
+
+#' Estimate IW dof parameter nu based on method of moments
+#'
+#' @param var_FC Empirical between-subject variance of covariance matrices (QxQ)
+#' @param mean_FC Empirical mean of covariance matrices (QxQ)
+#'
+#' @importFrom stats optimize
+#'
+#' @return QxQ matrix of estimates for nu
+#'
+estimate_nu_matrix <- function(var_FC, mean_FC){
+  nL <- nrow(var_FC)
+  nu_est <- matrix(NA, nL, nL)
+  for(q1 in 1:nL){
+    for(q2 in q1:nL){
+      #estimate nu by minimizing sq error between the empirical and theoretical IW variance
+      nu_opt <- optimize(f=var_sq_err, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
+      nu_est[q1,q2] <- nu_opt$minimum
+    }
+  }
+  return(nu_est)
+}
+
+
