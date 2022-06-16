@@ -642,10 +642,8 @@ estimate_template <- function(
     nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
     nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
 
-    template_FC <- list(nu = nu_est1,
+    template$FC <- list(nu = nu_est1,
                         psi = mean_FC*(nu_est1 - nL - 1))
-  } else {
-    template_FC <- NULL
   }
 
   # Format result ---------------------------------------------------
