@@ -611,7 +611,6 @@ estimate_template <- function(
 
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
-  if(FC) FC0 <- array(FC0, dim=c(nM, nN, nL*nL))
 
   if (verbose) { cat("\nCalculating template.\n") }
   # Estimate the mean and variance templates.
@@ -633,9 +632,9 @@ estimate_template <- function(
 
     FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
     mean_FC <- var_FC_tot <- var_FC_within <- NULL
-    mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
-    var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
-    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
+    mean_FC <- (apply(FC1, c(2, 3), mean, na.rm=TRUE) + apply(FC2, c(2, 3), mean, na.rm=TRUE))/2
+    var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
     var_FC_between <- var_FC_tot - var_FC_within
     var_FC_between[var_FC_between < 0] <- NA
 
