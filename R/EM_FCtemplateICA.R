@@ -9,7 +9,7 @@
 #' @param template_FC (list) Parameters of functional connectivity template
 #' @param prior_params Alpha and beta parameters of IG prior on tau^2 (error variance)
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
-#' @param AS_init (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
+#' @param AS_0 (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.01.
@@ -33,7 +33,7 @@ EM_FCtemplateICA <- function(template_mean,
                              template_FC,
                              prior_params=c(0.001, 0.001),
                              BOLD,
-                             AS_init,
+                             AS_0,
                              maxiter=100,
                              epsilon=0.01,
                              verbose){
@@ -63,10 +63,15 @@ EM_FCtemplateICA <- function(template_mean,
   template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance
 
   #compute initial estimates of posterior moments
-  A_init <- AS_0$A #TxQ
-  S_init <- AS_0$S #QxV
+  A <- A_init <- AS_0$A #TxQ
+  S <- S_init <- AS_0$S #QxV
   AS_init <- A_init %*% S_init #TxV -- for the terms E[a_t's_v]
   AS_sq_init <- (AS_init^2) #TxV -- for the terms E[(a_t's_v)^2]
+  # These next are empirical estimates of the hyperparameters that we are estimating with the EM
+  tau_v_init <- apply(BOLD - t(A %*% S),1,var)
+  alpha_init <- apply(A,2,mean)
+  G_init <- cov(A)
+  theta_new <- list(tau_v_init, alpha_init, G_init)
 
   #pre-compute sums over t
   A_sum_init <- colSums(A_init) #vector length Q
@@ -86,7 +91,26 @@ EM_FCtemplateICA <- function(template_mean,
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
 
     t00 <- Sys.time()
+    ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
+    # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
+    # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
+    post_sums <-
+      Gibbs_AS_posterior(
+        nsamp = 1,
+        nburn = 0,
+        template_mean = template_mean,
+        template_var = template_var,
+        S = S,
+        A = A,
+        G = theta_new[[3]],
+        tau_v = theta_new[[1]],
+        Y = BOLD,
+        alpha = theta_new[[2]],
+        final = F
+      )
     #this function returns a list of tau_sq, alpha, G
+    # This is the M-step. It might be better to perform the E-step first, as the
+    # M-step assumes that we have a good estimate of the first level of the posterior
     theta_new <- UpdateTheta_FCtemplateICA(template_mean,
                                           template_var,
                                           template_FC,
@@ -95,11 +119,6 @@ EM_FCtemplateICA <- function(template_mean,
                                           post_sums,
                                           verbose=verbose)
     if(verbose) print(Sys.time() - t00)
-
-    ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
-    tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
-    post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-
 
   #   ### Compute change in parameters
   #
@@ -189,4 +208,87 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
     G <- G_new
   )
   return(theta_new)
+}
+
+Gibbs_AS_posterior <- function(nsamp = 1000,
+                               nburn = 100,
+                               template_mean,
+                               template_var,
+                               S,
+                               A,
+                               ####Ani#### added the parameter A
+                               G,
+                               tau_v,
+                               Y,
+                               alpha,
+                               final = FALSE) {
+  # number_samples = 1000
+  niter <- nsamp + nburn
+  Q = ncol(A)
+  V = length(tau_v)
+  ntime <- ncol(Y)
+  A_sum = numeric(Q)
+  AAt_sum = numeric(ntime)
+  yAS_sum = numeric(V)
+  AS_sq = numeric(V)
+
+  G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
+  alphaGinv <- t(alpha)%*%solve(G)
+
+  ### A is T by Q
+  start_time <- proc.time()[3]
+  for(i in 1:niter){
+    # sigma_a = solve(S %*% G_tau_inv %*% t(S) + solve(G))
+    # # cat(sigma_a,'\n')
+    # YGS <- t(Y) %*% G_tau_inv %*% t(S)
+    # # cat(YGS[ntime,],"\n")
+    # # cat(YGS[ntime,] + alphaGinv,"\n")
+    # # cat(sigma_a %*% t(YGS[ntime,] + alphaGinv), "\n")
+    # mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
+    # # cat(mu_a,"\n")
+    # #### update A
+    # # A = mvtnorm::rmvnorm(n = 1, mean = mu_a, sigma = sigma_a) # This doesn't work because mu_a is a matrix
+    # A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
+
+    # G_tauv_inv = diag(1/template.var, nrow = T) # Don't actually need to make this
+    # G_sv_inv = Matrix::Diagonal(x = 1/sigma_s) ### Need var names for these
+
+    for(v in 1:V){
+      sigma_s = solve((1/tau_v[v]) * crossprod(A) + Matrix::Diagonal(x = template_var[v,]))
+      AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + Matrix::Diagonal(x = template_var[v,])%*%template_mean[v,]
+      mu = sigma_s %*% AtYvtempVarMean
+      # if(v == 1) print(mu)
+      # mu_s = cbind(mu_s, mu)
+      S[,v] <- mvtnorm::rmvnorm(n = 1, mean = mu, sigma = sigma_s)
+    }
+
+    #### update S
+    # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
+
+    #### I'm not sure about the definitions of AAt and AS_sq, so the following lines need to be checked.
+    if(i > nburn) {
+      AtS <- A %*% S
+      A_sum = A_sum + colSums(A)
+      AAt_sum = AAt_sum + colSums(A %*% t(A))
+      yAS_sum = yAS_sum + colSums(t(Y) * AtS)
+      AS_sq = AS_sq + apply(AtS^2,2,sum)
+    }
+
+    if(niter >= 10 & i %% round(niter / 10) == 0) {
+      cat("Posterior sample",i,"of",niter,". Estimated time remaining:", (proc.time()[3] - start_time) / i * (niter - i),"\n")
+    }
+  }
+  #### return estimates of A = A_sum_init, #only actually need sum over t
+  #AAt = AAt_sum_init,  #only actually need sum over t
+  #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
+  #AS_sq = AS_sq_sum_init
+
+  A_sum = A_sum/nsamp
+  AAt_sum = AAt_sum/nsamp
+  yAS_sum = yAS_sum/nsamp
+  AS_sq = AS_sq/nsamp
+  total_time <- proc.time()[3] - start_time
+
+  return(list(A_sum = A_sum, AAt_sum = AAt_sum, yAS_sum = yAS_sum, AS_sq = AS_sq, total_time = total_time))
+
 }
