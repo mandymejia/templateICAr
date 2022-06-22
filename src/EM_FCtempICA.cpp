@@ -5,6 +5,63 @@
 using namespace Rcpp;
 using namespace Eigen;
 
+// Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
+//                                         Eigen::MatrixXd template_var,
+//                                         Rcpp::List template_FC,
+//                                         Eigen::VectorXd prior_params,
+//                                         Eigen::MatrixXd BOLD,
+//                                         Rcpp::List post_sums,
+//                                         bool verbose){
+//
+//
+//   int nvox = BOLD.rows();
+//   int ntime = BOLD.cols();
+//   int nICs = template_mean.cols();
+//
+//   // UPDATE TAU^2 (ERROR VARIANCE)
+//
+//   Eigen::VectorXd tau_sq_new(nvox);
+//   double alpha_tau = prior_params(0);
+//   double beta_tau = prior_params(1);
+//   Eigen::VectorXd AS_sq = Eigen::VectorXd (post_sums["AS_sq"]);
+//   Eigen::VectorXd yAS = Eigen::VectorXd (post_sums["yAS_sum"]);
+//   Eigen::VectorXd A = Eigen::VectorXd (post_sums["A_sum"]);
+//   Eigen::VectorXd AAt = Eigen::VectorXd (post_sums["AAt_sum"]);
+//   Eigen::VectorXd alpha_new(nICs);
+//   double nu0 = double (template_FC["nu"]);
+//   Eigen::MatrixXd psi0 = Eigen::MatrixXd (template_FC["psi"]);
+//
+//   for(int v=0;v < nvox; v++){
+//     tau_sq_new(v) = 1/(ntime + 2*alpha_tau + 2) * (AS_sq(v) - 2*yAS(v) + 2*beta_tau);
+//   }
+//
+// // UPDATE ALPHA (TEMPORAL INTERCEPT)
+//
+//   alpha_new = A / ntime;
+//
+//
+// // UPDATE G (TEMPORAL COVARIANCE, I.E. FUNCTIONAL CONNECTIVITY)
+//
+//       Eigen::MatrixXd alpha_alpha_t = alpha_new * alpha_new.transpose();
+//       Eigen::MatrixXd tmp = 2* A * alpha_new.transpose() - AAt - ntime*alpha_alpha_t - psi0;
+//       Eigen::MatrixXd G_new = (ntime + nu0 + nICs + 1) * tmp.inverse();
+//
+// // RETURN NEW PARAMETER ESTIMATES
+//       // theta_new <- list(
+//       //     tau_sq <- tau_sq_new,
+//       //             alpha <- alpha_new,
+//       //                    G <- G_new
+//       // )
+//       //   return(theta_new)
+//
+//       Rcpp::NumericVector tau_sq_newX(wrap(tau_sq_new));
+//       Rcpp::NumericVector alpha_newX(wrap(alpha_new));
+//       Rcpp::NumericVector G_newX(wrap(G_new));
+//       return Rcpp::List::create(Rcpp::Named("tau_sq") = tau_sq_newX,
+//                                 Rcpp::Named("alpha") = alpha_newX,
+//                                 Rcpp::Named("G") = G_newX);
+// }
+
 // [[Rcpp::export]]
 Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
                                  const Eigen::MatrixXd template_mean,
@@ -34,13 +91,13 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   Eigen::MatrixXd YtG_tau_inv = Y.transpose() * G_tau_inv;
   // Initialize intermediate objects
   Eigen::MatrixXd sig_inv_A = Eigen::MatrixXd::Zero(Q,Q);
-  Eigen::MatrixXd sig_A, sig_S;
+  Eigen::MatrixXd chol_sig_A(Q,Q), chol_sig_S(Q,Q);
   Eigen::MatrixXd YGS(ntime,Q), AtA(Q,Q), sig_inv_S(Q,Q), SGti(Q,V);
   Eigen::MatrixXd AAt(ntime,ntime), AtS(ntime, V), YtAtS(ntime,V);
   Eigen::VectorXd mu_at(Q), mu_sv(Q), tVarRow(Q), At(Q), Sv(Q);
   Eigen::VectorXd ygs_alphaGinv(Q), AtYvtempVarMean(Q), tVarMean(Q);
   NumericVector Z(Q);
-  Eigen::LLT<Eigen::MatrixXd> chol_sig_inv_A, chol_sig_inv_S, chol_sig_A, chol_sig_S;
+  Eigen::LLT<Eigen::MatrixXd> chol_sig_inv_A, chol_sig_inv_S;
   // Start the Gibbs sampler
   for(int i=1;i <= niter; i++) {
     // Rcout << "Iteration " << i << std::endl;
@@ -48,11 +105,12 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
     SGti = S.transpose() * G_tau_inv;
     sig_inv_A = SGti * S;
     sig_inv_A += G_inv;
-    sig_A = sig_inv_A.inverse();
-    chol_sig_A.compute(sig_A);
+    // sig_A = sig_inv_A.inverse();
+    // chol_sig_A.compute(sig_A);
     // Rcout << sig_A << std::endl;
     // Eigen::LLT<Eigen::MatrixXd> chol_sig_inv_A(sig_inv_A);
     chol_sig_inv_A.compute(sig_inv_A);
+    chol_sig_A = chol_sig_inv_A.matrixL().toDenseMatrix().inverse();
     YGS = YtG_tau_inv * S;
     // ygs_alphaGinv = YGS.row(ntime - 1) + alphaGinv.transpose();
     // mu_at = sig_A * ygs_alphaGinv;
@@ -63,14 +121,16 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       // Eigen::VectorXd ygs_alphaGinv = Eigen::VectorXd::Zero(Q);
       ygs_alphaGinv = YGS.row(t-1) + alphaGinv.transpose();
       // mu_a.row(t) = chol_sig_inv_A.solve(ygs_alphaGinv);
-      // mu_at = chol_sig_inv_A.solve(ygs_alphaGinv);
-      mu_at = sig_A * ygs_alphaGinv;
-      // Rcout << mu_at.transpose() << std::endl;
+      mu_at = chol_sig_inv_A.solve(ygs_alphaGinv);
+      // mu_at = sig_A * ygs_alphaGinv;
+      // if(t == 1) Rcout << "mu_a1: " << mu_at.transpose() << std::endl;
       // mu_at = sig_inv_A.HouseholderQR().solve(ygs_alphaGinv);
       Z = rnorm(Q);
       Eigen::Map<Eigen::VectorXd> ZZ = as<Eigen::Map<Eigen::VectorXd> >(Z);
       // At = chol_sig_inv_A.solve(ZZ);
-      At = chol_sig_A.matrixL() * ZZ;
+      // At = chol_sig_A.matrixL() * ZZ;
+      // At = chol_sig_inv_A.matrixL().toDenseMatrix().inverse() * ZZ;
+      At = chol_sig_A * ZZ;
       At += mu_at;
       // A.row(t-1) = chol_sig_inv_A.solve(ZZ);
       // A.row(t-1) += mu_at;
@@ -86,25 +146,26 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       sig_inv_S = AtA;
       sig_inv_S /= tau_v(v-1);
       sig_inv_S += template_var.row(v-1).asDiagonal();
-      sig_S = sig_inv_S.inverse();
-      chol_sig_S.compute(sig_S);
+      // sig_S = sig_inv_S.inverse();
+      // chol_sig_S.compute(sig_S);
       // Rcout << "Found sig_inv_S...";
       chol_sig_inv_S.compute(sig_inv_S);
+      chol_sig_S = chol_sig_inv_S.matrixL().toDenseMatrix().inverse();
       // Rcout << "Cholesky computed...";
       AtYvtempVarMean = A.transpose() * Y.row(v-1).transpose();
       AtYvtempVarMean /= tau_v(v-1);
       tVarMean = template_var.row(v-1).asDiagonal() * template_mean.row(v-1).transpose();
       AtYvtempVarMean += tVarMean;
       // Rcout << "RHS computed...";
-      // mu_sv = chol_sig_inv_S.solve(AtYvtempVarMean);
-      mu_sv = sig_S * AtYvtempVarMean;
-      // if(v == 1) Rcout << mu_sv.transpose() << std::endl;
+      mu_sv = chol_sig_inv_S.solve(AtYvtempVarMean);
+      // mu_sv = sig_S * AtYvtempVarMean;
+      // if(v == 1) Rcout << "mu_s1: " << mu_sv.transpose() << std::endl;
       // Rcout << "mu computed...";
       Z = rnorm(Q);
       Eigen::Map<Eigen::VectorXd> ZZ = as<Eigen::Map<Eigen::VectorXd> >(Z);
       // S.row(v-1) = chol_sig_inv_S.solve(ZZ);
       // S.row(v-1) += mu_sv;
-      Sv = chol_sig_S.matrixL() * ZZ;
+      Sv = chol_sig_S * ZZ;
       Sv += mu_sv;
       S.row(v-1) = Sv;
     }

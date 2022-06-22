@@ -95,12 +95,12 @@ EM_FCtemplateICA <- function(template_mean,
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     post_sums <-
-      Gibbs_AS_posterior(
+      Gibbs_AS_posteriorCPP(
         nsamp = 1,
         nburn = 0,
         template_mean = template_mean,
         template_var = template_var,
-        S = S,
+        S = t(S),
         A = A,
         G = theta_new[[3]],
         tau_v = theta_new[[1]],
@@ -238,31 +238,31 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   ### A is T by Q
   start_time <- proc.time()[3]
   for(i in 1:niter){
-    # sigma_a = solve(S %*% G_tau_inv %*% t(S) + solve(G))
-    # # cat(sigma_a,'\n')
-    # YGS <- t(Y) %*% G_tau_inv %*% t(S)
-    # # cat(YGS[ntime,],"\n")
-    # # cat(YGS[ntime,] + alphaGinv,"\n")
-    # # cat(sigma_a %*% t(YGS[ntime,] + alphaGinv), "\n")
-    # mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
-    # # cat(mu_a,"\n")
-    # #### update A
-    # # A = mvtnorm::rmvnorm(n = 1, mean = mu_a, sigma = sigma_a) # This doesn't work because mu_a is a matrix
-    # A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
+    #### update A
+    sigma_a = solve(S %*% G_tau_inv %*% t(S) + solve(G))
+    # cat(sigma_a,'\n')
+    YGS <- t(Y) %*% G_tau_inv %*% t(S)
+    # cat(YGS[ntime,],"\n")
+    # cat(YGS[ntime,] + alphaGinv,"\n")
+    # cat("mu_a1:",sigma_a %*% t(YGS[1,] + alphaGinv), "\n")
+    mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
+    # cat(mu_a,"\n")
+    # A = mvtnorm::rmvnorm(n = 1, mean = mu_a, sigma = sigma_a) # This doesn't work because mu_a is a matrix
+    A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
 
     # G_tauv_inv = diag(1/template.var, nrow = T) # Don't actually need to make this
     # G_sv_inv = Matrix::Diagonal(x = 1/sigma_s) ### Need var names for these
 
+    #### update S
     for(v in 1:V){
       sigma_s = solve((1/tau_v[v]) * crossprod(A) + Matrix::Diagonal(x = template_var[v,]))
       AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + Matrix::Diagonal(x = template_var[v,])%*%template_mean[v,]
       mu = sigma_s %*% AtYvtempVarMean
-      # if(v == 1) print(mu)
+      # if(v == 1) cat("mu_s1:",mu@x,"\n")
       # mu_s = cbind(mu_s, mu)
       S[,v] <- mvtnorm::rmvnorm(n = 1, mean = mu, sigma = sigma_s)
     }
 
-    #### update S
     # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
 
     #### I'm not sure about the definitions of AAt and AS_sq, so the following lines need to be checked.
