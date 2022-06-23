@@ -70,6 +70,7 @@ EM_FCtemplateICA <- function(template_mean,
   # These next are empirical estimates of the hyperparameters that we are estimating with the EM
   tau_v_init <- apply(BOLD - t(A %*% S),1,var)
   alpha_init <- apply(A,2,mean)
+  sigma2_alpha <- max(apply(A,2,var))
   G_init <- cov(A)
   theta_new <- list(tau_v_init, alpha_init, G_init)
 
@@ -89,7 +90,7 @@ EM_FCtemplateICA <- function(template_mean,
   while(err > epsilon){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
-
+    theta_old <- theta_new
     t00 <- Sys.time()
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
@@ -102,22 +103,34 @@ EM_FCtemplateICA <- function(template_mean,
         template_var = template_var,
         S = t(S),
         A = A,
-        G = theta_new[[3]],
-        tau_v = theta_new[[1]],
+        G = theta_old[[3]],
+        tau_v = theta_old[[1]],
         Y = BOLD,
-        alpha = theta_new[[2]],
+        alpha = theta_old[[2]],
         final = F
       )
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
     # M-step assumes that we have a good estimate of the first level of the posterior
-    theta_new <- UpdateTheta_FCtemplateICA(template_mean,
-                                          template_var,
-                                          template_FC,
-                                          prior_params,
-                                          BOLD,
-                                          post_sums,
-                                          verbose=verbose)
+    # theta_new <- UpdateTheta_FCtemplateICA(template_mean,
+    #                                       template_var,
+    #                                       template_FC,
+    #                                       prior_params,
+    #                                       BOLD,
+    #                                       post_sums,
+    #                                       verbose=verbose)
+    theta_new <-
+      UpdateTheta_FCtemplateICAcpp(
+        template_mean,
+        template_var,
+        template_FC,
+        theta_old$G,
+        prior_params,
+        Y,
+        post_sums,
+        sigma2_alpha,
+        verbose = TRUE
+      )
     if(verbose) print(Sys.time() - t00)
 
   #   ### Compute change in parameters
