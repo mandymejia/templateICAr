@@ -669,6 +669,7 @@ estimate_template <- function(
   # Params, formatted as length-one character vectors to put in "xifti" metadata
   indsp <- if (all(seq(nQ) %in% inds)) { paste("all", nQ) } else { inds }
   tparams <- list(
+    FC=FC,
     num_subjects=nN, num_visits=nM,
     inds=indsp, center_Bcols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,

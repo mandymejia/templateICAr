@@ -439,3 +439,44 @@ plot.template.nifti <- function(x, stat=c("mean", "var"),
 plot.template.data <- function(x, ...) {
   stop("Not supported yet.")
 }
+
+#' Plot FC template
+#'
+#' @param x The FC template
+#' @param zlim Color limits
+#' @param title Plot title
+#' @param cols Colors
+#' @param break_by Color breaks
+#' @param cors \code{TRUE}
+#' @export
+plot_FC <- function(x, zlim=c(-1,1), title=NULL, cols=c('darkblue','turquoise','white','pink','red'), break_by=0.5, cor=TRUE){
+  browser()
+  require(grDevices)
+
+  #set color scale and breaks
+  breaks <- seq(zlim[1], zlim[2], length.out=100)
+  levs <- seq(zlim[1], zlim[2], break_by)
+  palfun <- grDevices::colorRampPalette(cols)
+  pal <- palfun(100-1)
+
+  #make plot
+  layout(matrix(c(1,2,0,3), nrow=2, ncol=2), widths=c(5,1), heights=c(1.2,5))
+  #title
+  par(mar = c(0,0,0,0))
+  plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+  text(x = 0.5, y = 0.25, title, cex = 2, col = "black")
+  # matrix
+  if(cor) diag(x) <- NA
+  size <- ncol(x)
+  x[x >= zlim[2]] <- (zlim[2]-0.0001) #truncate above
+  x[x <= zlim[1]] <- (zlim[1]+0.0001) #trunate below
+  par(mar=c(1,2,0,1))
+  image(seq(size), seq(size), t(x[size:1,]), col=pal, breaks=breaks-1e-8, xaxt="n", yaxt="n", ylab="", xlab="")
+  #image(x)
+  abline(h=seq(size)-0.5, v=seq(size)-0.5)
+  # color scale
+  par(mar=c(1,1,0,3))
+  image.default(x, col=pal, breaks=breaks-1e-8)
+  axis(4,at=levs, las=2)
+  abline(h=levs)
+}
