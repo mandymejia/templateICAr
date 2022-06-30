@@ -641,7 +641,7 @@ estimate_template <- function(
     var_FC_between[var_FC_between < 0] <- NA
 
     nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
-    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
+    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
 
     template$FC <- list(nu = nu_est1,
                         psi = mean_FC*(nu_est1 - nL - 1))
@@ -837,6 +837,7 @@ estimate_nu_matrix <- function(var_FC, mean_FC){
   nu_est <- matrix(NA, nL, nL)
   for(q1 in 1:nL){
     for(q2 in q1:nL){
+      if(is.na(var_FC[q1,q2])) next()
       #estimate nu by minimizing sq error between the empirical and theoretical IW variance
       nu_opt <- optimize(f=var_sq_err, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
       nu_est[q1,q2] <- nu_opt$minimum
