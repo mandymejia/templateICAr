@@ -114,6 +114,8 @@ dual_reg <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps as a (vectorized) numeric matrix
 #'  (\eqn{V \times Q}). Its columns will be centered.
+#' @param keepA Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
+#'  (default)?
 #' @inheritParams scale_Param
 #' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
 #'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
@@ -172,13 +174,15 @@ dual_reg <- function(
 #'  the intersection of the masks is used.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
-#' @return The dual regression \strong{S} matrices, or \code{NULL} if dual 
+#' @return The dual regression \strong{S} matrices, or both the \strong{S}
+#'  and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual 
 #'  regression was skipped due to too many masked data locations.
 #'
 #' @keywords internal
 dual_reg2 <- function(
   BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"), 
   GICA, 
+  keepA=FALSE,
   scale=c("global", "local", "none"), 
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
   detrend_DCT=0,
@@ -190,7 +194,8 @@ dual_reg2 <- function(
 
   if (verbose) { extime <- Sys.time() }
 
-  # No arg checks: check the args before calling this function.
+  keepA <- as.logical(keepA); stopifnot(length(keepA)==1)
+  # No other arg checks: check them before calling this function.
 
   # For `"xifti"` data for handling the medial wall and smoothing.
   xii1 <- NULL
@@ -348,11 +353,13 @@ dual_reg2 <- function(
 
   # Return these DR results if denoising is not needed. ------------------------
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
-    out$test <- out$test$S
-    out$retest <- out$retest$S
+    if (!keepA) {
+      out$test$A <- NULL
+      out$retest$A <- NULL
+    }
     if (use_mask) {
-      out$test <- unmask(out$test, mask)
-      out$retest <- unmask(out$retest, mask)
+      out$test$S <- unmask(out$test$S, mask)
+      out$retest$S <- unmask(out$retest$S, mask)
     }
     cat(" Done!\n")
     if(verbose) { print(Sys.time() - extime) }
@@ -389,16 +396,24 @@ dual_reg2 <- function(
 
   # Do DR again. ---------------------------------------------------------------
   if (verbose) { cat(" Computing DR again...") }
-  out$test_preclean <- out$test$S
-  out$test <- dual_reg_noNorm(BOLD)$S
-  out$retest_preclean <- out$retest$S
-  out$retest <- dual_reg_noNorm(BOLD2)$S
+
+  out$test_preclean <- out$test
+  out$test <- dual_reg_noNorm(BOLD)
+  out$retest_preclean <- out$retest
+  out$retest <- dual_reg_noNorm(BOLD2)
+
+  if (!keepA) {
+    out$test_preclean$A <- NULL
+    out$test$A <- NULL
+    out$retest_preclean$A <- NULL
+    out$retest$A <- NULL
+  }
 
   if (use_mask) {
-    out$test_preclean <- unmask(out$test_preclean, mask)
-    out$retest_preclean <- unmask(out$retest_preclean, mask)
-    out$test <- unmask(out$test, mask)
-    out$retest <- unmask(out$retest, mask)
+    out$test_preclean$S <- unmask(out$test_preclean$S, mask)
+    out$retest_preclean$S <- unmask(out$retest_preclean$S, mask)
+    out$test$S <- unmask(out$test$S, mask)
+    out$retest$S <- unmask(out$retest$S, mask)
   }
 
   cat(" Done!\n")

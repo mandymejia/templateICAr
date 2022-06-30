@@ -521,6 +521,7 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        keepA=FC,
         center_Bcols=center_Bcols,
         scale=scale, scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
@@ -534,11 +535,11 @@ estimate_template <- function(
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
       if (!is.null(DR_ii)) {
-        out$DR[1,,,] <- DR_ii$test[inds,]
-        out$DR[2,,,] <- DR_ii$retest[inds,]
+        out$DR[1,,,] <- DR_ii$test$S[inds,]
+        out$DR[2,,,] <- DR_ii$retest$S[inds,]
         if(FC) {
-          out$FC[1,,,] <- cov(DR_ii$test[,inds])
-          out$FC[2,,,] <- cov(DR_ii$retest[,inds])
+          out$FC[1,,,] <- cov(DR_ii$test$A[,inds])
+          out$FC[2,,,] <- cov(DR_ii$retest$A[,inds])
         }
       }
       out
@@ -565,6 +566,7 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        keepA=FC,
         center_Bcols=center_Bcols,
         scale=scale, scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
@@ -578,11 +580,11 @@ estimate_template <- function(
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
       if (!is.null(DR_ii)) {
-        DR0[1,ii,,] <- DR_ii$test[inds,]
-        DR0[2,ii,,] <- DR_ii$retest[inds,]
+        DR0[1,ii,,] <- DR_ii$test$S[inds,]
+        DR0[2,ii,,] <- DR_ii$retest$S[inds,]
         if(FC) {
-          FC0[1,ii,,] <- cov(DR_ii$test[,inds])
-          FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+          FC0[1,ii,,] <- cov(DR_ii$test$A[,inds])
+          FC0[2,ii,,] <- cov(DR_ii$retest$A[,inds])
         }
       }
     }
