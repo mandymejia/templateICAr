@@ -220,7 +220,7 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   # same for NIFTI
-  format <- infer_BOLD_format(BOLD)
+  format <- templateICAr:::infer_BOLD_format(BOLD)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -612,7 +612,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  x <- templateICAr:::rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
   BOLD <- x$BOLD
   Q2_est <- x$Q2
   rm(x)
@@ -652,10 +652,12 @@ templateICA <- function(
     prior_params <- c(0.001, 0.001)
     EM_FCtemplateICA <- function(...){NULL}
     resultEM <- EM_FCtemplateICA(
-      template$mean, template$var, template$FC,
+      template_mean = template$mean,
+      template_var = template$var,
+      template_FC = template_FC,
       prior_params, #for prior on tau^2
       BOLD=BOLD,
-      AS_init = BOLD_DR, #initial values for A and S
+      AS_0 = BOLD_DR, #initial values for A and S
       maxiter=maxiter, epsilon=epsilon,
       verbose=verbose
     )

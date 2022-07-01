@@ -111,7 +111,7 @@ EM_FCtemplateICA <- function(template_mean,
       )
 
     post_sums <-
-      templateICAr:::Gibbs_AS_posterior(
+      Gibbs_AS_posterior(
         nsamp = 10,
         nburn = 0,
         template_mean = template_mean,
@@ -245,6 +245,22 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   return(theta_new)
 }
 
+#' Find expectations from the posterior of A and S using MCMC
+#'
+#' @param nsamp number of usable samples
+#' @param nburn number of burn-in samples
+#' @param template_mean V by Q matrix of template mean values
+#' @param template_var V by Q matrix of template variance values
+#' @param S V by Q matrix of starting values for ICs
+#' @param A T by Q matrix of starting values for mixing
+#' @param G Q by Q prior covariance of A
+#' @param tau_v vector of length V of observational variance for each data location
+#' @param Y V by T matrix of observed BOLD values
+#' @param alpha length Q vector prior mean of A
+#' @param final (logical) should this output samples? Otherwise, summaries are output
+#'
+#' @return a list of posterior summaries or a list of MCMC samples
+#' @export
 Gibbs_AS_posterior <- function(nsamp = 1000,
                                nburn = 100,
                                template_mean,
@@ -260,29 +276,47 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   niter <- nsamp + nburn
   Q = ncol(A)
   V = length(tau_v)
+  if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
   ntime <- ncol(Y)
   A_sum = numeric(Q)
-  AAt_sum = numeric(ntime)
+  AAt_sum = matrix(0,Q,Q)
   yAS_sum = numeric(V)
   AS_sq = numeric(V)
 
   G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
-  alphaGinv <- t(alpha)%*%solve(G)
+  G_inv <- solve(G)
+  alphaGinv <- as.numeric(t(alpha)%*%G_inv)
+  YG <- t(Y) %*% G_tau_inv
+
 
   ### A is T by Q
   start_time <- proc.time()[3]
   for(i in 1:niter){
     #### update A
-    sigma_a = solve(S %*% G_tau_inv %*% t(S) + solve(G))
+    # sigma_a = solve(t(S) %*% G_tau_inv %*% S + solve(G))
+    sigma_a_inv <- as.matrix(t(S) %*% G_tau_inv %*% S + G_inv)
+    chol_sigma_a_inv <- chol(sigma_a_inv)
+    # sigma_a <- solve(sigma_a_inv)
     # cat(sigma_a,'\n')
-    YGS <- t(Y) %*% G_tau_inv %*% t(S)
+    YGS <- YG %*% S
+    YGSalphaGinv <- apply(YGS,1,function(ygs) ygs + alphaGinv)
+    mu_a <- as.matrix(Matrix::solve(sigma_a_inv,YGSalphaGinv))
+    cl <- parallel::makeCluster(parallel::detectCores() - 2)
+    mu_at <- mu_a[,1]
+    A <- t(parallel::parApply(cl,mu_a,2, function(mu_at, chol_sigma_a_inv){
+      Qa <- length(mu_at)
+      Za <- rnorm(Qa)
+      at <- mu_at + as.numeric(Matrix::solve(chol_sigma_a_inv,Za))
+      return(at)
+    }, chol_sigma_a_inv = chol_sigma_a_inv))
+    parallel::stopCluster(cl)
     # cat(YGS[ntime,],"\n")
     # cat(YGS[ntime,] + alphaGinv,"\n")
     # cat("mu_a1:",sigma_a %*% t(YGS[1,] + alphaGinv), "\n")
-    mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
+    # mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
     # cat(mu_a,"\n")
     # A = mvtnorm::rmvnorm(n = 1, mean = mu_a, sigma = sigma_a) # This doesn't work because mu_a is a matrix
-    A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
+    # A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
 
     # G_tauv_inv = diag(1/template.var, nrow = T) # Don't actually need to make this
     # G_sv_inv = Matrix::Diagonal(x = 1/sigma_s) ### Need var names for these
