@@ -1,41 +1,41 @@
 #' Template ICA
 #'
-#' Perform template independent component analysis (ICA) using 
+#' Perform template independent component analysis (ICA) using
 #'  expectation-maximization (EM).
 #'
-#' @param BOLD Vector of subject-level fMRI data in one of the following 
-#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
+#' @param BOLD Vector of subject-level fMRI data in one of the following
+#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
 #'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
 #'  is the number of data locations and \eqn{T} is the number of timepoints.
 #'
-#'  If multiple BOLD data are provided, they will be independently centered, 
-#'  scaled, and detrended (if applicable), and then they will be concatenated 
-#'  together followed by denoising (if applicable) and computing the initial 
+#'  If multiple BOLD data are provided, they will be independently centered,
+#'  scaled, and detrended (if applicable), and then they will be concatenated
+#'  together followed by denoising (if applicable) and computing the initial
 #'  dual regression estimate.
-#' @param template Template estimates in a format compatible with \code{BOLD}, 
+#' @param template Template estimates in a format compatible with \code{BOLD},
 #'  from \code{\link{estimate_template}}.
-#' @param tvar_method Which calculation of the template variance to use: 
+#' @param tvar_method Which calculation of the template variance to use:
 #'  \code{"non-negative"} (default) or \code{"unbiased"}. The unbiased template
-#'  variance is based on the assumed mixed effects/ANOVA model, whereas the 
+#'  variance is based on the assumed mixed effects/ANOVA model, whereas the
 #'  non-negative template variance adds to it to account for greater potential
 #'  between-subjects variation. (The template mean is the same for either choice
 #'  of \code{tvar_method}.)
 #' @inheritParams center_Bcols_Param
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  surface geometries along which to smooth as GIFTI geometry files or
 #'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -53,7 +53,7 @@
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
 #'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
 #'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI 
+#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -61,7 +61,7 @@
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
-#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  binary array of the same spatial dimensions as the fMRI data, with
 #'  \code{TRUE} corresponding to in-mask voxels.
 #' @param time_inds Subset of fMRI BOLD volumes to include in analysis.
 #'  If \code{NULL} (default), use all volumes. Subsetting is performed before
@@ -86,20 +86,20 @@
 #' @inheritParams varTol_Param
 #' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
 #'  The target resolution for resampling (number of cortical surface vertices
-#'  per hemisphere). For spatial modelling, a value less than 10000 is 
+#'  per hemisphere). For spatial modelling, a value less than 10000 is
 #'  recommended for computational feasibility. If \code{NULL} (default), do not
 #'  perform resampling.
-#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. 
+#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data.
 #'  Should medial wall (missing data) locations be removed from the mesh?
-#'  If \code{TRUE}, faster computation but less accurate estimates at the 
+#'  If \code{TRUE}, faster computation but less accurate estimates at the
 #'  boundary of wall.
-#' @param reduce_dim Reduce the temporal dimension of the data using PCA? 
-#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model 
+#' @param reduce_dim Reduce the temporal dimension of the data using PCA?
+#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
-#' @param usePar Parallelize the computation over data locations? Default: 
+#' @param usePar Parallelize the computation over data locations? Default:
 #'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
 #'  use the number on the PC minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm
@@ -107,16 +107,16 @@
 #  of the spatial template ICA model, which assumes that all IC's have the same
 #  smoothness parameter, \eqn{\kappa}
 #'
-#' @return A (spatial) template ICA object, which is a list containing: 
-#'  \code{subjICmean}, the \eqn{V \times L} estimated independent components 
-#'  \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the 
-#'  \code{mask} of locations without template values due to too many low 
+#' @return A (spatial) template ICA object, which is a list containing:
+#'  \code{subjICmean}, the \eqn{V \times L} estimated independent components
+#'  \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the
+#'  \code{mask} of locations without template values due to too many low
 #'  variance or missing values; and the function \code{params} such as
-#'  the type of scaling and detrending performed. 
-#' 
+#'  the type of scaling and detrending performed.
+#'
 #'  If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
 #'  \code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}
-#'  objects, respectively. 
+#'  objects, respectively.
 #'
 #' @export
 #'
@@ -132,8 +132,8 @@
 #' }
 templateICA <- function(
   BOLD, template, tvar_method=c("non-negative", "unbiased"),
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=NULL, Q2_max=NULL,
@@ -318,6 +318,13 @@ templateICA <- function(
     }
   }
 
+  #check for FC template
+  do_FC <- FALSE; template_FC <- NULL
+  if('FC' %in% names(template$template)) {
+    do_FC <- TRUE
+    template_FC <- template$template$FC
+  }
+
   # Get `nI`, `nL`, and `nV`.
   # Check brainstructures and resamp_res if CIFTI, where applicable.
   # Check mask if NIFTI.
@@ -481,8 +488,6 @@ templateICA <- function(
     #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
   }
 
-  #TO DO: Define do_FC, pass in FC template
-  do_FC <- FALSE
 
   # Process the scan -----------------------------------------------------------
   # Get each entry of `BOLD` as a data matrix or array.
@@ -630,7 +635,7 @@ templateICA <- function(
   # ----------------------------------------------------------------------------
   # EM -------------------------------------------------------------------------
   #Three algorithms to choose from:
-  #1) FC Template ICA (new)
+  #1) FC Template ICA
   #2) Template ICA
   #3) Spatial Template ICA (initialize with standard Template ICA)
   # ----------------------------------------------------------------------------
@@ -639,9 +644,12 @@ templateICA <- function(
   if(do_FC) {
     if (verbose) { cat("Computing FC.\n") }
 
-    ## TO DO: FILL IN HERE
-    prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
-    template$FC <- NULL
+    template_mean = template$mean
+    template_var = template$var
+    prior_params=c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
+    AS_0 = BOLD_DR
+
+    prior_params <- c(0.001, 0.001)
     EM_FCtemplateICA <- function(...){NULL}
     resultEM <- EM_FCtemplateICA(
       template$mean, template$var, template$FC,

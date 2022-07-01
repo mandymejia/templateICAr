@@ -731,7 +731,7 @@ estimate_template.cifti <- function(
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
@@ -746,7 +746,7 @@ estimate_template.cifti <- function(
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
-    #FC=FC,
+    FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,
     verbose=verbose
@@ -764,7 +764,7 @@ estimate_template.nifti <- function(
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
@@ -778,7 +778,7 @@ estimate_template.nifti <- function(
     Q2=Q2, Q2_max=Q2_max,
     mask=mask,
     keep_DR=keep_DR,
-    #FC=FC,
+    FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,
     verbose=verbose

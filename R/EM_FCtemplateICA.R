@@ -60,7 +60,7 @@ EM_FCtemplateICA <- function(template_mean,
 
   iter <- 1
   success <- 1
-  template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance
+  template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance (this should rarely/never happen with NN variance)
 
   #compute initial estimates of posterior moments
   A <- A_init <- AS_0$A #TxQ
@@ -97,7 +97,7 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     post_sums <-
       Gibbs_AS_posteriorCPP(
-        nsamp = 1,
+        nsamp = 1000,
         nburn = 0,
         template_mean = template_mean,
         template_var = template_var,
@@ -109,6 +109,22 @@ EM_FCtemplateICA <- function(template_mean,
         alpha = theta_old[[2]],
         final = F
       )
+
+    post_sums <-
+      templateICAr:::Gibbs_AS_posterior(
+        nsamp = 10,
+        nburn = 0,
+        template_mean = template_mean,
+        template_var = template_var,
+        S = S,
+        A = A,
+        G = theta_old[[3]],
+        tau_v = theta_old[[1]],
+        Y = BOLD,
+        alpha = theta_old[[2]],
+        final = F
+      )
+
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
     # M-step assumes that we have a good estimate of the first level of the posterior
@@ -124,25 +140,31 @@ EM_FCtemplateICA <- function(template_mean,
         template_mean,
         template_var,
         template_FC,
-        theta_old$G,
+        theta_old[[3]],
         prior_params,
-        Y,
+        BOLD,
         post_sums,
         sigma2_alpha,
-        verbose = TRUE
+        TRUE
       )
     if(verbose) print(Sys.time() - t00)
 
-  #   ### Compute change in parameters
-  #
-  #   A_old <- theta$A
-  #   A_new <- theta_new$A
-  #   #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-  #   A_change <- norm(as.vector(A_new - A_old), type="2")/norm(as.vector(A_old), type="2")
-  #
-  #   nu0_sq_old <- theta$nu0_sq
-  #   nu0_sq_new <- theta_new$nu0_sq
-  #   nu0_sq_change <- abs(nu0_sq_new - nu0_sq_old)/nu0_sq_old
+    ### Compute change in parameters
+
+    G_old <- theta_old[[3]]
+    G_new <- theta_new[[3]]
+    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
+    G_change <- norm(as.vector(G_new - G_old), type="2")/norm(as.vector(G_old), type="2")
+
+    tau_old <- mean(theta_old[[1]])
+    tau_new <- mean(theta_new[[1]])
+    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
+    G_change <- norm(as.vector(G_new - G_old), type="2")/norm(as.vector(G_old), type="2")
+
+    #
+    # alpha_old <- theta_old[[2]]
+    # alpha_new <- theta_new[[2]]
+    # alpha_change <- abs(alpha_new - alpha_old) #avoid dividing by zero
   #
   #   change <- c(A_change, nu0_sq_change)
   #   err <- max(change)
@@ -229,7 +251,6 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
                                template_var,
                                S,
                                A,
-                               ####Ani#### added the parameter A
                                G,
                                tau_v,
                                Y,
