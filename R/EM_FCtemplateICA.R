@@ -95,7 +95,7 @@ EM_FCtemplateICA <- function(template_mean,
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-    post_means <-
+    post_sums <-
       Gibbs_AS_posteriorCPP(
         nsamp = 1000,
         nburn = 0,
@@ -110,10 +110,10 @@ EM_FCtemplateICA <- function(template_mean,
         final = F
       )
 
-    post_means <-
+    post_sums <-
       Gibbs_AS_posterior(
-        nsamp = 10,
-        nburn = 0,
+        nsamp = 1000,
+        nburn = 100,
         template_mean = template_mean,
         template_var = template_var,
         S = S,
@@ -145,10 +145,22 @@ EM_FCtemplateICA <- function(template_mean,
         theta_old[[3]],
         prior_params,
         BOLD,
-        post_means,
+        post_sums,
         sigma2_alpha,
         TRUE
       )
+
+    theta_new <-
+      templateICAr:::UpdateTheta_FCtemplateICA(
+        template_mean,
+        template_var,
+        template_FC,
+        prior_params,
+        BOLD,
+        post_sums
+      )
+
+
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
@@ -222,7 +234,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   beta_tau <- prior_params[2]
   #TO DO: Make this more efficient (no loop)
   for(v in 1:nvox){
-    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq[v] - 2*post_sums$yAS[v] + 2*beta_tau)
+    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS[v] + 2*beta_tau)
   }
 
   ### UPDATE ALPHA (TEMPORAL INTERCEPT)
@@ -372,10 +384,10 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   AS_sq_sum = AS_sq_sum/nsamp
   total_time <- proc.time()[3] - start_time
 
-  return(list(A_mean = A_sum,
-              AAt_mean = AAt_sum,
-              yAS_mean = yAS_sum,
-              AS_sq_mean = AS_sq_sum,
+  return(list(A_sum = A_sum,
+              AAt_sum = AAt_sum,
+              yAS_sum = yAS_sum,
+              AS_sq_sum = AS_sq_sum,
               total_time = total_time))
 
 }
