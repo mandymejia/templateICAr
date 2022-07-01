@@ -89,13 +89,13 @@ EM_FCtemplateICA <- function(template_mean,
   err <- 1000 #large initial value for difference between iterations
   while(err > epsilon){
 
-    if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
+    if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ EM ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     theta_old <- theta_new
     t00 <- Sys.time()
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-    post_sums <-
+    post_means <-
       Gibbs_AS_posteriorCPP(
         nsamp = 1000,
         nburn = 0,
@@ -110,7 +110,7 @@ EM_FCtemplateICA <- function(template_mean,
         final = F
       )
 
-    post_sums <-
+    post_means <-
       Gibbs_AS_posterior(
         nsamp = 10,
         nburn = 0,
@@ -124,6 +124,8 @@ EM_FCtemplateICA <- function(template_mean,
         alpha = theta_old[[2]],
         final = F
       )
+
+    #plot_FC(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
 
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
@@ -143,7 +145,7 @@ EM_FCtemplateICA <- function(template_mean,
         theta_old[[3]],
         prior_params,
         BOLD,
-        post_sums,
+        post_means,
         sigma2_alpha,
         TRUE
       )
@@ -281,7 +283,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   A_sum = numeric(Q)
   AAt_sum = matrix(0,Q,Q)
   yAS_sum = numeric(V)
-  AS_sq = numeric(V)
+  AS_sq_sum = numeric(V)
 
   G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
   G_inv <- solve(G)
@@ -293,16 +295,19 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   start_time <- proc.time()[3]
   for(i in 1:niter){
     #### update A
+
     # sigma_a = solve(t(S) %*% G_tau_inv %*% S + solve(G))
     sigma_a_inv <- as.matrix(t(S) %*% G_tau_inv %*% S + G_inv)
     chol_sigma_a_inv <- chol(sigma_a_inv)
     # sigma_a <- solve(sigma_a_inv)
     # cat(sigma_a,'\n')
     YGS <- YG %*% S
-    YGSalphaGinv <- apply(YGS,1,function(ygs) ygs + alphaGinv)
-    mu_a <- as.matrix(Matrix::solve(sigma_a_inv,YGSalphaGinv))
+    YGSalphaGinv <- as.matrix(YGS + matrix(alphaGinv, nrow=ntime, ncol=Q, byrow=TRUE))
+    #YGSalphaGinv <- apply(YGS,1,function(ygs) ygs + alphaGinv)
+    mu_a <- as.matrix(Matrix::solve(sigma_a_inv,t(YGSalphaGinv)))
+
+    #generate samples from N(mu_at, Sigma_a) for each t=1,...,ntime
     cl <- parallel::makeCluster(parallel::detectCores() - 2)
-    mu_at <- mu_a[,1]
     A <- t(parallel::parApply(cl,mu_a,2, function(mu_at, chol_sigma_a_inv){
       Qa <- length(mu_at)
       Za <- rnorm(Qa)
@@ -310,6 +315,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
       return(at)
     }, chol_sigma_a_inv = chol_sigma_a_inv))
     parallel::stopCluster(cl)
+
     # cat(YGS[ntime,],"\n")
     # cat(YGS[ntime,] + alphaGinv,"\n")
     # cat("mu_a1:",sigma_a %*% t(YGS[1,] + alphaGinv), "\n")
@@ -323,23 +329,32 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
 
     #### update S
     for(v in 1:V){
-      sigma_s = solve((1/tau_v[v]) * crossprod(A) + Matrix::Diagonal(x = template_var[v,]))
-      AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + Matrix::Diagonal(x = template_var[v,])%*%template_mean[v,]
-      mu = sigma_s %*% AtYvtempVarMean
+      G_sv_inv = Matrix::Diagonal(x = 1/template_var[v,])
+      sigma_sv = solve((1/tau_v[v]) * crossprod(A) + G_sv_inv)
+      AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + G_sv_inv %*% template_mean[v,]
+      mu_sv = sigma_sv %*% AtYvtempVarMean
       # if(v == 1) cat("mu_s1:",mu@x,"\n")
       # mu_s = cbind(mu_s, mu)
-      S[,v] <- mvtnorm::rmvnorm(n = 1, mean = mu, sigma = sigma_s)
+      S[v,] <- mvtnorm::rmvnorm(n = 1, mean = mu_sv, sigma = sigma_sv)
     }
 
     # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
 
-    #### I'm not sure about the definitions of AAt and AS_sq, so the following lines need to be checked.
     if(i > nburn) {
-      AtS <- A %*% S
+
       A_sum = A_sum + colSums(A)
-      AAt_sum = AAt_sum + colSums(A %*% t(A))
+
+      #AS_sq = sum_t (a_t's_v)^2
+      AtS <- A %*% t(S)
+      AS_sq_sum = AS_sq_sum + apply(AtS^2,2,sum)
+      #AS_sq = sum_t (a_t's_v)^2
       yAS_sum = yAS_sum + colSums(t(Y) * AtS)
-      AS_sq = AS_sq + apply(AtS^2,2,sum)
+
+      #AAt = sum_t a_t a_t'
+      AAt_sum_i <- matrix(0, Q, Q) #QxQ matrix
+      for(t in 1:ntime){ AAt_sum_i <- AAt_sum_i + tcrossprod(A[t,]) }
+      AAt_sum = AAt_sum + AAt_sum_i
+
     }
 
     if(niter >= 10 & i %% round(niter / 10) == 0) {
@@ -354,9 +369,13 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   A_sum = A_sum/nsamp
   AAt_sum = AAt_sum/nsamp
   yAS_sum = yAS_sum/nsamp
-  AS_sq = AS_sq/nsamp
+  AS_sq_sum = AS_sq_sum/nsamp
   total_time <- proc.time()[3] - start_time
 
-  return(list(A_sum = A_sum, AAt_sum = AAt_sum, yAS_sum = yAS_sum, AS_sq = AS_sq, total_time = total_time))
+  return(list(A_mean = A_sum,
+              AAt_mean = AAt_sum,
+              yAS_mean = yAS_sum,
+              AS_sq_mean = AS_sq_sum,
+              total_time = total_time))
 
 }
