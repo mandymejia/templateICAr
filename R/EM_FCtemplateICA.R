@@ -95,25 +95,25 @@ EM_FCtemplateICA <- function(template_mean,
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-    post_sums <-
-      Gibbs_AS_posteriorCPP(
-        nsamp = 1000,
-        nburn = 0,
-        template_mean = template_mean,
-        template_var = template_var,
-        S = t(S),
-        A = A,
-        G = theta_old[[3]],
-        tau_v = theta_old[[1]],
-        Y = BOLD,
-        alpha = theta_old[[2]],
-        final = F
-      )
+    # post_sums <-
+    #   Gibbs_AS_posteriorCPP(
+    #     nsamp = 1000,
+    #     nburn = 0,
+    #     template_mean = template_mean,
+    #     template_var = template_var,
+    #     S = t(S),
+    #     A = A,
+    #     G = theta_old[[3]],
+    #     tau_v = theta_old[[1]],
+    #     Y = BOLD,
+    #     alpha = theta_old[[2]],
+    #     final = F
+    #   )
 
     post_sums <-
       Gibbs_AS_posterior(
-        nsamp = 1000,
-        nburn = 100,
+        nsamp = 100,
+        nburn = 0,
         template_mean = template_mean,
         template_var = template_var,
         S = S,
@@ -137,21 +137,20 @@ EM_FCtemplateICA <- function(template_mean,
     #                                       BOLD,
     #                                       post_sums,
     #                                       verbose=verbose)
-    theta_new <-
-      UpdateTheta_FCtemplateICAcpp(
-        template_mean,
-        template_var,
-        template_FC,
-        theta_old[[3]],
-        prior_params,
-        BOLD,
-        post_sums,
-        sigma2_alpha,
-        TRUE
-      )
+    # theta_new <-
+    #   UpdateTheta_FCtemplateICAcpp(
+    #     template_mean,
+    #     template_var,
+    #     template_FC,
+    #     theta_old[[3]],
+    #     prior_params,
+    #     BOLD,
+    #     post_sums,
+    #     sigma2_alpha,
+    #     TRUE
+    #   )
 
-    theta_new <-
-      templateICAr:::UpdateTheta_FCtemplateICA(
+    theta_new <- UpdateTheta_FCtemplateICA(
         template_mean,
         template_var,
         template_FC,
@@ -173,26 +172,25 @@ EM_FCtemplateICA <- function(template_mean,
     tau_old <- mean(theta_old[[1]])
     tau_new <- mean(theta_new[[1]])
     #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    G_change <- norm(as.vector(G_new - G_old), type="2")/norm(as.vector(G_old), type="2")
+    tau_change <- norm(as.vector(tau_new - tau_old), type="2")/norm(as.vector(tau_old), type="2")
 
-    #
-    # alpha_old <- theta_old[[2]]
-    # alpha_new <- theta_new[[2]]
-    # alpha_change <- abs(alpha_new - alpha_old) #avoid dividing by zero
-  #
-  #   change <- c(A_change, nu0_sq_change)
-  #   err <- max(change)
-  #   change <- format(change, digits=3, nsmall=3)
-  #   if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
-  #
-  #   ### Move to next iteration
-  #   theta <- theta_new
-  #   iter <- iter + 1
-  #   if(iter > maxiter){
-  #     success <- 0
-  #     warning(paste0('Failed to converge within ', maxiter,' iterations'))
-  #     break() #exit loop
-  #   }
+    alpha_old <- theta_old[[2]]
+    alpha_new <- theta_new[[2]]
+    alpha_change <- norm((alpha_new - alpha_old)/((alpha_old+alpha_new)/2), type="2") #avoid dividing by zero
+
+    change <- c(G_change, tau_change, alpha_change)
+    err <- max(change)
+    change <- format(change, digits=3, nsmall=3)
+    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for G, ',change[2],' for tau^2, ',change[3],' for alpha \n'))
+
+    ### Move to next iteration
+    theta_old <- theta_new
+    iter <- iter + 1
+    if(iter > maxiter){
+      success <- 0
+      warning(paste0('Failed to converge within ', maxiter,' iterations'))
+      break() #exit loop
+    }
   }
   #
   ### Compute final posterior means and variances of A and S
@@ -233,13 +231,14 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   alpha_tau <- prior_params[1]
   beta_tau <- prior_params[2]
   #TO DO: Make this more efficient (no loop)
+  y_sq_sum <- rowSums(BOLD^2)
   for(v in 1:nvox){
-    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS[v] + 2*beta_tau)
+    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS[v] + y_sq_sum[v] + 2*beta_tau)
   }
 
   ### UPDATE ALPHA (TEMPORAL INTERCEPT)
 
-  alpha_new <- 1/ntime*(post_sums$A)
+  alpha_new <- 1/ntime*(post_sums$A_sum)
 
 
   ### UPDATE G (TEMPORAL COVARIANCE, I.E. FUNCTIONAL CONNECTIVITY)
@@ -247,8 +246,9 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   nu0 <- template_FC$nu
   psi0 <- template_FC$psi
   alpha_alpha_t <- tcrossprod(alpha_new)
-  tmp <- 2*tcrossprod(post_sums$A, alpha_new) - post_sums$AAt - ntime*alpha_alpha_t - psi0
-  G_new <- (ntime + nu0 + nICs + 1)*solve(tmp)
+  a_alpha_t <- tcrossprod(post_sums$A_sum, alpha_new)
+  tmp <- post_sums$AAt - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
+  G_new <- 1/(ntime + nu0 + nICs + 1)*tmp
 
   # RETURN NEW PARAMETER ESTIMATES
   theta_new <- list(
