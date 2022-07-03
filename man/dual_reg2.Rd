@@ -74,8 +74,9 @@ resolution as the \code{BOLD} data.}
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default:
-\code{FALSE} (not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? This
+is equivalent to performing global signal regression. Default:
+\code{FALSE}.}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the
