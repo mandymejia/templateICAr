@@ -12,6 +12,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
                                         Eigen::MatrixXd G,
                                         Eigen::VectorXd prior_params,
                                         Eigen::MatrixXd BOLD,
+                                        Eigen::VectorXd Y_sq_sum,
                                         Rcpp::List post_sums,
                                         double sigma2_alpha,
                                         bool verbose){
@@ -23,13 +24,13 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   double alpha_tau = prior_params(0);
   double beta_tau = prior_params(1);
   double tau_sq_num, tau_sq_den;
-  Eigen::Map<Eigen::VectorXd> AS_sq(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(post_sums["AS_sq"]));
+  Eigen::Map<Eigen::VectorXd> AS_sq(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(post_sums["AS_sq_sum"]));
   Eigen::Map<Eigen::VectorXd> yAS(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(post_sums["yAS_sum"]));
   Eigen::Map<Eigen::VectorXd> A(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(post_sums["A_sum"]));
-  Eigen::Map<Eigen::MatrixXd> AAt(Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(post_sums["AAt_sum"]));
+  Eigen::Map<Eigen::MatrixXd> AtA(Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(post_sums["AtA_sum"]));
   Eigen::Map<Eigen::MatrixXd> psi0(Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(template_FC["psi"]));
   // Eigen::VectorXd A = Eigen::VectorXd (post_sums["A_sum"]);
-  // Eigen::MatrixXd AAt = Eigen::MatrixXd (post_sums["AAt_sum"]);
+  // Eigen::MatrixXd AtA = Eigen::MatrixXd (post_sums["AtA_sum"]);
   Eigen::VectorXd alpha_new(nICs);
   double nu0 = double (template_FC["nu"]);
   // Eigen::MatrixXd psi0 = Eigen::MatrixXd (template_FC["psi"]);
@@ -38,6 +39,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   tau_sq_den += 2;
   for(int v=0;v < nvox; v++){
     tau_sq_num = AS_sq(v) - 2*yAS(v);
+    tau_sq_num += Y_sq_sum(v);
     tau_sq_num += 2*beta_tau;
     tau_sq_new(v) = tau_sq_num / tau_sq_den;
     // tau_sq_new(v) = 1/(ntime + 2*alpha_tau + 2) * (AS_sq(v) - 2*yAS(v) + 2*beta_tau);
@@ -52,7 +54,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   alpha_new = alpha_part_inv * A;
   // UPDATE G (TEMPORAL COVARIANCE, I.E. FUNCTIONAL CONNECTIVITY)
   Eigen::MatrixXd alpha_alpha_t = alpha_new * alpha_new.transpose();
-  Eigen::MatrixXd tmp = AAt - 2 * A * alpha_new.transpose() + ntime*alpha_alpha_t + psi0;
+  Eigen::MatrixXd tmp = AtA - 2 * A * alpha_new.transpose() + ntime*alpha_alpha_t + psi0;
   Eigen::MatrixXd G_new = tmp / (ntime + nu0 + nICs + 1);
   // RETURN NEW PARAMETER ESTIMATES
   Rcpp::NumericVector tau_sq_newX(wrap(tau_sq_new));
@@ -80,7 +82,7 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   int ntime = Y.cols();
   // Initialize output values
   Eigen::VectorXd A_sum = Eigen::VectorXd::Zero(Q);
-  Eigen::MatrixXd AAt_sum = Eigen::MatrixXd::Zero(Q,Q);
+  Eigen::MatrixXd AtA_sum = Eigen::MatrixXd::Zero(Q,Q);
   Eigen::VectorXd yAS_sum = Eigen::VectorXd::Zero(V);
   Eigen::VectorXd AS_sq = Eigen::VectorXd::Zero(V);
   // Calculate static quantities
@@ -93,14 +95,22 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   Eigen::MatrixXd sig_inv_A = Eigen::MatrixXd::Zero(Q,Q);
   Eigen::MatrixXd chol_sig_A(Q,Q), chol_sig_S(Q,Q);
   Eigen::MatrixXd YGS(ntime,Q), AtA(Q,Q), sig_inv_S(Q,Q), SGti(Q,V);
-  Eigen::MatrixXd AAt(ntime,ntime), AtS(ntime, V), YtAtS(ntime,V);
+  Eigen::MatrixXd AtS(ntime, V), YtAtS(ntime,V);
   Eigen::VectorXd mu_at(Q), mu_sv(Q), tVarRow(Q), At(Q), Sv(Q);
   Eigen::VectorXd ygs_alphaGinv(Q), AtYvtempVarMean(Q), tVarMean(Q);
+  Eigen::MatrixXd G_sv_inv(V,Q);
+  // Initialize G_sv_inv so it doesn't happen in the loop
+  for(int v=0;v<V;v++) {
+    for(int q=0;q<Q;q++) {
+      G_sv_inv(v,q) = 1 / template_var(v,q);
+    }
+  }
   NumericVector Z(Q);
   Eigen::LLT<Eigen::MatrixXd> chol_sig_inv_A, chol_sig_inv_S;
   // Start the Gibbs sampler
   for(int i=1;i <= niter; i++) {
     // Update A
+    // Rcout << "Update A" << std::endl;
     SGti = S.transpose() * G_tau_inv;
     sig_inv_A = SGti * S;
     sig_inv_A += G_inv;
@@ -117,11 +127,13 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       A.row(t-1) = At;
     }
     // Update S
+    // Rcout << "Update A" << std::endl;
     AtA = A.transpose() * A;
     for(int v=1; v <= V; v++) {
       sig_inv_S = AtA;
       sig_inv_S /= tau_v(v-1);
-      sig_inv_S += template_var.row(v-1).asDiagonal();
+      // sig_inv_S += template_var.row(v-1).asDiagonal();
+      sig_inv_S += G_sv_inv.row(v-1).asDiagonal();
       chol_sig_inv_S.compute(sig_inv_S);
       chol_sig_S = chol_sig_inv_S.matrixL().toDenseMatrix().inverse();
       AtYvtempVarMean = A.transpose() * Y.row(v-1).transpose();
@@ -138,27 +150,27 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
     // Store summaries
     if(i > nburn) {
       AtS = A * S.transpose();
-      // AAt = A * A.transpose();
+      // AtA = A * A.transpose();
       YtAtS = Y.transpose().cwiseProduct(AtS);
       for(int t = 0; t < ntime; t++) {
         A_sum += A.row(t);
         yAS_sum += YtAtS.row(t);
         AS_sq += AtS.row(t).cwiseAbs2();
       }
-      AAt_sum += AtA;
+      AtA_sum += AtA;
     }
   }
   A_sum /= nsamp;
-  AAt_sum /= nsamp;
+  AtA_sum /= nsamp;
   yAS_sum /= nsamp;
   AS_sq /= nsamp;
   Rcpp::NumericVector A_sumX(wrap(A_sum));
-  SEXP aat = Rcpp::wrap(AAt_sum);
-  Rcpp::NumericMatrix AAt_sumX(aat);
+  SEXP aat = Rcpp::wrap(AtA_sum);
+  Rcpp::NumericMatrix AtA_sumX(aat);
   Rcpp::NumericVector yAS_sumX(wrap(yAS_sum));
   Rcpp::NumericVector AS_sqX(wrap(AS_sq));
   return Rcpp::List::create(Rcpp::Named("A_sum") = A_sumX,
-                            Rcpp::Named("AAt_sum") = AAt_sumX,
+                            Rcpp::Named("AtA_sum") = AtA_sumX,
                             Rcpp::Named("yAS_sum") = yAS_sumX,
-                            Rcpp::Named("AS_sq") = AS_sqX);
+                            Rcpp::Named("AS_sq_sum") = AS_sqX);
 }

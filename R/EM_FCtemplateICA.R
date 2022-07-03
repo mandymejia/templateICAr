@@ -79,10 +79,10 @@ EM_FCtemplateICA <- function(template_mean,
   AS_sq_sum_init <- colSums(AS_sq_init) #vector length V
   yAS_init <- t(BOLD) * AS_init #element-wise product -- for the terms y_tv * E[a_t's_v]
   yAS_sum_init <- colSums(yAS_init) #vector length V
-  AAt_sum_init <- matrix(0, nICs,nICs) #QxQ matrix
-  for(t in 1:ntime){ AAt_sum_init <- AAt_sum_init + tcrossprod(A_init[t,]) }
+  AtA_sum_init <- matrix(0, nICs,nICs) #QxQ matrix
+  for(t in 1:ntime){ AtA_sum_init <- AtA_sum_init + tcrossprod(A_init[t,]) }
   post_sums <- list(A = A_sum_init, #only actually need sum over t
-                    AAt = AAt_sum_init,  #only actually need sum over t
+                    AtA = AtA_sum_init,  #only actually need sum over t
                     yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
                     AS_sq = AS_sq_sum_init) #only actually need sum over t
 
@@ -97,7 +97,7 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     # post_sums <-
     #   Gibbs_AS_posteriorCPP(
-    #     nsamp = 1000,
+    #     nsamp = 100,
     #     nburn = 0,
     #     template_mean = template_mean,
     #     template_var = template_var,
@@ -149,7 +149,7 @@ EM_FCtemplateICA <- function(template_mean,
     #     sigma2_alpha,
     #     TRUE
     #   )
-
+    # Y_sq_sum <- rowSums(BOLD^2) # This is a shortcut in computation for the CPP version
     theta_new <- UpdateTheta_FCtemplateICA(
         template_mean,
         template_var,
@@ -247,7 +247,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   psi0 <- template_FC$psi
   alpha_alpha_t <- tcrossprod(alpha_new)
   a_alpha_t <- tcrossprod(post_sums$A_sum, alpha_new)
-  tmp <- post_sums$AAt - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
+  tmp <- post_sums$AtA - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
   G_new <- 1/(ntime + nu0 + nICs + 1)*tmp
 
   # RETURN NEW PARAMETER ESTIMATES
@@ -293,7 +293,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
   ntime <- ncol(Y)
   A_sum = numeric(Q)
-  AAt_sum = matrix(0,Q,Q)
+  AtA_sum = matrix(0,Q,Q)
   yAS_sum = numeric(V)
   AS_sq_sum = numeric(V)
 
@@ -362,10 +362,10 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
       #AS_sq = sum_t (a_t's_v)^2
       yAS_sum = yAS_sum + colSums(t(Y) * AtS)
 
-      #AAt = sum_t a_t a_t'
-      AAt_sum_i <- matrix(0, Q, Q) #QxQ matrix
-      for(t in 1:ntime){ AAt_sum_i <- AAt_sum_i + tcrossprod(A[t,]) }
-      AAt_sum = AAt_sum + AAt_sum_i
+      #AtA = sum_t a_t a_t'
+      AtA_sum_i <- matrix(0, Q, Q) #QxQ matrix
+      for(t in 1:ntime){ AtA_sum_i <- AtA_sum_i + tcrossprod(A[t,]) }
+      AtA_sum = AtA_sum + AtA_sum_i
 
     }
 
@@ -374,18 +374,18 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     }
   }
   #### return estimates of A = A_sum_init, #only actually need sum over t
-  #AAt = AAt_sum_init,  #only actually need sum over t
+  #AtA = AtA_sum_init,  #only actually need sum over t
   #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
   #AS_sq = AS_sq_sum_init
 
   A_sum = A_sum/nsamp
-  AAt_sum = AAt_sum/nsamp
+  AtA_sum = AtA_sum/nsamp
   yAS_sum = yAS_sum/nsamp
   AS_sq_sum = AS_sq_sum/nsamp
   total_time <- proc.time()[3] - start_time
 
   return(list(A_sum = A_sum,
-              AAt_sum = AAt_sum,
+              AtA_sum = AtA_sum,
               yAS_sum = yAS_sum,
               AS_sq_sum = AS_sq_sum,
               total_time = total_time))
