@@ -320,7 +320,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
 
   if(!final){
     A_sum = numeric(Q)
-    AAt_sum = matrix(0,Q,Q)
+    AtA_sum = matrix(0,Q,Q)
     yAS_sum = numeric(V)
     AS_sq_sum = numeric(V)
   } else {
@@ -395,10 +395,10 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
         #AS_sq = sum_t (a_t's_v)^2
         yAS_sum = yAS_sum + colSums(t(Y) * AtS)
 
-        #AAt = sum_t a_t a_t'
-        AAt_sum_i <- matrix(0, Q, Q) #QxQ matrix
-        for(t in 1:ntime){ AAt_sum_i <- AAt_sum_i + tcrossprod(A[t,]) }
-        AAt_sum = AAt_sum + AAt_sum_i
+        #AtA = sum_t a_t a_t'
+        AtA_sum_i <- matrix(0, Q, Q) #QxQ matrix
+        for(t in 1:ntime){ AtA_sum_i <- AtA_sum_i + tcrossprod(A[t,]) }
+        AtA_sum = AtA_sum + AtA_sum_i
       } else {
         A_final = A_final + A
         covA_final[,,i] <- cov(A)
@@ -417,7 +417,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
 
   if(!final){
     A_sum = A_sum/nsamp
-    AAt_sum = AAt_sum/nsamp
+    AtA_sum = AtA_sum/nsamp
     yAS_sum = yAS_sum/nsamp
     AS_sq_sum = AS_sq_sum/nsamp
   } else {
@@ -427,7 +427,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
 
   if(!final){
     return(list(A_sum = A_sum,
-                AAt_sum = AAt_sum,
+                AtA_sum = AtA_sum,
                 yAS_sum = yAS_sum,
                 AS_sq_sum = AS_sq_sum,
                 total_time = total_time))
