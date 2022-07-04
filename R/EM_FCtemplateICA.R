@@ -176,7 +176,7 @@ EM_FCtemplateICA <- function(template_mean,
 
     alpha_old <- theta_old[[2]]
     alpha_new <- theta_new[[2]]
-    alpha_change <- norm((alpha_new - alpha_old)/((alpha_old+alpha_new)/2), type="2") #avoid dividing by zero
+    alpha_change <- norm((alpha_new - alpha_old), type="2") #avoid dividing by zero
 
     change <- c(G_change, tau_change, alpha_change)
     err <- max(change)
@@ -196,6 +196,31 @@ EM_FCtemplateICA <- function(template_mean,
   ### Compute final posterior means and variances of A and S
 
   post_AS <- Gibbs_AS_posterior(tricolon, final=TRUE)
+
+  post_AS <-
+    Gibbs_AS_posterior(
+      nsamp = 1000,
+      nburn = 0,
+      template_mean = template_mean,
+      template_var = template_var,
+      S = S,
+      A = A,
+      G = theta_new[[3]],
+      tau_v = theta_new[[1]],
+      Y = BOLD,
+      alpha = theta_new[[2]],
+      final = TRUE
+    )
+
+  S_post_mean <- apply(post_AS$S_final, c(1,2), mean)
+  S_post_SE <- apply(post_AS$S_final, c(1,2), sd)
+  A_post_mean <- post_AS$A_final
+  covA_post_mean <- apply(post_AS$covA_final, c(1,2), mean)
+
+  #FC matrices
+  corA_post <- apply(post_AS$covA_final, 3, cov2cor)
+  corA_post_mean <- sapply(corA_post, mean)
+  corA_post_SE <- sapply(corA_post, sd)
 
   #
   # result <- list(subjICmean=miu_s,
@@ -292,10 +317,17 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   V = length(tau_v)
   if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
   ntime <- ncol(Y)
-  A_sum = numeric(Q)
-  AAt_sum = matrix(0,Q,Q)
-  yAS_sum = numeric(V)
-  AS_sq_sum = numeric(V)
+
+  if(!final){
+    A_sum = numeric(Q)
+    AAt_sum = matrix(0,Q,Q)
+    yAS_sum = numeric(V)
+    AS_sq_sum = numeric(V)
+  } else {
+    A_final = array(0, dim=c(ntime, Q))
+    covA_final = array(0, dim=c(Q, Q, nsamp)) #save samples of cov(A)
+    S_final = array(0, dim=c(V, Q, nsamp))
+  }
 
   G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
   G_inv <- solve(G)
@@ -354,19 +386,24 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
 
     if(i > nburn) {
 
-      A_sum = A_sum + colSums(A)
+      if(!final){
+        A_sum = A_sum + colSums(A)
 
-      #AS_sq = sum_t (a_t's_v)^2
-      AtS <- A %*% t(S)
-      AS_sq_sum = AS_sq_sum + apply(AtS^2,2,sum)
-      #AS_sq = sum_t (a_t's_v)^2
-      yAS_sum = yAS_sum + colSums(t(Y) * AtS)
+        #AS_sq = sum_t (a_t's_v)^2
+        AtS <- A %*% t(S)
+        AS_sq_sum = AS_sq_sum + apply(AtS^2,2,sum)
+        #AS_sq = sum_t (a_t's_v)^2
+        yAS_sum = yAS_sum + colSums(t(Y) * AtS)
 
-      #AAt = sum_t a_t a_t'
-      AAt_sum_i <- matrix(0, Q, Q) #QxQ matrix
-      for(t in 1:ntime){ AAt_sum_i <- AAt_sum_i + tcrossprod(A[t,]) }
-      AAt_sum = AAt_sum + AAt_sum_i
-
+        #AAt = sum_t a_t a_t'
+        AAt_sum_i <- matrix(0, Q, Q) #QxQ matrix
+        for(t in 1:ntime){ AAt_sum_i <- AAt_sum_i + tcrossprod(A[t,]) }
+        AAt_sum = AAt_sum + AAt_sum_i
+      } else {
+        A_final = A_final + A
+        covA_final[,,i] <- cov(A)
+        S_final[,,i] = S
+      }
     }
 
     if(niter >= 10 & i %% round(niter / 10) == 0) {
@@ -378,16 +415,26 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
   #AS_sq = AS_sq_sum_init
 
-  A_sum = A_sum/nsamp
-  AAt_sum = AAt_sum/nsamp
-  yAS_sum = yAS_sum/nsamp
-  AS_sq_sum = AS_sq_sum/nsamp
+  if(!final){
+    A_sum = A_sum/nsamp
+    AAt_sum = AAt_sum/nsamp
+    yAS_sum = yAS_sum/nsamp
+    AS_sq_sum = AS_sq_sum/nsamp
+  } else {
+    A_final = A_final/nsamp
+  }
   total_time <- proc.time()[3] - start_time
 
-  return(list(A_sum = A_sum,
-              AAt_sum = AAt_sum,
-              yAS_sum = yAS_sum,
-              AS_sq_sum = AS_sq_sum,
-              total_time = total_time))
-
+  if(!final){
+    return(list(A_sum = A_sum,
+                AAt_sum = AAt_sum,
+                yAS_sum = yAS_sum,
+                AS_sq_sum = AS_sq_sum,
+                total_time = total_time))
+  } else {
+    return(list(A_final = A_final,
+                covA_final = covA_final,
+                S_final = S_final,
+                total_time = total_time))
+  }
 }
