@@ -19,10 +19,13 @@ struct_template <- function(template, FORMAT, dat_struct, params){
       )
     }
   } else if (FORMAT == "GIFTI") {
-    stop()
+    template <- ciftiTools:::as.metric_gifti(
+      template, hemisphere=dat_struct$hemisphere
+    )
   } else if (FORMAT == "NIFTI") {
     template <- RNifti::asNifti(
-      unmask_subcortex(template, dat_struct, fill=NA)
+      unmask_subcortex(template, drop(dat_struct), fill=NA),
+      reference=dat_struct
     )
   }
   template
@@ -54,6 +57,7 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 #'  \code{out_fname}.
 #'
 #' @export
+#'
 #' @examples
 #' \dontrun{
 #'  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
@@ -67,10 +71,11 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
   if (length(FORMAT) != 1) { stop("Not a template.") }
   FORMAT <- switch(FORMAT,
     template.cifti = "CIFTI",
+    template.gifti = "GIFTI",
     template.nifti = "NIFTI",
     template.data = "DATA"
   )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
 
   var_method <- match.arg(var_method, c("non-negative", "unbiased"))
   var_name <- switch(var_method, `non-negative`="varNN", unbiased="varUB")
@@ -135,11 +140,11 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
       write_cifti(x$template$mean, out_fname[1])
       write_cifti(x$template$var, out_fname[2])
     } else if (FORMAT == "GIFTI") {
-      ciftiTools:::as.metric_gifti(
-        object$template$mean, 
-        hemisphere=object$dat_struct$hemisphere, 
-        data_type=NIFTI_TYPE_FLOAT32
-      )
+      if (!requireNamespace("gifti", quietly = TRUE)) {
+        stop("Package \"gifti\" needed to write NIFTI data. Please install it.", call. = FALSE)
+      }
+      gifti::writegii(x$template$mean, out_fname[1])
+      gifti::writegii(x$template$var, out_fname[2])
     } else if (FORMAT == "NIFTI") {
       if (!requireNamespace("RNifti", quietly = TRUE)) {
         stop("Package \"RNifti\" needed to write NIFTI data. Please install it.", call. = FALSE)

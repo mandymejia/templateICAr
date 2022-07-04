@@ -228,7 +228,7 @@ templateICA <- function(
     nifti = "NIFTI",
     data = "DATA"
   )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
 
   if (FORMAT == "NIFTI") {
     if (!requireNamespace("RNifti", quietly = TRUE)) {

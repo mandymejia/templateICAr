@@ -470,6 +470,7 @@ estimate_template <- function(
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
   # Check `GICA` and `mask` dimensions match.
+  # Append NIFTI header from GICA to `mask`.
   # Vectorize `GICA`.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
@@ -485,8 +486,11 @@ estimate_template <- function(
       if (length(dim(GICA)) != 2) {
         stopifnot(all(dim(GICA)[seq(length(dim(GICA))-1)] == nI))
       }
+      # Append NIFTI header. 
+      mask <- RNifti::asNifti(array(mask, dim=c(dim(mask), 1)), reference=GICA)
+      # Vectorize `GICA`.
       if (all(dim(GICA)[seq(length(dim(GICA))-1)] == nI)) {
-        GICA <- matrix(GICA[rep(mask, nQ)], ncol=nQ)
+        GICA <- matrix(GICA[rep(as.logical(mask), nQ)], ncol=nQ)
         stopifnot(nrow(GICA) == nV)
       }
     }
@@ -652,7 +656,6 @@ estimate_template <- function(
   rm(x)
 
   # Unmask the data matrices.
-  # [TO DO] don't do this. bloats NIFTI-format file sizes!
   if (use_mask) {
     template <- lapply(template, unmask_mat, mask=maskAll)
     var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)

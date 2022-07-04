@@ -8,9 +8,9 @@
 #' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"} and
 #'  \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
 #'  estimates used for local scaling, provide a \code{"xifti"} object with data
-#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM 
+#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 #'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
-#'  not smooth. 
+#'  not smooth.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #'
@@ -30,7 +30,7 @@
 #' BOLD <- mS + rnorm(nV*nT, sd=.05)
 #' GICA <- mU
 #' dual_reg(BOLD=BOLD, GICA=mU, scale="local")
-#' 
+#'
 dual_reg <- function(
   BOLD, GICA,
   scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
@@ -39,7 +39,7 @@ dual_reg <- function(
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
-  if (isTRUE(scale)) { 
+  if (isTRUE(scale)) {
     warning(
       "Setting `scale='global'`. Use `'global'` or `'local'` ",
       "instead of `TRUE`, which has been deprecated."
@@ -117,20 +117,20 @@ dual_reg <- function(
 #' @param keepA Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
 #'  (default)?
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  surface geometries along which to smooth as GIFTI geometry files or
 #'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -175,16 +175,16 @@ dual_reg <- function(
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @return The dual regression \strong{S} matrices, or both the \strong{S}
-#'  and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual 
+#'  and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual
 #'  regression was skipped due to too many masked data locations.
 #'
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"), 
-  GICA, 
+  BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
+  GICA,
   keepA=FALSE,
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
@@ -258,7 +258,7 @@ dual_reg2 <- function(
       stopifnot(length(dim(BOLD2)) > 1)
     }
     stopifnot(!is.null(mask))
-    nI <- dim(mask); nV <- sum(mask)
+    nI <- dim(drop(mask)); nV <- sum(mask)
   } else {
     stopifnot(is.matrix(BOLD))
     if (retest) { stopifnot(is.matrix(BOLD2)) }
@@ -280,10 +280,10 @@ dual_reg2 <- function(
 
   # Vectorize `BOLD` (and `BOLD2`). --------------------------------------------
   if (FORMAT=="NIFTI") {
-    BOLD <- matrix(BOLD[rep(mask, dBOLD[ldB])], ncol=nT)
+    BOLD <- matrix(BOLD[rep(as.logical(mask), dBOLD[ldB])], ncol=nT)
     stopifnot(nrow(BOLD) == nV)
     if (retest) {
-      BOLD2 <- matrix(BOLD2[rep(mask, dBOLD[ldB])], ncol=nT)
+      BOLD2 <- matrix(BOLD2[rep(as.logical(mask), dBOLD[ldB])], ncol=nT)
       stopifnot(nrow(BOLD2) == nV)
     }
   }
@@ -335,13 +335,13 @@ dual_reg2 <- function(
   ) }
 
   dual_reg_yesNorm <- function(B){ dual_reg(
-    B, GICA, 
+    B, GICA,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA
   ) }
 
   dual_reg_noNorm <- function(B){ dual_reg(
-    B, GICA, 
+    B, GICA,
     scale="none", detrend_DCT=0, center_Bcols=FALSE, normA=normA
   ) }
 
@@ -355,7 +355,7 @@ dual_reg2 <- function(
     out$test <- dual_reg_yesNorm(BOLD[, part1, drop=FALSE])
     out$retest <- dual_reg_yesNorm(BOLD[, part2, drop=FALSE])
   } else {
-    # If retest, normalize `BOLD` and `BOLD2`, and then compute DR. 
+    # If retest, normalize `BOLD` and `BOLD2`, and then compute DR.
     BOLD <- this_norm_BOLD(BOLD)
     BOLD2 <- this_norm_BOLD(BOLD2)
     # (No need to normalize again.)
