@@ -79,10 +79,10 @@ EM_FCtemplateICA <- function(template_mean,
   AS_sq_sum_init <- colSums(AS_sq_init) #vector length V
   yAS_init <- t(BOLD) * AS_init #element-wise product -- for the terms y_tv * E[a_t's_v]
   yAS_sum_init <- colSums(yAS_init) #vector length V
-  AAt_sum_init <- matrix(0, nICs,nICs) #QxQ matrix
-  for(t in 1:ntime){ AAt_sum_init <- AAt_sum_init + tcrossprod(A_init[t,]) }
+  AtA_sum_init <- matrix(0, nICs,nICs) #QxQ matrix
+  for(t in 1:ntime){ AtA_sum_init <- AtA_sum_init + tcrossprod(A_init[t,]) }
   post_sums <- list(A = A_sum_init, #only actually need sum over t
-                    AAt = AAt_sum_init,  #only actually need sum over t
+                    AtA = AtA_sum_init,  #only actually need sum over t
                     yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
                     AS_sq = AS_sq_sum_init) #only actually need sum over t
 
@@ -97,7 +97,7 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     # post_sums <-
     #   Gibbs_AS_posteriorCPP(
-    #     nsamp = 1000,
+    #     nsamp = 100,
     #     nburn = 0,
     #     template_mean = template_mean,
     #     template_var = template_var,
@@ -149,7 +149,7 @@ EM_FCtemplateICA <- function(template_mean,
     #     sigma2_alpha,
     #     TRUE
     #   )
-
+    # Y_sq_sum <- rowSums(BOLD^2) # This is a shortcut in computation for the CPP version
     theta_new <- UpdateTheta_FCtemplateICA(
         template_mean,
         template_var,
@@ -272,7 +272,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   psi0 <- template_FC$psi
   alpha_alpha_t <- tcrossprod(alpha_new)
   a_alpha_t <- tcrossprod(post_sums$A_sum, alpha_new)
-  tmp <- post_sums$AAt - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
+  tmp <- post_sums$AtA - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
   G_new <- 1/(ntime + nu0 + nICs + 1)*tmp
 
   # RETURN NEW PARAMETER ESTIMATES
@@ -411,7 +411,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     }
   }
   #### return estimates of A = A_sum_init, #only actually need sum over t
-  #AAt = AAt_sum_init,  #only actually need sum over t
+  #AtA = AtA_sum_init,  #only actually need sum over t
   #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
   #AS_sq = AS_sq_sum_init
 

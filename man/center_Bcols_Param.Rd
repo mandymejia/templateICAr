@@ -4,8 +4,9 @@
 \alias{center_Bcols_Param}
 \title{center_Bcols}
 \arguments{
-\item{center_Bcols}{Center BOLD across columns (each image)? Default:
-\code{FALSE} (not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? This
+is equivalent to performing global signal regression. Default:
+\code{FALSE}.}
 }
 \description{
 center_Bcols

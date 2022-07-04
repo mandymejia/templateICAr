@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // UpdateTheta_FCtemplateICAcpp
-Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean, Eigen::MatrixXd template_var, Rcpp::List template_FC, Eigen::MatrixXd G, Eigen::VectorXd prior_params, Eigen::MatrixXd BOLD, Rcpp::List post_sums, double sigma2_alpha, bool verbose);
-RcppExport SEXP _templateICAr_UpdateTheta_FCtemplateICAcpp(SEXP template_meanSEXP, SEXP template_varSEXP, SEXP template_FCSEXP, SEXP GSEXP, SEXP prior_paramsSEXP, SEXP BOLDSEXP, SEXP post_sumsSEXP, SEXP sigma2_alphaSEXP, SEXP verboseSEXP) {
+Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean, Eigen::MatrixXd template_var, Rcpp::List template_FC, Eigen::MatrixXd G, Eigen::VectorXd prior_params, Eigen::MatrixXd BOLD, Eigen::VectorXd Y_sq_sum, Rcpp::List post_sums, double sigma2_alpha, bool verbose);
+RcppExport SEXP _templateICAr_UpdateTheta_FCtemplateICAcpp(SEXP template_meanSEXP, SEXP template_varSEXP, SEXP template_FCSEXP, SEXP GSEXP, SEXP prior_paramsSEXP, SEXP BOLDSEXP, SEXP Y_sq_sumSEXP, SEXP post_sumsSEXP, SEXP sigma2_alphaSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,10 +23,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type prior_params(prior_paramsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type BOLD(BOLDSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type Y_sq_sum(Y_sq_sumSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type post_sums(post_sumsSEXP);
     Rcpp::traits::input_parameter< double >::type sigma2_alpha(sigma2_alphaSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(UpdateTheta_FCtemplateICAcpp(template_mean, template_var, template_FC, G, prior_params, BOLD, post_sums, sigma2_alpha, verbose));
+    rcpp_result_gen = Rcpp::wrap(UpdateTheta_FCtemplateICAcpp(template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -53,7 +54,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_templateICAr_UpdateTheta_FCtemplateICAcpp", (DL_FUNC) &_templateICAr_UpdateTheta_FCtemplateICAcpp, 9},
+    {"_templateICAr_UpdateTheta_FCtemplateICAcpp", (DL_FUNC) &_templateICAr_UpdateTheta_FCtemplateICAcpp, 10},
     {"_templateICAr_Gibbs_AS_posteriorCPP", (DL_FUNC) &_templateICAr_Gibbs_AS_posteriorCPP, 11},
     {NULL, NULL, 0}
 };
