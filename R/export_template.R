@@ -1,7 +1,7 @@
 #' Apply data structure to templates
 #' 
 #' @param template The template
-#' @param FORMAT "CIFTI", "NIFTI", or "DATA"
+#' @param FORMAT "CIFTI", "GIFTI", "NIFTI", or "DATA"
 #' @param dat_struct The data structure
 #' @param params The params
 #' 
@@ -18,6 +18,8 @@ struct_template <- function(template, FORMAT, dat_struct, params){
         "IC", strsplit(params$inds, " ")[[1]]
       )
     }
+  } else if (FORMAT == "GIFTI") {
+    stop()
   } else if (FORMAT == "NIFTI") {
     template <- RNifti::asNifti(
       unmask_subcortex(template, dat_struct, fill=NA)
@@ -57,6 +59,7 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 #'  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
 #'  export_template(tm, out_fname="my_template", var_method="unbiased")
 #' }
+#' 
 export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unbiased")){
   
   # Check template format.
@@ -131,6 +134,12 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     if (FORMAT == "CIFTI") {
       write_cifti(x$template$mean, out_fname[1])
       write_cifti(x$template$var, out_fname[2])
+    } else if (FORMAT == "GIFTI") {
+      ciftiTools:::as.metric_gifti(
+        object$template$mean, 
+        hemisphere=object$dat_struct$hemisphere, 
+        data_type=NIFTI_TYPE_FLOAT32
+      )
     } else if (FORMAT == "NIFTI") {
       if (!requireNamespace("RNifti", quietly = TRUE)) {
         stop("Package \"RNifti\" needed to write NIFTI data. Please install it.", call. = FALSE)

@@ -24,7 +24,7 @@ plot_FC(
 
 \item{break_by}{Color breaks}
 
-\item{cors}{\code{TRUE}}
+\item{cor}{\code{TRUE}}
 }
 \description{
 Plot FC template

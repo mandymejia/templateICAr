@@ -122,10 +122,15 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  be in the same spatial resolution.
 #'
 #' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following
-#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
-#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where
-#'  \eqn{V} is the number of data locations and \eqn{T} is the number of
-#'  timepoints.
+#'  formats: CIFTI file paths, \code{"xifti"} objects, GIFTI file paths,
+#'  \code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects, 
+#'  or \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data
+#'  locations and \eqn{T} is the number of timepoints.
+# 
+#  If GIFTI or \code{"gifti"}, the input can also be a length two list,
+#  where the first list element is a length \eqn{N} vector for the left
+#  hemisphere and the second list element is a length \eqn{N} vector for the
+#  right hemisphere.
 #'
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
@@ -362,12 +367,25 @@ estimate_template <- function(
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
+    GIFTI = "GIFTI",
+    gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
     data = "DATA"
   )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
+  FORMAT_extn <- switch(FORMAT, 
+    CIFTI=".dscalar.nii", 
+    GIFTI=".func.gii",
+    NIFTI=".nii", 
+    DATA=".rds"
+  )
   nN <- length(BOLD)
+
+  if (FORMAT == "GIFTI") {
+    if (!requireNamespace("gifti", quietly = TRUE)) {
+      stop("Package \"gifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   if (FORMAT == "NIFTI") {
     if (!requireNamespace("RNifti", quietly = TRUE)) {
@@ -382,8 +400,8 @@ estimate_template <- function(
     }
   }
 
-  # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "NIFTI")) {
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, or NIFTI file, check that the file paths exist.
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (real_retest) {
@@ -422,6 +440,14 @@ estimate_template <- function(
       xii1 <- convert_xifti(select_xifti(xii1, 1), "dscalar")
     }
     stopifnot(is.matrix(GICA))
+  } else if (FORMAT == "GIFTI") {
+    if (is.character(GICA)) { GICA <- gifti::readgii(GICA) }
+    ghemi <- GICA$file_meta["AnatomicalStructurePrimary"]
+    if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+      stop("AnatomicalStructurePrimary metadata missing or invalid for GICA.")
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
+    GICA <- do.call(cbind, GICA$data)
   } else if (FORMAT == "NIFTI") {
     if (is.character(GICA)) { GICA <- RNifti::readNifti(GICA) }
     stopifnot(length(dim(GICA)) > 1)
@@ -479,6 +505,9 @@ estimate_template <- function(
     cat('Number of data locations:      ', nV, "\n")
     if (FORMAT == "NIFTI") {
       cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
+    }
+    if (FORMAT == "GIFTI") {
+      cat("Cortex Hemisphere:             ", ghemi, "\n")
     }
     cat('Number of original group ICs:  ', nQ, "\n")
     cat('Number of template ICs:        ', nL, "\n")
@@ -698,6 +727,7 @@ estimate_template <- function(
 
   dat_struct <- switch(FORMAT,
     CIFTI = newdata_xifti(xii1, 0),
+    GIFTI = list(hemisphere=ghemi),
     NIFTI = mask,
     DATA = NULL
   )

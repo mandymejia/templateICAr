@@ -208,6 +208,8 @@ dual_reg2 <- function(
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
+    GIFTI = "GIFTI",
+    gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
     data = "DATA"
@@ -235,6 +237,16 @@ dual_reg2 <- function(
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
       if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
+      stopifnot(is.matrix(BOLD2))
+    }
+    nI <- nV <- nrow(GICA)
+  } else if (FORMAT == "GIFTI") {
+    if (is.character(BOLD)) { BOLD <- gifti::readgii(BOLD) }
+    if (inherits(BOLD, "gifti")) { BOLD <- do.call(cbind, BOLD$data) }
+    stopifnot(is.matrix(BOLD))
+    if (retest) {
+      if (is.character(BOLD2)) { BOLD2 <- gifti::readgii(BOLD2) }
+      if (inherits(BOLD2, "gifti")) { BOLD2 <- do.call(cbind, BOLD2$data) }
       stopifnot(is.matrix(BOLD2))
     }
     nI <- nV <- nrow(GICA)

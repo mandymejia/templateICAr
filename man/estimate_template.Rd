@@ -82,10 +82,10 @@ estimate_template.nifti(
 }
 \arguments{
 \item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following
-formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
-\code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where
-\eqn{V} is the number of data locations and \eqn{T} is the number of
-timepoints.
+formats: CIFTI file paths, \code{"xifti"} objects, GIFTI file paths,
+\code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects,
+or \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data
+locations and \eqn{T} is the number of timepoints.
 
 If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.

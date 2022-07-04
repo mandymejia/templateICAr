@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks Using Empirical Population Priors
-Version: 0.5.0
+Version: 0.6.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -47,6 +47,7 @@ Imports:
 Suggests:
     RNifti,
     oro.nifti,
+    gifti,
     covr,
     doParallel,
     foreach,

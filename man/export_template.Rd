@@ -43,4 +43,5 @@ visualization or processing outside of \code{templateICAr}.
  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
  export_template(tm, out_fname="my_template", var_method="unbiased")
 }
+
 }

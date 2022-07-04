@@ -18,6 +18,30 @@ summary.template.cifti <- function(object, ...) {
   return(x)
 }
 
+#' Summarize a \code{"template.gifti"} object
+#'
+#' Summary method for class \code{"template.gifti"}
+#'
+#' @param object Object of class \code{"template.gifti"}.
+#' @param ... further arguments passed to or from other methods.
+#' @import ciftiTools
+#' @export
+#' @method summary template.gifti
+summary.template.gifti <- function(object, ...) {
+  x <- c(
+    list(
+      nV=nrow(object$template$mean),
+      nL=ncol(object$template$mean),
+      hemisphere=object$dat_struct$hemisphere,
+      hasDR="DR" %in% names(object)
+    ),
+    object$params
+  )
+
+  class(x) <- "summary.template.gifti"
+  return(x)
+}
+
 #' Summarize a \code{"template.nifti"} object
 #'
 #' Summary method for class \code{"template.nifti"}
@@ -94,6 +118,42 @@ print.summary.template.cifti <- function(x, ...) {
 
   class(x) <- "summary.xifti"
   print(x)
+  invisible(NULL)
+}
+
+#' @rdname summary.template.gifti
+#' @export
+#'
+#' @param x The template from \code{estimate_template.gifti}
+#' @param ... further arguments passed to or from other methods.
+#' @method print summary.template.gifti
+print.summary.template.gifti <- function(x, ...) {
+  # Get DCT output.
+  dct <- x$detrend_DCT
+  if (!is.null(dct)) {
+    dct <- as.numeric(x$detrend_DCT)
+    dct <- if (dct>1) {
+      paste(dct, "DCT bases")
+    } else if (dct > 0) {
+      paste(dct, "DCT basis")
+    } else {
+      "None"
+    }
+  }
+
+  cat("====TEMPLATE INFO====================\n")
+  cat("# Subjects:      ", x$num_subjects, "\n")
+  cat("Detrending:      ", dct, "\n")
+  cat("Spatial scaling: ", x$scale, "\n")
+  cat("A normalization: ", x$normA, "\n")
+  cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
+  cat("Pseudo retest:   ", x$pseudo_retest, "\n")
+  cat("-------------------------------------\n")
+  cat("# Locations:     ", x$nV, "\n")
+  cat("# Template ICs:  ", x$nL, "\n")
+  cat("Hemisphere:      ", x$hemisphere, "\n")
+  cat("\n")
+
   invisible(NULL)
 }
 
@@ -176,6 +236,14 @@ print.summary.template.data <- function(x, ...) {
 #' @method print template.cifti
 print.template.cifti <- function(x, ...) {
   print.summary.template.cifti(summary(x))
+}
+
+#' @rdname summary.template.gifti
+#' @export
+#'
+#' @method print template.gifti
+print.template.gifti <- function(x, ...) {
+  print.summary.template.gifti(summary(x))
 }
 
 #' @rdname summary.template.nifti
@@ -293,6 +361,30 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
   }
 
   invisible(out)
+}
+
+#' Plot template
+#'
+#' @param x The template from \code{estimate_template.gifti}
+#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default)
+#' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
+#' @param ... Additional arguments to \code{view_xifti}
+#' @return The plot
+#' @export
+#' @importFrom ciftiTools view_xifti as.xifti
+#' @method plot template.gifti
+plot.template.gifti <- function(x, stat=c("both", "mean", "var"),
+  var_method=c("non-negative", "unbiased"), ...) {
+  stopifnot(inherits(x, "template.gifti"))
+
+  if (x$dat_struct$hemisphere == "left")  {
+    y <- ciftiTools::as_cifti(cortexL=x$template$mean[,1,drop=FALSE] * 0)
+  } else {
+    y <- ciftiTools::as_cifti(cortexR=x$template$mean[,1,drop=FALSE] * 0)
+  }
+  y <- move_from_mwall(y)
+  x$dat_struct <- y; class(x) <- "template.cifti"
+  plot.template.cifti(x, stat, var_method, ...)
 }
 
 #' Plot template
@@ -447,16 +539,17 @@ plot.template.data <- function(x, ...) {
 #' @param title Plot title
 #' @param cols Colors
 #' @param break_by Color breaks
-#' @param cors \code{TRUE}
+#' @param cor \code{TRUE}
+#'
+#' @import grDevices
+#' @import graphics
 #' @export
 plot_FC <- function(x, zlim=c(-1,1), title=NULL, cols=c('darkblue','turquoise','white','pink','red'), break_by=0.5, cor=TRUE){
-
-  require(grDevices)
 
   #set color scale and breaks
   breaks <- seq(zlim[1], zlim[2], length.out=100)
   levs <- seq(zlim[1], zlim[2], break_by)
-  palfun <- grDevices::colorRampPalette(cols)
+  palfun <- colorRampPalette(cols)
   pal <- palfun(100-1)
 
   #make plot
@@ -475,7 +568,7 @@ plot_FC <- function(x, zlim=c(-1,1), title=NULL, cols=c('darkblue','turquoise','
   abline(h=seq(size)-0.5, v=seq(size)-0.5)
   # color scale
   par(mar=c(1,1,0,3))
-  image.scale(mat, col=pal, breaks=breaks-1e-8, axis.pos=4, add.axis=FALSE)
+  image.scale(x, col=pal, breaks=breaks-1e-8, axis.pos=4, add.axis=FALSE)
   axis(4,at=levs, las=2)
   abline(h=levs)
 }
