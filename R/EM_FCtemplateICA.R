@@ -164,19 +164,18 @@ EM_FCtemplateICA <- function(template_mean,
 
     G_old <- theta_old[[3]]
     G_new <- theta_new[[3]]
-    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    G_change <- norm(as.vector(G_new - G_old), type="2")/norm(as.vector(G_old), type="2")
+    G_change <- max(abs((G_new - G_old)/G_old))
 
     tau_old <- mean(theta_old[[1]])
     tau_new <- mean(theta_new[[1]])
-    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    tau_change <- norm(as.vector(tau_new - tau_old), type="2")/norm(as.vector(tau_old), type="2")
+    tau_change <- abs((tau_new - tau_old)/tau_old)
 
-    #alpha_old <- theta_old[[2]]
-    #alpha_new <- theta_new[[2]]
-    #alpha_change <- norm((alpha_new - alpha_old), type="2") #avoid dividing by zero
+    alpha_old <- theta_old[[2]]
+    alpha_new <- theta_new[[2]]
+    #alphaG_change1 <- sqrt(sum((alpha_old - alpha_new)^2) + sum(diag(G_old + G_new - 2*expm::sqrtm(G_old %*% G_new))))
+    alpha_change <- sqrt(sum((expm::sqrtm(solve(G_new)) %*% alpha_new - expm::sqrtm(solve(G_old)) %*% alpha_old)^2))
 
-    change <- c(G_change, tau_change)#, alpha_change)
+    change <- c(G_change, tau_change, alpha_change)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for G, ',change[2],' for tau^2, ',change[3],' for alpha \n'))
@@ -214,9 +213,12 @@ EM_FCtemplateICA <- function(template_mean,
   A_post_mean <- post_AS$A_final
   covA_post_mean <- apply(post_AS$covA_final, c(1,2), mean)
 
-  #delta_post <- S_post_mean - template_mean
-  #delta_true <- truth_IC - template_mean
-  #delta_init <- S_init - template_mean
+  # delta_post <- S_post_mean - template_mean
+  # delta_true <- truth_IC - template_mean
+  # delta_init <- t(S_init) - template_mean
+  # plot(newdata_xifti(GICA, delta_true), title='true', zlim=c(-0.5,0.5))
+  # plot(newdata_xifti(GICA, delta_post), title='post', zlim=c(-0.5,0.5))
+  # plot(newdata_xifti(GICA, delta_init), title='init', zlim=c(-0.5,0.5))
 
   #FC matrices
   corA_post <- apply(post_AS$covA_final, 3, cov2cor)
@@ -261,6 +263,8 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   for(v in 1:nvox){
     tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS_sum[v] + y_sq_sum[v] + 2*beta_tau)
   }
+  tau_sq_new <- rep(mean(tau_sq_new), nvox) #TO DO: FORMALIZE THIS
+
 
   ### UPDATE ALPHA (TEMPORAL INTERCEPT)
 
