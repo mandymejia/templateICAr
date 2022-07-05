@@ -19,3 +19,4 @@
 ^cran-comments\.md$
 ^tests/testWithData$
 ^codecov\.yml$
+^R/plot_FC\.R$
