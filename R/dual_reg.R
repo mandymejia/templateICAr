@@ -242,7 +242,22 @@ dual_reg2 <- function(
     nI <- nV <- nrow(GICA)
   } else if (FORMAT == "GIFTI") {
     if (is.character(BOLD)) { BOLD <- gifti::readgii(BOLD) }
-    if (inherits(BOLD, "gifti")) { BOLD <- do.call(cbind, BOLD$data) }
+    stopifnot(gifti::is.gifti(BOLD))
+    ghemi <- BOLD$file_meta["AnatomicalStructurePrimary"]
+    if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+      stop("AnatomicalStructurePrimary metadata missing or invalid for GICA.")
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
+    if (scale == "local") {
+      if (ghemi == "left") {
+        xii1 <- select_xifti(as.xifti(cortexL=do.call(cbind, BOLD$data)), 1) * 0
+      } else if (ghemi == "right") {
+        xii1 <- select_xifti(as.xifti(cortexR=do.call(cbind, BOLD$data)), 1) * 0
+      } else { stop() }
+      xii1$meta$cifti$intent <- 3006
+    }
+    BOLD <- do.call(cbind, BOLD$data)
+
     stopifnot(is.matrix(BOLD))
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- gifti::readgii(BOLD2) }
