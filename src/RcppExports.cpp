@@ -32,8 +32,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // Gibbs_AS_posteriorCPP
-Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn, const Eigen::MatrixXd template_mean, const Eigen::MatrixXd template_var, Eigen::MatrixXd S, Eigen::MatrixXd A, const Eigen::MatrixXd G, const Eigen::VectorXd tau_v, const Eigen::MatrixXd Y, const Eigen::VectorXd alpha, bool final);
-RcppExport SEXP _templateICAr_Gibbs_AS_posteriorCPP(SEXP nsampSEXP, SEXP nburnSEXP, SEXP template_meanSEXP, SEXP template_varSEXP, SEXP SSEXP, SEXP ASEXP, SEXP GSEXP, SEXP tau_vSEXP, SEXP YSEXP, SEXP alphaSEXP, SEXP finalSEXP) {
+Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn, const Eigen::MatrixXd template_mean, const Eigen::MatrixXd template_var, Eigen::MatrixXd S, const Eigen::MatrixXd G, const Eigen::VectorXd tau_v, const Eigen::MatrixXd Y, const Eigen::VectorXd alpha, bool final);
+RcppExport SEXP _templateICAr_Gibbs_AS_posteriorCPP(SEXP nsampSEXP, SEXP nburnSEXP, SEXP template_meanSEXP, SEXP template_varSEXP, SEXP SSEXP, SEXP GSEXP, SEXP tau_vSEXP, SEXP YSEXP, SEXP alphaSEXP, SEXP finalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -42,20 +42,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type template_mean(template_meanSEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type template_var(template_varSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type S(SSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type A(ASEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< const Eigen::VectorXd >::type tau_v(tau_vSEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const Eigen::VectorXd >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< bool >::type final(finalSEXP);
-    rcpp_result_gen = Rcpp::wrap(Gibbs_AS_posteriorCPP(nsamp, nburn, template_mean, template_var, S, A, G, tau_v, Y, alpha, final));
+    rcpp_result_gen = Rcpp::wrap(Gibbs_AS_posteriorCPP(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_templateICAr_UpdateTheta_FCtemplateICAcpp", (DL_FUNC) &_templateICAr_UpdateTheta_FCtemplateICAcpp, 10},
-    {"_templateICAr_Gibbs_AS_posteriorCPP", (DL_FUNC) &_templateICAr_Gibbs_AS_posteriorCPP, 11},
+    {"_templateICAr_Gibbs_AS_posteriorCPP", (DL_FUNC) &_templateICAr_Gibbs_AS_posteriorCPP, 10},
     {NULL, NULL, 0}
 };
 

@@ -5,7 +5,7 @@ UpdateTheta_FCtemplateICAcpp <- function(template_mean, template_var, template_F
     .Call('_templateICAr_UpdateTheta_FCtemplateICAcpp', PACKAGE = 'templateICAr', template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose)
 }
 
-Gibbs_AS_posteriorCPP <- function(nsamp, nburn, template_mean, template_var, S, A, G, tau_v, Y, alpha, final) {
-    .Call('_templateICAr_Gibbs_AS_posteriorCPP', PACKAGE = 'templateICAr', nsamp, nburn, template_mean, template_var, S, A, G, tau_v, Y, alpha, final)
+Gibbs_AS_posteriorCPP <- function(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final) {
+    .Call('_templateICAr_Gibbs_AS_posteriorCPP', PACKAGE = 'templateICAr', nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final)
 }
 
