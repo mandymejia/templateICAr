@@ -224,11 +224,19 @@ templateICA <- function(
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
+    GIFTI = "GIFTI",
+    gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
     data = "DATA"
   )
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
+
+  if (FORMAT == "GIFTI") {
+    if (!requireNamespace("gifti", quietly = TRUE)) {
+      stop("Package \"gifti\" needed to read GIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   if (FORMAT == "NIFTI") {
     if (!requireNamespace("RNifti", quietly = TRUE)) {
@@ -236,8 +244,8 @@ templateICA <- function(
     }
   }
 
-  # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "NIFTI")) {
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, or NIFTI file, check that the file paths exist.
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (any(missing_BOLD)) {
@@ -253,6 +261,8 @@ templateICA <- function(
     BOLD <- list(BOLD)
   } else if (format == "xifti" && inherits(BOLD, "xifti")) {
     BOLD <- list(BOLD)
+  } else if (format == "gifti" && inherits(BOLD, "gifti")) {
+    BOLD <- list(BOLD)
   } else if (format == "nifti" && inherits(BOLD, "nifti")) {
     BOLD <- list(BOLD)
   }
@@ -267,7 +277,7 @@ templateICA <- function(
     do_sub <- "subcortical" %in% brainstructures
   }
 
-  # Read in CIFTI or NIFTI files.
+  # Read in CIFTI, GIFTI, or NIFTI files.
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
@@ -279,6 +289,24 @@ templateICA <- function(
       }
       stopifnot(is.xifti(BOLD[[bb]]))
     }
+  } else if (format == "GIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- gifti::readgii(BOLD[[bb]])
+      }
+      stopifnot(gifti::is.gifti(BOLD[[bb]]))
+      if (bb == 1) {
+        ghemi <- BOLD[[bb]]$file_meta["AnatomicalStructurePrimary"]
+        if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+          stop("AnatomicalStructurePrimary metadata missing or invalid for BOLD #", bb, ".")
+        }
+      } else {
+        if (ghemi != BOLD[[bb]]$file_meta["AnatomicalStructurePrimary"]) {
+          stop("AnatomicalStructurePrimary metadata missing or invalid for BOLD #", bb, ".")
+        }
+      }
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
   } else if (format == "NIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
@@ -327,6 +355,7 @@ templateICA <- function(
 
   # Get `nI`, `nL`, and `nV`.
   # Check brainstructures and resamp_res if CIFTI, where applicable.
+  # Convert to CIFTI if GIFTI.
   # Check mask if NIFTI.
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
@@ -355,6 +384,21 @@ templateICA <- function(
     if (!is.null(resamp_res)) {
       template <- resample_template(template, resamp_res=resamp_res)
     }
+    nI <- nrow(template$template$mean)
+
+  } else if (FORMAT == "GIFTI") {
+    if (ghemi == "left") {
+      xii1 <- select_xifti(as.xifti(cortexL=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      for (bb in seq(length(BOLD))) {
+        BOLD[[bb]] <- as.xifti(cortexL=do.call(cbind, BOLD[[bb]]$data))
+      }
+    } else if (ghemi == "right") {
+      xii1 <- select_xifti(as.xifti(cortexR=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      for (bb in seq(length(BOLD))) {
+        BOLD[[bb]] <- as.xifti(cortexR=do.call(cbind, BOLD[[bb]]$data))
+      }
+    } else { stop() }
+    # xii1 <- move_to_mwall(xii1)
     nI <- nrow(template$template$mean)
 
   } else if (FORMAT == "NIFTI") {
@@ -425,7 +469,7 @@ templateICA <- function(
       ))
     }
 
-    if (FORMAT == "CIFTI") {
+    if (FORMAT %in% c("GIFTI", "CIFTI")) {
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
           res <- ciftiTools::infer_resolution(BOLD[[1]])
@@ -491,15 +535,13 @@ templateICA <- function(
 
   # Process the scan -----------------------------------------------------------
   # Get each entry of `BOLD` as a data matrix or array.
-  if (FORMAT == "CIFTI") {
+  if (FORMAT %in% c("CIFTI", "GIFTI")) {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_cifti(BOLD[[bb]], brainstructures=brainstructures) }
       if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
       stopifnot(is.matrix(BOLD[[bb]]))
     }
   } else if (FORMAT == "NIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]]) }
       stopifnot(length(dim(BOLD[[bb]])) > 1)
     }
   } else {
@@ -788,7 +830,7 @@ templateICA <- function(
     resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
   }
 
-  if (FORMAT=="CIFTI" && !is.null(xii1)) {
+  if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
     xiiL <- select_xifti(xii1, rep(1, nL))
     if (grepl("all", IC_inds)) {
       IC_inds <- seq(nL)
@@ -799,6 +841,12 @@ templateICA <- function(
     xiiL$meta$cifti$names <- paste("IC", IC_inds)
     resultEM$subjICmean <- newdata_xifti(xiiL, resultEM$subjICmean)
     resultEM$subjICse <- newdata_xifti(xiiL, resultEM$subjICse)
+    if (FORMAT == "GIFTI") {
+      # Apply `mask2`.
+      resultEM$subjICmean <- move_to_mwall(resultEM$subjICmean)
+      resultEM$subjICse <- move_to_mwall(resultEM$subjICse)
+      mask2 <- NULL
+    }
     if (do_spatial) {
       resultEM$result_tICA$subjICmean <- newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
       resultEM$result_tICA$subjICse <- newdata_xifti(xiiL, resultEM$result_tICA$subjICse)

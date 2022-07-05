@@ -49,9 +49,11 @@ activations <- function(
   if (length(FORMAT) != 1) { stop("Not a tICA.") }
   FORMAT <- switch(FORMAT,
     tICA.cifti = "CIFTI",
+    tICA.gifti = "GIFTI",
     tICA.nifti = "NIFTI",
     tICA = "DATA",
     stICA.cifti = "CIFTI",
+    stICA.gifti = "GIFTI",
     stICA.nifti = "NIFTI",
     stICA = "DATA"
   )
