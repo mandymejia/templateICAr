@@ -102,7 +102,6 @@ EM_FCtemplateICA <- function(template_mean,
     #     template_mean = template_mean,
     #     template_var = template_var,
     #     S = t(S),
-    #     A = A,
     #     G = theta_old[[3]],
     #     tau_v = theta_old[[1]],
     #     Y = BOLD,
@@ -117,13 +116,13 @@ EM_FCtemplateICA <- function(template_mean,
         template_mean = template_mean,
         template_var = template_var,
         S = S,
-        A = A,
         G = theta_old[[3]],
         tau_v = theta_old[[1]],
         Y = BOLD,
         alpha = theta_old[[2]],
         final = F
       )
+    S = post_sums$S_post #update S because it is used to start the Gibbs sampler
 
     #plot_FC(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
 
@@ -159,7 +158,6 @@ EM_FCtemplateICA <- function(template_mean,
         post_sums
       )
 
-
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
@@ -174,11 +172,11 @@ EM_FCtemplateICA <- function(template_mean,
     #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
     tau_change <- norm(as.vector(tau_new - tau_old), type="2")/norm(as.vector(tau_old), type="2")
 
-    alpha_old <- theta_old[[2]]
-    alpha_new <- theta_new[[2]]
-    alpha_change <- norm((alpha_new - alpha_old), type="2") #avoid dividing by zero
+    #alpha_old <- theta_old[[2]]
+    #alpha_new <- theta_new[[2]]
+    #alpha_change <- norm((alpha_new - alpha_old), type="2") #avoid dividing by zero
 
-    change <- c(G_change, tau_change, alpha_change)
+    change <- c(G_change, tau_change)#, alpha_change)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for G, ',change[2],' for tau^2, ',change[3],' for alpha \n'))
@@ -195,16 +193,15 @@ EM_FCtemplateICA <- function(template_mean,
   #
   ### Compute final posterior means and variances of A and S
 
-  post_AS <- Gibbs_AS_posterior(tricolon, final=TRUE)
+  #post_AS <- Gibbs_AS_posterior(tricolon, final=TRUE)
 
   post_AS <-
     Gibbs_AS_posterior(
-      nsamp = 1000,
+      nsamp = 100,
       nburn = 0,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
-      A = A,
       G = theta_new[[3]],
       tau_v = theta_new[[1]],
       Y = BOLD,
@@ -216,6 +213,10 @@ EM_FCtemplateICA <- function(template_mean,
   S_post_SE <- apply(post_AS$S_final, c(1,2), sd)
   A_post_mean <- post_AS$A_final
   covA_post_mean <- apply(post_AS$covA_final, c(1,2), mean)
+
+  #delta_post <- S_post_mean - template_mean
+  #delta_true <- truth_IC - template_mean
+  #delta_init <- S_init - template_mean
 
   #FC matrices
   corA_post <- apply(post_AS$covA_final, 3, cov2cor)
@@ -258,7 +259,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   #TO DO: Make this more efficient (no loop)
   y_sq_sum <- rowSums(BOLD^2)
   for(v in 1:nvox){
-    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS[v] + y_sq_sum[v] + 2*beta_tau)
+    tau_sq_new[v] <- 1/(ntime + 2*alpha_tau + 2) * (post_sums$AS_sq_sum[v] - 2*post_sums$yAS_sum[v] + y_sq_sum[v] + 2*beta_tau)
   }
 
   ### UPDATE ALPHA (TEMPORAL INTERCEPT)
@@ -272,7 +273,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
   psi0 <- template_FC$psi
   alpha_alpha_t <- tcrossprod(alpha_new)
   a_alpha_t <- tcrossprod(post_sums$A_sum, alpha_new)
-  tmp <- post_sums$AtA - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
+  tmp <- post_sums$AtA_sum - 2*a_alpha_t + ntime*alpha_alpha_t + psi0
   G_new <- 1/(ntime + nu0 + nICs + 1)*tmp
 
   # RETURN NEW PARAMETER ESTIMATES
@@ -291,7 +292,6 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #' @param template_mean V by Q matrix of template mean values
 #' @param template_var V by Q matrix of template variance values
 #' @param S V by Q matrix of starting values for ICs
-#' @param A T by Q matrix of starting values for mixing
 #' @param G Q by Q prior covariance of A
 #' @param tau_v vector of length V of observational variance for each data location
 #' @param Y V by T matrix of observed BOLD values
@@ -305,7 +305,6 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
                                template_mean,
                                template_var,
                                S,
-                               A,
                                G,
                                tau_v,
                                Y,
@@ -313,8 +312,9 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
                                final = FALSE) {
   # number_samples = 1000
   niter <- nsamp + nburn
-  Q = ncol(A)
+  Q = ncol(G)
   V = length(tau_v)
+  tau_v <- rep(mean(tau_v), V) #TO DO: FORMALIZE THIS
   if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
   ntime <- ncol(Y)
 
@@ -323,6 +323,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     AtA_sum = matrix(0,Q,Q)
     yAS_sum = numeric(V)
     AS_sq_sum = numeric(V)
+    S_post = matrix(0, V, Q)
   } else {
     A_final = array(0, dim=c(ntime, Q))
     covA_final = array(0, dim=c(Q, Q, nsamp)) #save samples of cov(A)
@@ -334,20 +335,15 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
   alphaGinv <- as.numeric(t(alpha)%*%G_inv)
   YG <- t(Y) %*% G_tau_inv
 
-
   ### A is T by Q
   start_time <- proc.time()[3]
   for(i in 1:niter){
     #### update A
 
-    # sigma_a = solve(t(S) %*% G_tau_inv %*% S + solve(G))
     sigma_a_inv <- as.matrix(t(S) %*% G_tau_inv %*% S + G_inv)
     chol_sigma_a_inv <- chol(sigma_a_inv)
-    # sigma_a <- solve(sigma_a_inv)
-    # cat(sigma_a,'\n')
     YGS <- YG %*% S
     YGSalphaGinv <- as.matrix(YGS + matrix(alphaGinv, nrow=ntime, ncol=Q, byrow=TRUE))
-    #YGSalphaGinv <- apply(YGS,1,function(ygs) ygs + alphaGinv)
     mu_a <- as.matrix(Matrix::solve(sigma_a_inv,t(YGSalphaGinv)))
 
     #generate samples from N(mu_at, Sigma_a) for each t=1,...,ntime
@@ -360,26 +356,16 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     }, chol_sigma_a_inv = chol_sigma_a_inv))
     parallel::stopCluster(cl)
 
-    # cat(YGS[ntime,],"\n")
-    # cat(YGS[ntime,] + alphaGinv,"\n")
-    # cat("mu_a1:",sigma_a %*% t(YGS[1,] + alphaGinv), "\n")
-    # mu_a <- apply(YGS,1,function(ygs) tcrossprod(sigma_a, ygs + alphaGinv))
-    # cat(mu_a,"\n")
-    # A = mvtnorm::rmvnorm(n = 1, mean = mu_a, sigma = sigma_a) # This doesn't work because mu_a is a matrix
-    # A = t(apply(mu_a, 2, function(ma) mvtnorm::rmvnorm(n = 1,mean = ma,sigma = sigma_a)))
-
-    # G_tauv_inv = diag(1/template.var, nrow = T) # Don't actually need to make this
-    # G_sv_inv = Matrix::Diagonal(x = 1/sigma_s) ### Need var names for these
-
     #### update S
     for(v in 1:V){
       G_sv_inv = Matrix::Diagonal(x = 1/template_var[v,])
-      sigma_sv = solve((1/tau_v[v]) * crossprod(A) + G_sv_inv)
+      sigma_sv_inv <- (1/tau_v[v]) * crossprod(A) + G_sv_inv
+      chol_sigma_sv_inv <- chol(sigma_sv_inv)
+      sigma_sv = solve(sigma_sv_inv)
       AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + G_sv_inv %*% template_mean[v,]
-      mu_sv = sigma_sv %*% AtYvtempVarMean
-      # if(v == 1) cat("mu_s1:",mu@x,"\n")
-      # mu_s = cbind(mu_s, mu)
-      S[v,] <- mvtnorm::rmvnorm(n = 1, mean = mu_sv, sigma = sigma_sv)
+      mu_sv = as.numeric(Matrix::solve(sigma_sv_inv, AtYvtempVarMean))
+      Zs <- rnorm(Q)
+      S[v,] <- mu_sv + as.numeric(Matrix::solve(chol_sigma_sv_inv,Zs))
     }
 
     # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
@@ -395,11 +381,13 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
         #AS_sq = sum_t (a_t's_v)^2
         yAS_sum = yAS_sum + colSums(t(Y) * AtS)
 
-        #AtA = sum_t a_t a_t'
-        AtA_sum_i <- matrix(0, Q, Q) #QxQ matrix
-        for(t in 1:ntime){ AtA_sum_i <- AtA_sum_i + tcrossprod(A[t,]) }
-        AtA_sum = AtA_sum + AtA_sum_i
+        #AtA = sum_t a_t a_t' = A'A
+        AtA_sum = AtA_sum + crossprod(A)
+
+        #S
+        S_post = S_post + S
       } else {
+        print(paste0('Saving sample ',i))
         A_final = A_final + A
         covA_final[,,i] <- cov(A)
         S_final[,,i] = S
@@ -407,7 +395,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     }
 
     if(niter >= 10 & i %% round(niter / 10) == 0) {
-      cat("Posterior sample",i,"of",niter,". Estimated time remaining:", (proc.time()[3] - start_time) / i * (niter - i),"\n")
+      cat("Posterior sample",i,"of",niter,". Estimated time remaining:", (proc.time()[3] - start_time) / i * (niter - i)," sec\n")
     }
   }
   #### return estimates of A = A_sum_init, #only actually need sum over t
@@ -420,6 +408,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
     AtA_sum = AtA_sum/nsamp
     yAS_sum = yAS_sum/nsamp
     AS_sq_sum = AS_sq_sum/nsamp
+    S_post = S_post/nsamp
   } else {
     A_final = A_final/nsamp
   }
@@ -430,6 +419,7 @@ Gibbs_AS_posterior <- function(nsamp = 1000,
                 AtA_sum = AtA_sum,
                 yAS_sum = yAS_sum,
                 AS_sq_sum = AS_sq_sum,
+                S_post = S_post,
                 total_time = total_time))
   } else {
     return(list(A_final = A_final,
