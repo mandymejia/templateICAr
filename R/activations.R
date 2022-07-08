@@ -6,24 +6,24 @@
 #' @param u Activation threshold. Default: \code{0}.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
-#' @param method_p If the input is a \code{"tICA"} model object, the type of 
-#'  multiple comparisons correction to use for p-values, or \code{NULL} for no 
-#'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini & 
+#' @param method_p If the input is a \code{"tICA"} model object, the type of
+#'  multiple comparisons correction to use for p-values, or \code{NULL} for no
+#'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
 #'  Hochberg, i.e. the false discovery rate).
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: 
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default:
 #'  \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If 
+#' @param which.ICs Indices of ICs for which to identify activations.  If
 #'  \code{NULL} (default), use all ICs.
-#' @param deviation If \code{TRUE} identify significant deviations from the 
-#'  template mean, rather than significant areas of engagement. Default: 
+#' @param deviation If \code{TRUE} identify significant deviations from the
+#'  template mean, rather than significant areas of engagement. Default:
 #'  \code{FALSE}.
 #'
-#' @return A list containing activation maps for each IC and the joint and 
+#' @return A list containing activation maps for each IC and the joint and
 #'  marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
-#'  data, then the activations maps will be formatted accordingly. 
-#' 
+#'  data, then the activations maps will be formatted accordingly.
+#'
 #'  Use \code{summary} to obtain information about the activations results.
-#'  For CIFTI-format activations, use \code{plot} to visualize the activation 
+#'  For CIFTI-format activations, use \code{plot} to visualize the activation
 #'  maps.
 #'
 #' @export
@@ -37,7 +37,7 @@
 #'  activations(tICA_result, alpha=.05, deviation=TRUE)
 #' }
 activations <- function(
-  tICA, u=0, alpha=0.01, type=">", method_p='BH', 
+  tICA, u=0, alpha=0.01, type=">", method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
@@ -81,7 +81,7 @@ activations <- function(
   names(tICA) <- c("t_mean", "t_var", "s_mean", "s_se")
 
   # Apply data mask.
-  use_mask <- (!is.null(mask)) && (!all(mask))
+  use_mask <- (!is.null(mask)) && (!all(mask) && (sum(mask)!=nrow(tICA$s_mean)))
   if (use_mask) {
     tICA$s_mean <- tICA$s_mean[mask,]
     tICA$s_se <- tICA$s_se[mask,]
