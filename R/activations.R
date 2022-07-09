@@ -67,7 +67,7 @@ activations <- function(
 
   # Get needed metadata from `tICA`.
   Q <- tICA$omega
-  mask <- tICA$mask
+  mask <- tICA[["mask"]] # avoid grabbing mask_nii
 
   # Vectorize data.
   if (FORMAT == "CIFTI") {
@@ -83,7 +83,7 @@ activations <- function(
   names(tICA) <- c("t_mean", "t_var", "s_mean", "s_se")
 
   # Apply data mask.
-  use_mask <- (!is.null(mask)) && (!all(mask) && (sum(mask)!=nrow(tICA$s_mean)))
+  use_mask <- (!is.null(mask)) && (!all(mask))
   if (use_mask) {
     tICA$s_mean <- tICA$s_mean[mask,]
     tICA$s_se <- tICA$s_se[mask,]
