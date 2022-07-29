@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# templaceICAr
+# templateICAr
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mandymejia/templateICAr/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/templateICAr/actions)
@@ -31,11 +31,11 @@ Template ICA consists of three steps. The main functions associated with each st
 
 ## Installation
 
-You can install the development version of `templaceICAr` from Github with:
+You can install the development version of `templateICAr` from Github with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("templaceICAr")
+devtools::install_github("templateICAr")
 ```
 
 

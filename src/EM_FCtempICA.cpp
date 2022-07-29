@@ -198,7 +198,7 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       Eigen::Map<Eigen::VectorXd> ZZ = as<Eigen::Map<Eigen::VectorXd> >(Z);
       Sv = chol_sig_S * ZZ;
       Sv += mu_sv;
-      S.row(v-1) = Sv;
+      S.row(v) = Sv;
     }
     // Store summaries
     if(i > nburn) {

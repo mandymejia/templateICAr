@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# templaceICAr
+# templateICAr
 
 <!-- badges: start -->
 
@@ -31,12 +31,12 @@ each step are listed below.
 
 ## Installation
 
-You can install the development version of `templaceICAr` from Github
+You can install the development version of `templateICAr` from Github
 with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("templaceICAr")
+devtools::install_github("templateICAr")
 ```
 
 ## Important Notes on Dependencies:
