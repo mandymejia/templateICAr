@@ -16,6 +16,8 @@
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
+#' @importFrom Matrix Diagonal
+#' @importFrom matrixStats rowVars
 #'
 #' @return  A list:
 #' theta (list of final parameter estimates),
@@ -326,6 +328,8 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #' @param final (logical) should this output samples? Otherwise, summaries are output
 #'
 #' @return a list of posterior summaries or a list of MCMC samples
+#' @importFrom Matrix Diagonal solve
+#' @import parallel
 #' @export
 Gibbs_AS_posterior <- function(nsamp = 1000,
                                nburn = 100,
