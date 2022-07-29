@@ -73,18 +73,18 @@ EM_FCtemplateICA <- function(template_mean,
   sigma2_alpha <- max(apply(A,2,var))
   G_init <- cov(A)
   theta_new <- list(tau_v_init, alpha_init, G_init)
+  S <- t(S)
 
   #pre-compute sums over t
   A_sum_init <- colSums(A_init) #vector length Q
   AS_sq_sum_init <- colSums(AS_sq_init) #vector length V
   yAS_init <- t(BOLD) * AS_init #element-wise product -- for the terms y_tv * E[a_t's_v]
   yAS_sum_init <- colSums(yAS_init) #vector length V
-  AtA_sum_init <- matrix(0, nICs,nICs) #QxQ matrix
-  for(t in 1:ntime){ AtA_sum_init <- AtA_sum_init + tcrossprod(A_init[t,]) }
-  post_sums <- list(A = A_sum_init, #only actually need sum over t
-                    AtA = AtA_sum_init,  #only actually need sum over t
-                    yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
-                    AS_sq = AS_sq_sum_init) #only actually need sum over t
+  AtA_sum_init <- crossprod(A_init) #QxQ matrix
+  post_sums <- list(A = A_sum_init,
+                    AtA = AtA_sum_init,
+                    yAS = yAS_sum_init,
+                    AS_sq = AS_sq_sum_init)
 
   err <- 1000 #large initial value for difference between iterations
   while(err > epsilon){
@@ -95,23 +95,9 @@ EM_FCtemplateICA <- function(template_mean,
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-    # post_sums <-
-    #   Gibbs_AS_posteriorCPP(
-    #     nsamp = 100,
-    #     nburn = 0,
-    #     template_mean = template_mean,
-    #     template_var = template_var,
-    #     S = t(S),
-    #     G = theta_old[[3]],
-    #     tau_v = theta_old[[1]],
-    #     Y = BOLD,
-    #     alpha = theta_old[[2]],
-    #     final = F
-    #   )
-
     post_sums <-
-      Gibbs_AS_posterior(
-        nsamp = 100,
+      Gibbs_AS_posteriorCPP(
+        nsamp = 500,
         nburn = 0,
         template_mean = template_mean,
         template_var = template_var,
@@ -124,39 +110,49 @@ EM_FCtemplateICA <- function(template_mean,
       )
     S = post_sums$S_post #update S because it is used to start the Gibbs sampler
 
+    # post_sums <-
+    #   Gibbs_AS_posterior(
+    #     nsamp = 100,
+    #     nburn = 0,
+    #     template_mean = template_mean,
+    #     template_var = template_var,
+    #     S = S,
+    #     G = theta_old[[3]],
+    #     tau_v = theta_old[[1]],
+    #     Y = BOLD,
+    #     alpha = theta_old[[2]],
+    #     final = F
+    #   )
+    # S = post_sums$S_post #update S because it is used to start the Gibbs sampler
+
     #plot_FC(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
 
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
     # M-step assumes that we have a good estimate of the first level of the posterior
-    # theta_new <- UpdateTheta_FCtemplateICA(template_mean,
-    #                                       template_var,
-    #                                       template_FC,
-    #                                       prior_params,
-    #                                       BOLD,
-    #                                       post_sums,
-    #                                       verbose=verbose)
-    # theta_new <-
-    #   UpdateTheta_FCtemplateICAcpp(
-    #     template_mean,
-    #     template_var,
-    #     template_FC,
-    #     theta_old[[3]],
-    #     prior_params,
-    #     BOLD,
-    #     post_sums,
-    #     sigma2_alpha,
-    #     TRUE
-    #   )
-    # Y_sq_sum <- rowSums(BOLD^2) # This is a shortcut in computation for the CPP version
-    theta_new <- UpdateTheta_FCtemplateICA(
+
+    Y_sq_sum <- rowSums(BOLD^2) # This is a shortcut in computation for the CPP version
+    theta_new <-
+      UpdateTheta_FCtemplateICAcpp(
         template_mean,
         template_var,
         template_FC,
+        theta_old[[3]],
         prior_params,
         BOLD,
-        post_sums
+        Y_sq_sum,
+        post_sums,
+        sigma2_alpha,
+        TRUE
       )
+    # theta_new <- UpdateTheta_FCtemplateICA(
+    #     template_mean,
+    #     template_var,
+    #     template_FC,
+    #     prior_params,
+    #     BOLD,
+    #     post_sums
+    #   )
 
     if(verbose) print(Sys.time() - t00)
 
@@ -195,8 +191,8 @@ EM_FCtemplateICA <- function(template_mean,
   #post_AS <- Gibbs_AS_posterior(tricolon, final=TRUE)
 
   post_AS <-
-    Gibbs_AS_posterior(
-      nsamp = 100,
+    Gibbs_AS_posteriorCPP(
+      nsamp = 500,
       nburn = 0,
       template_mean = template_mean,
       template_var = template_var,
@@ -208,10 +204,16 @@ EM_FCtemplateICA <- function(template_mean,
       final = TRUE
     )
 
-  S_post_mean <- apply(post_AS$S_final, c(1,2), mean)
-  S_post_SE <- apply(post_AS$S_final, c(1,2), sd)
-  A_post_mean <- post_AS$A_final
-  covA_post_mean <- apply(post_AS$covA_final, c(1,2), mean)
+  #HERE
+
+  S_post <- array(post_AS$S_final, dim=c(nvox, Q, 500))[,,-1] #WHY IS THE FIRST ITERATION ZERO?
+  S_post_mean <- apply(S_post, c(1,2), mean)
+  S_post_SE <- apply(S_post, c(1,2), sd)
+  A_post <- array(post_AS$A_final, dim=c(ntime, Q, 500))[,,-1] #WHY IS THE FIRST ITERATION ZERO?
+  A_post_mean <- apply(A_post, c(1,2), mean)
+  covA_post_mean <- cov(A_post_mean)
+  corA_post_mean <- cor(A_post_mean)
+
 
   # delta_post <- S_post_mean - template_mean
   # delta_true <- truth_IC - template_mean
