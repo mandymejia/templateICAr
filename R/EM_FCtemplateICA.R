@@ -15,6 +15,8 @@
 #' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.01.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
+#' @importFrom expm sqrtm
+#'
 #' @return  A list:
 #' theta (list of final parameter estimates),
 #' subICmean (estimates of subject-level ICs),
@@ -160,7 +162,13 @@ EM_FCtemplateICA <- function(template_mean,
 
     G_old <- theta_old[[3]]
     G_new <- theta_new[[3]]
-    G_change <- max(abs((G_new - G_old)/G_old))
+    #G_change <- max(abs((G_new - G_old)/G_old)) #not good in case there are true zeros
+    #Use Frechet distance between distributions, assuming mean zero
+    #https://www.sciencedirect.com/science/article/pii/0047259X8290077X
+    #Tr(G_old + G_new - 2*(G_old G_new)^(1/2))
+    G_orig <- sqrt(sum(diag(G_old)))
+    G_diff <- sqrt(sum(diag(G_old + G_new - 2*expm::sqrtm(G_old %*% G_new))))
+    G_change <- G_diff / G_orig
 
     tau_old <- mean(theta_old[[1]])
     tau_new <- mean(theta_new[[1]])
@@ -168,7 +176,6 @@ EM_FCtemplateICA <- function(template_mean,
 
     alpha_old <- theta_old[[2]]
     alpha_new <- theta_new[[2]]
-    #alphaG_change1 <- sqrt(sum((alpha_old - alpha_new)^2) + sum(diag(G_old + G_new - 2*expm::sqrtm(G_old %*% G_new))))
     alpha_change <- sqrt(sum((expm::sqrtm(solve(G_new)) %*% alpha_new - expm::sqrtm(solve(G_old)) %*% alpha_old)^2))
 
     change <- c(G_change, tau_change, alpha_change)
@@ -211,8 +218,12 @@ EM_FCtemplateICA <- function(template_mean,
   S_post_SE <- apply(S_post, c(1,2), sd)
   A_post <- array(post_AS$A_final, dim=c(ntime, Q, 500))[,,-1] #WHY IS THE FIRST ITERATION ZERO?
   A_post_mean <- apply(A_post, c(1,2), mean)
-  covA_post_mean <- cov(A_post_mean)
-  corA_post_mean <- cor(A_post_mean)
+  A_post_mean_cor <- cor(A_post_mean)
+
+  #compute cor(A) for each iteration
+  corA_post <- apply(A_post, 3, cor)
+  corA_post_mean <- matrix(rowMeans(corA_post), nrow=Q)
+  corA_post_SE <- matrix(sqrt(matrixStats::rowVars(corA_post)), nrow=Q)
 
 
   # delta_post <- S_post_mean - template_mean
@@ -222,10 +233,20 @@ EM_FCtemplateICA <- function(template_mean,
   # plot(newdata_xifti(GICA, delta_post), title='post', zlim=c(-0.5,0.5))
   # plot(newdata_xifti(GICA, delta_init), title='init', zlim=c(-0.5,0.5))
 
-  #FC matrices
-  corA_post <- apply(post_AS$covA_final, 3, cov2cor)
-  corA_post_mean <- sapply(corA_post, mean)
-  corA_post_SE <- sapply(corA_post, sd)
+  # #FC matrices
+  # corA_post <- apply(post_AS$covA_final, 3, cov2cor)
+  # corA_post_mean <- sapply(corA_post, mean)
+  # corA_post_SE <- sapply(corA_post, sd)
+
+  result <- list(#S_post,
+                 S_post_mean,
+                 S_post_SE,
+                 #A_post,
+                 A_post_mean_cor,
+                 #corA_post,
+                 corA_post_mean,
+                 corA_post_SE
+                 )
 
   #
   # result <- list(subjICmean=miu_s,
@@ -236,7 +257,7 @@ EM_FCtemplateICA <- function(template_mean,
   #                numiter=iter-1,
   #                template_mean = template_mean,
   #                template_var = template_var)
-  # return(result)
+  return(result)
 }
 
 

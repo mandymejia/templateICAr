@@ -135,8 +135,10 @@ templateICA <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
-  Q2=NULL, Q2_max=NULL,
+  center_Bcols=FALSE,
+  normA=FALSE,
+  Q2=NULL,
+  Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   varTol=1e-6,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
@@ -656,7 +658,8 @@ templateICA <- function(
       prior_params, #for prior on tau^2
       BOLD=BOLD,
       AS_0 = BOLD_DR, #initial values for A and S
-      maxiter=maxiter, epsilon=epsilon,
+      maxiter=maxiter,
+      epsilon=epsilon,
       verbose=verbose
     )
   } else {
