@@ -102,6 +102,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
 //' @param alpha a length Q vector of the prior mean of all rows of A
 //' @param final a boolean. Should posterior samples be returned instead of
 //'   summary measures?
+//' @param return_samp a boolean. Should posterior samples be returned?
 //' @export
 // [[Rcpp::export]]
 Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
@@ -112,7 +113,8 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
                                  const Eigen::VectorXd tau_v,
                                  const Eigen::MatrixXd Y,
                                  const Eigen::VectorXd alpha,
-                                 bool final) {
+                                 bool final,
+                                 bool return_samp) {
   // Find dimension quantities
   int niter = nsamp + nburn;
   int V = tau_v.size();
@@ -124,12 +126,13 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   Rcpp::List output;
   int TQ = ntime * Q;
   int VQ = V * Q;
-  Eigen::MatrixXd A_final, S_final, AtA_sum, S_post = Eigen::MatrixXd::Zero(V,Q);
+  Eigen::MatrixXd A_samp, S_samp, AtA_sum, S_post = Eigen::MatrixXd::Zero(V,Q);
   Eigen::VectorXd A_sum, yAS_sum, AS_sq;
-  if(final){
+  if(final) return_samp = true;
+  if(return_samp){
     // In the case of final, just output posterior samples of A and S
-    A_final = Eigen::MatrixXd::Zero(TQ,nsamp);
-    S_final = Eigen::MatrixXd::Zero(VQ,nsamp);
+    A_samp = Eigen::MatrixXd::Zero(TQ,nsamp);
+    S_samp = Eigen::MatrixXd::Zero(VQ,nsamp);
   }
   if(!final){
     // In the case of not final, output posterior summaries
@@ -214,17 +217,17 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
         }
         AtA_sum += AtA;
       }
-      if(final) {
+      if(return_samp) {
         for(int t = 0;t<ntime;t++){
           for(int q=0;q<Q;q++){
             int Aidx = t + q*ntime;
-            A_final(Aidx,i - nburn) = A(t,q);
+            A_samp(Aidx,i - nburn) = A(t,q);
           }
         }
         for(int v=0;v<V;v++) {
           for(int q=0;q<Q;q++) {
             int Sidx = v + q*V;
-            S_final(Sidx,i - nburn) = S(v,q);
+            S_samp(Sidx,i - nburn) = S(v,q);
           }
         }
       }
@@ -243,15 +246,25 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
     Rcpp::NumericVector yAS_sumX(wrap(yAS_sum));
     Rcpp::NumericVector AS_sqX(wrap(AS_sq));
     Rcpp::NumericMatrix S_postX(s_post);
-    output = Rcpp::List::create(Rcpp::Named("A_sum") = A_sumX,
-                                Rcpp::Named("AtA_sum") = AtA_sumX,
-                                Rcpp::Named("yAS_sum") = yAS_sumX,
-                                Rcpp::Named("AS_sq_sum") = AS_sqX,
-                                Rcpp::Named("S_post") = S_post);
+    if(!return_samp) {
+      output = Rcpp::List::create(Rcpp::Named("A_sum") = A_sumX,
+                                  Rcpp::Named("AtA_sum") = AtA_sumX,
+                                  Rcpp::Named("yAS_sum") = yAS_sumX,
+                                  Rcpp::Named("AS_sq_sum") = AS_sqX,
+                                  Rcpp::Named("S_post") = S_post);
+    } else {
+      output = Rcpp::List::create(Rcpp::Named("A_sum") = A_sumX,
+                                  Rcpp::Named("AtA_sum") = AtA_sumX,
+                                  Rcpp::Named("yAS_sum") = yAS_sumX,
+                                  Rcpp::Named("AS_sq_sum") = AS_sqX,
+                                  Rcpp::Named("S_post") = S_post,
+                                  Rcpp::Named("A_samp") = A_samp,
+                                  Rcpp::Named("S_samp") = S_samp);
+    }
   }
   if(final) {
-    output = Rcpp::List::create(Rcpp::Named("A_final") = A_final,
-                                Rcpp::Named("S_final") = S_final);
+    output = Rcpp::List::create(Rcpp::Named("A_samp") = A_samp,
+                                Rcpp::Named("S_samp") = S_samp);
   }
 
   return output;
