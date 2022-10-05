@@ -204,7 +204,7 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       S.row(v) = Sv;
     }
     // Store summaries
-    if(i > nburn) {
+    if(i > (nburn-1)) {
       if(!final) {
         AtS = A * S.transpose();
         S_post += S;
