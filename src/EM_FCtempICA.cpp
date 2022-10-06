@@ -167,7 +167,7 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   NumericVector Z(Q);
   Eigen::LLT<Eigen::MatrixXd> chol_sig_inv_A, chol_sig_inv_S;
   // Start the Gibbs sampler
-  for(int i=1;i <= niter; i++) {
+  for(int i=0;i < niter; i++) {
     // Update A
     SGti = S.transpose() * G_tau_inv;
     sig_inv_A = SGti * S;
