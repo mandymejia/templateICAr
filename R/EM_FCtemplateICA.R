@@ -211,6 +211,7 @@ EM_FCtemplateICA <- function(template_mean,
       tau_v = theta_new[[1]],
       Y = BOLD,
       alpha = theta_new[[2]],
+      final = TRUE,
       return_samp = TRUE
     )
 
