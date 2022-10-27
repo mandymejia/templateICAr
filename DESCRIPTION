@@ -34,6 +34,7 @@ Imports:
     abind,
     ciftiTools (>= 0.8.0),
     excursions,
+    expm,
     fMRIscrub,
     ica,
     Matrix,

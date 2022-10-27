@@ -8,7 +8,6 @@
 ^CRAN-RELEASE$
 ^cran-comments\.md
 ^R/ignore\.R$
-^R/EM_FCtemplateICA\.R$
 ^R/groupICA\.R$
 ^R/EM_diagnosticICA\.R$
 ^R/diagnosticICA\.nifti\.R$

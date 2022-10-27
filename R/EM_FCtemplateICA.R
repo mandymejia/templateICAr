@@ -18,6 +18,7 @@
 #' @importFrom expm sqrtm
 #' @importFrom Matrix Diagonal
 #' @importFrom matrixStats rowVars
+#' @importFrom stats sd cor
 #'
 #' @return  A list:
 #' theta (list of final parameter estimates),
@@ -215,17 +216,17 @@ EM_FCtemplateICA <- function(template_mean,
 
 
   #[TO DO]: Fix indexing issue where first iteration is zero (only affects burn-in)
-  S_post <- array(post_AS$S_samp, dim=c(nvox, Q, 1000-50))
+  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
   S_post_mean <- apply(S_post, c(1,2), mean)
   S_post_SE <- apply(S_post, c(1,2), sd)
-  A_post <- array(post_AS$A_samp, dim=c(ntime, Q, 1000-50))
+  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
   A_post_mean <- apply(A_post, c(1,2), mean)
   A_post_mean_cor <- cor(A_post_mean)
 
   #compute cor(A) for each iteration
   corA_post <- apply(A_post, 3, cor)
-  corA_post_mean <- matrix(rowMeans(corA_post), nrow=Q)
-  corA_post_SE <- matrix(sqrt(matrixStats::rowVars(corA_post)), nrow=Q)
+  corA_post_mean <- matrix(rowMeans(corA_post), nrow=nICs)
+  corA_post_SE <- matrix(sqrt(matrixStats::rowVars(corA_post)), nrow=nICs)
 
 
   # delta_post <- S_post_mean - template_mean
@@ -261,7 +262,14 @@ EM_FCtemplateICA <- function(template_mean,
 
 
 #' @rdname UpdateTheta_FCtemplateICA
-#Update theta = (tau_sq, alpha, G)
+#' @title Update FC Template ICA parameters (tau_sq, alpha, G)
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template
+#' @param template_var (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
+#' @param template_FC (list) Parameters of functional connectivity template
+#' @param prior_params Alpha and beta parameters of IG prior on tau^2 (error variance)
+#' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
+#' @param post_sums TBD
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 UpdateTheta_FCtemplateICA <- function(template_mean,
                                       template_var,
                                       template_FC,
