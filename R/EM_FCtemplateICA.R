@@ -101,8 +101,8 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     system.time(post_sums <-
       Gibbs_AS_posteriorCPP(
-        nsamp = 500,
-        nburn = 0,
+        nsamp = 1000,
+        nburn = 50,
         template_mean = template_mean,
         template_var = template_var,
         S = S,
@@ -111,7 +111,7 @@ EM_FCtemplateICA <- function(template_mean,
         Y = BOLD,
         alpha = theta_old[[2]],
         final = F,
-        return_samp = TRUE
+        return_samp = FALSE
       ))
     S = post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
 
@@ -202,8 +202,8 @@ EM_FCtemplateICA <- function(template_mean,
 
   post_AS <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 500,
-      nburn = 0,
+      nsamp = 1000,
+      nburn = 50,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
@@ -211,15 +211,15 @@ EM_FCtemplateICA <- function(template_mean,
       tau_v = theta_new[[1]],
       Y = BOLD,
       alpha = theta_new[[2]],
-      final = TRUE
+      return_samp = TRUE
     )
 
-  #HERE
 
-  S_post <- array(post_AS$S_final, dim=c(nvox, Q, 500))[,,-1] #WHY IS THE FIRST ITERATION ZERO?
+  #[TO DO]: Fix indexing issue where first iteration is zero (only affects burn-in)
+  S_post <- array(post_AS$S_samp, dim=c(nvox, Q, 1000-50))
   S_post_mean <- apply(S_post, c(1,2), mean)
   S_post_SE <- apply(S_post, c(1,2), sd)
-  A_post <- array(post_AS$A_final, dim=c(ntime, Q, 500))[,,-1] #WHY IS THE FIRST ITERATION ZERO?
+  A_post <- array(post_AS$A_samp, dim=c(ntime, Q, 1000-50))
   A_post_mean <- apply(A_post, c(1,2), mean)
   A_post_mean_cor <- cor(A_post_mean)
 
@@ -241,25 +241,22 @@ EM_FCtemplateICA <- function(template_mean,
   # corA_post_mean <- sapply(corA_post, mean)
   # corA_post_SE <- sapply(corA_post, sd)
 
-  result <- list(#S_post,
-                 S_post_mean,
-                 S_post_SE,
-                 #A_post,
+  result <- list(S_post,
+                 subjICmean = S_post_mean,
+                 subjICse = S_post_SE,
+                 A_post,
                  A_post_mean_cor,
-                 #corA_post,
-                 corA_post_mean,
-                 corA_post_SE
-                 )
+                 corA_post,
+                 subjFCmean = corA_post_mean,
+                 subjFCse = corA_post_SE,
+                 theta_MLE=theta_new,
+                 success_flag=success,
+                 error=err,
+                 numiter=iter-1,
+                 template_mean,
+                 template_var,
+                 template_FC)
 
-  #
-  # result <- list(subjICmean=miu_s,
-  #                subjICvar=var_s,
-  #                theta_MLE=theta,
-  #                success_flag=success,
-  #                error=err,
-  #                numiter=iter-1,
-  #                template_mean = template_mean,
-  #                template_var = template_var)
   return(result)
 }
 
