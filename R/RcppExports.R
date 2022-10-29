@@ -20,7 +20,7 @@
 #' @param verbose a boolean. Should messages be generated and output?
 #' @export
 UpdateTheta_FCtemplateICAcpp <- function(template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose) {
-    .Call('_templateICAr_UpdateTheta_FCtemplateICAcpp', PACKAGE = 'templateICAr', template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose)
+    .Call(`_templateICAr_UpdateTheta_FCtemplateICAcpp`, template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose)
 }
 
 #' Use a Gibbs sampler for the A and S variables (E-step of the EM)
@@ -38,8 +38,9 @@ UpdateTheta_FCtemplateICAcpp <- function(template_mean, template_var, template_F
 #' @param alpha a length Q vector of the prior mean of all rows of A
 #' @param final a boolean. Should posterior samples be returned instead of
 #'   summary measures?
+#' @param return_samp a boolean. Should posterior samples be returned?
 #' @export
-Gibbs_AS_posteriorCPP <- function(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final) {
-    .Call('_templateICAr_Gibbs_AS_posteriorCPP', PACKAGE = 'templateICAr', nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final)
+Gibbs_AS_posteriorCPP <- function(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final, return_samp) {
+    .Call(`_templateICAr_Gibbs_AS_posteriorCPP`, nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final, return_samp)
 }
 

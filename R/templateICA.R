@@ -135,8 +135,10 @@ templateICA <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
-  Q2=NULL, Q2_max=NULL,
+  center_Bcols=FALSE,
+  normA=FALSE,
+  Q2=NULL,
+  Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   varTol=1e-6,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
@@ -621,7 +623,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
 
   if(sum(!mask3) > 0){
     stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
@@ -684,15 +686,13 @@ templateICA <- function(
 
   #1) FC Template ICA ----------------------------------------------------------
   if(do_FC) {
-    if (verbose) { cat("Computing FC.\n") }
+    if (verbose) { cat("Estimating FC Template ICA Model\n") }
 
     template_mean = template$mean
     template_var = template$var
-    prior_params=c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
-    AS_0 = BOLD_DR
+    prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    prior_params <- c(0.001, 0.001)
-    EM_FCtemplateICA <- function(...){NULL}
+    #EM_FCtemplateICA <- function(...){NULL}
     resultEM <- EM_FCtemplateICA(
       template_mean = template$mean,
       template_var = template$var,
@@ -700,7 +700,8 @@ templateICA <- function(
       prior_params, #for prior on tau^2
       BOLD=BOLD,
       AS_0 = BOLD_DR, #initial values for A and S
-      maxiter=maxiter, epsilon=epsilon,
+      maxiter=maxiter,
+      epsilon=epsilon,
       verbose=verbose
     )
   } else {

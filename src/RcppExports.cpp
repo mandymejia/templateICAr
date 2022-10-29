@@ -32,8 +32,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // Gibbs_AS_posteriorCPP
-Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn, const Eigen::MatrixXd template_mean, const Eigen::MatrixXd template_var, Eigen::MatrixXd S, const Eigen::MatrixXd G, const Eigen::VectorXd tau_v, const Eigen::MatrixXd Y, const Eigen::VectorXd alpha, bool final);
-RcppExport SEXP _templateICAr_Gibbs_AS_posteriorCPP(SEXP nsampSEXP, SEXP nburnSEXP, SEXP template_meanSEXP, SEXP template_varSEXP, SEXP SSEXP, SEXP GSEXP, SEXP tau_vSEXP, SEXP YSEXP, SEXP alphaSEXP, SEXP finalSEXP) {
+Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn, const Eigen::MatrixXd template_mean, const Eigen::MatrixXd template_var, Eigen::MatrixXd S, const Eigen::MatrixXd G, const Eigen::VectorXd tau_v, const Eigen::MatrixXd Y, const Eigen::VectorXd alpha, bool final, bool return_samp);
+RcppExport SEXP _templateICAr_Gibbs_AS_posteriorCPP(SEXP nsampSEXP, SEXP nburnSEXP, SEXP template_meanSEXP, SEXP template_varSEXP, SEXP SSEXP, SEXP GSEXP, SEXP tau_vSEXP, SEXP YSEXP, SEXP alphaSEXP, SEXP finalSEXP, SEXP return_sampSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,14 +47,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const Eigen::VectorXd >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< bool >::type final(finalSEXP);
-    rcpp_result_gen = Rcpp::wrap(Gibbs_AS_posteriorCPP(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final));
+    Rcpp::traits::input_parameter< bool >::type return_samp(return_sampSEXP);
+    rcpp_result_gen = Rcpp::wrap(Gibbs_AS_posteriorCPP(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final, return_samp));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_templateICAr_UpdateTheta_FCtemplateICAcpp", (DL_FUNC) &_templateICAr_UpdateTheta_FCtemplateICAcpp, 10},
-    {"_templateICAr_Gibbs_AS_posteriorCPP", (DL_FUNC) &_templateICAr_Gibbs_AS_posteriorCPP, 10},
+    {"_templateICAr_Gibbs_AS_posteriorCPP", (DL_FUNC) &_templateICAr_Gibbs_AS_posteriorCPP, 11},
     {NULL, NULL, 0}
 };
 

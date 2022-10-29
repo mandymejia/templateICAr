@@ -14,7 +14,8 @@ Gibbs_AS_posteriorCPP(
   tau_v,
   Y,
   alpha,
-  final
+  final,
+  return_samp
 )
 }
 \arguments{
@@ -40,6 +41,8 @@ of the independent components}
 
 \item{final}{a boolean. Should posterior samples be returned instead of
 summary measures?}
+
+\item{return_samp}{a boolean. Should posterior samples be returned?}
 }
 \description{
 Use a Gibbs sampler for the A and S variables (E-step of the EM)
