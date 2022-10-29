@@ -29,6 +29,14 @@ Template ICA consists of three steps. The main functions associated with each st
 2. Template ICA model estimation (single-subject): `templateICA`.
 3. Identification of areas of engagement in each IC (or deviation from the template mean): `activations`.
 
+## Citation
+
+If you use `templateICAr`, please cite the Template ICA [paper](https://doi.org/10.1080/01621459.2019.1679638) as well as the spatial model [paper](https://doi.org/10.1080/10618600.2022.2104289) if applicable. You can also obtain citation information from within R like so:
+
+``` {r}
+citation("templateICAr")
+```
+
 ## Installation
 
 You can install the development version of `templateICAr` from Github with:

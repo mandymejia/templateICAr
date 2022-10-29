@@ -265,7 +265,8 @@ print.template.data <- function(x, ...) {
 #' Plot template
 #'
 #' @param x The template from \code{estimate_template.cifti}
-#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default)
+#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default). Can also
+#'  be \code{"sd"} to show the square root of the variance template.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
@@ -395,7 +396,7 @@ plot.template.gifti <- function(x, stat=c("both", "mean", "var"),
 #'  viewer function (e.g. from \code{oro.nifti}) if desired.
 #'
 #' @param x The template from \code{estimate_template.nifti}
-#' @param stat \code{"mean"} (default) or \code{"var"}
+#' @param stat \code{"mean"} (default), \code{"var"}, or \code{"sd"}
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param plane,n_slices,slices Anatomical plane and which slice indices to show.
 #'  Default: 9 axial slices.
@@ -403,7 +404,7 @@ plot.template.gifti <- function(x, stat=c("both", "mean", "var"),
 #' @return The plot
 #' @export
 #' @method plot template.nifti
-plot.template.nifti <- function(x, stat=c("mean", "var"),
+plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
   plane=c("axial", "sagittal", "coronal"), n_slices=9, slices=NULL,
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.nifti"))
@@ -432,14 +433,10 @@ plot.template.nifti <- function(x, stat=c("mean", "var"),
 
   # Check `stat`
   stat <- tolower(stat)
-  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args))) {
-    if (identical(stat, c("mean", "var"))) {
-      stat <- "mean"
-    } else {
-      stat <- match.arg(stat, c("mean", "var"))
-    }
+  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args)) && identical(stat, c("mean", "var", "sd"))) {
+    stat <- "mean"
   }
-  stat <- match.arg(stat, c("mean", "var"))
+  stat <- match.arg(stat, c("mean", "var", "sd"))
 
   # Print message saying what's happening.
   msg1 <- ifelse(has_idx,
@@ -448,13 +445,14 @@ plot.template.nifti <- function(x, stat=c("mean", "var"),
   )
   msg2 <- switch(stat,
     mean="mean template.",
-    var="variance template."
+    var="variance template.",
+    sd="variance template (sqrt)."
   )
   cat(msg1, msg2, "\n")
 
   # Plot
   out <- list(mean=NULL, var=NULL)
-  ss <- stat
+  ss <- ifelse(stat=="sd", "var", stat)
 
   plane <- match.arg(plane, c("axial", "sagittal", "coronal"))
   args$plane <- plane
@@ -506,6 +504,8 @@ plot.template.nifti <- function(x, stat=c("mean", "var"),
   } else if (plane=="sagittal") {
     tss <- tss[slices,,,drop=FALSE]
   } else { stop() }
+
+  if (stat=="sd") { tss <- sqrt(tss) }
 
   args_ss <- args
   args_ss$plane <- plane

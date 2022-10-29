@@ -29,6 +29,41 @@ each step are listed below.
 3.  Identification of areas of engagement in each IC (or deviation from
     the template mean): `activations`.
 
+## Citation
+
+If you use `templateICAr`, please cite the Template ICA
+[paper](https://doi.org/10.1080/01621459.2019.1679638) as well as the
+spatial model [paper](https://doi.org/10.1080/10618600.2022.2104289) if
+applicable. You can also obtain citation information from within R like
+so:
+
+``` r
+citation("templateICAr")
+#> 
+#> To cite {templateICAr} in publications use:
+#> 
+#> Mejia AF, Nebel MB, Wang Y, Caffo BS, Guo Y (2020). " Template
+#> Independent Component Analysis: Targeted and Reliable Estimation of
+#> Subject-level Brain Networks Using Big Data Population Priors."
+#> _Journal of the American Statistical Association_, *115*(531),
+#> 1151-1177. doi: 10.1080/01621459.2019.1679638 (URL:
+#> https://doi.org/10.1080/01621459.2019.1679638).
+#> 
+#> A BibTeX entry for LaTeX users is
+#> 
+#>   @Article{mejiaTemplateIndependentComponent2019a,
+#>     title = { Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors},
+#>     author = {Amanda F Mejia and Mary Beth Nebel and Yikai Wang and Brian S Caffo and Ying Guo},
+#>     journal = {Journal of the American Statistical Association},
+#>     year = {2020},
+#>     volume = {115},
+#>     number = {531},
+#>     pages = {1151--1177},
+#>     publisher = {American Statistical Association},
+#>     doi = {10.1080/01621459.2019.1679638},
+#>   }
+```
+
 ## Installation
 
 You can install the development version of `templateICAr` from Github
