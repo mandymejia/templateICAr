@@ -623,7 +623,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
   if(sum(!mask3) > 0){
     stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
