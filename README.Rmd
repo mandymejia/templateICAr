@@ -31,9 +31,17 @@ Template ICA consists of three steps. The main functions associated with each st
 
 ## Citation
 
-If you use `templateICAr`, please cite the Template ICA [paper](https://doi.org/10.1080/01621459.2019.1679638) as well as the spatial model [paper](https://doi.org/10.1080/10618600.2022.2104289) if applicable. You can also obtain citation information from within R like so:
+If you use `templateICAr` please cite the following papers:
 
-``` {r}
+
+| Name | APA Citation |
+| -------------  | ------------- |
+| [Template ICA](https://doi.org/10.1080/01621459.2019.1679638) | Mejia, A. F., Nebel, M. B., Wang, Y., Caffo, B. S., & Guo, Y. (2020). Template Independent Component Analysis: targeted and reliable estimation of subject-level brain networks using big data population priors. Journal of the American Statistical Association, 115(531), 1151-1177. | 
+| [Spatial Template ICA](https://doi.org/10.1080/10618600.2022.2104289) | Mejia, A. F., Bolin, D., Yue, Y. R., Wang, J., Caffo, B. S., & Nebel, M. B. (2022). Template Independent Component Analysis with spatial priors for accurate subject-level brain network estimation and inference. Journal of Computational and Graphical Statistics, (just-accepted), 1-35. | 
+
+You can also obtain citation information from within R like so:
+
+``` r
 citation("templateICAr")
 ```
 
