@@ -266,7 +266,7 @@ print.template.data <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
-#'  default the square root of the variance template is shown; use 
+#'  default the square root of the variance template is shown; another option is 
 #'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
@@ -376,7 +376,9 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #' Plot template
 #'
 #' @param x The template from \code{estimate_template.gifti}
-#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default)
+#' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
+#'  default the square root of the variance template is shown; another option is 
+#'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
