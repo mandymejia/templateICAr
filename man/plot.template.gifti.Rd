@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{template.gifti}(
   x,
-  stat = c("both", "mean", "var"),
+  stat = c("both", "mean", "sd", "var"),
   var_method = c("non-negative", "unbiased"),
   ...
 )

@@ -265,15 +265,16 @@ print.template.data <- function(x, ...) {
 #' Plot template
 #'
 #' @param x The template from \code{estimate_template.cifti}
-#' @param stat \code{"mean"}, \code{"var"}, or \code{"both"} (default). Can also
-#'  be \code{"sd"} to show the square root of the variance template.
+#' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
+#'  default the square root of the variance template is shown; use 
+#'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
 #' @importFrom ciftiTools view_xifti
 #' @method plot template.cifti
-plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
+plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.cifti"))
 
@@ -288,24 +289,24 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
   # Check `stat`
   stat <- tolower(stat)
   if (has_idx && length(args$idx)>1 && !("fname" %in% names(args))) {
-    if (identical(stat, c("both", "mean", "var"))) {
+    if (identical(stat, c("both", "mean", "sd", "var"))) {
       stat <- "mean"
     } else {
-      stat <- match.arg(stat, c("both", "mean", "var"))
+      stat <- match.arg(stat, c("both", "mean", "sd", "var"))
     }
     if (stat == "both") {
       if (!("fname" %in% names(args))) {
         warning(
           "For multiple `idx`, use one call to plot() ",
           "for the mean template, ",
-          "and a separate one for the variance template. ",
+          "and a separate call for the variance template. ",
           "Showing the mean template now."
         )
         stat <- "mean"
       }
     }
   }
-  stat <- match.arg(stat, c("both", "mean", "var"))
+  stat <- match.arg(stat, c("both", "mean", "sd", "var"))
 
   # Print message saying what's happening.
   msg1 <- ifelse(has_idx,
@@ -313,15 +314,16 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
     "Plotting the first component's"
   )
   msg2 <- switch(stat,
-    both="templates.",
+    both="mean and sqrt(variance) template.",
     mean="mean template.",
+    sd="sqrt(variance) template.",
     var="variance template."
   )
   cat(msg1, msg2, "\n")
 
   # Plot
   out <- list(mean=NULL, var=NULL)
-  if (stat == "both") { stat <- c("mean", "var") }
+  if (stat == "both") { stat <- c("mean", "sd") }
   for (ss in stat) {
     ssname <- if (ss == "mean") {
       ss
@@ -331,7 +333,14 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
       "varUB"
     }
     if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
+    if (ss=="sd") { 
+      x$template[[ssname]] <- sqrt(x$template[[ssname]])
+    }
     tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$params)
+    if (ss=="sd") { 
+      ssname <- paste0("sqrt ", ssname)
+    }
+    
     args_ss <- args
     # Handle title and idx
     if (!has_title && !has_idx) {
@@ -374,7 +383,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "var"),
 #' @export
 #' @importFrom ciftiTools view_xifti as.xifti
 #' @method plot template.gifti
-plot.template.gifti <- function(x, stat=c("both", "mean", "var"),
+plot.template.gifti <- function(x, stat=c("both", "mean", "sd", "var"),
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.gifti"))
 
@@ -396,15 +405,17 @@ plot.template.gifti <- function(x, stat=c("both", "mean", "var"),
 #'  viewer function (e.g. from \code{oro.nifti}) if desired.
 #'
 #' @param x The template from \code{estimate_template.nifti}
-#' @param stat \code{"mean"} (default), \code{"var"}, or \code{"sd"}
+#' @param stat \code{"mean"} (default), \code{"sd"}, or \code{"var"}. 
+#'  (\code{"sd"} will show the square root of the variance template.)
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
-#' @param plane,n_slices,slices Anatomical plane and which slice indices to show.
+#' @param plane,n_slices,slices Anatomical plane and which slice indices to 
+#'  show.
 #'  Default: 9 axial slices.
 #' @param ... Additional arguments to \code{oro.nifti::image}
 #' @return The plot
 #' @export
 #' @method plot template.nifti
-plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
+plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
   plane=c("axial", "sagittal", "coronal"), n_slices=9, slices=NULL,
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.nifti"))
@@ -433,10 +444,10 @@ plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
 
   # Check `stat`
   stat <- tolower(stat)
-  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args)) && identical(stat, c("mean", "var", "sd"))) {
+  if (has_idx && length(args$idx)>1 && !("fname" %in% names(args)) && identical(stat, c("mean", "sd", "var"))) {
     stat <- "mean"
   }
-  stat <- match.arg(stat, c("mean", "var", "sd"))
+  stat <- match.arg(stat, c("mean", "sd", "var"))
 
   # Print message saying what's happening.
   msg1 <- ifelse(has_idx,
@@ -445,14 +456,13 @@ plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
   )
   msg2 <- switch(stat,
     mean="mean template.",
-    var="variance template.",
-    sd="variance template (sqrt)."
+    sd="sqrt(variance) template.",
+    var="variance template."
   )
   cat(msg1, msg2, "\n")
 
   # Plot
   out <- list(mean=NULL, var=NULL)
-  ss <- ifelse(stat=="sd", "var", stat)
 
   plane <- match.arg(plane, c("axial", "sagittal", "coronal"))
   args$plane <- plane
@@ -486,14 +496,14 @@ plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
     stopifnot(all(slices %in% seq(dim(x$dat_struct)[plane_dim])))
   }
 
-  ssname <- if (ss == "mean") {
-    ss
+  ssname <- if (stat == "mean") {
+    stat
   } else if (var_method=="non-negative") {
     "varNN"
   } else {
     "varUB"
   }
-  if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
+  if (stat=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
   tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$params)
   tss <- tss[,,,idx]
 
@@ -505,7 +515,10 @@ plot.template.nifti <- function(x, stat=c("mean", "var", "sd"),
     tss <- tss[slices,,,drop=FALSE]
   } else { stop() }
 
-  if (stat=="sd") { tss <- sqrt(tss) }
+  if (stat=="sd") { 
+    tss <- sqrt(tss)
+    ssname <- paste0("sqrt ", ssname)
+  }
 
   args_ss <- args
   args_ss$plane <- plane
