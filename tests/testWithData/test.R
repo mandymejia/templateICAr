@@ -12,6 +12,7 @@ library(templateICAr)
 print(packageVersion("templateICAr"))
 
 library(RNifti)
+library(gifti)
 library(rgl)
 
 # file paths
@@ -39,10 +40,13 @@ tm <- estimate_template(
 tm
 plot(tm)
 rgl.close(); rgl.close()
-tICA <- templateICA(cii_fnames[5], tm, scale=FALSE, maxiter=7)
+tICA <- templateICA(cii_fnames[5], tm, scale=FALSE, maxiter=7, Q2=0)
 plot(tICA)
 rgl.close()
-plot(activations(tICA))
+actICA <- activations(tICA)
+actICA_fname <- paste0(tempfile(), ".dlabel.nii")
+write_cifti(actICA, actICA_fname)
+plot(actICA)
 rgl.close()
 
 tm <- estimate_template(
