@@ -84,9 +84,15 @@ tm
 rm(cii)
 plot(tm, idx=3)
 rgl.close(); rgl.close()
-cii <- read_cifti(cii_fnames[5])
+cii <- read_cifti(cii_fnames[5], brainstructures="left")
 cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
-tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0)
+tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
+
+cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="right")
+cii0 <- lapply(cii, as.matrix)
+cii0f <- paste0(c(tempfile(), tempfile(), tempfile(), tempfile()), ".rds")
+tm <- estimate_template(cii0f, GICA=as.matrix(read_cifti(cgIC_fname, brainstructures="right")))
+
 
 # CIFTI pseudo retest vs data true retest: should get same results.
 tm2 <- estimate_template(

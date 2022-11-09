@@ -371,12 +371,14 @@ estimate_template <- function(
     gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
+    RDS = "RDS",
     data = "DATA"
   )
   FORMAT_extn <- switch(FORMAT, 
     CIFTI=".dscalar.nii", 
     GIFTI=".func.gii",
     NIFTI=".nii", 
+    RDS=".rds",
     DATA=".rds"
   )
   nN <- length(BOLD)
@@ -401,7 +403,7 @@ estimate_template <- function(
   }
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "GIFTI", "NIFTI")) {
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (real_retest) {
@@ -451,6 +453,9 @@ estimate_template <- function(
   } else if (FORMAT == "NIFTI") {
     if (is.character(GICA)) { GICA <- RNifti::readNifti(GICA) }
     stopifnot(length(dim(GICA)) > 1)
+  } else if (FORMAT == "RDS") {
+    if (is.character(GICA)) { GICA <- readRDS(GICA) }
+    stopifnot(is.matrix(GICA))
   } else {
     stopifnot(is.matrix(GICA))
   }
@@ -466,7 +471,6 @@ estimate_template <- function(
   }
 
   # [TO DO]: NA in GICA?
-
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
   # Check `GICA` and `mask` dimensions match.
@@ -745,6 +749,7 @@ estimate_template <- function(
     CIFTI = newdata_xifti(xii1, 0),
     GIFTI = list(hemisphere=ghemi),
     NIFTI = mask,
+    RDS = NULL,
     DATA = NULL
   )
 

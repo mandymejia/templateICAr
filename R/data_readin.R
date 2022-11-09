@@ -5,7 +5,7 @@
 #' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object,
 #'  \code{"GIFTI"} file path, \code{"gifti"} object,  
 #'  \code{"NIFTI"} file path, \code{"nifti"} object, 
-#'  or \code{"data"}.
+#'  \code{"RDS"} file path, or \code{"data"}.
 #' @keywords internal
 infer_BOLD_format <- function(BOLD, verbose=FALSE){
 
@@ -14,18 +14,22 @@ infer_BOLD_format <- function(BOLD, verbose=FALSE){
   # Character vector: CIFTI, GIFTI, or NIFTI
   if (is.character(BOLD)) {
     Bformat <- ifelse(
-      endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"),
-      "CIFTI",
-      ifelse(endsWith(BOLD, ".gii"), "GIFTI", "NIFTI")
+      endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"), "CIFTI",
+      ifelse(
+        endsWith(BOLD, ".gii"), "GIFTI", 
+        ifelse(
+          endsWith(BOLD, ".nii"), "NIFTI",
+          ifelse(
+            endsWith(BOLD, ".rds") | endsWith(BOLD, ".RDS"), "RDS", "unknown"
+          )
+        )
+      )
     )
+    if (any(Bformat=="unknown")) { stop("Unrecognized file extension in at least one BOLD file name. Use a correct file format or fix the file names.") }
     if (length(unique(Bformat)) == 1) {
       Bformat <- Bformat[1]
     } else {
-      if (all(endsWith(BOLD, "nii") | endsWith(BOLD, "gii"))) {
-        stop("BOLD format seems to be a mix. Use the same format or correct the file names.")
-      } else {
-        stop("BOLD list seems to include unexpected file types. Use a correct format or fix the names.")
-      }
+      stop("BOLD format seems to be a mix. Use the same format or correct the file names.")
     }
 
   # The xifti, gifti, or niftiImage data object

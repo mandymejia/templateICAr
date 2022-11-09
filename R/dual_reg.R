@@ -212,6 +212,7 @@ dual_reg2 <- function(
     gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
+    RDS = "RDS",
     data = "DATA"
   )
   nQ <- ncol(GICA)
@@ -274,6 +275,13 @@ dual_reg2 <- function(
     }
     stopifnot(!is.null(mask))
     nI <- dim(drop(mask)); nV <- sum(mask)
+  } else if (FORMAT == "RDS") {
+    if (is.character(BOLD)) { BOLD <- readRDS(BOLD) }
+    stopifnot(is.matrix(BOLD))
+    if (retest) {
+      if (is.character(BOLD2)) { BOLD2 <- readRDS(BOLD2) }
+      stopifnot(is.matrix(BOLD2))
+    }
   } else {
     stopifnot(is.matrix(BOLD))
     if (retest) { stopifnot(is.matrix(BOLD2)) }
