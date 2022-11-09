@@ -313,12 +313,7 @@ dual_reg2 <- function(
     stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
     if (maskTol < 1) { maskTol <- maskTol * nV }
     # Skip this scan if `maskTol` is surpassed.
-    if (sum(!mask) > maskTol) {
-      if (verbose) {
-        cat("Skipping subject: too many masked locations (", sum(!mask), ").\n")
-      }
-      return(NULL)
-    }
+    if (sum(!mask) > maskTol) { return(NULL) }
     # Mask out the locations.
     BOLD <- BOLD[mask,,drop=FALSE]
     GICA <- GICA[mask,,drop=FALSE]

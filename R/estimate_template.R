@@ -502,7 +502,7 @@ estimate_template <- function(
   center_Gcols <- TRUE
   if (center_Gcols) { GICA <- colCenter(GICA) }
 
-  # Process each scan ----------------------------------------------------------
+  # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }
   if (verbose) {
     cat("Data input format:             ", format2, "\n")
@@ -518,6 +518,7 @@ estimate_template <- function(
     cat('Number of training subjects:   ', nN, "\n")
   }
 
+  # Process each scan ----------------------------------------------------------
   nM <- 2
 
   if (usePar) {
@@ -576,6 +577,10 @@ estimate_template <- function(
           out$FC[1,,,] <- cov(DR_ii$test$A[,inds])
           out$FC[2,,,] <- cov(DR_ii$retest$A[,inds])
         }
+      } else {
+        if(verbose) { cat(paste0(
+          '\nSubject ', ii,' of ', nN, " was skipped (too many masked locations).\n"
+        )) }
       }
       out
     }
@@ -593,7 +598,7 @@ estimate_template <- function(
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
-        '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+        '\nReading and analyzing data for subject ', ii,' of ', nN, '.\n'
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
@@ -623,6 +628,10 @@ estimate_template <- function(
           FC0[1,ii,,] <- cov(DR_ii$test$A[,inds])
           FC0[2,ii,,] <- cov(DR_ii$retest$A[,inds])
         }
+      } else {
+        if(verbose) { cat(paste0(
+          '\tSubject ', ii,' was skipped (too many masked locations).\n'
+        )) }
       }
     }
     rm(DR_ii)
