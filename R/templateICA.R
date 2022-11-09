@@ -625,16 +625,26 @@ templateICA <- function(
   # Mask out additional locations due to data mask.
   mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
-  if(sum(!mask3) > 0){
-    stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
-    # For this part, would need to also update "A" matrix (projection from mesh to data locations)
-    # template_mean_orig <- template_mean
-    # template_var_orig <- template_var
-    # nV <- sum(keep)
-    # if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
-    # template_mean <- template_mean[keep,]
-    # template_var <- template_var[keep,]
-    # BOLD <- BOLD[keep,]
+  if (any(!mask3)) {
+    if (do_spatial) {
+      stop('Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.')
+    }
+
+    # [NOTE] For same results, would have needed to also update "A" matrix
+    #   (projection from mesh to data locations)
+
+    if(verbose) {
+      cat(paste0(
+        'Excluding ', sum(!mask3),
+        ' bad (flat or NA) voxels/vertices from analysis.\n'
+      ))
+    }
+    template_orig <- template
+    BOLD <- lapply(BOLD, function(x){x[mask3,]})
+    dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
+    template$mean <- template$mean[mask3,]
+    template$var <- template$var[mask3,]
+    mask2[mask2][!mask3] <- FALSE
   }
 
   # Normalize BOLD -------------------------------------------------------------

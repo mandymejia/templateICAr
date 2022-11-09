@@ -40,7 +40,10 @@ tm <- estimate_template(
 tm
 plot(tm)
 rgl.close(); rgl.close()
-tICA <- templateICA(cii_fnames[5], tm, scale=FALSE, maxiter=7, Q2=0)
+
+cii <- read_cifti(cii_fnames[5])
+cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
+tICA <- templateICA(cii, tm, scale=FALSE, maxiter=7, Q2=0)
 plot(tICA)
 rgl.close()
 actICA <- activations(tICA)
@@ -72,14 +75,18 @@ cii[[3]]$data$cortex_left[11,] <- NA
 cii[[1]]$data$cortex_left[78,5] <- NA
 cii[[2]]$data$cortex_left[78,seq(10)] <- NA
 cii[[3]]$data$cortex_left[78,] <- NA
+cii[[4]]$data$cortex_left[,] <- NA
 tm <- estimate_template(
   cii, GICA=read_cifti(cgIC_fname, brainstructures="left"),
-  scale="global", inds=c(1,4,7,11)
+  scale="global", inds=c(1,4,7,11), maskTol = .5, missingTol=.5
 )
 tm
 rm(cii)
 plot(tm, idx=3)
 rgl.close(); rgl.close()
+cii <- read_cifti(cii_fnames[5])
+cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
+tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0)
 
 # CIFTI pseudo retest vs data true retest: should get same results.
 tm2 <- estimate_template(
