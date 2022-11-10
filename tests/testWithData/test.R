@@ -35,7 +35,7 @@ cgIC <- read_cifti(cgIC_fname)
 xii1 <- select_xifti(cgIC, 1) * 0
 
 tm <- estimate_template(
-  cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE
+  cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE#, FC=TRUE
 )
 tm
 plot(tm)

@@ -130,7 +130,7 @@ EM_FCtemplateICA <- function(template_mean,
     #   )
     # S = post_sums$S_post #update S because it is used to start the Gibbs sampler
 
-    #plot_FC(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
+    #plot.FC_template(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
 
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
