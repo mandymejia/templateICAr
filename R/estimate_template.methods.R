@@ -24,7 +24,6 @@ summary.template.cifti <- function(object, ...) {
 #'
 #' @param object Object of class \code{"template.gifti"}.
 #' @param ... further arguments passed to or from other methods.
-#' @import ciftiTools
 #' @export
 #' @method summary template.gifti
 summary.template.gifti <- function(object, ...) {

@@ -32,10 +32,9 @@ Encoding: UTF-8
 LazyData: true
 Imports:
     abind,
-    ciftiTools (>= 0.8.0),
     excursions,
     expm,
-    fMRIscrub,
+    fMRItools,
     ica,
     Matrix,
     matrixStats,
@@ -46,6 +45,7 @@ Imports:
     SQUAREM,
     stats
 Suggests:
+    ciftiTools,
     RNifti,
     oro.nifti,
     gifti,

@@ -121,7 +121,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @import ciftiTools
+#' @importFrom ciftiTools read_cifti infer_resolution add_surf
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'

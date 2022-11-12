@@ -357,9 +357,9 @@ estimate_template <- function(
 
   # `BOLD` and `BOLD2` ---------------------------------------------------------
   # Determine the format of `BOLD` and `BOLD2`.
-  format <- infer_BOLD_format(BOLD)
+  format <- infer_format_ifti_vec(BOLD)
   if (real_retest) {
-    format2 <- infer_BOLD_format(BOLD2)
+    format2 <- infer_format_ifti_vec(BOLD2)
     if (format2 != format) {
       stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
     }
@@ -383,15 +383,21 @@ estimate_template <- function(
   )
   nN <- length(BOLD)
 
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
   if (FORMAT == "GIFTI") {
     if (!requireNamespace("gifti", quietly = TRUE)) {
-      stop("Package \"gifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+      stop("Package \"gifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
     }
   }
 
   if (FORMAT == "NIFTI") {
     if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
+      stop("Package \"RNifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
     }
   }
 
@@ -430,8 +436,8 @@ estimate_template <- function(
   # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
-    if (is.xifti(GICA, messages=FALSE)) {
-      xii1 <- select_xifti(GICA, 1) # for formatting output
+    if (ciftiTools::is.xifti(GICA, messages=FALSE)) {
+      xii1 <- ciftiTools::select_xifti(GICA, 1) # for formatting output
       GICA <- as.matrix(GICA)
     } else {
       # Get `xii1` from first data entry.
@@ -439,7 +445,7 @@ estimate_template <- function(
       if (is.character(xii1)) {
         xii1 <- ciftiTools::read_cifti(xii1, brainstructures=brainstructures, idx=1)
       }
-      xii1 <- convert_xifti(select_xifti(xii1, 1), "dscalar")
+      xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(xii1, 1), "dscalar")
     }
     stopifnot(is.matrix(GICA))
   } else if (FORMAT == "GIFTI") {
@@ -499,6 +505,10 @@ estimate_template <- function(
       }
     }
   } else {
+    if (!is.null(mask)) { 
+      warning("Ignoring `mask`, which is only applicable to NIFTI data.")
+    }
+    mask <- NULL
     nI <- nV <- nrow(GICA)
   }
 
@@ -780,7 +790,7 @@ estimate_template.cifti <- function(
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"), mask=NULL,
+  brainstructures=c("left","right"),
   keep_DR=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -835,67 +845,4 @@ estimate_template.nifti <- function(
     verbose=verbose
   )
 }
-
-#' Compute theoretical Inverse-Wishart variance of covariance matrix elements
-#'
-#' @param nu Inverse Wishart degrees of freedom parameter
-#' @param p Matrix dimension for IW distribution
-#' @param xbar_ij Empirical mean of covariance matrices at element (i,j)
-#' @param xbar_ii Empirical mean of covariance matrices at the ith diagonal element
-#' @param xbar_jj Empirical mean of covariance matrices at the jth diagonal element
-
-#'
-#' @return Theoretical IW variance for covariance element (i,j)
-#'
-IW_var <- function(nu, p, xbar_ij, xbar_ii, xbar_jj){
-  phi_ij <- xbar_ij*(nu-p-1)
-  phi_ii <- xbar_ii*(nu-p-1)
-  phi_jj <- xbar_jj*(nu-p-1)
-  RHS_numer <- (nu-p+1)*phi_ij^2 + (nu-p-1)*phi_ii*phi_jj
-  RHS_denom <- (nu-p)*((nu-p-1)^2)*(nu-p-3)
-  return(RHS_numer/RHS_denom)
-}
-
-#' Compute the error between empirical and theoretical variance of covariance matrix elements
-#'
-#' @param nu Inverse Wishart degrees of freedom parameter
-#' @param p Matrix dimension for IW distribution
-#' @param var_ij Empirical between-subject variance of covariance matrices at element (i,j)
-#' @param xbar_ij Empirical mean of covariance matrices at element (i,j)
-#' @param xbar_ii Empirical mean of covariance matrices at the ith diagonal element
-#' @param xbar_jj Empirical mean of covariance matrices at the jth diagonal element
-#'
-#' @return Squared difference between the empirical and theoretical IW variance of covariance matrices at element (i,j)
-#'
-var_sq_err <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
-  var_ij_theo <- IW_var(nu, p, xbar_ij, xbar_ii, xbar_jj)
-  sq_diff <- (var_ij - var_ij_theo)^2
-  return(sq_diff)
-}
-
-
-
-#' Estimate IW dof parameter nu based on method of moments
-#'
-#' @param var_FC Empirical between-subject variance of covariance matrices (QxQ)
-#' @param mean_FC Empirical mean of covariance matrices (QxQ)
-#'
-#' @importFrom stats optimize
-#'
-#' @return QxQ matrix of estimates for nu
-#'
-estimate_nu_matrix <- function(var_FC, mean_FC){
-  nL <- nrow(var_FC)
-  nu_est <- matrix(NA, nL, nL)
-  for(q1 in 1:nL){
-    for(q2 in q1:nL){
-      if(is.na(var_FC[q1,q2])) next()
-      #estimate nu by minimizing sq error between the empirical and theoretical IW variance
-      nu_opt <- optimize(f=var_sq_err, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
-      nu_est[q1,q2] <- nu_opt$minimum
-    }
-  }
-  return(nu_est)
-}
-
 
