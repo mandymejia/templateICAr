@@ -229,6 +229,7 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
+#' @import fMRItools
 #' @importFrom ciftiTools read_cifti is.xifti write_cifti
 #' @importFrom abind abind
 #'
@@ -514,7 +515,7 @@ estimate_template <- function(
 
   # Center `GICA` columns.
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- colCenter(GICA) }
+  if (center_Gcols) { GICA <- fMRItools:::colCenter(GICA) }
 
   # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }

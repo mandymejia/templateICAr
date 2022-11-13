@@ -24,6 +24,7 @@
 #'  subtracted from it. If \code{return_Q2}, a list of length two: the second 
 #'  entry will be \code{Q2}.
 #' 
+#' @import fMRItools
 #' @keywords internal 
 rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, 
   checkRowCenter=TRUE, verbose=FALSE, return_Q2=FALSE){
@@ -38,7 +39,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL,
   } else {
     nQ <- ncol(DR$A)
   }
-  Q2_max <- Q2_max_check(Q2_max, nQ=nQ, nT=ncol(BOLD))
+  Q2_max <- fMRItools:::Q2_max_check(Q2_max, nQ=nQ, nT=ncol(BOLD))
 
   if ( (!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0) ) {
     # if (verbose) { cat("`Q2` and/or `Q2_max` specifies no nuisance ICs. Skipping denoising.\n") }
@@ -58,7 +59,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL,
   # Remove the global signal, for the purpose of estimating the nuisance ICs.
   #   It will be "added back" later when we subtract the nuisance ICs estimate
   #   from the original `BOLD`.
-  BOLD2 <- colCenter(BOLD2)
+  BOLD2 <- fMRItools:::colCenter(BOLD2)
 
   # iii. ESTIMATE THE NUMBER OF REMAINING ICS
   #   pesel function expects nxp data and will determine asymptotic framework

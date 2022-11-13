@@ -51,6 +51,7 @@
 #'  subject IC variance estimates (class \code{"xifti"}), and the result of the model 
 #'  call to \code{diagnosticICA} (class \code{"dICA"}).
 #' 
+#' @import fMRItools
 #' @keywords internal
 #'
 diagnosticICA.cifti <- function(cifti_fname,
@@ -71,7 +72,7 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   if (is.null(write_dir)) { write_dir <- getwd() }
 
-  brainstructures <- match_input(
+  brainstructures <- fMRItools:::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )

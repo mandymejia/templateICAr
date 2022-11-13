@@ -4,7 +4,7 @@
 \alias{Q2_max_check}
 \title{Check \code{Q2_max}}
 \usage{
-Q2_max_check(Q2_max, nQ, nT)
+(Q2_max, nQ, nT)
 }
 \arguments{
 \item{Q2_max, nQ, nT}{The args}
