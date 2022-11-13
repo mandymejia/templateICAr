@@ -138,3 +138,22 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
   return(-1*loglik) #return negative log-likelihood for minimization
 
 }
+
+#' Get FORMAT from format
+#' 
+#' @param format the file format
+#' @return The file FORMAT
+#' @keywords internal
+#' 
+get_FORMAT <- function(format){
+  switch(format,
+    CIFTI = "CIFTI",
+    xifti = "CIFTI",
+    GIFTI = "GIFTI",
+    gifti = "GIFTI",
+    NIFTI = "NIFTI",
+    nifti = "NIFTI",
+    RDS = "RDS",
+    data = "DATA"
+  )
+}

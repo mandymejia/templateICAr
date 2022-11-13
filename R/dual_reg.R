@@ -206,16 +206,7 @@ dual_reg2 <- function(
 
   # Load helper variables.
   retest <- !is.null(BOLD2)
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    GIFTI = "GIFTI",
-    gifti = "GIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    RDS = "RDS",
-    data = "DATA"
-  )
+  FORMAT <- get_FORMAT(format)
   nQ <- ncol(GICA)
   nI <- nV <- nrow(GICA)
 
@@ -334,6 +325,7 @@ dual_reg2 <- function(
     }
     nV <- nrow(BOLD)
 
+    # [TO DO]: replace with fMRIscrub::unmask_mat(..., mask_dim=2)
     # For later
     unmask <- function(S, mask) {
       S2 <- matrix(NA, nrow=nrow(S), ncol=length(mask))

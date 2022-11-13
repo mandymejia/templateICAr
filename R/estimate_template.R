@@ -114,6 +114,27 @@ estimate_template_from_DR_two <- function(DR1, DR2){
   template
 }
 
+#' Estimate FC template
+#' 
+#' @param FC0 The FC estimates from \code{\link{estimate_template}}.
+#' @importFrom matrixStats colVars
+#' @keywords internal
+estimate_template_FC <- function(FC0){
+  FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
+  mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
+  var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+  var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
+  var_FC_between <- var_FC_tot - var_FC_within
+  var_FC_between[var_FC_between < 0] <- NA
+
+  nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
+  nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
+
+  psi <- mean_FC*(nu_est1 - nL - 1)
+
+  list(nu = nu_est1, psi = psi)
+}
+
 #' Estimate template
 #'
 #' Estimate template for Template ICA based on fMRI data
@@ -282,7 +303,6 @@ estimate_template <- function(
   # Check arguments ------------------------------------------------------------
 
   # Simple argument checks.
-  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
   if (isTRUE(scale)) {
     warning(
@@ -292,18 +312,18 @@ estimate_template <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
+  stopifnot(fMRItools:::is_1(scale_sm_FWHM, "numeric"))
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
-  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
-  stopifnot(is.logical(normA) && length(normA)==1)
-  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
-  stopifnot(is.logical(FC) && length(FC)==1)
-  stopifnot(is.numeric(varTol) && length(varTol)==1)
+  stopifnot(fMRItools:::is_integer(detrend_DCT, nneg=TRUE))
+  stopifnot(fMRItools:::is_1(center_Bcols, "logical"))
+  stopifnot(fMRItools:::is_1(normA, "logical"))
+  if (!is.null(Q2)) { stopifnot(fMRItools:::is_posNum(Q2)) } # Q2_max checked later.
+  stopifnot(fMRItools:::is_1(FC, "logical"))
+  stopifnot(fMRItools:::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
-  stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
-  stopifnot(is.numeric(missingTol) && length(missingTol)==1 && missingTol >= 0)
-  stopifnot(is.logical(verbose) && length(verbose)==1)
+  stopifnot(fMRItools:::is_posNum(maskTol))
+  stopifnot(fMRItools:::is_posNum(missingTol))
+  stopifnot(fMRItools:::is_1(verbose, "logical"))
   real_retest <- !is.null(BOLD2)
 
   # `keep_DR`
@@ -364,16 +384,7 @@ estimate_template <- function(
       stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
     }
   }
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    GIFTI = "GIFTI",
-    gifti = "GIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    RDS = "RDS",
-    data = "DATA"
-  )
+  FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, 
     CIFTI=".dscalar.nii", 
     GIFTI=".func.gii",
@@ -393,6 +404,9 @@ estimate_template <- function(
     if (!requireNamespace("gifti", quietly = TRUE)) {
       stop("Package \"gifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
     }
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
   }
 
   if (FORMAT == "NIFTI") {
@@ -408,7 +422,7 @@ estimate_template <- function(
     }
   }
 
-  # If BOLD (and BOLD2) is a CIFTI, GIFTI, or NIFTI file, check that the file paths exist.
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
@@ -477,6 +491,7 @@ estimate_template <- function(
   }
 
   # [TO DO]: NA in GICA?
+
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
   # Check `GICA` and `mask` dimensions match.
@@ -507,8 +522,8 @@ estimate_template <- function(
   } else {
     if (!is.null(mask)) { 
       warning("Ignoring `mask`, which is only applicable to NIFTI data.")
+      mask <- NULL
     }
-    mask <- NULL
     nI <- nV <- nrow(GICA)
   }
 
@@ -689,22 +704,7 @@ estimate_template <- function(
   }
 
   # Estimate FC template
-  if(FC){
-
-    FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
-    mean_FC <- var_FC_tot <- var_FC_within <- NULL
-    mean_FC <- (apply(FC1, c(2, 3), mean, na.rm=TRUE) + apply(FC2, c(2, 3), mean, na.rm=TRUE))/2
-    var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
-    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
-    var_FC_between <- var_FC_tot - var_FC_within
-    var_FC_between[var_FC_between < 0] <- NA
-
-    nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
-    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
-
-    template$FC <- list(nu = nu_est1,
-                        psi = mean_FC*(nu_est1 - nL - 1))
-  }
+  if(FC){ template$FC <- estimate_template_FC(FC0) }
 
   # Format result ---------------------------------------------------
   # Keep DR
@@ -725,7 +725,8 @@ estimate_template <- function(
   }
   if (!keep_DR) { rm(DR0) }
 
-  # Params, formatted as length-one character vectors to put in "xifti" metadata
+  # Params, formatted as length-one character vectors to be compatible with
+  #   putting in "xifti" metadata
   indsp <- if (all(seq(nQ) %in% inds)) { paste("all", nQ) } else { inds }
   tparams <- list(
     FC=FC,
@@ -783,6 +784,40 @@ estimate_template <- function(
 #' @rdname estimate_template
 #'
 estimate_template.cifti <- function(
+  BOLD, BOLD2=NULL,
+  GICA, inds=NULL,
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
+  detrend_DCT=0,
+  center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=NULL,
+  brainstructures=c("left","right"),
+  keep_DR=FALSE,
+  FC=FALSE,
+  varTol=1e-6, maskTol=.1, missingTol=.1,
+  usePar=FALSE, wb_path=NULL,
+  verbose=TRUE) {
+
+  estimate_template(
+    BOLD=BOLD, BOLD2=BOLD2,
+    GICA=GICA, inds=inds,
+    scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+    scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT,
+    center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max,
+    brainstructures=brainstructures,
+    keep_DR=keep_DR,
+    FC=FC,
+    varTol=varTol, maskTol=maskTol, missingTol=missingTol,
+    usePar=usePar, wb_path=wb_path,
+    verbose=verbose
+  )
+}
+
+#' @rdname estimate_template
+#'
+estimate_template.gifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
   scale=c("global", "local", "none"),

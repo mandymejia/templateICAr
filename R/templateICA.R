@@ -222,15 +222,7 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   format <- fMRItools:::infer_format_ifti(BOLD)[1]
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    GIFTI = "GIFTI",
-    gifti = "GIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    data = "DATA"
-  )
+  FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
 
   if (FORMAT == "CIFTI") {

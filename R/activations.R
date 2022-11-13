@@ -39,12 +39,6 @@ activations <- function(
   tICA, u=0, alpha=0.01, type=">", method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
-  if (FORMAT == "CIFTI") {
-    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-      stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
-
   # Setup ----------------------------------------------------------------------
   is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
   is_stICA <- inherits(tICA, "stICA") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
@@ -62,6 +56,12 @@ activations <- function(
     stICA.nifti = "NIFTI",
     stICA = "DATA"
   )
+
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
