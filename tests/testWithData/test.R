@@ -116,6 +116,11 @@ tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[
 out_fname=export_template(tm_rds, tempfile())
 tm_rds2 <- lapply(out_fname, readRDS)
 
+tm_cii <- estimate_template(
+  cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
+  keep_DR=TRUE#, FC=TRUE
+)
+
 # `templateICA`
 tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=0)
 tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20)
@@ -128,7 +133,7 @@ plot(activations(tICA_cii)); plot(activations(tICA_gii))
 
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
-  cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE#, FC=TRUE
+  cii_fnames[seq(4)], GICA=GICA_fname["cii"], scale=FALSE, keep_DR=TRUE#, FC=TRUE
 )
 tm
 plot(tm)
@@ -148,7 +153,7 @@ rgl.close(); rgl.close()
 
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
-  GICA=cgIC_fname, scale="local", detrend_DCT=3,
+  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3,
   normA=TRUE, brainstructures="right", varTol=1, verbose=FALSE
 )
 tm
@@ -157,7 +162,7 @@ rgl.close()
 
 tm2 <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
-  GICA=cgIC_fname, scale="local", detrend_DCT=3, scale_FWHM=20,
+  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3, scale_FWHM=20,
   normA=TRUE, brainstructures="right", varTol=1, verbose=FALSE
 )
 
@@ -171,7 +176,7 @@ cii[[2]]$data$cortex_left[78,seq(10)] <- NA
 cii[[3]]$data$cortex_left[78,] <- NA
 cii[[4]]$data$cortex_left[,] <- NA
 tm <- estimate_template(
-  cii, GICA=read_cifti(cgIC_fname, brainstructures="left"),
+  cii, GICA=read_cifti(GICA_fname["cii"], brainstructures="left"),
   scale="global", inds=c(1,4,7,11), maskTol = .5, missingTol=.5
 )
 tm
@@ -185,14 +190,14 @@ tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="right")
 cii0 <- lapply(cii, as.matrix)
 cii0f <- paste0(c(tempfile(), tempfile(), tempfile(), tempfile()), ".rds")
-tm <- estimate_template(cii0f, GICA=as.matrix(read_cifti(cgIC_fname, brainstructures="right")))
+tm <- estimate_template(cii0f, GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="right")))
 
 
 # CIFTI pseudo retest vs data true retest: should get same results.
 tm2 <- estimate_template(
   lapply(cii, function(x){as.matrix(x)[,seq(600)]}),
   lapply(cii, function(x){as.matrix(x)[,seq(601,1200)]}),
-  GICA=as.matrix(read_cifti(cgIC_fname, brainstructures="left")),
+  GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="left")),
   scale="global", inds=c(1,4,7,11),
 )
 stopifnot(
