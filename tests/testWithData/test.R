@@ -94,6 +94,38 @@ testthat::expect_equal(
 
 rgl.close(); rgl.close(); rgl.close(); rgl.close()
 
+# `export_template` and `templateICA`: check for same result w/ different file types -----------------
+tm_cii <- estimate_template(
+  cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
+  keep_DR=TRUE, FC=TRUE
+)
+tm_gii <- estimate_template(
+  giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),
+  keep_DR=TRUE#, FC=TRUE
+)
+tm_rds <- estimate_template(
+  rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
+  keep_DR=TRUE#, FC=TRUE
+)
+
+# `export_template`
+out_fname=export_template(tm_cii, tempfile())
+tm_cii2 <- list(read_cifti(out_fname[1]), read_cifti(out_fname[2]), readRDS(out_fname[3]), readRDS(out_fname[4]))
+out_fname=export_template(tm_gii, tempfile())
+tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[3]), readRDS(out_fname[4]))
+out_fname=export_template(tm_rds, tempfile())
+tm_rds2 <- lapply(out_fname, readRDS)
+
+# `templateICA`
+tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=0)
+tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20)
+tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=0, maxiter=20)
+tICA_cii; tICA_gii; tICA_rds
+testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
+testthat::expect_equal(tICA_gii$A, tICA_rds$A)
+actICA_rds <- activations(tICA_rds)
+plot(activations(tICA_cii)); plot(activations(tICA_gii))
+
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
   cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE#, FC=TRUE
@@ -110,8 +142,9 @@ rgl.close()
 actICA <- activations(tICA)
 actICA_fname <- paste0(tempfile(), ".dlabel.nii")
 write_cifti(actICA, actICA_fname)
-plot(actICA)
-rgl.close()
+actICA2 <- read_cifti(actICA_fname)
+plot(actICA); plot(actICA2)
+rgl.close(); rgl.close()
 
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
@@ -211,5 +244,3 @@ tICA <- templateICA(
 )
 tICA
 activations(tICA)
-
-# GIFTI ------------------------------------------------------------------------

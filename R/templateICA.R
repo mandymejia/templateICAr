@@ -223,32 +223,20 @@ templateICA <- function(
   # Determine the format of `BOLD`.
   format <- fMRItools:::infer_format_ifti(BOLD)[1]
   FORMAT <- get_FORMAT(format)
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  if (FORMAT == "CIFTI") {
-    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-      stop("Package \"ciftiTools\" needed to read CIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
-  if (FORMAT == "GIFTI") {
-    if (!requireNamespace("gifti", quietly = TRUE)) {
-      stop("Package \"gifti\" needed to read GIFTI data. Please install it.", call. = FALSE)
-    }
-  }
-
-  if (FORMAT == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
-
-  # If BOLD (and BOLD2) is a CIFTI, GIFTI, or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "GIFTI", "NIFTI")) {
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (any(missing_BOLD)) {
-      warning('There are ', missing_BOLD, ' scans in `BOLD` that do not exist. These scans will be excluded from template estimation.')
+      warning(
+        'There are ', missing_BOLD, 
+        ' scans in `BOLD` that do not exist. ',
+        'These scans will be excluded from template estimation.'
+      )
       BOLD <- BOLD[!missing_BOLD]
     }
   }
@@ -312,6 +300,12 @@ templateICA <- function(
         BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]])
       }
       # [TO DO] check?
+    }
+  } else if (format == "RDS") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- readRDS(BOLD[[bb]])
+      }
     }
   }
 
@@ -693,7 +687,7 @@ templateICA <- function(
 
   #1) FC Template ICA ----------------------------------------------------------
   if(do_FC) {
-    if (verbose) { cat("Estimating FC Template ICA Model\n") }
+    if (verbose) { cat("Estimating FC Template ICA model.\n") }
 
     template_mean = template$mean
     template_var = template$var
@@ -892,6 +886,8 @@ templateICA <- function(
     resultEM$mask_nii <- mask
     # resultEM$mask <- mask
     class(resultEM) <- 'tICA.nifti'
+  } else {
+    class(resultEM) <- 'tICA.matrix'
   }
 
   resultEM$mask <- mask2

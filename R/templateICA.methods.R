@@ -38,21 +38,21 @@ summary.tICA.nifti <- function(object, ...) {
   return(x)
 }
 
-#' Summarize a \code{"tICA"} object
+#' Summarize a \code{"tICA.matrix"} object
 #'
-#' Summary method for class \code{"tICA"}
+#' Summary method for class \code{"tICA.matrix"}
 #'
-#' @param object Object of class \code{"tICA"}.
+#' @param object Object of class \code{"tICA.matrix"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary tICA
-summary.tICA <- function(object, ...) {
+#' @method summary tICA.matrix
+summary.tICA.matrix <- function(object, ...) {
   x <- c(
     list(nV=nrow(object$subjICmean), nL=ncol(object$subjICmean)),
     object$params
   )
 
-  class(x) <- "summary.tICA"
+  class(x) <- "summary.tICA.matrix"
   return(x)
 }
 
@@ -140,13 +140,13 @@ print.summary.tICA.nifti <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.tICA
+#' @rdname summary.tICA.matrix
 #' @export
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.tICA
-print.summary.tICA <- function(x, ...) {
+#' @method print summary.tICA.matrix
+print.summary.tICA.matrix <- function(x, ...) {
   # Get DCT output.
   dct <- x$detrend_DCT
   if (!is.null(dct)) {
@@ -172,8 +172,8 @@ print.summary.tICA <- function(x, ...) {
   cat("Maximum iters:   ", x$maxiter, "\n")
   cat("Epsilon:         ", x$epsilon, "\n")
   cat("-------------------------------------\n")
-  cat("# Locations:     ", x$nL, "\n")
-  cat("# Template ICs:  ", x$nV, "\n")
+  cat("# Locations:     ", x$nV, "\n")
+  cat("# Template ICs:  ", x$nL, "\n")
   cat("\n")
 
   invisible(NULL)
@@ -195,12 +195,12 @@ print.tICA.nifti <- function(x, ...) {
   print.summary.tICA.nifti(summary(x))
 }
 
-#' @rdname summary.tICA
+#' @rdname summary.tICA.matrix
 #' @export
 #'
-#' @method print tICA
-print.tICA <- function(x, ...) {
-  print.summary.tICA(summary(x))
+#' @method print tICA.matrix
+print.tICA.matrix <- function(x, ...) {
+  print.summary.tICA.matrix(summary(x))
 }
 
 #' Plot template
@@ -419,8 +419,8 @@ plot.tICA.nifti <- function(x, stat=c("mean", "se"),
 #' @param ... Additional arguments
 #' @return The plot
 #' @export
-#' @method plot tICA
-plot.tICA <- function(x, ...) {
-  stopifnot(inherits(x, "tICA"))
+#' @method plot tICA.matrix
+plot.tICA.matrix <- function(x, ...) {
+  stopifnot(inherits(x, "tICA.matrix"))
   stop("Not supported yet.")
 }
