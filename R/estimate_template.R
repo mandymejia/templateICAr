@@ -120,6 +120,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @importFrom matrixStats colVars
 #' @keywords internal
 estimate_template_FC <- function(FC0){
+
+  nL <- dim(FC0)[3]
+  stopifnot(nL == dim(FC0)[4])
+
   FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
   mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
   var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
@@ -317,7 +321,9 @@ estimate_template <- function(
   stopifnot(fMRItools:::is_integer(detrend_DCT, nneg=TRUE))
   stopifnot(fMRItools:::is_1(center_Bcols, "logical"))
   stopifnot(fMRItools:::is_1(normA, "logical"))
-  if (!is.null(Q2)) { stopifnot(fMRItools:::is_posNum(Q2)) } # Q2_max checked later.
+  if (!is.null(Q2)) { # Q2_max checked later.
+    stopifnot(fMRItools:::is_integer(Q2) && (Q2 >= 0))
+  }
   stopifnot(fMRItools:::is_1(FC, "logical"))
   stopifnot(fMRItools:::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }

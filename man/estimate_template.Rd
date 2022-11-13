@@ -3,6 +3,7 @@
 \name{estimate_template}
 \alias{estimate_template}
 \alias{estimate_template.cifti}
+\alias{estimate_template.gifti}
 \alias{estimate_template.nifti}
 \title{Estimate template}
 \usage{
@@ -33,6 +34,31 @@ estimate_template(
 )
 
 estimate_template.cifti(
+  BOLD,
+  BOLD2 = NULL,
+  GICA,
+  inds = NULL,
+  scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
+  scale_sm_FWHM = 2,
+  detrend_DCT = 0,
+  center_Bcols = FALSE,
+  normA = FALSE,
+  Q2 = 0,
+  Q2_max = NULL,
+  brainstructures = c("left", "right"),
+  keep_DR = FALSE,
+  FC = FALSE,
+  varTol = 1e-06,
+  maskTol = 0.1,
+  missingTol = 0.1,
+  usePar = FALSE,
+  wb_path = NULL,
+  verbose = TRUE
+)
+
+estimate_template.gifti(
   BOLD,
   BOLD2 = NULL,
   GICA,
