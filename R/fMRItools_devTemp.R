@@ -13,10 +13,11 @@
 #'  \code{"RDS"} file path, or \code{"data"}. The second element indicates 
 #'  the sub-format if relevant; i.e. the type of CIFTI or GIFTI file/object.
 #' 
+#' @import fMRItools
 #' @keywords internal
 infer_format_ifti_vec <- function(BOLD, verbose=FALSE){
   BOLD <- as.list(BOLD)
-  Bformat <- lapply(BOLD, infer_format_ifti, verbose=verbose)
+  Bformat <- lapply(BOLD, fMRItools:::infer_format_ifti, verbose=verbose)
   Bformat <- unique(Bformat)
   if (length(Bformat)>1) {
     stop(paste(

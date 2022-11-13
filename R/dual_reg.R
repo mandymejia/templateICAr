@@ -48,7 +48,7 @@ dual_reg <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  if (!is.null(scale_sm_xifti)) { stopifnot(is.xifti(scale_sm_xifti)) }
+  if (!is.null(scale_sm_xifti)) { stopifnot(ciftiTools::is.xifti(scale_sm_xifti)) }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
 
@@ -229,16 +229,16 @@ dual_reg2 <- function(
   if (verbose) { cat("\tReading and formatting data...") }
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
-    if (is.xifti(BOLD)) {
+    if (ciftiTools::is.xifti(BOLD)) {
       if (scale == "local") {
-        xii1 <- convert_xifti(select_xifti(BOLD, 1), "dscalar") * 0
+        xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(BOLD, 1), "dscalar") * 0
       }
       BOLD <- as.matrix(BOLD)
     }
     stopifnot(is.matrix(BOLD))
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
-      if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
+      if (ciftiTools::is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
     nI <- nV <- nrow(GICA)
@@ -252,9 +252,9 @@ dual_reg2 <- function(
     ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
     if (scale == "local") {
       if (ghemi == "left") {
-        xii1 <- select_xifti(as.xifti(cortexL=do.call(cbind, BOLD$data)), 1) * 0
+        xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD$data)), 1) * 0
       } else if (ghemi == "right") {
-        xii1 <- select_xifti(as.xifti(cortexR=do.call(cbind, BOLD$data)), 1) * 0
+        xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD$data)), 1) * 0
       } else { stop() }
       xii1$meta$cifti$intent <- 3006
     }
@@ -330,7 +330,7 @@ dual_reg2 <- function(
     if (!is.null(xii1)) {
       xiitmp <- as.matrix(xii1)
       xiitmp[!mask,] <- NA
-      xii1 <- move_to_mwall(newdata_xifti(xii1, xiitmp))
+      xii1 <- ciftiTools::move_to_mwall(ciftiTools::newdata_xifti(xii1, xiitmp))
     }
     nV <- nrow(BOLD)
 
@@ -343,7 +343,7 @@ dual_reg2 <- function(
   }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
-    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+    xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
   # Helper functions

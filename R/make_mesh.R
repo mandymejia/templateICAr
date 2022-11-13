@@ -17,7 +17,6 @@
 #' @export
 #' 
 # @importFrom INLA inla.spde2.matern inla.mesh.create
-#' @importFrom ciftiTools is.xifti
 #' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #'
@@ -25,7 +24,11 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 
   INLA_check()
 
-  stopifnot(is.surf(surf))
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+  }
+
+  stopifnot(ciftiTools::is.surf(surf))
 
   #if inds_mesh is NULL, keep all current vertices in the mesh
   nmesh_orig <- nrow(surf$vertices)

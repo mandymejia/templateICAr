@@ -233,9 +233,9 @@ EM_FCtemplateICA <- function(template_mean,
   # delta_post <- S_post_mean - template_mean
   # delta_true <- truth_IC - template_mean
   # delta_init <- t(S_init) - template_mean
-  # plot(newdata_xifti(GICA, delta_true), title='true', zlim=c(-0.5,0.5))
-  # plot(newdata_xifti(GICA, delta_post), title='post', zlim=c(-0.5,0.5))
-  # plot(newdata_xifti(GICA, delta_init), title='init', zlim=c(-0.5,0.5))
+  # plot(ciftiTools::newdata_xifti(GICA, delta_true), title='true', zlim=c(-0.5,0.5))
+  # plot(ciftiTools::newdata_xifti(GICA, delta_post), title='post', zlim=c(-0.5,0.5))
+  # plot(ciftiTools::newdata_xifti(GICA, delta_init), title='init', zlim=c(-0.5,0.5))
 
   # #FC matrices
   # corA_post <- apply(post_AS$covA_final, 3, cov2cor)

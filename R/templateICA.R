@@ -121,7 +121,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom ciftiTools read_cifti infer_resolution add_surf
+#' @import fMRItools
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -221,8 +221,7 @@ templateICA <- function(
 
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
-  # same for NIFTI
-  format <- infer_BOLD_format(BOLD)
+  format <- fMRItools:::infer_format_ifti(BOLD)[1]
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -233,6 +232,12 @@ templateICA <- function(
     data = "DATA"
   )
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
+
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to read CIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   if (FORMAT == "GIFTI") {
     if (!requireNamespace("gifti", quietly = TRUE)) {
@@ -289,7 +294,7 @@ templateICA <- function(
           brainstructures=brainstructures
         )
       }
-      stopifnot(is.xifti(BOLD[[bb]]))
+      stopifnot(ciftiTools::is.xifti(BOLD[[bb]]))
     }
   } else if (format == "GIFTI") {
     for (bb in seq(nN)) {
@@ -390,14 +395,14 @@ templateICA <- function(
 
   } else if (FORMAT == "GIFTI") {
     if (ghemi == "left") {
-      xii1 <- select_xifti(as.xifti(cortexL=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD[[1]]$data)), 1) * 0
       for (bb in seq(length(BOLD))) {
-        BOLD[[bb]] <- as.xifti(cortexL=do.call(cbind, BOLD[[bb]]$data))
+        BOLD[[bb]] <- ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD[[bb]]$data))
       }
     } else if (ghemi == "right") {
-      xii1 <- select_xifti(as.xifti(cortexR=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD[[1]]$data)), 1) * 0
       for (bb in seq(length(BOLD))) {
-        BOLD[[bb]] <- as.xifti(cortexR=do.call(cbind, BOLD[[bb]]$data))
+        BOLD[[bb]] <- ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD[[bb]]$data))
       }
     } else { stop() }
     # xii1 <- move_to_mwall(xii1)
@@ -480,7 +485,7 @@ templateICA <- function(
         }
         if (do_left) {
           surf <- BOLD[[1]]$surf$cortex_left
-          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+          if (is.null(surf)) { surf <- ciftiTools::read_surf(ciftiTools::ciftiTools.files()$surf["left"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
             wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$left
             if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
@@ -497,7 +502,7 @@ templateICA <- function(
         }
         if (do_right) {
           surf <- BOLD[[1]]$surf$cortex_right
-          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+          if (is.null(surf)) { surf <- ciftiTools::read_surf(ciftiTools::ciftiTools.files()$surf["right"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
             wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$right
             if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
@@ -539,7 +544,7 @@ templateICA <- function(
   # Get each entry of `BOLD` as a data matrix or array.
   if (FORMAT %in% c("CIFTI", "GIFTI")) {
     for (bb in seq(nN)) {
-      if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
+      if (ciftiTools::is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
       stopifnot(is.matrix(BOLD[[bb]]))
     }
   } else if (FORMAT == "NIFTI") {
@@ -652,7 +657,7 @@ templateICA <- function(
   if (verbose) { cat("Pre-processing BOLD data.\n") }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
-    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+    xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
   BOLD <- lapply(BOLD, norm_BOLD,
@@ -837,12 +842,12 @@ templateICA <- function(
 
   # Format output.
   if (use_mask2) {
-    resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
-    resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
+    resultEM$subjICmean <- fMRItools:::unmask_mat(resultEM$subjICmean, mask2)
+    resultEM$subjICse <- fMRItools:::unmask_mat(resultEM$subjICse, mask2)
   }
 
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
-    xiiL <- select_xifti(xii1, rep(1, nL))
+    xiiL <- ciftiTools::select_xifti(xii1, rep(1, nL))
     if (grepl("all", IC_inds)) {
       IC_inds <- seq(nL)
     } else {
@@ -850,17 +855,17 @@ templateICA <- function(
       if (length(IC_inds) != nL) { IC_inds <- rep("?", nL) } # TO-DO: improve
     }
     xiiL$meta$cifti$names <- paste("IC", IC_inds)
-    resultEM$subjICmean <- newdata_xifti(xiiL, resultEM$subjICmean)
-    resultEM$subjICse <- newdata_xifti(xiiL, resultEM$subjICse)
+    resultEM$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICmean)
+    resultEM$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICse)
     if (FORMAT == "GIFTI") {
       # Apply `mask2`.
-      resultEM$subjICmean <- move_to_mwall(resultEM$subjICmean)
-      resultEM$subjICse <- move_to_mwall(resultEM$subjICse)
+      resultEM$subjICmean <- ciftiTools::move_to_mwall(resultEM$subjICmean)
+      resultEM$subjICse <- ciftiTools::move_to_mwall(resultEM$subjICse)
       mask2 <- NULL
     }
     if (do_spatial) {
-      resultEM$result_tICA$subjICmean <- newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
-      resultEM$result_tICA$subjICse <- newdata_xifti(xiiL, resultEM$result_tICA$subjICse)
+      resultEM$result_tICA$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
+      resultEM$result_tICA$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$result_tICA$subjICse)
     }
     class(resultEM) <- 'tICA.cifti'
 

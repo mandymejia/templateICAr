@@ -8,7 +8,11 @@
 #' @keywords internal
 struct_template <- function(template, FORMAT, dat_struct, params){
   if (FORMAT == "CIFTI") {
-    template <- newdata_xifti(dat_struct, template)
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
+
+    template <- ciftiTools::newdata_xifti(dat_struct, template)
     if (params$inds == paste("all", ncol(template))) {
       template$meta$cifti$names <- paste(
         "IC", seq(ncol(template))
@@ -19,6 +23,10 @@ struct_template <- function(template, FORMAT, dat_struct, params){
       )
     }
   } else if (FORMAT == "GIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with GIFTI data. Please install it.", call. = FALSE)
+    }
+
     template <- ciftiTools:::as.metric_gifti(
       template, hemisphere=dat_struct$hemisphere
     )
@@ -137,8 +145,8 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
   # Save
   if (!is.null(out_fname)) {
     if (FORMAT == "CIFTI") {
-      write_cifti(x$template$mean, out_fname[1])
-      write_cifti(x$template$var, out_fname[2])
+      ciftiTools::write_cifti(x$template$mean, out_fname[1])
+      ciftiTools::write_cifti(x$template$var, out_fname[2])
     } else if (FORMAT == "GIFTI") {
       if (!requireNamespace("gifti", quietly = TRUE)) {
         stop("Package \"gifti\" needed to write NIFTI data. Please install it.", call. = FALSE)

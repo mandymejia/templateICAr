@@ -210,10 +210,13 @@ print.tICA <- function(x, ...) {
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
-#' @importFrom ciftiTools view_xifti
 #' @method plot tICA.cifti
 plot.tICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
   stopifnot(inherits(x, "tICA.cifti"))
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+  }
 
   # Check `...`
   args <- list(...)
@@ -285,7 +288,7 @@ plot.tICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
       args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
     }
     out[[ss]] <- do.call(
-      view_xifti, c(list(x[[paste0("subjIC", ss)]]), args_ss)
+      ciftiTools::view_xifti, c(list(x[[paste0("subjIC", ss)]]), args_ss)
     )
   }
 

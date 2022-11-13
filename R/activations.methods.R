@@ -85,10 +85,13 @@ print.tICA_act.cifti <- function(x, ...) {
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
-#' @importFrom ciftiTools view_xifti
 #' @method plot tICA_act.cifti
 plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "se"), ...) {
   stopifnot(inherits(x, "tICA_act.cifti"))
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
 
   # Check `...`
   args <- list(...)
@@ -115,7 +118,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
   if (stat == "active") {
     x <- x$active
   } else {
-    x <- newdata_xifti(x$se, as.matrix(x[[stat]]))
+    x <- ciftiTools::newdata_xifti(x$se, as.matrix(x[[stat]]))
   }
 
   ss <- stat # to match `plot.template.cifti`
@@ -143,7 +146,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
     args_ss$fname <- gsub(paste0(".", fext), "", args_ss$fname, fixed=TRUE)
     args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
   }
-  do.call(view_xifti, c(list(x), args_ss))
+  do.call(ciftiTools::view_xifti, c(list(x), args_ss))
 }
 
 #' Summarize a \code{"tICA_act"} object

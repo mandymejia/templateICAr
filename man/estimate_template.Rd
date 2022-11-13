@@ -47,7 +47,6 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
-  mask = NULL,
   keep_DR = FALSE,
   FC = FALSE,
   varTol = 1e-06,

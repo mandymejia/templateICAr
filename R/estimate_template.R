@@ -230,7 +230,6 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'
 #' @importFrom stats cov quantile
 #' @import fMRItools
-#' @importFrom ciftiTools read_cifti is.xifti write_cifti
 #' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
@@ -358,9 +357,9 @@ estimate_template <- function(
 
   # `BOLD` and `BOLD2` ---------------------------------------------------------
   # Determine the format of `BOLD` and `BOLD2`.
-  format <- infer_format_ifti_vec(BOLD)
+  format <- infer_format_ifti_vec(BOLD)[1]
   if (real_retest) {
-    format2 <- infer_format_ifti_vec(BOLD2)
+    format2 <- infer_format_ifti_vec(BOLD2)[1]
     if (format2 != format) {
       stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
     }
@@ -685,8 +684,8 @@ estimate_template <- function(
 
   # Unmask the data matrices.
   if (use_mask) {
-    template <- lapply(template, unmask_mat, mask=maskAll)
-    var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)
+    template <- lapply(template, fMRItools:::unmask_mat, mask=maskAll)
+    var_decomp <- lapply(var_decomp, fMRItools:::unmask_mat, mask=maskAll)
   }
 
   # Estimate FC template
@@ -757,7 +756,7 @@ estimate_template <- function(
   }
 
   dat_struct <- switch(FORMAT,
-    CIFTI = newdata_xifti(xii1, 0),
+    CIFTI = ciftiTools::newdata_xifti(xii1, 0),
     GIFTI = list(hemisphere=ghemi),
     NIFTI = mask,
     RDS = NULL,

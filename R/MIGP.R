@@ -180,13 +180,13 @@ datProcFUN.cifti <- function(
       brainstructures=brainstructures, resamp_res=resamp_res
     )
   }
-  stopifnot(all(vapply(dat, is.xifti, messages=FALSE, FALSE)))
+  stopifnot(all(vapply(dat, ciftiTools::is.xifti, messages=FALSE, FALSE)))
 
   # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
   dat <- lapply(dat, function(x){
-    newdata_xifti(x, norm_BOLD(
+    ciftiTools::newdata_xifti(x, norm_BOLD(
       as.matrix(x), center_cols=center_Bcols, 
-      scale=scale, scale_sm_xifti=select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM, 
+      scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM, 
       detrend_DCT=detrend_DCT
     ))
   })

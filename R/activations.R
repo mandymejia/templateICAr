@@ -30,7 +30,6 @@
 #'
 #' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
-#' @importFrom ciftiTools unmask_subcortex
 #'
 #' @examples
 #' \dontrun{
@@ -39,6 +38,12 @@
 activations <- function(
   tICA, u=0, alpha=0.01, type=">", method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
+
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   # Setup ----------------------------------------------------------------------
   is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
@@ -71,7 +76,7 @@ activations <- function(
 
   # Vectorize data.
   if (FORMAT == "CIFTI") {
-    xii1 <- newdata_xifti(select_xifti(tICA$subjICmean,1), 0)
+    xii1 <- ciftiTools::newdata_xifti(ciftiTools::select_xifti(tICA$subjICmean,1), 0)
     tICA$subjICmean <- as.matrix(tICA$subjICmean)
     tICA$subjICse <- as.matrix(tICA$subjICse)
   } else if (FORMAT == "NIFTI") {
@@ -167,12 +172,12 @@ activations <- function(
 
   # Format result. -------------------------------------------------------------
   # Unmask data.
-  if (use_mask) { result$active <- unmask_mat(result$active, mask) }
+  if (use_mask) { result$active <- fMRItools:::unmask_mat(result$active, mask) }
 
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
-    result$active <- newdata_xifti(xii1, as.numeric(result$active))
-    result$active <- convert_xifti(result$active, "dlabel", values=c(0, 1), colors="red")
+    result$active <- ciftiTools::newdata_xifti(xii1, as.numeric(result$active))
+    result$active <- ciftiTools::convert_xifti(result$active, "dlabel", values=c(0, 1), colors="red")
     for (ii in seq(ncol(result$active))) {
       rownames(result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
     }

@@ -271,11 +271,14 @@ print.template.data <- function(x, ...) {
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
-#' @importFrom ciftiTools view_xifti
 #' @method plot template.cifti
 plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.cifti"))
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
 
   var_method <- match.arg(var_method, c("non-negative", "unbiased"))
 
@@ -365,7 +368,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
       args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
     }
     out[[ss]] <- do.call(
-      view_xifti, c(list(tss), args_ss)
+      ciftiTools::view_xifti, c(list(tss), args_ss)
     )
   }
 
@@ -382,18 +385,21 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #' @param ... Additional arguments to \code{view_xifti}
 #' @return The plot
 #' @export
-#' @importFrom ciftiTools view_xifti as.xifti
 #' @method plot template.gifti
 plot.template.gifti <- function(x, stat=c("both", "mean", "sd", "var"),
   var_method=c("non-negative", "unbiased"), ...) {
   stopifnot(inherits(x, "template.gifti"))
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
 
   if (x$dat_struct$hemisphere == "left")  {
     y <- ciftiTools::as_cifti(cortexL=x$template$mean[,1,drop=FALSE] * 0)
   } else {
     y <- ciftiTools::as_cifti(cortexR=x$template$mean[,1,drop=FALSE] * 0)
   }
-  y <- move_from_mwall(y)
+  y <- ciftiTools::move_from_mwall(y)
   x$dat_struct <- y; class(x) <- "template.cifti"
   plot.template.cifti(x, stat, var_method, ...)
 }
