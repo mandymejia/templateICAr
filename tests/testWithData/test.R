@@ -22,18 +22,77 @@ cii_fnames <- c(
   paste0(data_dir, "/", subjects, "_rfMRI_REST1_LR_Atlas.dtseries.nii"),
   paste0(data_dir, "/", subjects, "_rfMRI_REST2_LR_Atlas.dtseries.nii")
 )
-nii_fnames <- c(
-  paste0(data_dir, "/", subjects, "_rfMRI_REST1_LR.nii.gz"),
-  paste0(data_dir, "/", subjects, "_rfMRI_REST2_LR.nii.gz")
+giiL_fnames <- gsub("dtseries.nii", "sep.L.func.gii", cii_fnames, fixed=TRUE)
+giiL_ROI_fnames <- gsub("dtseries.nii", "sep.ROI_L.func.gii", cii_fnames, fixed=TRUE)
+nii_fnames <- gsub("dtseries.nii", "nii.gz", cii_fnames, fixed=TRUE)
+rds_fnames <-gsub("dtseries.nii", "rds", cii_fnames, fixed=TRUE)
+
+GICA_fname <- c(
+  cii = file.path(data_dir, "melodic_IC_100.4k.dscalar.nii"),
+  gii = file.path(data_dir, "melodic_IC_100.4k.sep.L.func.gii"),
+  nii = file.path(data_dir, "melodic_IC_sum.nii.gz"),
+  rds = file.path(data_dir, "melodic_IC_100.4k.rds")
+)
+
+xii1 <- select_xifti(read_cifti(GICA_fname["cii"]), 1) * 0
+
+# `estimate_template`: check for same result w/ different file types -----------
+### Test 1: basic
+tm_cii <- estimate_template(
+  cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
+  keep_DR=TRUE, FC=TRUE
+)
+tm_gii <- estimate_template(
+  giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
+  keep_DR=TRUE, FC=TRUE
+)
+tm_rds <- estimate_template(
+  rds_fnames[seq(5)], GICA = GICA_fname["rds"],
+  keep_DR=TRUE, FC=TRUE
+)
+testthat::expect_equal(
+  lapply(tm_cii$template[seq(3)], fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+  tm_gii$template[seq(3)]
+)
+testthat::expect_equal(tm_cii$template, tm_rds$template)
+##### Misc follow-up
+tm_cii; tm_gii; tm_rds
+plot(tm_cii); plot(tm_gii)
+
+### Test 2: with various parameters changed
+tm_cii <- estimate_template(
+  cii_fnames[seq(3)], cii_fnames[seq(4,6)], GICA = GICA_fname["cii"],
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4, normA=TRUE,
+  maskTol=.9, brainstructures="left", wb_path="~/Desktop/workbench",
+  usePar=TRUE, FC=TRUE, varTol=10000
+)
+tm_gii <- estimate_template(
+  giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4, normA=TRUE,
+  maskTol=.9, wb_path="~/Desktop/workbench",
+  usePar=TRUE, FC=TRUE, varTol=10000
+)
+testthat::expect_equal(
+  lapply(tm_cii$template[seq(3)], fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+  tm_gii$template[seq(3)]
+)
+tm_gii <- estimate_template(
+  giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
+  inds=seq(5), scale="none", detrend_DCT=4, Q2=5,
+  maskTol=.9, wb_path="~/Desktop/workbench",
+  usePar=TRUE
+)
+tm_rds <- estimate_template(
+  lapply(rds_fnames[seq(4,6)], readRDS), lapply(rds_fnames[seq(3)], readRDS), GICA = GICA_fname["rds"],
+  inds=seq(5), scale="none", detrend_DCT=4, Q2=5,
+  maskTol=.9, ,usePar=TRUE
+)
+testthat::expect_equal(
+  tm_gii$template,
+  lapply(tm_rds$template, fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
 )
 
 # CIFTI ------------------------------------------------------------------------
-
-# Load CIFTI group IC
-cgIC_fname <- file.path(data_dir, "melodic_IC_100.4k.dscalar.nii")
-cgIC <- read_cifti(cgIC_fname)
-xii1 <- select_xifti(cgIC, 1) * 0
-
 tm <- estimate_template(
   cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE#, FC=TRUE
 )
@@ -150,3 +209,5 @@ tICA <- templateICA(
 )
 tICA
 activations(tICA)
+
+# GIFTI ------------------------------------------------------------------------

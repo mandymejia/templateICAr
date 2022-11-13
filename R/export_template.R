@@ -81,9 +81,9 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     template.cifti = "CIFTI",
     template.gifti = "GIFTI",
     template.nifti = "NIFTI",
-    template.data = "DATA"
+    template.matrix = "MATRIX"
   )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", DATA=".rds")
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
   var_method <- match.arg(var_method, c("non-negative", "unbiased"))
   var_name <- switch(var_method, `non-negative`="varNN", unbiased="varUB")

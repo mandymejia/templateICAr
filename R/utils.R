@@ -153,7 +153,37 @@ get_FORMAT <- function(format){
     gifti = "GIFTI",
     NIFTI = "NIFTI",
     nifti = "NIFTI",
-    RDS = "RDS",
-    data = "DATA"
+    RDS = "MATRIX",
+    data = "MATRIX"
   )
+}
+
+#' Check required packages for the data format
+#' 
+#' @param FORMAT The data FORMAT
+#' @return \code{NULL}, invisibly
+#' @keywords internal
+check_req_ifti_pkg <- function(FORMAT){
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
+  if (FORMAT == "GIFTI") {
+    if (!requireNamespace("gifti", quietly = TRUE)) {
+      stop("Package \"gifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
+    }
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
+  if (FORMAT == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
+
+  invisible(NULL)
 }

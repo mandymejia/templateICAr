@@ -181,7 +181,8 @@ dual_reg <- function(
 #'
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
+  BOLD, BOLD2=NULL, 
+  format=c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
   keepA=FALSE,
   scale=c("global", "local", "none"),
@@ -206,15 +207,12 @@ dual_reg2 <- function(
 
   # Load helper variables.
   retest <- !is.null(BOLD2)
+  format <- match.arg(format, c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"))
   FORMAT <- get_FORMAT(format)
   nQ <- ncol(GICA)
   nI <- nV <- nrow(GICA)
 
-  if (format == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (verbose) { cat("\tReading and formatting data...") }
@@ -267,18 +265,15 @@ dual_reg2 <- function(
     }
     stopifnot(!is.null(mask))
     nI <- dim(drop(mask)); nV <- sum(mask)
-  } else if (FORMAT == "RDS") {
+  } else if (FORMAT == "MATRIX") {
     if (is.character(BOLD)) { BOLD <- readRDS(BOLD) }
     stopifnot(is.matrix(BOLD))
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- readRDS(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
-  } else {
-    stopifnot(is.matrix(BOLD))
-    if (retest) { stopifnot(is.matrix(BOLD2)) }
     nI <- nV <- nrow(GICA)
-  }
+  } else { stop() }
   dBOLD <- dim(BOLD)
   ldB <- length(dim(BOLD))
   nT <- dim(BOLD)[ldB]

@@ -137,10 +137,10 @@ deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
-\code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
-smooth the standard deviation estimates used for local scaling, provide the
-surface geometries along which to smooth as GIFTI geometry files or
-\code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+\code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
+GIFTI). To smooth the standard deviation estimates used for local scaling,
+provide the surface geometries along which to smooth as GIFTI geometry files
+or \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
 
 If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 estimates will be performed.

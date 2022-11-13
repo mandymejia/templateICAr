@@ -7,7 +7,7 @@
 dual_reg2(
   BOLD,
   BOLD2 = NULL,
-  format = c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
+  format = c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
   keepA = FALSE,
   scale = c("global", "local", "none"),

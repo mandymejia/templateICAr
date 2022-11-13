@@ -115,7 +115,7 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 }
 
 #' Estimate FC template
-#' 
+#'
 #' @param FC0 The FC estimates from \code{\link{estimate_template}}.
 #' @importFrom matrixStats colVars
 #' @keywords internal
@@ -148,10 +148,10 @@ estimate_template_FC <- function(FC0){
 #'
 #' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following
 #'  formats: CIFTI file paths, \code{"xifti"} objects, GIFTI file paths,
-#'  \code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects, 
+#'  \code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects,
 #'  or \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data
 #'  locations and \eqn{T} is the number of timepoints.
-# 
+#
 #  If GIFTI or \code{"gifti"}, the input can also be a length two list,
 #  where the first list element is a length \eqn{N} vector for the left
 #  hemisphere and the second list element is a length \eqn{N} vector for the
@@ -175,10 +175,10 @@ estimate_template_FC <- function(FC0){
 #'  could bias the templates.
 #' @inheritParams scale_Param
 #' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
-#'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or
-#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#'  \code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
+#'  GIFTI). To smooth the standard deviation estimates used for local scaling,
+#'  provide the surface geometries along which to smooth as GIFTI geometry files
+#'  or \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
 #'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
@@ -391,35 +391,15 @@ estimate_template <- function(
     }
   }
   FORMAT <- get_FORMAT(format)
-  FORMAT_extn <- switch(FORMAT, 
-    CIFTI=".dscalar.nii", 
+  FORMAT_extn <- switch(FORMAT,
+    CIFTI=".dscalar.nii",
     GIFTI=".func.gii",
-    NIFTI=".nii", 
-    RDS=".rds",
-    DATA=".rds"
+    NIFTI=".nii",
+    MATRIX=".rds"
   )
   nN <- length(BOLD)
 
-  if (FORMAT == "CIFTI") {
-    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
-    }
-  }
-
-  if (FORMAT == "GIFTI") {
-    if (!requireNamespace("gifti", quietly = TRUE)) {
-      stop("Package \"gifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
-    }
-    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
-    }
-  }
-
-  if (FORMAT == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
   # Ensure `BOLD2` is the same length.
   if (real_retest) {
@@ -452,6 +432,23 @@ estimate_template <- function(
     }
   }
 
+  # Check `scale_sm_FWHM`
+  if (scale_sm_FWHM !=0 && FORMAT %in% c("NIFTI", "MATRIX")) {
+    if (scale_sm_FWHM==2) {
+      cat("Setting `scale_sm_FWHM == 0`.\n")
+    } else {
+      if (FORMAT == "NIFTI") {
+        warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for volumetric data.).\n")
+      } else {
+        warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for data matrices: use CIFTI/GIFTI files.).\n")
+      }
+    }
+    scale_sm_FWHM <- 0
+  }
+
+  # [TO DO]: Mysteriously, MATRIX FORMAT is not working with parallel.
+  if (usePar && format=="RDS") { stop("Parallel computation not working with RDS file input. Working on this!") }
+
   # `GICA` ---------------------------------------------------------------------
   # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
@@ -479,10 +476,8 @@ estimate_template <- function(
   } else if (FORMAT == "NIFTI") {
     if (is.character(GICA)) { GICA <- RNifti::readNifti(GICA) }
     stopifnot(length(dim(GICA)) > 1)
-  } else if (FORMAT == "RDS") {
+  } else if (FORMAT == "MATRIX") {
     if (is.character(GICA)) { GICA <- readRDS(GICA) }
-    stopifnot(is.matrix(GICA))
-  } else {
     stopifnot(is.matrix(GICA))
   }
   nQ <- dim(GICA)[length(dim(GICA))]
@@ -517,7 +512,7 @@ estimate_template <- function(
       if (length(dim(GICA)) != 2) {
         stopifnot(all(dim(GICA)[seq(length(dim(GICA))-1)] == nI))
       }
-      # Append NIFTI header. 
+      # Append NIFTI header.
       mask <- RNifti::asNifti(array(mask, dim=c(dim(mask), 1)), reference=GICA)
       # Vectorize `GICA`.
       if (all(dim(GICA)[seq(length(dim(GICA))-1)] == nI)) {
@@ -526,7 +521,7 @@ estimate_template <- function(
       }
     }
   } else {
-    if (!is.null(mask)) { 
+    if (!is.null(mask)) {
       warning("Ignoring `mask`, which is only applicable to NIFTI data.")
       mask <- NULL
     }
@@ -568,7 +563,7 @@ estimate_template <- function(
     # Loop over subjects.
     `%dopar%` <- foreach::`%dopar%`
     q <- foreach::foreach(ii = seq(nN)) %dopar% {
-      if (FORMAT=="CIFTI") {
+      if (FORMAT=="CIFTI" || FORMAT=="GIFTI") {
         # Load the workbench.
         if (is.null(wb_path)) {
           stop("`wb_path` is required for parallel computation.")
@@ -592,7 +587,7 @@ estimate_template <- function(
         GICA=GICA,
         keepA=FC,
         center_Bcols=center_Bcols,
-        scale=scale, 
+        scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
@@ -643,7 +638,7 @@ estimate_template <- function(
         GICA=GICA,
         keepA=FC,
         center_Bcols=center_Bcols,
-        scale=scale, 
+        scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
@@ -738,7 +733,8 @@ estimate_template <- function(
     FC=FC,
     num_subjects=nN, num_visits=nM,
     inds=indsp, center_Bcols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
@@ -766,8 +762,7 @@ estimate_template <- function(
     CIFTI = ciftiTools::newdata_xifti(xii1, 0),
     GIFTI = list(hemisphere=ghemi),
     NIFTI = mask,
-    RDS = NULL,
-    DATA = NULL
+    MATRIX = NULL
   )
 
   # Results list.

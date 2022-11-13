@@ -64,15 +64,15 @@ summary.template.nifti <- function(object, ...) {
   return(x)
 }
 
-#' Summarize a \code{"template.data"} object
+#' Summarize a \code{"template.matrix"} object
 #'
-#' Summary method for class \code{"template.data"}
+#' Summary method for class \code{"template.matrix"}
 #'
-#' @param object Object of class \code{"template.data"}.
+#' @param object Object of class \code{"template.matrix"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
-#' @method summary template.data
-summary.template.data <- function(object, ...) {
+#' @method summary template.matrix
+summary.template.matrix <- function(object, ...) {
   x <- c(
     list(
       nV=nrow(object$template$mean),
@@ -82,7 +82,7 @@ summary.template.data <- function(object, ...) {
     object$params
   )
 
-  class(x) <- "summary.template.data"
+  class(x) <- "summary.template.matrix"
   return(x)
 }
 
@@ -193,13 +193,13 @@ print.summary.template.nifti <- function(x, ...) {
   invisible(NULL)
 }
 
-#' @rdname summary.template.data
+#' @rdname summary.template.matrix
 #' @export
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.template.data
-print.summary.template.data <- function(x, ...) {
+#' @method print summary.template.matrix
+print.summary.template.matrix <- function(x, ...) {
   # Get DCT output.
   dct <- x$detrend_DCT
   if (!is.null(dct)) {
@@ -253,12 +253,12 @@ print.template.nifti <- function(x, ...) {
   print.summary.template.nifti(summary(x))
 }
 
-#' @rdname summary.template.data
+#' @rdname summary.template.matrix
 #' @export
 #'
-#' @method print template.data
-print.template.data <- function(x, ...) {
-  print.summary.template.data(summary(x))
+#' @method print template.matrix
+print.template.matrix <- function(x, ...) {
+  print.summary.template.matrix(summary(x))
 }
 
 #' Plot template
@@ -543,11 +543,11 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
 
 #' Plot template
 #'
-#' @param x The template from \code{estimate_template.data}
+#' @param x The template from \code{estimate_template.matrix}
 #' @param ... Additional arguments
 #' @return The plot
 #' @export
-#' @method plot template.data
-plot.template.data <- function(x, ...) {
+#' @method plot template.matrix
+plot.template.matrix <- function(x, ...) {
   stop("Not supported yet.")
 }
