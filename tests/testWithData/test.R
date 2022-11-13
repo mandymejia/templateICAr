@@ -92,6 +92,8 @@ testthat::expect_equal(
   lapply(tm_rds$template, fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
 )
 
+rgl.close(); rgl.close(); rgl.close(); rgl.close()
+
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
   cii_fnames[seq(4)], GICA=cgIC_fname, scale=FALSE, keep_DR=TRUE#, FC=TRUE
