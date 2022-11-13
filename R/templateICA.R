@@ -855,8 +855,21 @@ templateICA <- function(
       if (length(IC_inds) != nL) { IC_inds <- rep("?", nL) } # TO-DO: improve
     }
     xiiL$meta$cifti$names <- paste("IC", IC_inds)
-    resultEM$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICmean)
-    resultEM$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICse)
+
+    # [TO DO]: fMRItools update: simplify this
+    if (any(!mask3)) {
+      resultEM$subjICmean <- ciftiTools::newdata_xifti(
+        xiiL, 
+        fMRItools:::unmask_mat(resultEM$subjICmean, mask3),
+      )
+      resultEM$subjICse <- ciftiTools::newdata_xifti(
+        xiiL, 
+        fMRItools:::unmask_mat(resultEM$subjICse, mask3),
+      )
+    } else {
+      resultEM$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICmean)
+      resultEM$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICse)
+    }
     if (FORMAT == "GIFTI") {
       # Apply `mask2`.
       resultEM$subjICmean <- ciftiTools::move_to_mwall(resultEM$subjICmean)
