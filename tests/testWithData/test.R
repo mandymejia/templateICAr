@@ -97,7 +97,7 @@ rgl.close(); rgl.close(); rgl.close(); rgl.close()
 # `export_template` and `templateICA`: check for same result w/ different file types -----------------
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
-  keep_DR=TRUE, FC=TRUE
+  keep_DR=TRUE#, FC=TRUE
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),

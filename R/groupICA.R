@@ -143,7 +143,7 @@ groupICA.cifti <- function(
     )
   }
 
-  brainstructures <- fMRItools::match_input(
+  brainstructures <- fMRItools:::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
@@ -189,7 +189,7 @@ groupICA.cifti <- function(
     }
 
     # Read in BOLD data.
-    BOLD_ii <- lapply(fnames_ii, read_cifti, brainstructures=brainstructures)
+    BOLD_ii <- lapply(fnames_ii, ciftiTools::read_cifti, brainstructures=brainstructures)
     # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
     BOLD_ii <- lapply(BOLD_ii, function(x){
       ciftiTools::newdata_xifti(x, norm_BOLD(

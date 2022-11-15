@@ -48,7 +48,6 @@ Imports:
     methods,
     pesel,
     Rcpp,
-    RcppEigen,
     SQUAREM,
     stats
 Suggests:
