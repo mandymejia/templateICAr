@@ -222,7 +222,7 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   # same for NIFTI
-  format <- templateICAr:::infer_BOLD_format(BOLD)
+  format <- infer_BOLD_format(BOLD)
   FORMAT <- switch(format,
     CIFTI = "CIFTI",
     xifti = "CIFTI",
@@ -581,7 +581,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
   if(sum(!mask3) > 0){
     stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
@@ -691,8 +691,6 @@ templateICA <- function(
       C_diag <- rep(1, nT)
       H <- Hinv <- NULL
     }
-
-    #HERE
 
     #2) Template ICA -----------------------------------------------------------
     if (verbose) {

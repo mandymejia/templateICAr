@@ -20,11 +20,12 @@ Authors@R: c(
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: Functions implementing the template ICA model proposed in Mejia et
     al. (2019) <doi:10.1080/01621459.2019.1679638> and the spatial template ICA
-    model proposed in proposed in Mejia et al. (2020+). For both models, 
-    subject-level brain networks are estimated as deviations from known 
-    population-level networks, which can be estimated using standard ICA 
-    algorithms. Both models employ an expectation-maximization algorithm 
-    for estimation of the latent brain networks and unknown model parameters.
+    model proposed in proposed in Mejia et al. (2020+), along with dual 
+    regression. For both template ICA models, subject-level brain networks are 
+    estimated as deviations from known population-level networks, which can be 
+    estimated using standard ICA algorithms. Both models employ an expectation-
+    maximization algorithm for estimation of the latent brain network maps and 
+    unknown model parameters.
 Depends: R (>= 3.6.0)
 License: GPL-3
 Additional_repositories: https://inla.r-inla-download.org/R/testing
@@ -36,7 +37,6 @@ Imports:
     excursions,
     expm,
     fMRIscrub,
-    ica,
     Matrix,
     matrixStats,
     methods,

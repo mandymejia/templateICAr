@@ -184,6 +184,21 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
       At += mu_at;
       A.row(t) = At;
     }
+    // Enforcing columnwise centering and variance = 1
+    for(int q = 0;q < Q;q++) {
+      double AcolMean = A.col(q).mean();
+      double ssAcol = 0.0;
+      for(int t=0;t<ntime;t++) {
+        A(t,q) = A(t,q) - AcolMean; // centering
+        ssAcol += std::pow(A(t,q),2.0); // finding the sums of squares
+      }
+      double varAcol = ssAcol / (ntime - 1.0); // calculating the variance
+      // Rcout << "Variance for column q = " << q << " = " << varAcol << std::endl;
+      double sdAcol = std::pow(varAcol, 0.5); // calculating the SD
+      for(int t=0;t<ntime;t++) {
+        A(t,q) = A(t,q) / sdAcol; // scaling
+      }
+    }
     // Update S
     AtA = A.transpose() * A;
     for(int v=0; v < V; v++) {
