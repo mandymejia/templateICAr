@@ -11,6 +11,8 @@ LL_SQUAREM(
   meshes,
   BOLD,
   C_diag,
+  H,
+  Hinv,
   s0_vec,
   D,
   Dinv_s0,
@@ -29,6 +31,10 @@ LL_SQUAREM(
 \item{BOLD}{Not used, but squarem will return error without}
 
 \item{C_diag}{Not used, but squarem will return error without}
+
+\item{H}{Not used, but squarem will return error without}
+
+\item{Hinv}{Not used, but squarem will return error without}
 
 \item{s0_vec}{Not used, but squarem will return error without}
 

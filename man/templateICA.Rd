@@ -14,7 +14,7 @@ templateICA(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
+  normA = TRUE,
   Q2 = NULL,
   Q2_max = NULL,
   brainstructures = c("left", "right"),

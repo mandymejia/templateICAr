@@ -136,7 +136,7 @@ templateICA <- function(
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE,
-  normA=FALSE,
+  normA=TRUE,
   Q2=NULL,
   Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
@@ -614,7 +614,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- templateICAr:::rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
   BOLD <- x$BOLD
   Q2_est <- x$Q2
   rm(x)
@@ -689,7 +689,10 @@ templateICA <- function(
       BOLD2 <- BOLD; rm(BOLD)
       theta0 <- list(A = BOLD_DR$A)
       C_diag <- rep(1, nT)
+      H <- Hinv <- NULL
     }
+
+    #HERE
 
     #2) Template ICA -----------------------------------------------------------
     if (verbose) {
@@ -698,11 +701,12 @@ templateICA <- function(
     }
     theta00 <- theta0
     theta00$nu0_sq <- err_var
-    resultEM <- EM_templateICA.independent(template$mean,
-                                           template$var,
+    resultEM <- EM_templateICA.independent(template_mean=template$mean,
+                                           template_var=template$var,
                                            BOLD=BOLD2,
                                            theta0=theta00,
                                            C_diag=C_diag,
+                                           H=H, Hinv=Hinv,
                                            maxiter=maxiter,
                                            usePar=usePar,
                                            epsilon=epsilon,
