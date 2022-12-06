@@ -836,11 +836,11 @@ var_sq_err <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
 estimate_nu_matrix <- function(var_FC, mean_FC){
   nL <- nrow(var_FC)
   nu_est <- matrix(NA, nL, nL)
-  for(q1 in 1:nL){
-    for(q2 in q1:nL){
+  for(q1 in 1:(nL-1)){
+    for(q2 in (q1+1):nL){
       if(is.na(var_FC[q1,q2])) next()
       #estimate nu by minimizing sq error between the empirical and theoretical IW variance
-      nu_opt <- optimize(f=var_sq_err, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
+      nu_opt <- optimize(f=var_sq_err, interval=c(nL+1,nL*100), p=nL, var_ij=var_FC[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
       nu_est[q1,q2] <- nu_opt$minimum
     }
   }

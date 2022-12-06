@@ -12,7 +12,7 @@ dual_reg(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE
+  normA = TRUE
 )
 }
 \arguments{
@@ -41,7 +41,7 @@ is equivalent to performing global signal regression. Default:
 \code{FALSE}.}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
-regression estimates? Default: \code{FALSE} (not recommended). Note that the
+regression estimates? Default: \code{TRUE}. Note that the
 product \eqn{A \times S} remains the same with either option.}
 }
 \value{
