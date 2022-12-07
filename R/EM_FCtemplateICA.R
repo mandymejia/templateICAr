@@ -242,12 +242,12 @@ EM_FCtemplateICA <- function(template_mean,
   # corA_post_mean <- sapply(corA_post, mean)
   # corA_post_SE <- sapply(corA_post, sd)
 
-  result <- list(S_post,
+  result <- list(S_samples = S_post,
                  subjICmean = S_post_mean,
                  subjICse = S_post_SE,
-                 A_post,
+                 A_samples = A_post,
                  A_post_mean_cor,
-                 corA_post,
+                 FC_samples = corA_post,
                  subjFCmean = corA_post_mean,
                  subjFCse = corA_post_SE,
                  theta_MLE=theta_new,

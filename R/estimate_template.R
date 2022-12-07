@@ -265,7 +265,7 @@ estimate_template <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE, normA=TRUE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
@@ -640,11 +640,12 @@ estimate_template <- function(
     var_FC_between <- var_FC_tot - var_FC_within
     var_FC_between[var_FC_between < 0] <- NA
 
-    nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
-    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
+    nu_est <- estimate_nu(var_FC_between, mean_FC)
 
-    template$FC <- list(nu = nu_est1,
-                        psi = mean_FC*(nu_est1 - nL - 1))
+    #nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
+    #nu_est1 <- min(nu_est[upper.tri(nu_est, diag=TRUE)], na.rm = TRUE)
+    template$FC <- list(nu = nu_est,
+                        psi = mean_FC*(nu_est - nL - 1))
   }
 
   # Format result ---------------------------------------------------
@@ -727,7 +728,7 @@ estimate_template.cifti <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE, normA=TRUE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
@@ -760,7 +761,7 @@ estimate_template.nifti <- function(
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE, normA=TRUE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
@@ -805,6 +806,20 @@ IW_var <- function(nu, p, xbar_ij, xbar_ii, xbar_jj){
   return(RHS_numer/RHS_denom)
 }
 
+#' Compute theoretical Inverse-Wishart variance of correlation matrix elements
+#'
+#' @param nu Inverse Wishart degrees of freedom parameter
+#' @param p Matrix dimension for IW distribution
+#' @param xbar_ij Empirical mean of covariance matrices at element (i,j)
+#'
+#' @return Theoretical IW variance for correlation element (i,j)
+#'
+IW_var_cor <- function(nu, p, xbar_ij){
+  RHS_numer <- (nu-p+1)*xbar_ij^2 + (nu-p-1)
+  RHS_denom <- (nu-p)*(nu-p-3)
+  return(RHS_numer/RHS_denom)
+}
+
 #' Compute the error between empirical and theoretical variance of covariance matrix elements
 #'
 #' @param nu Inverse Wishart degrees of freedom parameter
@@ -821,6 +836,29 @@ var_sq_err <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
   sq_diff <- (var_ij - var_ij_theo)^2
   return(sq_diff)
 }
+
+#' Compute the overall error between empirical and theoretical variance of CORRELATION matrix elements
+#'
+#' @param nu Inverse Wishart degrees of freedom parameter
+#' @param p Matrix dimension for IW distribution
+#' @param var Empirical between-subject variances of CORRELATION matrix (upper triangle)
+#' @param xbar Empirical mean of CORRELATION matrix (upper triangle)
+#' @param M Penalty to assign if theoretical variance is smaller than empirical variance
+#'
+#' @return Sum of squared difference between the empirical and theoretical IW variance of CORRELATION matrix,
+#' but with constraint that theoretical variances must not be smaller than empirical variances
+#'
+var_sq_err_constrained <- function(nu, p, var, xbar, M=10000){
+  K <- length(var)
+  var_theo <- rep(NA, K)
+  for(k in 1:K){
+    var_theo[k] <- IW_var_cor(nu, p, xbar[k])
+  }
+  penalty <- (var_theo - var)^2
+  penalty[var_theo < var] <- M  #constrain so that var_theo >= var
+  return(sum(penalty))
+}
+
 
 
 
@@ -846,5 +884,36 @@ estimate_nu_matrix <- function(var_FC, mean_FC){
   }
   return(nu_est)
 }
+
+
+#' Universally estimate IW dof parameter nu based on method of moments, so
+#' that no empirical variance is under-estimated
+#'
+#' @param var_FC Empirical between-subject variance of covariance matrices (QxQ)
+#' @param mean_FC Empirical mean of covariance matrices (QxQ)
+#'
+#' @importFrom stats optimize
+#'
+#' @return estimate for nu
+#'
+estimate_nu <- function(var_FC, mean_FC){
+
+  var_FC_UT <- var_FC[upper.tri(var_FC)]
+  mean_FC_UT <- mean_FC[upper.tri(mean_FC)]
+
+  #first, determine the appropriate interval
+  interval_LB <- nL+1
+  interval_UB <- nL*100
+  nu_vals <- seq(interval_LB, interval_UB)
+  penalty <- sapply(nu_vals, var_sq_err_constrained, p=nL, var=var_FC_UT, xbar = mean_FC_UT)
+  penalty[penalty >= 10000] <- NA
+  interval_UB <- nu_vals[max(which(!is.na(penalty)))] + 1
+  interval_LB <- nu_vals[min(which(!is.na(penalty)))] - 1
+
+  nu_opt <- optimize(f=var_sq_err_constrained, interval=c(interval_LB,interval_UB), p=nL, var=var_FC_UT, xbar = mean_FC_UT)
+  return(nu_opt$minimum)
+
+}
+
 
 
