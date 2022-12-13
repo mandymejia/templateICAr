@@ -870,17 +870,17 @@ templateICA <- function(
 
   } else if (FORMAT == "NIFTI") {
     resultEM$subjICmean <- RNifti::asNifti(
-      unmask_subcortex(resultEM$subjICmean, mask, fill=NA)
+      fMRItools::unmask_3D(resultEM$subjICmean, mask, fill=NA)
     )
     resultEM$subjICse <- RNifti::asNifti(
-      unmask_subcortex(resultEM$subjICse, mask, fill=NA)
+      fMRItools::unmask_3D(resultEM$subjICse, mask, fill=NA)
     )
     if (do_spatial) {
       resultEM$result_tICA$subjICmean <- RNifti::asNifti(
-        unmask_subcortex(resultEM$result_tICA$subjICmean, mask, fill=NA)
+        fMRItools::unmask_3D(resultEM$result_tICA$subjICmean, mask, fill=NA)
       )
       resultEM$result_tICA$subjICse <- RNifti::asNifti(
-        unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=NA)
+        fMRItools::unmask_3D(resultEM$result_tICA$subjICse, mask, fill=NA)
       )
     }
     resultEM$mask_nii <- mask

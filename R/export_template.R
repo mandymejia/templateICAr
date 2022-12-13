@@ -32,7 +32,7 @@ struct_template <- function(template, FORMAT, dat_struct, params){
     )
   } else if (FORMAT == "NIFTI") {
     template <- RNifti::asNifti(
-      unmask_subcortex(template, drop(dat_struct), fill=NA),
+      fMRItools::unmask_3D(template, drop(dat_struct), fill=NA),
       reference=dat_struct
     )
   }

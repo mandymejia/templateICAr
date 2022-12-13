@@ -177,20 +177,20 @@ activations <- function(
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
     result$active <- ciftiTools::newdata_xifti(xii1, as.numeric(result$active))
-    
-    # ----
-    #result$active <- transform_xifti(result$active, function(q){ifelse(is.na(q), 0, q)})
-    #result$active <- ciftiTools::convert_xifti(result$active, "dlabel", values=c(0, 1), colors=c("red"))
-    # [TO DO]: after ciftiTools update, use this instead
-    result$active <- ciftiTools::convert_xifti(result$active, "dlabel", values=c(NaN, 0, 1), colors=c("grey", "white", "red"), add_white=FALSE)
-    # ----
+    result$active <- ciftiTools::move_from_mwall(result$active, -1)
+    result$active <- ciftiTools::convert_xifti(
+      result$active, "dlabel",
+      values=c(-1, 0, 1),
+      colors=c("grey", "white", "red"),
+      add_white=FALSE
+    )
 
     for (ii in seq(ncol(result$active))) {
-      rownames(result$active$meta$cifti$labels[[ii]]) <- c("NA", "Inactive", "Active") # add "NA" to first
+      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Medial Wall", "Inactive", "Active") # add "NA" to first
     }
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
-    result$active <- unmask_subcortex(result$active, mask_nii, fill=NA)
+    result$active <- fMRItools::unmask_3D(result$active, mask_nii, fill=NA)
     class(result) <- "tICA_act.nifti"
   } else {
     class(result) <- "tICA_act"
