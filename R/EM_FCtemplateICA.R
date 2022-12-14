@@ -101,7 +101,7 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     system.time(post_sums <-
       Gibbs_AS_posteriorCPP(
-        nsamp = 1000,
+        nsamp = 10000,
         nburn = 50,
         template_mean = template_mean,
         template_var = template_var,
@@ -202,7 +202,7 @@ EM_FCtemplateICA <- function(template_mean,
 
   post_AS <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 1000,
+      nsamp = 10000,
       nburn = 50,
       template_mean = template_mean,
       template_var = template_var,

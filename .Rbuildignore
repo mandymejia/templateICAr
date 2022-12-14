@@ -19,3 +19,4 @@
 ^tests/testWithData$
 ^codecov\.yml$
 ^R/plot_FC\.R$
+^R/effective_size\.R$

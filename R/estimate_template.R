@@ -633,14 +633,19 @@ estimate_template <- function(
   if(FC){
 
     FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
-    mean_FC <- var_FC_tot <- var_FC_within <- NULL
-    mean_FC <- (apply(FC1, c(2, 3), mean, na.rm=TRUE) + apply(FC2, c(2, 3), mean, na.rm=TRUE))/2
-    var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
-    var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
-    var_FC_between <- var_FC_tot - var_FC_within
-    var_FC_between[var_FC_between < 0] <- NA
+    FCavg <- (FC1 + FC2)/2
+    mean_FC <- apply(FCavg, c(2,3), mean, na.rm=TRUE)
+    var_FC_between <- apply(FCavg, c(2,3), var, na.rm=TRUE) #this may be an overestimate but that's ok
+    #mean_FC <- var_FC_tot <- var_FC_within <- NULL
+    #mean_FC <- (apply(FC1, c(2, 3), mean, na.rm=TRUE) + apply(FC2, c(2, 3), mean, na.rm=TRUE))/2
+    #var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+    #var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
+    #var_FC_between <- var_FC_tot - var_FC_within
+    #var_FC_between[var_FC_between < 0] <- NA
+    #var_FC_between <- var_FC_tot #to avoid under-estimation of between-subject variance
 
     nu_est <- estimate_nu(var_FC_between, mean_FC)
+    nu_est <- max(nL+2, nu_est*.75)
 
     #nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
     #nu_est1 <- min(nu_est[upper.tri(nu_est, diag=TRUE)], na.rm = TRUE)
@@ -898,6 +903,7 @@ estimate_nu_matrix <- function(var_FC, mean_FC){
 #'
 estimate_nu <- function(var_FC, mean_FC){
 
+  nL <- nrow(var_FC)
   var_FC_UT <- var_FC[upper.tri(var_FC)]
   mean_FC_UT <- mean_FC[upper.tri(mean_FC)]
 
