@@ -13,6 +13,8 @@
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.01.
+#' @param Gibbs_nsamp the number of Gibbs posterior samples of A and S to output after burn-in
+#' @param Gibbs_nburn the number of Gibbs posterior samples of A and S to throw away before saving
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
@@ -40,6 +42,8 @@ EM_FCtemplateICA <- function(template_mean,
                              AS_0,
                              maxiter=100,
                              epsilon=0.01,
+                             Gibbs_nsamp=10000,
+                             Gibbs_nburn=50,
                              verbose){
 
   #get initial values for A and S with dual regression - DONE
@@ -101,8 +105,8 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
     system.time(post_sums <-
       Gibbs_AS_posteriorCPP(
-        nsamp = 10000,
-        nburn = 50,
+        nsamp = Gibbs_nsamp,
+        nburn = Gibbs_nburn,
         template_mean = template_mean,
         template_var = template_var,
         S = S,
@@ -114,23 +118,6 @@ EM_FCtemplateICA <- function(template_mean,
         return_samp = FALSE
       ))
     S = post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
-
-    # post_sums <-
-    #   Gibbs_AS_posterior(
-    #     nsamp = 100,
-    #     nburn = 0,
-    #     template_mean = template_mean,
-    #     template_var = template_var,
-    #     S = S,
-    #     G = theta_old[[3]],
-    #     tau_v = theta_old[[1]],
-    #     Y = BOLD,
-    #     alpha = theta_old[[2]],
-    #     final = F
-    #   )
-    # S = post_sums$S_post #update S because it is used to start the Gibbs sampler
-
-    #plot_FC(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
 
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
@@ -150,14 +137,6 @@ EM_FCtemplateICA <- function(template_mean,
         sigma2_alpha,
         TRUE
       )
-    # theta_new <- UpdateTheta_FCtemplateICA(
-    #     template_mean,
-    #     template_var,
-    #     template_FC,
-    #     prior_params,
-    #     BOLD,
-    #     post_sums
-    #   )
 
     if(verbose) print(Sys.time() - t00)
 
@@ -202,8 +181,8 @@ EM_FCtemplateICA <- function(template_mean,
 
   post_AS <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 10000,
-      nburn = 50,
+      nsamp = Gibbs_nsamp,
+      nburn = Gibbs_nburn,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
@@ -216,11 +195,11 @@ EM_FCtemplateICA <- function(template_mean,
     )
 
 
-  #[TO DO]: Fix indexing issue where first iteration is zero (only affects burn-in)
-  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
+  #[TO DO]: Fix indexing issue where first iteration is zero
+  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, Gibbs_nsamp))
   S_post_mean <- apply(S_post, c(1,2), mean)
   S_post_SE <- apply(S_post, c(1,2), sd)
-  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, Gibbs_nsamp))
   A_post_mean <- apply(A_post, c(1,2), mean)
   A_post_mean_cor <- cor(A_post_mean)
 

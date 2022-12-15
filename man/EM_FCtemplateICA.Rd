@@ -13,6 +13,8 @@ EM_FCtemplateICA(
   AS_0,
   maxiter = 100,
   epsilon = 0.01,
+  Gibbs_nsamp = 10000,
+  Gibbs_nburn = 50,
   verbose
 )
 }
@@ -34,6 +36,10 @@ and S (\eqn{QxV} matrix of spatial ICs)}
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between iterations. Default: 0.01.}
+
+\item{Gibbs_nsamp}{the number of Gibbs posterior samples of A and S to output after burn-in}
+
+\item{Gibbs_nburn}{the number of Gibbs posterior samples of A and S to throw away before saving}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
