@@ -51,7 +51,7 @@ You can install the development version of `templateICAr` from Github with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("templateICAr")
+devtools::install_github("mandymejia/templateICAr")
 ```
 
 

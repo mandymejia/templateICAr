@@ -51,7 +51,7 @@ with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("templateICAr")
+devtools::install_github("mandymejia/templateICAr")
 ```
 
 ## Important Notes on Dependencies:
