@@ -121,7 +121,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @import fMRItools
+#' @importFrom fMRItools infer_format_ifti unmask_mat unmask_vol dim_reduce
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -221,7 +221,7 @@ templateICA <- function(
 
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
-  format <- fMRItools:::infer_format_ifti(BOLD)[1]
+  format <- fMRItools::infer_format_ifti(BOLD)[1]
   FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
@@ -828,8 +828,8 @@ templateICA <- function(
 
   # Format output.
   if (use_mask2) {
-    resultEM$subjICmean <- fMRItools:::unmask_mat(resultEM$subjICmean, mask2)
-    resultEM$subjICse <- fMRItools:::unmask_mat(resultEM$subjICse, mask2)
+    resultEM$subjICmean <- fMRItools::unmask_mat(resultEM$subjICmean, mask2)
+    resultEM$subjICse <- fMRItools::unmask_mat(resultEM$subjICse, mask2)
   }
 
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
@@ -846,11 +846,11 @@ templateICA <- function(
     if (any(!mask3)) {
       resultEM$subjICmean <- ciftiTools::newdata_xifti(
         xiiL, 
-        fMRItools:::unmask_mat(resultEM$subjICmean, mask3),
+        fMRItools::unmask_mat(resultEM$subjICmean, mask3),
       )
       resultEM$subjICse <- ciftiTools::newdata_xifti(
         xiiL, 
-        fMRItools:::unmask_mat(resultEM$subjICse, mask3),
+        fMRItools::unmask_mat(resultEM$subjICse, mask3),
       )
     } else {
       resultEM$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICmean)
@@ -870,17 +870,17 @@ templateICA <- function(
 
   } else if (FORMAT == "NIFTI") {
     resultEM$subjICmean <- RNifti::asNifti(
-      fMRItools::unmask_3D(resultEM$subjICmean, mask, fill=NA)
+      fMRItools::unmask_vol(resultEM$subjICmean, mask, fill=NA)
     )
     resultEM$subjICse <- RNifti::asNifti(
-      fMRItools::unmask_3D(resultEM$subjICse, mask, fill=NA)
+      fMRItools::unmask_vol(resultEM$subjICse, mask, fill=NA)
     )
     if (do_spatial) {
       resultEM$result_tICA$subjICmean <- RNifti::asNifti(
-        fMRItools::unmask_3D(resultEM$result_tICA$subjICmean, mask, fill=NA)
+        fMRItools::unmask_vol(resultEM$result_tICA$subjICmean, mask, fill=NA)
       )
       resultEM$result_tICA$subjICse <- RNifti::asNifti(
-        fMRItools::unmask_3D(resultEM$result_tICA$subjICse, mask, fill=NA)
+        fMRItools::unmask_vol(resultEM$result_tICA$subjICse, mask, fill=NA)
       )
     }
     resultEM$mask_nii <- mask

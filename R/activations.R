@@ -172,7 +172,7 @@ activations <- function(
 
   # Format result. -------------------------------------------------------------
   # Unmask data.
-  if (use_mask) { result$active <- fMRItools:::unmask_mat(result$active, mask) }
+  if (use_mask) { result$active <- fMRItools::unmask_mat(result$active, mask) }
 
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
@@ -190,7 +190,7 @@ activations <- function(
     }
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
-    result$active <- fMRItools::unmask_3D(result$active, mask_nii, fill=NA)
+    result$active <- fMRItools::unmask_vol(result$active, mask_nii, fill=NA)
     class(result) <- "tICA_act.nifti"
   } else {
     class(result) <- "tICA_act"

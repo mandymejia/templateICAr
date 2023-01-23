@@ -43,7 +43,7 @@
 #'  surface and volume arguments to \code{\link[ciftiTools]{smooth_cifti}}.
 #'  These arguments only apply if \code{smooth}.
 #'
-#' @import fMRItools
+#' @importFrom fMRItools match_input sign_flip
 #' @importFrom ica icaimax
 #'
 #' @return \code{out_fname} if a file was written, or the GICA as a \code{"xifti"} object
@@ -143,7 +143,7 @@ groupICA.cifti <- function(
     )
   }
 
-  brainstructures <- fMRItools:::match_input(
+  brainstructures <- fMRItools::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
@@ -253,7 +253,7 @@ groupICA.cifti <- function(
   if (verbose) { cat("Performing group-level ICA.\n") }
   GICA <- ica::icaimax(bigY, nc=num_ICs, center=TRUE)
   rm(bigY)
-  GICA <- fMRItools:::sign_flip(GICA)
+  GICA <- fMRItools::sign_flip(GICA)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # # Repeat GICA. Does not work with icaimax because there is no change, but works (badly) with fastica

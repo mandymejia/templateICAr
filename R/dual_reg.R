@@ -14,7 +14,7 @@
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #'
-#' @import fMRItools
+#' @importFrom fMRItools colCenter
 #' @importFrom matrixStats colVars
 #'
 #' @return A list containing
@@ -77,7 +77,7 @@ dual_reg <- function(
 
   # Center each group IC across space. (Used to be a function argument.)
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- fMRItools:::colCenter(GICA) }
+  if (center_Gcols) { GICA <- fMRItools::colCenter(GICA) }
 
   # Estimate A (IC timeseries).
   # We need to center `BOLD` across space because the linear model has no intercept.
@@ -85,7 +85,7 @@ dual_reg <- function(
 
   # Center each subject IC timecourse across time.
   # (Redundant. Since BOLD is column-centered, A is already column-centered.)
-  # A <- fMRItools:::colCenter(A)
+  # A <- fMRItools::colCenter(A)
 
   # Normalize each subject IC timecourse if `normA`.
   if (normA) { A <- scale(A) }

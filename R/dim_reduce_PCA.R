@@ -16,7 +16,7 @@
 #'  save on memory. Note that the directions will be with respect to \code{X},
 #'  not its covariance matrix.
 #' 
-#' @import fMRItools
+#' @importFrom fMRItools colCenter
 #' @importFrom pesel pesel
 #' @export
 #' 
@@ -28,7 +28,7 @@ PCA <- function(X, center=TRUE, Q=NULL, Q_max=100, nV=0) {
   if(ntime > nvox) warning('More time points than voxels. Are you sure?')
 
   if (center) {
-    X <- fMRItools:::colCenter(X)
+    X <- fMRItools::colCenter(X)
   } else {
     TOL <- 1e-8
     if (max(abs(colMeans(X))) > TOL) stop('Columns of X must be centered')

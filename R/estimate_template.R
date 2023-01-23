@@ -20,6 +20,7 @@
 #'  non-negative variance estimate. Values in \code{varUB} will need to be
 #'  clamped above zero before using in \code{templateICA}.
 #'
+#' @importFrom fMRItools var_decomp
 #' @export
 estimate_template_from_DR <- function(
   DR, LV=NULL){
@@ -254,7 +255,7 @@ estimate_template_FC <- function(FC0){
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
-#' @import fMRItools
+#' @importFrom fMRItools is_1 is_integer is_posNum colCenter unmask_mat infer_format_ifti_vec
 #' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
@@ -316,20 +317,20 @@ estimate_template <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  stopifnot(fMRItools:::is_1(scale_sm_FWHM, "numeric"))
+  stopifnot(fMRItools::is_1(scale_sm_FWHM, "numeric"))
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(fMRItools:::is_integer(detrend_DCT, nneg=TRUE))
-  stopifnot(fMRItools:::is_1(center_Bcols, "logical"))
-  stopifnot(fMRItools:::is_1(normA, "logical"))
+  stopifnot(fMRItools::is_integer(detrend_DCT, nneg=TRUE))
+  stopifnot(fMRItools::is_1(center_Bcols, "logical"))
+  stopifnot(fMRItools::is_1(normA, "logical"))
   if (!is.null(Q2)) { # Q2_max checked later.
-    stopifnot(fMRItools:::is_integer(Q2) && (Q2 >= 0))
+    stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
-  stopifnot(fMRItools:::is_1(FC, "logical"))
-  stopifnot(fMRItools:::is_1(varTol, "numeric"))
+  stopifnot(fMRItools::is_1(FC, "logical"))
+  stopifnot(fMRItools::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
-  stopifnot(fMRItools:::is_posNum(maskTol))
-  stopifnot(fMRItools:::is_posNum(missingTol))
-  stopifnot(fMRItools:::is_1(verbose, "logical"))
+  stopifnot(fMRItools::is_posNum(maskTol))
+  stopifnot(fMRItools::is_posNum(missingTol))
+  stopifnot(fMRItools::is_1(verbose, "logical"))
   real_retest <- !is.null(BOLD2)
 
   # `keep_DR`
@@ -530,7 +531,7 @@ estimate_template <- function(
 
   # Center `GICA` columns.
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- fMRItools:::colCenter(GICA) }
+  if (center_Gcols) { GICA <- fMRItools::colCenter(GICA) }
 
   # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }
@@ -700,8 +701,8 @@ estimate_template <- function(
 
   # Unmask the data matrices.
   if (use_mask) {
-    template <- lapply(template, fMRItools:::unmask_mat, mask=maskAll)
-    var_decomp <- lapply(var_decomp, fMRItools:::unmask_mat, mask=maskAll)
+    template <- lapply(template, fMRItools::unmask_mat, mask=maskAll)
+    var_decomp <- lapply(var_decomp, fMRItools::unmask_mat, mask=maskAll)
   }
 
   # Estimate FC template
