@@ -61,15 +61,20 @@ To analyze or visualize CIFTI-format data, `templateICAr` depends on the
 Workbench. It can be installed from the [HCP
 website](https://www.humanconnectome.org/software/get-connectome-workbench).
 
-For fitting *spatial* template ICA model, INLA is required, along with
-an INLA-PARDISO license. INLA is NOT required for running standard
-template ICA. Due to a CRAN policy, INLA cannot be installed
-automatically. You can obtain it by running
+For fitting the template ICA model with surface-based priors
+(`spatial_model=TRUE` in `templateICA()`), INLA is required, and an
+INLA-PARDISO license is highly recommended. INLA is NOT required for
+running standard template ICA. Due to a CRAN policy, INLA cannot be
+installed automatically. You can obtain it by running
 `install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)`.
-Binaries for alternative Linux builds can be added with the command
-`inla.binary.install()`. To obtain an INLA-PARDISO license, run
-`inla.pardiso()` in R after running `library(INLA)`. Once you obtain a
-license, point to it using
+Alternatively, `dep=FALSE` can be used along with manual installation of
+dependencies as necessary to avoid installing all of the many INLA
+dependencies, most of which are not actually required. Binaries for
+alternative Linux builds can be added with the command
+`inla.binary.install()`.
+
+To obtain an INLA-PARDISO license, run `inla.pardiso()` in R after
+running `library(INLA)`. Once you obtain a license, point to it using
 `INLA::inla.setOption(pardiso.license = "pardiso.lic")` followed by
 `INLA::inla.pardiso.check()` to ensure that PARDISO is successfully
 installed and running.
