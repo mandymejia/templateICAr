@@ -51,7 +51,7 @@ tm_rds <- estimate_template(
   keep_DR=TRUE, FC=TRUE
 )
 testthat::expect_equal(
-  lapply(tm_cii$template[seq(3)], fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+  lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
   tm_gii$template[seq(3)]
 )
 testthat::expect_equal(tm_cii$template, tm_rds$template)
@@ -73,7 +73,7 @@ tm_gii <- estimate_template(
   usePar=TRUE, FC=TRUE, varTol=10000
 )
 testthat::expect_equal(
-  lapply(tm_cii$template[seq(3)], fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+  lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
   tm_gii$template[seq(3)]
 )
 tm_gii <- estimate_template(
@@ -89,10 +89,10 @@ tm_rds <- estimate_template(
 )
 testthat::expect_equal(
   tm_gii$template,
-  lapply(tm_rds$template, fMRItools:::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+  lapply(tm_rds$template, fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
 )
 
-rgl.close(); rgl.close(); rgl.close(); rgl.close()
+close3d(); close3d(); close3d(); close3d()
 
 # `export_template` and `templateICA`: check for same result w/ different file types -----------------
 tm_cii <- estimate_template(
@@ -110,9 +110,9 @@ tm_rds <- estimate_template(
 
 # `export_template`
 out_fname=export_template(tm_cii, tempfile())
-tm_cii2 <- list(read_cifti(out_fname[1]), read_cifti(out_fname[2]), readRDS(out_fname[3]), readRDS(out_fname[4]))
+tm_cii2 <- list(read_cifti(out_fname[1]), read_cifti(out_fname[2]), readRDS(out_fname[3]))
 out_fname=export_template(tm_gii, tempfile())
-tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[3]), readRDS(out_fname[4]))
+tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[3]))
 out_fname=export_template(tm_rds, tempfile())
 tm_rds2 <- lapply(out_fname, readRDS)
 
@@ -137,19 +137,19 @@ tm <- estimate_template(
 )
 tm
 plot(tm)
-rgl.close(); rgl.close()
+close3d(); close3d()
 
 cii <- read_cifti(cii_fnames[5])
 cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
 tICA <- templateICA(cii, tm, scale=FALSE, maxiter=7, Q2=0)
 plot(tICA)
-rgl.close()
+close3d()
 actICA <- activations(tICA)
 actICA_fname <- paste0(tempfile(), ".dlabel.nii")
 write_cifti(actICA, actICA_fname)
 actICA2 <- read_cifti(actICA_fname)
 plot(actICA); plot(actICA2)
-rgl.close(); rgl.close()
+close3d(); close3d()
 
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
@@ -158,7 +158,7 @@ tm <- estimate_template(
 )
 tm
 plot(tm, "var")
-rgl.close()
+close3d()
 
 tm2 <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
@@ -182,7 +182,7 @@ tm <- estimate_template(
 tm
 rm(cii)
 plot(tm, idx=3)
-rgl.close(); rgl.close()
+close3d(); close3d()
 cii <- read_cifti(cii_fnames[5], brainstructures="left")
 cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
 tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
@@ -208,7 +208,7 @@ rm(tm2)
 tICA <- templateICA(cii_fnames[2], tm, brainstructures="left")
 tICA
 plot(tICA)
-rgl.close()
+close3d()
 # plot(activations(tICA))
 
 tICA <- templateICA(
@@ -217,14 +217,14 @@ tICA <- templateICA(
 )
 tICA
 plot(tICA)
-rgl.close()
+close3d()
 # temp:
 tICA$subjICmean$data$cortex_left[is.na(tICA$subjICmean$data$cortex_left)] <- 0
 tICA$subjICse$data$cortex_left[is.na(tICA$subjICse$data$cortex_left)] <- 5
 tICA$mask <- rep(TRUE, length(tICA$mask))
 # -----
 plot(activations(tICA))
-rgl.close()
+close3d()
 
 # NIFTI ------------------------------------------------------------------------
 
