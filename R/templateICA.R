@@ -121,7 +121,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti unmask_mat unmask_vol dim_reduce
+#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -870,17 +870,17 @@ templateICA <- function(
 
   } else if (FORMAT == "NIFTI") {
     resultEM$subjICmean <- RNifti::asNifti(
-      fMRItools::unmask_vol(resultEM$subjICmean, mask, fill=NA)
+      fMRItools::unvec_vol(resultEM$subjICmean, mask, fill=NA)
     )
     resultEM$subjICse <- RNifti::asNifti(
-      fMRItools::unmask_vol(resultEM$subjICse, mask, fill=NA)
+      fMRItools::unvec_vol(resultEM$subjICse, mask, fill=NA)
     )
     if (do_spatial) {
       resultEM$result_tICA$subjICmean <- RNifti::asNifti(
-        fMRItools::unmask_vol(resultEM$result_tICA$subjICmean, mask, fill=NA)
+        fMRItools::unvec_vol(resultEM$result_tICA$subjICmean, mask, fill=NA)
       )
       resultEM$result_tICA$subjICse <- RNifti::asNifti(
-        fMRItools::unmask_vol(resultEM$result_tICA$subjICse, mask, fill=NA)
+        fMRItools::unvec_vol(resultEM$result_tICA$subjICse, mask, fill=NA)
       )
     }
     resultEM$mask_nii <- mask

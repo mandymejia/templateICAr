@@ -190,7 +190,7 @@ activations <- function(
     }
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
-    result$active <- fMRItools::unmask_vol(result$active, mask_nii, fill=NA)
+    result$active <- fMRItools::unvec_vol(result$active, mask_nii, fill=NA)
     class(result) <- "tICA_act.nifti"
   } else {
     class(result) <- "tICA_act"
