@@ -6,7 +6,7 @@
 #' @param u Activation threshold. Default: \code{0}.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
-#' @param method_p If the input is a \code{"tICA"} model object, the type of
+#' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
 #'  multiple comparisons correction to use for p-values, or \code{NULL} for no
 #'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
 #'  Hochberg, i.e. the false discovery rate).
@@ -40,8 +40,8 @@ activations <- function(
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
-  is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
-  is_stICA <- inherits(tICA, "stICA") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
+  is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
+  is_stICA <- inherits(tICA, "stICA.matrix") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
   if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
 
   FORMAT <- class(tICA)[grepl("tICA", class(tICA))]
@@ -50,11 +50,11 @@ activations <- function(
     tICA.cifti = "CIFTI",
     tICA.gifti = "GIFTI",
     tICA.nifti = "NIFTI",
-    tICA = "DATA",
+    tICA.matrix = "DATA",
     stICA.cifti = "CIFTI",
     stICA.gifti = "GIFTI",
     stICA.nifti = "NIFTI",
-    stICA = "DATA"
+    stICA.matrix = "DATA"
   )
 
   if (FORMAT == "CIFTI") {
@@ -193,7 +193,7 @@ activations <- function(
     result$active <- fMRItools::unvec_vol(result$active, mask_nii, fill=NA)
     class(result) <- "tICA_act.nifti"
   } else {
-    class(result) <- "tICA_act"
+    class(result) <- "tICA_act.matrix"
   }
 
   result

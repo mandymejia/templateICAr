@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks and Connectivity with ICA and Empirical Priors
-Version: 0.6.0
+Version: 0.6.1
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -41,7 +41,7 @@ Imports:
     abind,
     excursions,
     expm,
-    fMRItools (>= 0.2.0),
+    fMRItools (>= 0.2.2),
     ica,
     Matrix,
     matrixStats,

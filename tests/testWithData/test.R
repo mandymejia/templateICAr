@@ -24,7 +24,7 @@ cii_fnames <- c(
 )
 giiL_fnames <- gsub("dtseries.nii", "sep.L.func.gii", cii_fnames, fixed=TRUE)
 giiL_ROI_fnames <- gsub("dtseries.nii", "sep.ROI_L.func.gii", cii_fnames, fixed=TRUE)
-nii_fnames <- gsub("dtseries.nii", "nii.gz", cii_fnames, fixed=TRUE)
+nii_fnames <- gsub("_Atlas.dtseries.nii", ".nii.gz", cii_fnames, fixed=TRUE)
 rds_fnames <-gsub("dtseries.nii", "rds", cii_fnames, fixed=TRUE)
 
 GICA_fname <- c(
@@ -129,6 +129,7 @@ tICA_cii; tICA_gii; tICA_rds
 testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
 testthat::expect_equal(tICA_gii$A, tICA_rds$A)
 actICA_rds <- activations(tICA_rds)
+actICA_cii <- activations(tICA_cii)
 plot(activations(tICA_cii)); plot(activations(tICA_gii))
 
 # CIFTI ------------------------------------------------------------------------
@@ -146,11 +147,14 @@ plot(tICA)
 close3d()
 actICA <- activations(tICA)
 actICA_fname <- paste0(tempfile(), ".dlabel.nii")
-write_cifti(actICA, actICA_fname)
+# [TO DO]: ciftiTools 12.0. get rid of below.
+actICA$active$data$cortex_left[50,] <- 0
+write_cifti(actICA$active, actICA_fname)
 actICA2 <- read_cifti(actICA_fname)
 plot(actICA); plot(actICA2)
 close3d(); close3d()
 
+# LEFT OFF HERE.
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
   GICA=GICA_fname["cii"], scale="local", detrend_DCT=3,
@@ -190,14 +194,19 @@ tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="right")
 cii0 <- lapply(cii, as.matrix)
 cii0f <- paste0(c(tempfile(), tempfile(), tempfile(), tempfile()), ".rds")
-tm <- estimate_template(cii0f, GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="right")))
+for (ii in seq(4)) { saveRDS(cii0[[ii]], cii0f[ii]) }
+tm <- estimate_template(
+  cii0f,
+  GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="right")),
+  scale="global", inds=c(1,4,7,11)
+)
 
 
 # CIFTI pseudo retest vs data true retest: should get same results.
 tm2 <- estimate_template(
   lapply(cii, function(x){as.matrix(x)[,seq(600)]}),
   lapply(cii, function(x){as.matrix(x)[,seq(601,1200)]}),
-  GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="left")),
+  GICA=as.matrix(read_cifti(GICA_fname["cii"], brainstructures="right")),
   scale="global", inds=c(1,4,7,11),
 )
 stopifnot(
@@ -205,30 +214,9 @@ stopifnot(
 )
 rm(tm2)
 
-tICA <- templateICA(cii_fnames[2], tm, brainstructures="left")
-tICA
-plot(tICA)
-close3d()
-# plot(activations(tICA))
-
-tICA <- templateICA(
-  cii_fnames[3], tm, brainstructures="left",
-  tvar_method="unbiased", Q2=0, reduce_dim=FALSE, usePar=TRUE
-)
-tICA
-plot(tICA)
-close3d()
-# temp:
-tICA$subjICmean$data$cortex_left[is.na(tICA$subjICmean$data$cortex_left)] <- 0
-tICA$subjICse$data$cortex_left[is.na(tICA$subjICse$data$cortex_left)] <- 5
-tICA$mask <- rep(TRUE, length(tICA$mask))
-# -----
-plot(activations(tICA))
-close3d()
 
 # NIFTI ------------------------------------------------------------------------
-
-rm(cgIC, xii1)
+rm(xii1)
 
 # Load NIFTI group IC
 ngIC_fname <- file.path(data_dir, "melodic_IC_sum.nii.gz")

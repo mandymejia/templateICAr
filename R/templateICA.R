@@ -233,7 +233,7 @@ templateICA <- function(
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (any(missing_BOLD)) {
       warning(
-        'There are ', missing_BOLD, 
+        'There are ', missing_BOLD,
         ' scans in `BOLD` that do not exist. ',
         'These scans will be excluded from template estimation.'
       )
@@ -405,8 +405,12 @@ templateICA <- function(
     }
     nI <- dim(mask)
     # Check its compatibility with the template
-    stopifnot(length(dim(template$dat_struct)) == length(nI))
-    stopifnot(all(dim(template$dat_struct) == nI))
+    tds_dim <- dim(template$dat_struct) # has an empty last dim
+    if (length(tds_dim) == length(nI) + 1 && tds_dim[length(tds_dim)] == 1) {
+      tds_dim <- tds_dim[seq(length(tds_dim)-1)]
+    }
+    stopifnot(length(tds_dim) == length(nI))
+    stopifnot(all(tds_dim == nI))
   } else {
     nI <- nrow(template$template$mean)
   }
@@ -845,11 +849,11 @@ templateICA <- function(
     # [TO DO]: fMRItools update: simplify this
     if (any(!mask3)) {
       resultEM$subjICmean <- ciftiTools::newdata_xifti(
-        xiiL, 
+        xiiL,
         fMRItools::unmask_mat(resultEM$subjICmean, mask3),
       )
       resultEM$subjICse <- ciftiTools::newdata_xifti(
-        xiiL, 
+        xiiL,
         fMRItools::unmask_mat(resultEM$subjICse, mask3),
       )
     } else {

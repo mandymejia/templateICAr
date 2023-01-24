@@ -27,9 +27,9 @@ summary.tICA.cifti <- function(object, ...) {
 summary.tICA.nifti <- function(object, ...) {
   x <- c(
     list(
-      mask_dims=dim(object$mask),
-      nV=nrow(object$subjICmean), 
-      nL=ncol(object$subjICmean)
+      mask_dims=dim(object$mask_nii),
+      nV=nrow(object$template_mean),
+      nL=ncol(object$template_mean)
     ),
     object$params
   )
@@ -305,7 +305,7 @@ plot.tICA.cifti <- function(x, stat=c("mean", "se", "both"), ...) {
 #' @return The plot
 #' @export
 #' @method plot tICA.nifti
-plot.tICA.nifti <- function(x, stat=c("mean", "se"), 
+plot.tICA.nifti <- function(x, stat=c("mean", "se"),
   plane=c("axial", "sagittal", "coronal"), n_slices=9, slices=NULL,
   ...) {
   stopifnot(inherits(x, "tICA.nifti"))

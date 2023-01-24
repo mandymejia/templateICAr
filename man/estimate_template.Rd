@@ -196,7 +196,8 @@ the DR estimates and only return the templates. If \code{TRUE}, the DR
 estimates are returned too. If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
-\item{FC}{Include the functional connectivity template? Default: \code{FALSE}}
+\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
+(not fully supported yet.)}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.

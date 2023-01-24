@@ -1,3 +1,22 @@
+# 6.0
+
+* activations: gray medial wall
+* prep for adding FC template
+
+# 5.0
+
+?
+
+# 4.0
+
+`estimate_template`
+* add custom smoothing
+* add parallel over subjects
+
+# 3.0
+
+Fixes and cleaning up
+
 # 2.0
 
 Data pre-processing, for both template estimation and TemplateICA

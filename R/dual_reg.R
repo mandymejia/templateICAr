@@ -379,8 +379,8 @@ dual_reg2 <- function(
       out$test$S <- unmask(out$test$S, mask)
       out$retest$S <- unmask(out$retest$S, mask)
     }
-    cat(" Done!\n")
-    if(verbose) { print(Sys.time() - extime) }
+    if (verbose) { cat(" Done!\n") }
+    if (verbose) { print(Sys.time() - extime) }
     return(out)
   }
 
@@ -434,7 +434,7 @@ dual_reg2 <- function(
     out$retest$S <- unmask(out$retest$S, mask)
   }
 
-  cat(" Done!\n")
-  if(verbose) { print(Sys.time() - extime) }
+  if (verbose) { cat(" Done!\n") }
+  if (verbose) { print(Sys.time() - extime) }
   out
 }

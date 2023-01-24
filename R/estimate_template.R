@@ -226,6 +226,7 @@ estimate_template_FC <- function(FC0){
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param FC Include the functional connectivity template? Default: \code{FALSE}
+#'  (not fully supported yet.)
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -326,6 +327,7 @@ estimate_template <- function(
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
   stopifnot(fMRItools::is_1(FC, "logical"))
+  if (isTRUE(FC)) { warning("FC template is still under development.") }
   stopifnot(fMRItools::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
   stopifnot(fMRItools::is_posNum(maskTol))
