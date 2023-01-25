@@ -17,7 +17,6 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mandymejia/templateICAr/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/templateICAr/actions)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/mandymejia/templateICAr?branch=master&svg=true)](https://ci.appveyor.com/project/mandymejia/templateICAr)
 [![Codecov test coverage](https://codecov.io/gh/mandymejia/templateICAr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/templateICAr?branch=master)
 <!-- badges: end -->
 
