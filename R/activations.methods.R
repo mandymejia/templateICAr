@@ -4,6 +4,7 @@
 #'
 #' @param object Object of class \code{"tICA_act.cifti"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing the data and results for the activations analysis.
 #' @export
 #' @method summary tICA_act.cifti
 summary.tICA_act.cifti <- function(object, ...) {
@@ -23,6 +24,7 @@ summary.tICA_act.cifti <- function(object, ...) {
 #'
 #' @param x The activations from \code{activations.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA_act.cifti
 print.summary.tICA_act.cifti <- function(x, ...) {
 
@@ -72,11 +74,13 @@ print.summary.tICA_act.cifti <- function(x, ...) {
 
   class(x) <- "summary.xifti"
   print(x)
+  invisible(NULL)
 }
 
 #' @rdname summary.tICA_act.cifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA_act.cifti
 print.tICA_act.cifti <- function(x, ...) {
   print.summary.tICA_act.cifti(summary(x))
@@ -88,7 +92,7 @@ print.tICA_act.cifti <- function(x, ...) {
 #' @param stat \code{"active"} (default), \code{"pvals"}, \code{"pvals_adj"},
 #'  \code{"tstats"}, or \code{"vars"}.
 #' @param ... Additional arguments to \code{view_xifti}
-#' @return The plot
+#' @return The activations plot
 #' @export
 #' @method plot tICA_act.cifti
 plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "se"), ...) {
@@ -160,6 +164,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
 #'
 #' @param object Object of class \code{"tICA_act.matrix"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing the data and results for the activations analysis.
 #' @export
 #' @method summary tICA_act.matrix
 summary.tICA_act.matrix <- function(object, ...) {
@@ -179,6 +184,7 @@ summary.tICA_act.matrix <- function(object, ...) {
 #'
 #' @param x The activations from \code{activations}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA_act.matrix
 print.summary.tICA_act.matrix <- function(x, ...) {
 
@@ -228,11 +234,13 @@ print.summary.tICA_act.matrix <- function(x, ...) {
   cat("# Locations:     ", x$nL, "\n")
   cat("# Template ICs:  ", x$nV, "\n")
   cat("\n")
+  invisible(NULL)
 }
 
 #' @rdname summary.tICA_act.matrix
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA_act.matrix
 print.tICA_act.matrix <- function(x, ...) {
   print.summary.tICA_act.matrix(summary(x))

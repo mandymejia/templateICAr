@@ -22,6 +22,7 @@ using namespace Eigen;
 //'   summaries \code{AS_sq_sum}, \code{yAS_sum}, \code{A_sum}, and \code{AtA_sum}
 //' @param sigma2_alpha a scalar multiplier for the prior variance of alpha
 //' @param verbose a boolean. Should messages be generated and output?
+//' @return A list with quantities tau_sq, alpha, and G
 //' @export
 // [[Rcpp::export]]
 Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
@@ -103,6 +104,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
 //' @param final a boolean. Should posterior samples be returned instead of
 //'   summary measures?
 //' @param return_samp a boolean. Should posterior samples be returned?
+//' @return List with estimates for A, S, and possibly other quantities
 //' @export
 // [[Rcpp::export]]
 Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,

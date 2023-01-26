@@ -5,6 +5,8 @@
 #' @param object Object of class \code{"template.cifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A list summarizing the template: data dimensions, options used for
+#'  template estimation, etc.
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
   tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$params)
@@ -25,6 +27,8 @@ summary.template.cifti <- function(object, ...) {
 #' @param object Object of class \code{"template.gifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A list summarizing the template: data dimensions, options used for
+#'  template estimation, etc.
 #' @method summary template.gifti
 summary.template.gifti <- function(object, ...) {
   x <- c(
@@ -48,6 +52,8 @@ summary.template.gifti <- function(object, ...) {
 #' @param object Object of class \code{"template.nifti"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A list summarizing the template: data dimensions, options used for
+#'  template estimation, etc.
 #' @method summary template.nifti
 summary.template.nifti <- function(object, ...) {
   x <- c(
@@ -71,6 +77,8 @@ summary.template.nifti <- function(object, ...) {
 #' @param object Object of class \code{"template.matrix"}.
 #' @param ... further arguments passed to or from other methods.
 #' @export
+#' @return A list summarizing the template: data dimensions, options used for
+#'  template estimation, etc.
 #' @method summary template.matrix
 summary.template.matrix <- function(object, ...) {
   x <- c(
@@ -91,6 +99,7 @@ summary.template.matrix <- function(object, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.template.cifti
 print.summary.template.cifti <- function(x, ...) {
   # Get DCT output.
@@ -125,6 +134,7 @@ print.summary.template.cifti <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.gifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.template.gifti
 print.summary.template.gifti <- function(x, ...) {
   # Get DCT output.
@@ -161,6 +171,7 @@ print.summary.template.gifti <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.nifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.template.nifti
 print.summary.template.nifti <- function(x, ...) {
   # Get DCT output.
@@ -198,6 +209,7 @@ print.summary.template.nifti <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.template.matrix
 print.summary.template.matrix <- function(x, ...) {
   # Get DCT output.
@@ -232,6 +244,7 @@ print.summary.template.matrix <- function(x, ...) {
 #' @rdname summary.template.cifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print template.cifti
 print.template.cifti <- function(x, ...) {
   print.summary.template.cifti(summary(x))
@@ -240,6 +253,7 @@ print.template.cifti <- function(x, ...) {
 #' @rdname summary.template.gifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print template.gifti
 print.template.gifti <- function(x, ...) {
   print.summary.template.gifti(summary(x))
@@ -248,6 +262,7 @@ print.template.gifti <- function(x, ...) {
 #' @rdname summary.template.nifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print template.nifti
 print.template.nifti <- function(x, ...) {
   print.summary.template.nifti(summary(x))
@@ -256,6 +271,7 @@ print.template.nifti <- function(x, ...) {
 #' @rdname summary.template.matrix
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print template.matrix
 print.template.matrix <- function(x, ...) {
   print.summary.template.matrix(summary(x))

@@ -6,6 +6,7 @@
 #' @param resamp_res The new resampling resolution.
 #' @param verbose Give occasional updates? Default: \code{FALSE}.
 #' 
+#' @return The resampled \code{"template.cifti"} object.
 #' @export
 #' 
 resample_template <- function(x, resamp_res, verbose=FALSE){

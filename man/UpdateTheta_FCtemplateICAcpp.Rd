@@ -43,6 +43,9 @@ summaries \code{AS_sq_sum}, \code{yAS_sum}, \code{A_sum}, and \code{AtA_sum}}
 
 \item{verbose}{a boolean. Should messages be generated and output?}
 }
+\value{
+A list with quantities tau_sq, alpha, and G
+}
 \description{
 Update parameters (M-step of the EM)
 }

@@ -18,6 +18,7 @@
 #'   summaries \code{AS_sq_sum}, \code{yAS_sum}, \code{A_sum}, and \code{AtA_sum}
 #' @param sigma2_alpha a scalar multiplier for the prior variance of alpha
 #' @param verbose a boolean. Should messages be generated and output?
+#' @return A list with quantities tau_sq, alpha, and G
 #' @export
 UpdateTheta_FCtemplateICAcpp <- function(template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose) {
     .Call(`_templateICAr_UpdateTheta_FCtemplateICAcpp`, template_mean, template_var, template_FC, G, prior_params, BOLD, Y_sq_sum, post_sums, sigma2_alpha, verbose)
@@ -39,6 +40,7 @@ UpdateTheta_FCtemplateICAcpp <- function(template_mean, template_var, template_F
 #' @param final a boolean. Should posterior samples be returned instead of
 #'   summary measures?
 #' @param return_samp a boolean. Should posterior samples be returned?
+#' @return List with estimates for A, S, and possibly other quantities
 #' @export
 Gibbs_AS_posteriorCPP <- function(nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final, return_samp) {
     .Call(`_templateICAr_Gibbs_AS_posteriorCPP`, nsamp, nburn, template_mean, template_var, S, G, tau_v, Y, alpha, final, return_samp)

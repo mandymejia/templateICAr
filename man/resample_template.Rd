@@ -13,6 +13,9 @@ resample_template(x, resamp_res, verbose = FALSE)
 
 \item{verbose}{Give occasional updates? Default: \code{FALSE}.}
 }
+\value{
+The resampled \code{"template.cifti"} object.
+}
 \description{
 Resample a CIFTI template to a new spatial resolution.
 }

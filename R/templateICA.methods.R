@@ -4,6 +4,7 @@
 #'
 #' @param object Object of class \code{"tICA.cifti"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing of the results of the templateICA analysis.
 #' @export
 #' @method summary tICA.cifti
 summary.tICA.cifti <- function(object, ...) {
@@ -22,6 +23,7 @@ summary.tICA.cifti <- function(object, ...) {
 #'
 #' @param object Object of class \code{"tICA.nifti"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing of the results of the templateICA analysis.
 #' @export
 #' @method summary tICA.nifti
 summary.tICA.nifti <- function(object, ...) {
@@ -44,6 +46,7 @@ summary.tICA.nifti <- function(object, ...) {
 #'
 #' @param object Object of class \code{"tICA.matrix"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing of the results of the templateICA analysis.
 #' @export
 #' @method summary tICA.matrix
 summary.tICA.matrix <- function(object, ...) {
@@ -61,6 +64,7 @@ summary.tICA.matrix <- function(object, ...) {
 #'
 #' @param x The result of \code{templateICA} with CIFTI data
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA.cifti
 print.summary.tICA.cifti <- function(x, ...) {
   # Get DCT output.
@@ -104,6 +108,7 @@ print.summary.tICA.cifti <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA.nifti
 print.summary.tICA.nifti <- function(x, ...) {
   # Get DCT output.
@@ -145,6 +150,7 @@ print.summary.tICA.nifti <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA.matrix
 print.summary.tICA.matrix <- function(x, ...) {
   # Get DCT output.
@@ -182,6 +188,7 @@ print.summary.tICA.matrix <- function(x, ...) {
 #' @rdname summary.tICA.cifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA.cifti
 print.tICA.cifti <- function(x, ...) {
   print.summary.tICA.cifti(summary(x))
@@ -190,6 +197,7 @@ print.tICA.cifti <- function(x, ...) {
 #' @rdname summary.tICA.nifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA.nifti
 print.tICA.nifti <- function(x, ...) {
   print.summary.tICA.nifti(summary(x))
@@ -198,6 +206,7 @@ print.tICA.nifti <- function(x, ...) {
 #' @rdname summary.tICA.matrix
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA.matrix
 print.tICA.matrix <- function(x, ...) {
   print.summary.tICA.matrix(summary(x))
@@ -414,10 +423,12 @@ plot.tICA.nifti <- function(x, stat=c("mean", "se"),
 }
 
 #' Plot template
+#' 
+#' This feature is not supported yet.
 #'
 #' @param x The result of \code{templateICA} with NIFTI data
 #' @param ... Additional arguments
-#' @return The plot
+#' @return Nothing, because an error is raised.
 #' @export
 #' @method plot tICA.matrix
 plot.tICA.matrix <- function(x, ...) {

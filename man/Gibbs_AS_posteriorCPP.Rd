@@ -44,6 +44,9 @@ summary measures?}
 
 \item{return_samp}{a boolean. Should posterior samples be returned?}
 }
+\value{
+List with estimates for A, S, and possibly other quantities
+}
 \description{
 Use a Gibbs sampler for the A and S variables (E-step of the EM)
 }

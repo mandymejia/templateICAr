@@ -12,8 +12,8 @@
 \item{...}{Additional arguments}
 }
 \value{
-The plot
+Nothing, because an error is raised.
 }
 \description{
-Plot template
+This feature is not supported yet.
 }
