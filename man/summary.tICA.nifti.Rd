@@ -19,6 +19,13 @@
 
 \item{x}{The template from \code{estimate_template.cifti}}
 }
+\value{
+A list summarizing of the results of the templateICA analysis.
+
+Nothing, invisibly.
+
+Nothing, invisibly.
+}
 \description{
 Summary method for class \code{"tICA.nifti"}
 }

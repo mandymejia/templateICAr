@@ -45,12 +45,12 @@
 #'  (default) will write them to the current working directory.
 #'
 # @importFrom INLA inla.pardiso.check inla.setOption
-#' @importFrom ciftiTools read_cifti select_xifti
 #'
 #' @return A list containing the subject IC estimates (class \code{"xifti"}), the 
 #'  subject IC variance estimates (class \code{"xifti"}), and the result of the model 
 #'  call to \code{diagnosticICA} (class \code{"dICA"}).
 #' 
+#' @importFrom fMRItools match_input
 #' @keywords internal
 #'
 diagnosticICA.cifti <- function(cifti_fname,
@@ -69,9 +69,13 @@ diagnosticICA.cifti <- function(cifti_fname,
                               kappa_init=0.2,
                               write_dir=NULL){
 
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
+
   if (is.null(write_dir)) { write_dir <- getwd() }
 
-  brainstructures <- match_input(
+  brainstructures <- fMRItools::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
@@ -104,7 +108,7 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   # READ IN BOLD TIMESERIES DATA
   if(!file.exists(cifti_fname)) stop(paste0('The BOLD timeseries file ',cifti_fname,' does not exist.'))
-  BOLD <- read_cifti(cifti_fname,
+  BOLD <- ciftiTools::read_cifti(cifti_fname,
                     surfL_fname = surfL_fname,
                     surfR_fname = surfR_fname,
                     brainstructures = brainstructures,
@@ -131,8 +135,8 @@ diagnosticICA.cifti <- function(cifti_fname,
       fname_var <- paste0(templates[[g]],'_var.dscalar.nii')
       if(!file.exists(fname_mean)) stop(paste0('The file ', fname_mean, ' does not exist.'))
       if(!file.exists(fname_var)) stop(paste0('The file ', fname_var, ' does not exist.'))
-      template_mean_cifti[[g]] <- read_cifti(fname_mean, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
-      template_var_cifti[[g]] <- read_cifti(fname_var, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
+      template_mean_cifti[[g]] <- ciftiTools::read_cifti(fname_mean, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
+      template_var_cifti[[g]] <- ciftiTools::read_cifti(fname_var, surfL_fname = surfL_fname, surfR_fname = surfR_fname, brainstructures=brainstructures, resamp_res=resamp_res)
     } else {
       stop('template argument must be an object of class template.cifti or file path prefix to result of estimate_template.cifti() (same as out_fname argument passed to estimate_template.cifti().')
     }
@@ -218,16 +222,15 @@ diagnosticICA.cifti <- function(cifti_fname,
 
   #HERE (BELOW IS FOR SINGLE MODEL.  ACTUALLY FOR SPATIAL MODEL NEED TO GENERALIZE ABOVE TO SINGLE MODEL.)
 
-  result$subjICmean <- newdata_xifti(
-    select_xifti(template_mean_cifti[[1]], rep(1, ncol(result$subjICmean))),
+  result$subjICmean <- ciftiTools::newdata_xifti(
+    ciftiTools::select_xifti(template_mean_cifti[[1]], rep(1, ncol(result$subjICmean))),
     result$subjICmean
   )
-  result$subjICse <- newdata_xifti(
-    select_xifti(template_var_cifti[[1]], rep(1, ncol(result$subjICse))),
+  result$subjICse <- ciftiTools::newdata_xifti(
+    ciftiTools::select_xifti(template_var_cifti[[1]], rep(1, ncol(result$subjICse))),
     result$subjICse
   )
 
   # RETURN XIFTI RESULTS AND MODEL RESULT
   result
 }
-

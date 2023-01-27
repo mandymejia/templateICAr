@@ -2,14 +2,11 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^\.github$
-^appveyor\.yml$
 ^vignettes$
 ^LICENSE\.md$
 ^CRAN-RELEASE$
 ^cran-comments\.md
 ^R/ignore\.R$
-^R/EM_FCtemplateICA\.R$
-^R/groupICA\.R$
 ^R/EM_diagnosticICA\.R$
 ^R/diagnosticICA\.nifti\.R$
 ^R/diagnosticICA\.R$
@@ -19,3 +16,4 @@
 ^cran-comments\.md$
 ^tests/testWithData$
 ^codecov\.yml$
+^R/plot_FC\.R$

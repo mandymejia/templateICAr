@@ -1,72 +1,3 @@
-#' Match user inputs to expected values
-#'
-#' Match each user input to an expected/allowed value. Raise a warning if either
-#'  several user inputs match the same expected value, or at least one could not
-#'  be matched to any expected value. \code{ciftiTools} uses this function to
-#'  match keyword arguments for a function call. Another use is to match
-#'  brainstructure labels ("left", "right", or "subcortical").
-#'
-#' @param user Character vector of user input. These will be matched to
-#'  \code{expected} using \code{\link{match.arg}}.
-#' @param expected Character vector of expected/allowed values.
-#' @param fail_action If any value in \code{user} could not be
-#'  matched, or repeated matches occurred, what should happen? Possible values
-#'  are \code{"stop"} (default; raises an error), \code{"warning"}, and
-#'  \code{"nothing"}.
-#' @param user_value_label How to refer to the user input in a stop or warning
-#'  message. If \code{NULL}, no label is used.
-#'
-#' @return The matched user inputs.
-#'
-#' @keywords internal
-#'
-match_input <- function(
-  user, expected,
-  fail_action=c("stop", "warning", "message", "nothing"),
-  user_value_label=NULL) {
-
-  fail_action <- match.arg(
-    fail_action,
-    c("stop", "warning", "message", "nothing")
-  )
-  unrecognized_FUN <- switch(fail_action,
-                             stop=stop,
-                             warning=warning,
-                             message=message,
-                             nothing=invisible
-  )
-
-  if (!is.null(user_value_label)) {
-    user_value_label <- paste0("\"", user_value_label, "\" ")
-  }
-  msg <- paste0(
-    "The user-input values ", user_value_label,
-    "did not match their expected values. ",
-    "Either several matched the same value, ",
-    "or at least one did not match any.\n\n",
-    "The user inputs were:\n",
-    "\t\"", paste0(user, collapse="\", \""), "\".\n",
-    "The expected values were:\n",
-    "\t\"", paste0(expected, collapse="\", \""), "\".\n"
-  )
-
-  tryCatch(
-    {
-      matched <- match.arg(user, expected, several.ok=TRUE)
-      if (length(matched) != length(user)) { stop() }
-      return(matched)
-    },
-    error = function(e) {
-      unrecognized_FUN(msg)
-    },
-    finally = {
-      NULL
-    }
-  )
-
-  invisible(NULL)
-}
-
 #' Create a mask based on vertices that are invalid
 #'
 #' @param BOLD A \eqn{V \times T} numeric matrix. Each row is a location.
@@ -208,144 +139,51 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 
 }
 
-#' Positive skew?
-#'
-#' Does the vector have a positive skew?
-#'
-#' @param x The numeric vector for which to calculate the skew. Can also be a matrix,
-#'  in which case the skew of each column will be calculated.
-#' @return \code{TRUE} if the skew is positive or zero. \code{FALSE} if the skew is negative.
+#' Get FORMAT from format
+#' 
+#' @param format the file format
+#' @return The file FORMAT
 #' @keywords internal
-#'
-#' @importFrom stats median
-skew_pos <- function(x){
-  x <- as.matrix(x)
-  apply(x, 2, median, na.rm=TRUE) <= colMeans(x, na.rm=TRUE)
+#' 
+get_FORMAT <- function(format){
+  switch(format,
+    CIFTI = "CIFTI",
+    xifti = "CIFTI",
+    GIFTI = "GIFTI",
+    gifti = "GIFTI",
+    NIFTI = "NIFTI",
+    nifti = "NIFTI",
+    RDS = "MATRIX",
+    data = "MATRIX"
+  )
 }
 
-#' Sign match ICA results
-#'
-#' Flips all source signal estimates (S) to positive skew
-#'
-#' @param x The ICA results with entries \code{S} and \code{M}
-#' @return \code{x} but with positive skew source signals
+#' Check required packages for the data format
+#' 
+#' @param FORMAT The data FORMAT
+#' @return \code{NULL}, invisibly
 #' @keywords internal
-#'
-sign_flip <- function(x){
-  stopifnot(is.list(x))
-  stopifnot(("S" %in% names(x)) & ("M" %in% names(x)))
-  spos <- skew_pos(x$M)
-  x$M[,!spos] <- -x$M[,!spos]
-  x$S[,!spos] <- x$S[,!spos]
-  x
-}
-
-#' Center cols
-#'
-#' Efficiently center columns of a matrix. (Faster than \code{scale})
-#'
-#' @param X The data matrix. Its columns will be centered
-#' @return The centered data
-#' @keywords internal
-colCenter <- function(X) {
-  X - rep(colMeans(X), rep.int(nrow(X), ncol(X)))
-}
-
-#' Infer fMRI data format
-#'
-#' @param BOLD The fMRI data
-#' @param verbose Print the format? Default: \code{FALSE}.
-#' @return The format: \code{"CIFTI"} file path, \code{"xifti"} object,
-#'  \code{"NIFTI"} file path, \code{"nifti"} object, or \code{"data"}.
-#' @keywords internal
-infer_BOLD_format <- function(BOLD, verbose=FALSE){
-
-  # Character vector: CIFTI or NIFTI
-  if (is.character(BOLD)) {
-    format <- ifelse(
-      endsWith(BOLD, ".dtseries.nii") | endsWith(BOLD, ".dscalar.nii"),
-      "CIFTI", "NIFTI"
-    )
-    if (length(unique(format)) == 1) {
-      format <- format[1]
-    } else {
-      if (all(endsWith(BOLD, ".nii"))) {
-        stop("BOLD format seems to be a mix of CIFTI files and NIFTI files. Use the same format or rename the files.")
-      } else {
-        stop("BOLD format seems to be a mix of CIFTI files and something else. Use the same format or rename the files.")
-      }
-    }
-
-  } else if (inherits(BOLD, "xifti")) {
-    format <- "xifti"
-  } else if (inherits(BOLD, "nifti")) {
-    format <- "nifti"
-
-  # Non-character vector: xifti, nifti, or data
-  } else if (inherits(BOLD[[1]], "xifti")) {
-    if (all(vapply(BOLD, inherits, what="xifti", FALSE))) {
-      format <- "xifti"
-    } else {
-      stop("BOLD format seems to be a mix of `xifti` files and something else. Use the same format for all.")
-    }
-  } else if (inherits(BOLD[[1]], "nifti")) {
-    if (all(vapply(BOLD, inherits, what="nifti", FALSE))) {
-      format <- "nifti"
-    } else {
-      stop("BOLD format seems to be a mix of `nifti` files and something else. Use the same format for all.")
-    }
-  } else {
-    if (!is.list(BOLD)) { BOLD <- list(BOLD) }
-    BOLD_dims <- lapply(BOLD, dim)
-    BOLD_dims_lens <- sort(unique(vapply(BOLD_dims, length, 0)))
-    if (length(BOLD_dims_lens) > 1) {
-      stop("BOLD data have inconsistent dimension lengths. fMRI data should be provided as matrices, not vectors or arrays.")
-    } else if (BOLD_dims_lens==4) {
-      format <- "nifti" # 4D array: treat as a "nifti"
-    } else if (BOLD_dims_lens!=2) {
-      stop("BOLD data should be provided as matrices, not vectors or arrays.")
-    } else {
-      format <- "data"
+check_req_ifti_pkg <- function(FORMAT){
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
     }
   }
-  if (verbose) { cat("Inferred input format:", format, "\n") }
-  format
-}
 
-#' Check \code{Q2_max}
-#'
-#' Check \code{Q2_max} and set it if \code{NULL}.
-#'
-#' @param Q2_max,nQ,nT The args
-#' @return \code{Q2_max}, clamped to acceptable range of values.
-#' @keywords internal
-Q2_max_check <- function(Q2_max, nQ, nT){
-  if (!is.null(Q2_max)) {
-    if (round(Q2_max) != Q2_max || Q2_max <= 0) {
-      stop('`Q2_max` must be `NULL` or a non-negative integer.')
+  if (FORMAT == "GIFTI") {
+    if (!requireNamespace("gifti", quietly = TRUE)) {
+      stop("Package \"gifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
     }
-  } else {
-    Q2_max <- pmax(round(nT*.50 - nQ), 1)
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
   }
 
-  # This is to avoid the area of the pesel objective function that spikes close
-  #   to rank(X), which often leads to nPC close to rank(X)
-  if (Q2_max > round(nT*.75 - nQ)) {
-    warning('`Q2_max` too high, setting to 75% of T.')
-    Q2_max <- round(nT*.75 - nQ)
+  if (FORMAT == "NIFTI") {
+    if (!requireNamespace("RNifti", quietly = TRUE)) {
+      stop("Package \"RNifti\" needed to work with NIFTI data. Please install it.", call. = FALSE)
+    }
   }
 
-  Q2_max
-}
-
-#' Unmask a matrix
-#'
-#' @param dat The data
-#' @param mask The mask
-#' @keywords internal
-unmask_mat <- function(dat, mask){
-  stopifnot(nrow(dat) == sum(mask))
-  mdat <- matrix(NA, nrow=length(mask), ncol=ncol(dat))
-  mdat[mask,] <- dat
-  mdat
+  invisible(NULL)
 }

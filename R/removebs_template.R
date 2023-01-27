@@ -12,14 +12,14 @@ removebs_template <- function(x, remove=NULL){
 
   # Remove brain structure(s) from data.
   x$template <- lapply(x$template, function(y){
-    as.matrix(remove_xifti(newdata_xifti(x$dat_struct, y), remove=remove))
+    as.matrix(ciftiTools::remove_xifti(ciftiTools::newdata_xifti(x$dat_struct, y), remove=remove))
   })
   x$var_decomp <- lapply(x$var_decomp, function(y){
-    as.matrix(remove_xifti(newdata_xifti(x$dat_struct, y), remove=remove))
+    as.matrix(ciftiTools::remove_xifti(ciftiTools::newdata_xifti(x$dat_struct, y), remove=remove))
   })
 
   # Get new `dat_struct` and mask.
-  x$dat_struct <- remove_xifti(x$dat_struct, remove=remove)
+  x$dat_struct <- ciftiTools::remove_xifti(x$dat_struct, remove=remove)
   x$mask <- !is.na(x$template$mean[,1])
 
   x

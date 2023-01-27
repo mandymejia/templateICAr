@@ -821,7 +821,7 @@ compute_R_inv <- function(meshes, kappa, C1=1/(4*pi), rm_extra=FALSE){
   if(length(kappa)==1) onekappa <- TRUE
   if(onekappa) kappa <- kappa[1]
 
-  if(class(meshes) != 'list') stop('meshes argument must be a list of objects of class "templateICA_mesh"')
+  if(!inherits(meshes, "list")) stop('meshes argument must be a list of objects of class "templateICA_mesh"')
 
   #SPDE matrices, needed to construct R_l_inv
   nmeshes <- length(meshes)

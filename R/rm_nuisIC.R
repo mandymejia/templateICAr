@@ -1,3 +1,29 @@
+#' Check \code{Q2_max}
+#'
+#' Check \code{Q2_max} and set it if \code{NULL}.
+#'
+#' @param Q2_max,nQ,nT The args
+#' @return \code{Q2_max}, clamped to acceptable range of values.
+#' @keywords internal
+Q2_max_check <- function(Q2_max, nQ, nT){
+  if (!is.null(Q2_max)) {
+    if (round(Q2_max) != Q2_max || Q2_max <= 0) {
+      stop('`Q2_max` must be `NULL` or a non-negative integer.')
+    }
+  } else {
+    Q2_max <- pmax(round(nT*.50 - nQ), 1)
+  }
+
+  # This is to avoid the area of the pesel objective function that spikes close
+  #   to rank(X), which often leads to nPC close to rank(X)
+  if (Q2_max > round(nT*.75 - nQ)) {
+    warning('`Q2_max` too high, setting to 75% of T.')
+    Q2_max <- round(nT*.75 - nQ)
+  }
+
+  Q2_max
+}
+
 #' Remove nuisance ICs from data
 #'
 #' Subtract estimated nuisance ICs from data matrix. If the number of 
@@ -24,6 +50,7 @@
 #'  subtracted from it. If \code{return_Q2}, a list of length two: the second 
 #'  entry will be \code{Q2}.
 #' 
+#' @importFrom fMRItools colCenter
 #' @keywords internal 
 rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, 
   checkRowCenter=TRUE, verbose=FALSE, return_Q2=FALSE){
@@ -58,7 +85,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL,
   # Remove the global signal, for the purpose of estimating the nuisance ICs.
   #   It will be "added back" later when we subtract the nuisance ICs estimate
   #   from the original `BOLD`.
-  BOLD2 <- colCenter(BOLD2)
+  BOLD2 <- fMRItools::colCenter(BOLD2)
 
   # iii. ESTIMATE THE NUMBER OF REMAINING ICS
   #   pesel function expects nxp data and will determine asymptotic framework

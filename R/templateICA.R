@@ -1,41 +1,41 @@
 #' Template ICA
 #'
-#' Perform template independent component analysis (ICA) using 
+#' Perform template independent component analysis (ICA) using
 #'  expectation-maximization (EM).
 #'
-#' @param BOLD Vector of subject-level fMRI data in one of the following 
-#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
+#' @param BOLD Vector of subject-level fMRI data in one of the following
+#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
 #'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
 #'  is the number of data locations and \eqn{T} is the number of timepoints.
 #'
-#'  If multiple BOLD data are provided, they will be independently centered, 
-#'  scaled, and detrended (if applicable), and then they will be concatenated 
-#'  together followed by denoising (if applicable) and computing the initial 
+#'  If multiple BOLD data are provided, they will be independently centered,
+#'  scaled, and detrended (if applicable), and then they will be concatenated
+#'  together followed by denoising (if applicable) and computing the initial
 #'  dual regression estimate.
-#' @param template Template estimates in a format compatible with \code{BOLD}, 
+#' @param template Template estimates in a format compatible with \code{BOLD},
 #'  from \code{\link{estimate_template}}.
-#' @param tvar_method Which calculation of the template variance to use: 
+#' @param tvar_method Which calculation of the template variance to use:
 #'  \code{"non-negative"} (default) or \code{"unbiased"}. The unbiased template
-#'  variance is based on the assumed mixed effects/ANOVA model, whereas the 
+#'  variance is based on the assumed mixed effects/ANOVA model, whereas the
 #'  non-negative template variance adds to it to account for greater potential
 #'  between-subjects variation. (The template mean is the same for either choice
 #'  of \code{tvar_method}.)
 #' @inheritParams center_Bcols_Param
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  surface geometries along which to smooth as GIFTI geometry files or
 #'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -53,7 +53,7 @@
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
 #'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
 #'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI 
+#' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
@@ -61,7 +61,7 @@
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
-#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  binary array of the same spatial dimensions as the fMRI data, with
 #'  \code{TRUE} corresponding to in-mask voxels.
 #' @param time_inds Subset of fMRI BOLD volumes to include in analysis.
 #'  If \code{NULL} (default), use all volumes. Subsetting is performed before
@@ -86,20 +86,20 @@
 #' @inheritParams varTol_Param
 #' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
 #'  The target resolution for resampling (number of cortical surface vertices
-#'  per hemisphere). For spatial modelling, a value less than 10000 is 
+#'  per hemisphere). For spatial modelling, a value less than 10000 is
 #'  recommended for computational feasibility. If \code{NULL} (default), do not
 #'  perform resampling.
-#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data. 
+#' @param rm_mwall Only applies if \code{BOLD} represents CIFTI-format data.
 #'  Should medial wall (missing data) locations be removed from the mesh?
-#'  If \code{TRUE}, faster computation but less accurate estimates at the 
+#'  If \code{TRUE}, faster computation but less accurate estimates at the
 #'  boundary of wall.
-#' @param reduce_dim Reduce the temporal dimension of the data using PCA? 
-#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model 
+#' @param reduce_dim Reduce the temporal dimension of the data using PCA?
+#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
-#' @param usePar Parallelize the computation over data locations? Default: 
+#' @param usePar Parallelize the computation over data locations? Default:
 #'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
 #'  use the number on the PC minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm
@@ -107,21 +107,21 @@
 #  of the spatial template ICA model, which assumes that all IC's have the same
 #  smoothness parameter, \eqn{\kappa}
 #'
-#' @return A (spatial) template ICA object, which is a list containing: 
-#'  \code{subjICmean}, the \eqn{V \times L} estimated independent components 
-#'  \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the 
-#'  \code{mask} of locations without template values due to too many low 
+#' @return A (spatial) template ICA object, which is a list containing:
+#'  \code{subjICmean}, the \eqn{V \times L} estimated independent components
+#'  \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the
+#'  \code{mask} of locations without template values due to too many low
 #'  variance or missing values; and the function \code{params} such as
-#'  the type of scaling and detrending performed. 
-#' 
+#'  the type of scaling and detrending performed.
+#'
 #'  If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
 #'  \code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}
-#'  objects, respectively. 
+#'  objects, respectively.
 #'
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @import ciftiTools
+#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -132,11 +132,13 @@
 #' }
 templateICA <- function(
   BOLD, template, tvar_method=c("non-negative", "unbiased"),
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
-  Q2=NULL, Q2_max=NULL,
+  center_Bcols=FALSE,
+  normA=FALSE,
+  Q2=NULL,
+  Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
   varTol=1e-6,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
@@ -219,29 +221,22 @@ templateICA <- function(
 
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
-  # same for NIFTI
-  format <- infer_BOLD_format(BOLD)
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    data = "DATA"
-  )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
+  format <- fMRItools::infer_format_ifti(BOLD)[1]
+  FORMAT <- get_FORMAT(format)
+  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  if (FORMAT == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
-  # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "NIFTI")) {
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (any(missing_BOLD)) {
-      warning('There are ', missing_BOLD, ' scans in `BOLD` that do not exist. These scans will be excluded from template estimation.')
+      warning(
+        'There are ', missing_BOLD,
+        ' scans in `BOLD` that do not exist. ',
+        'These scans will be excluded from template estimation.'
+      )
       BOLD <- BOLD[!missing_BOLD]
     }
   }
@@ -252,6 +247,8 @@ templateICA <- function(
   } else if (!is.list(BOLD)) {
     BOLD <- list(BOLD)
   } else if (format == "xifti" && inherits(BOLD, "xifti")) {
+    BOLD <- list(BOLD)
+  } else if (format == "gifti" && inherits(BOLD, "gifti")) {
     BOLD <- list(BOLD)
   } else if (format == "nifti" && inherits(BOLD, "nifti")) {
     BOLD <- list(BOLD)
@@ -267,7 +264,7 @@ templateICA <- function(
     do_sub <- "subcortical" %in% brainstructures
   }
 
-  # Read in CIFTI or NIFTI files.
+  # Read in CIFTI, GIFTI, or NIFTI files.
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
@@ -277,14 +274,38 @@ templateICA <- function(
           brainstructures=brainstructures
         )
       }
-      stopifnot(is.xifti(BOLD[[bb]]))
+      stopifnot(ciftiTools::is.xifti(BOLD[[bb]]))
     }
+  } else if (format == "GIFTI") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- gifti::readgii(BOLD[[bb]])
+      }
+      stopifnot(gifti::is.gifti(BOLD[[bb]]))
+      if (bb == 1) {
+        ghemi <- BOLD[[bb]]$file_meta["AnatomicalStructurePrimary"]
+        if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+          stop("AnatomicalStructurePrimary metadata missing or invalid for BOLD #", bb, ".")
+        }
+      } else {
+        if (ghemi != BOLD[[bb]]$file_meta["AnatomicalStructurePrimary"]) {
+          stop("AnatomicalStructurePrimary metadata missing or invalid for BOLD #", bb, ".")
+        }
+      }
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
   } else if (format == "NIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
         BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]])
       }
       # [TO DO] check?
+    }
+  } else if (format == "RDS") {
+    for (bb in seq(nN)) {
+      if (is.character(BOLD[[bb]])) {
+        BOLD[[bb]] <- readRDS(BOLD[[bb]])
+      }
     }
   }
 
@@ -318,8 +339,16 @@ templateICA <- function(
     }
   }
 
+  #check for FC template
+  do_FC <- FALSE; template_FC <- NULL
+  if('FC' %in% names(template$template)) {
+    do_FC <- TRUE
+    template_FC <- template$template$FC
+  }
+
   # Get `nI`, `nL`, and `nV`.
   # Check brainstructures and resamp_res if CIFTI, where applicable.
+  # Convert to CIFTI if GIFTI.
   # Check mask if NIFTI.
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
@@ -350,6 +379,21 @@ templateICA <- function(
     }
     nI <- nrow(template$template$mean)
 
+  } else if (FORMAT == "GIFTI") {
+    if (ghemi == "left") {
+      xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      for (bb in seq(length(BOLD))) {
+        BOLD[[bb]] <- ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD[[bb]]$data))
+      }
+    } else if (ghemi == "right") {
+      xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD[[1]]$data)), 1) * 0
+      for (bb in seq(length(BOLD))) {
+        BOLD[[bb]] <- ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD[[bb]]$data))
+      }
+    } else { stop() }
+    # xii1 <- move_to_mwall(xii1)
+    nI <- nrow(template$template$mean)
+
   } else if (FORMAT == "NIFTI") {
     # Check `mask`
     if (is.null(mask)) { stop("`mask` is required.") }
@@ -361,8 +405,12 @@ templateICA <- function(
     }
     nI <- dim(mask)
     # Check its compatibility with the template
-    stopifnot(length(dim(template$dat_struct)) == length(nI))
-    stopifnot(all(dim(template$dat_struct) == nI))
+    tds_dim <- dim(template$dat_struct) # has an empty last dim
+    if (length(tds_dim) == length(nI) + 1 && tds_dim[length(tds_dim)] == 1) {
+      tds_dim <- tds_dim[seq(length(tds_dim)-1)]
+    }
+    stopifnot(length(tds_dim) == length(nI))
+    stopifnot(all(tds_dim == nI))
   } else {
     nI <- nrow(template$template$mean)
   }
@@ -418,7 +466,7 @@ templateICA <- function(
       ))
     }
 
-    if (FORMAT == "CIFTI") {
+    if (FORMAT %in% c("GIFTI", "CIFTI")) {
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
           res <- ciftiTools::infer_resolution(BOLD[[1]])
@@ -427,7 +475,7 @@ templateICA <- function(
         }
         if (do_left) {
           surf <- BOLD[[1]]$surf$cortex_left
-          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["left"], resamp_res=res) }
+          if (is.null(surf)) { surf <- ciftiTools::read_surf(ciftiTools::ciftiTools.files()$surf["left"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$left)) {
             wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$left
             if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
@@ -444,7 +492,7 @@ templateICA <- function(
         }
         if (do_right) {
           surf <- BOLD[[1]]$surf$cortex_right
-          if (is.null(surf)) { surf <- read_surf(ciftiTools.files()$surf["right"], resamp_res=res) }
+          if (is.null(surf)) { surf <- ciftiTools::read_surf(ciftiTools::ciftiTools.files()$surf["right"], resamp_res=res) }
           if (!is.null(BOLD[[1]]$meta$cortex$medial_wall_mask$right)) {
             wall_mask <- BOLD[[1]]$meta$cortex$medial_wall_mask$right
             if (length(wall_mask) != nrow(surf$vertices)) { stop("Could not make surface of compatible resolution with data.") }
@@ -481,20 +529,16 @@ templateICA <- function(
     #if(!do_spatial & !is.null(kappa_init)) stop('kappa_init should only be provided if mesh also provided for spatial modeling')
   }
 
-  #TO DO: Define do_FC, pass in FC template
-  do_FC <- FALSE
 
   # Process the scan -----------------------------------------------------------
   # Get each entry of `BOLD` as a data matrix or array.
-  if (FORMAT == "CIFTI") {
+  if (FORMAT %in% c("CIFTI", "GIFTI")) {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- ciftiTools::read_cifti(BOLD[[bb]], brainstructures=brainstructures) }
-      if (is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
+      if (ciftiTools::is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
       stopifnot(is.matrix(BOLD[[bb]]))
     }
   } else if (FORMAT == "NIFTI") {
     for (bb in seq(nN)) {
-      if (is.character(BOLD[[bb]])) { BOLD[[bb]] <- RNifti::readNifti(BOLD[[bb]]) }
       stopifnot(length(dim(BOLD[[bb]])) > 1)
     }
   } else {
@@ -576,16 +620,26 @@ templateICA <- function(
   # Mask out additional locations due to data mask.
   mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
-  if(sum(!mask3) > 0){
-    stop('Not supported yet: flat or NA voxels in data, after applying template mask.')
-    # For this part, would need to also update "A" matrix (projection from mesh to data locations)
-    # template_mean_orig <- template_mean
-    # template_var_orig <- template_var
-    # nV <- sum(keep)
-    # if(verbose) cat(paste0('Excluding ',sum(!keep),' bad (NA, NaN or flat) voxels/vertices from analysis.\n'))
-    # template_mean <- template_mean[keep,]
-    # template_var <- template_var[keep,]
-    # BOLD <- BOLD[keep,]
+  if (any(!mask3)) {
+    if (do_spatial) {
+      stop('Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.')
+    }
+
+    # [NOTE] For same results, would have needed to also update "A" matrix
+    #   (projection from mesh to data locations)
+
+    if(verbose) {
+      cat(paste0(
+        'Excluding ', sum(!mask3),
+        ' bad (flat or NA) voxels/vertices from analysis.\n'
+      ))
+    }
+    template_orig <- template
+    BOLD <- lapply(BOLD, function(x){x[mask3,]})
+    dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
+    template$mean <- template$mean[mask3,]
+    template$var <- template$var[mask3,]
+    mask2[mask2][!mask3] <- FALSE
   }
 
   # Normalize BOLD -------------------------------------------------------------
@@ -593,7 +647,7 @@ templateICA <- function(
   if (verbose) { cat("Pre-processing BOLD data.\n") }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
-    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+    xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
   BOLD <- lapply(BOLD, norm_BOLD,
@@ -630,25 +684,29 @@ templateICA <- function(
   # ----------------------------------------------------------------------------
   # EM -------------------------------------------------------------------------
   #Three algorithms to choose from:
-  #1) FC Template ICA (new)
+  #1) FC Template ICA
   #2) Template ICA
   #3) Spatial Template ICA (initialize with standard Template ICA)
   # ----------------------------------------------------------------------------
 
   #1) FC Template ICA ----------------------------------------------------------
   if(do_FC) {
-    if (verbose) { cat("Computing FC.\n") }
+    if (verbose) { cat("Estimating FC Template ICA model.\n") }
 
-    ## TO DO: FILL IN HERE
-    prior_params <- c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
-    template$FC <- NULL
-    EM_FCtemplateICA <- function(...){NULL}
+    template_mean = template$mean
+    template_var = template$var
+    prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
+
+    #EM_FCtemplateICA <- function(...){NULL}
     resultEM <- EM_FCtemplateICA(
-      template$mean, template$var, template$FC,
+      template_mean = template$mean,
+      template_var = template$var,
+      template_FC = template_FC,
       prior_params, #for prior on tau^2
       BOLD=BOLD,
-      AS_init = BOLD_DR, #initial values for A and S
-      maxiter=maxiter, epsilon=epsilon,
+      AS_0 = BOLD_DR, #initial values for A and S
+      maxiter=maxiter,
+      epsilon=epsilon,
       verbose=verbose
     )
   } else {
@@ -774,12 +832,12 @@ templateICA <- function(
 
   # Format output.
   if (use_mask2) {
-    resultEM$subjICmean <- unmask_mat(resultEM$subjICmean, mask2)
-    resultEM$subjICse <- unmask_mat(resultEM$subjICse, mask2)
+    resultEM$subjICmean <- fMRItools::unmask_mat(resultEM$subjICmean, mask2)
+    resultEM$subjICse <- fMRItools::unmask_mat(resultEM$subjICse, mask2)
   }
 
-  if (FORMAT=="CIFTI" && !is.null(xii1)) {
-    xiiL <- select_xifti(xii1, rep(1, nL))
+  if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
+    xiiL <- ciftiTools::select_xifti(xii1, rep(1, nL))
     if (grepl("all", IC_inds)) {
       IC_inds <- seq(nL)
     } else {
@@ -787,32 +845,53 @@ templateICA <- function(
       if (length(IC_inds) != nL) { IC_inds <- rep("?", nL) } # TO-DO: improve
     }
     xiiL$meta$cifti$names <- paste("IC", IC_inds)
-    resultEM$subjICmean <- newdata_xifti(xiiL, resultEM$subjICmean)
-    resultEM$subjICse <- newdata_xifti(xiiL, resultEM$subjICse)
+
+    # [TO DO]: fMRItools update: simplify this
+    if (any(!mask3)) {
+      resultEM$subjICmean <- ciftiTools::newdata_xifti(
+        xiiL,
+        fMRItools::unmask_mat(resultEM$subjICmean, mask3),
+      )
+      resultEM$subjICse <- ciftiTools::newdata_xifti(
+        xiiL,
+        fMRItools::unmask_mat(resultEM$subjICse, mask3),
+      )
+    } else {
+      resultEM$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICmean)
+      resultEM$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$subjICse)
+    }
+    if (FORMAT == "GIFTI") {
+      # Apply `mask2`.
+      resultEM$subjICmean <- ciftiTools::move_to_mwall(resultEM$subjICmean)
+      resultEM$subjICse <- ciftiTools::move_to_mwall(resultEM$subjICse)
+      mask2 <- NULL
+    }
     if (do_spatial) {
-      resultEM$result_tICA$subjICmean <- newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
-      resultEM$result_tICA$subjICse <- newdata_xifti(xiiL, resultEM$result_tICA$subjICse)
+      resultEM$result_tICA$subjICmean <- ciftiTools::newdata_xifti(xiiL, resultEM$result_tICA$subjICmean)
+      resultEM$result_tICA$subjICse <- ciftiTools::newdata_xifti(xiiL, resultEM$result_tICA$subjICse)
     }
     class(resultEM) <- 'tICA.cifti'
 
   } else if (FORMAT == "NIFTI") {
     resultEM$subjICmean <- RNifti::asNifti(
-      unmask_subcortex(resultEM$subjICmean, mask, fill=NA)
+      fMRItools::unvec_vol(resultEM$subjICmean, mask, fill=NA)
     )
     resultEM$subjICse <- RNifti::asNifti(
-      unmask_subcortex(resultEM$subjICse, mask, fill=NA)
+      fMRItools::unvec_vol(resultEM$subjICse, mask, fill=NA)
     )
     if (do_spatial) {
       resultEM$result_tICA$subjICmean <- RNifti::asNifti(
-        unmask_subcortex(resultEM$result_tICA$subjICmean, mask, fill=NA)
+        fMRItools::unvec_vol(resultEM$result_tICA$subjICmean, mask, fill=NA)
       )
       resultEM$result_tICA$subjICse <- RNifti::asNifti(
-        unmask_subcortex(resultEM$result_tICA$subjICse, mask, fill=NA)
+        fMRItools::unvec_vol(resultEM$result_tICA$subjICse, mask, fill=NA)
       )
     }
     resultEM$mask_nii <- mask
     # resultEM$mask <- mask
     class(resultEM) <- 'tICA.nifti'
+  } else {
+    class(resultEM) <- 'tICA.matrix'
   }
 
   resultEM$mask <- mask2

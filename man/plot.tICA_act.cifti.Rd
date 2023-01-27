@@ -15,7 +15,7 @@
 \item{...}{Additional arguments to \code{view_xifti}}
 }
 \value{
-The plot
+The activations plot
 }
 \description{
 Plot activations

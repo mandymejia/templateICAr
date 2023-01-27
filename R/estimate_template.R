@@ -1,5 +1,5 @@
 #' Estimate template from DR
-#' 
+#'
 #' Estimate variance decomposition and templates from DR estimates.
 #'
 #' @param DR the test/retest dual regression estimates, as an array with
@@ -16,10 +16,11 @@
 #' @return List of two elements: the templates and the variance decomposition.
 #'
 #'  There are two version of the variance template: \code{varUB} gives the
-#'  unbiased variance estimate, and \code{varNN} gives the upwardly-biased 
-#'  non-negative variance estimate. Values in \code{varUB} will need to be 
+#'  unbiased variance estimate, and \code{varNN} gives the upwardly-biased
+#'  non-negative variance estimate. Values in \code{varUB} will need to be
 #'  clamped above zero before using in \code{templateICA}.
-#' 
+#'
+#' @importFrom fMRItools var_decomp
 #' @export
 estimate_template_from_DR <- function(
   DR, LV=NULL){
@@ -114,6 +115,31 @@ estimate_template_from_DR_two <- function(DR1, DR2){
   template
 }
 
+#' Estimate FC template
+#'
+#' @param FC0 The FC estimates from \code{\link{estimate_template}}.
+#' @importFrom matrixStats colVars
+#' @keywords internal
+estimate_template_FC <- function(FC0){
+
+  nL <- dim(FC0)[3]
+  stopifnot(nL == dim(FC0)[4])
+
+  FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
+  mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
+  var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+  var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
+  var_FC_between <- var_FC_tot - var_FC_within
+  var_FC_between[var_FC_between < 0] <- NA
+
+  nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
+  nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
+
+  psi <- mean_FC*(nu_est1 - nL - 1)
+
+  list(nu = nu_est1, psi = psi)
+}
+
 #' Estimate template
 #'
 #' Estimate template for Template ICA based on fMRI data
@@ -121,16 +147,21 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
 #'  be in the same spatial resolution.
 #'
-#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following 
-#'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths, 
-#'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where 
-#'  \eqn{V} is the number of data locations and \eqn{T} is the number of 
-#'  timepoints.
+#' @param BOLD,BOLD2 Vector of subject-level fMRI data in one of the following
+#'  formats: CIFTI file paths, \code{"xifti"} objects, GIFTI file paths,
+#'  \code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects,
+#'  or \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data
+#'  locations and \eqn{T} is the number of timepoints.
+#
+#  If GIFTI or \code{"gifti"}, the input can also be a length two list,
+#  where the first list element is a length \eqn{N} vector for the left
+#  hemisphere and the second list element is a length \eqn{N} vector for the
+#  right hemisphere.
 #'
 #'  If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 #'  \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
-#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same 
-#'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD} 
+#'  \code{BOLD2} should be the same length as \code{BOLD} and have the same
+#'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD}
 #'  will be split in half; the first half will be the test data and the second
 #'  half will be the retest data.
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
@@ -139,25 +170,25 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' @param inds Numeric indices of the group ICs to include in the template. If
 #'  \code{NULL}, use all group ICs (default).
 #'
-#'  If \code{inds} is provided, the ICs not included will be removed after 
+#'  If \code{inds} is provided, the ICs not included will be removed after
 #'  calculating dual regression, not before. This is because removing the ICs
 #'  prior to dual regression would leave unmodelled signals in the data, which
 #'  could bias the templates.
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
-#'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
-#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
+#'  GIFTI). To smooth the standard deviation estimates used for local scaling,
+#'  provide the surface geometries along which to smooth as GIFTI geometry files
+#'  or \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -171,10 +202,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  Default: \code{c("left","right")} (cortical surface only).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
-#'  binary array of the same spatial dimensions as the fMRI data, with 
+#'  binary array of the same spatial dimensions as the fMRI data, with
 #'  \code{TRUE} corresponding to in-mask voxels.
 #' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save
-#'  the DR estimates and only return the templates. If \code{TRUE}, the DR 
+#'  the DR estimates and only return the templates. If \code{TRUE}, the DR
 #'  estimates are returned too. If a single file path, save the DR estimates as
 #'  an RDS file at that location rather than returning them.
 #   [TO DO] If a list of two vectors of file paths with the same lengths as
@@ -194,8 +225,8 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-# @param FC Include the functional connectivity template? Default: \code{FALSE}
-#  (work in progress, not available yet).
+#' @param FC Include the functional connectivity template? Default: \code{FALSE}
+#'  (not fully supported yet.)
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -218,27 +249,27 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #'  zero and one), or as a number of locations (integers greater than one).
 #'  Default: \code{.1}, i.e. up to 10 percent of subjects can be masked out
 #'  at a given location.
-#' @param usePar,wb_path Parallelize the DR computations over subjects? Default: 
-#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will 
+#' @param usePar,wb_path Parallelize the DR computations over subjects? Default:
+#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
 #'  use the number on the PC minus two. If the input data is in CIFTI format, the
 #'  \code{wb_path} must also be provided.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
-#' @importFrom ciftiTools read_cifti is.xifti write_cifti
+#' @importFrom fMRItools is_1 is_integer is_posNum colCenter unmask_mat infer_format_ifti_vec
 #' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
-#'  matrix format; the \code{mask} of locations without template values due to 
+#'  matrix format; the \code{mask} of locations without template values due to
 #'  too many low variance or missing values; the function \code{params} such as
 #'  the type of scaling and detrending performed; the {dat_struct} which can be
-#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or 
+#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
 #'  \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
 #'  and \code{DR} if \code{isTRUE(keep_DR)}.
 #'
 #'  Use \code{summary} to print a description of the template results, and
 #'  for CIFTI-format data use \code{plot} to plot the template mean and variance
-#'  estimates. Use \code{\link{export_template}} to save the templates to 
+#'  estimates. Use \code{\link{export_template}} to save the templates to
 #'  individual RDS, CIFTI, or NIFTI files (depending on the \code{BOLD} format).
 #' @export
 #'
@@ -252,10 +283,10 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
 #' GICA <- mU
 #' estimate_template(BOLD=BOLD, GICA=mU)
-#' 
+#'
 #' \dontrun{
 #'  estimate_template(
-#'    run1_cifti_fnames, run2_cifti_fnames, 
+#'    run1_cifti_fnames, run2_cifti_fnames,
 #'    gICA_cifti_fname, brainstructures="all",
 #'    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
 #'  )
@@ -263,25 +294,23 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   # Check arguments ------------------------------------------------------------
-  FC <- FALSE
 
   # Simple argument checks.
-  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
-  if (isTRUE(scale)) { 
+  if (isTRUE(scale)) {
     warning(
       "Setting `scale='global'`. Use `'global'` or `'local'` ",
       "instead of `TRUE`, which has been deprecated."
@@ -289,18 +318,21 @@ estimate_template <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
+  stopifnot(fMRItools::is_1(scale_sm_FWHM, "numeric"))
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
-  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
-  stopifnot(is.logical(normA) && length(normA)==1)
-  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
-  stopifnot(is.logical(FC) && length(FC)==1)
-  stopifnot(is.numeric(varTol) && length(varTol)==1)
+  stopifnot(fMRItools::is_integer(detrend_DCT, nneg=TRUE))
+  stopifnot(fMRItools::is_1(center_Bcols, "logical"))
+  stopifnot(fMRItools::is_1(normA, "logical"))
+  if (!is.null(Q2)) { # Q2_max checked later.
+    stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
+  }
+  stopifnot(fMRItools::is_1(FC, "logical"))
+  if (isTRUE(FC)) { warning("FC template is still under development.") }
+  stopifnot(fMRItools::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
-  stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
-  stopifnot(is.numeric(missingTol) && length(missingTol)==1 && missingTol >= 0)
-  stopifnot(is.logical(verbose) && length(verbose)==1)
+  stopifnot(fMRItools::is_posNum(maskTol))
+  stopifnot(fMRItools::is_posNum(missingTol))
+  stopifnot(fMRItools::is_1(verbose, "logical"))
   real_retest <- !is.null(BOLD2)
 
   # `keep_DR`
@@ -354,28 +386,23 @@ estimate_template <- function(
 
   # `BOLD` and `BOLD2` ---------------------------------------------------------
   # Determine the format of `BOLD` and `BOLD2`.
-  format <- infer_BOLD_format(BOLD)
+  format <- infer_format_ifti_vec(BOLD)[1]
   if (real_retest) {
-    format2 <- infer_BOLD_format(BOLD2)
+    format2 <- infer_format_ifti_vec(BOLD2)[1]
     if (format2 != format) {
       stop("`BOLD` format is ", format, ", but `BOLD2` format is ", format2, ".")
     }
   }
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    data = "DATA"
+  FORMAT <- get_FORMAT(format)
+  FORMAT_extn <- switch(FORMAT,
+    CIFTI=".dscalar.nii",
+    GIFTI=".func.gii",
+    NIFTI=".nii",
+    MATRIX=".rds"
   )
-  FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", NIFTI=".nii", DATA=".rds")
   nN <- length(BOLD)
 
-  if (FORMAT == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
   # Ensure `BOLD2` is the same length.
   if (real_retest) {
@@ -384,8 +411,8 @@ estimate_template <- function(
     }
   }
 
-  # If BOLD (and BOLD2) is a CIFTI or NIFTI file, check that the file paths exist.
-  if (format %in% c("CIFTI", "NIFTI")) {
+  # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
+  if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
     missing_BOLD <- !file.exists(BOLD)
     if (all(missing_BOLD)) stop('The files in `BOLD` do not exist.')
     if (real_retest) {
@@ -408,12 +435,29 @@ estimate_template <- function(
     }
   }
 
+  # Check `scale_sm_FWHM`
+  if (scale_sm_FWHM !=0 && FORMAT %in% c("NIFTI", "MATRIX")) {
+    if (scale_sm_FWHM==2) {
+      cat("Setting `scale_sm_FWHM == 0`.\n")
+    } else {
+      if (FORMAT == "NIFTI") {
+        warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for volumetric data.).\n")
+      } else {
+        warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for data matrices: use CIFTI/GIFTI files.).\n")
+      }
+    }
+    scale_sm_FWHM <- 0
+  }
+
+  # [TO DO]: Mysteriously, MATRIX FORMAT is not working with parallel.
+  if (usePar && format=="RDS") { stop("Parallel computation not working with RDS file input. Working on this!") }
+
   # `GICA` ---------------------------------------------------------------------
   # Conver `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
-    if (is.xifti(GICA, messages=FALSE)) {
-      xii1 <- select_xifti(GICA, 1) # for formatting output
+    if (ciftiTools::is.xifti(GICA, messages=FALSE)) {
+      xii1 <- ciftiTools::select_xifti(GICA, 1) # for formatting output
       GICA <- as.matrix(GICA)
     } else {
       # Get `xii1` from first data entry.
@@ -421,13 +465,22 @@ estimate_template <- function(
       if (is.character(xii1)) {
         xii1 <- ciftiTools::read_cifti(xii1, brainstructures=brainstructures, idx=1)
       }
-      xii1 <- convert_xifti(select_xifti(xii1, 1), "dscalar")
+      xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(xii1, 1), "dscalar")
     }
     stopifnot(is.matrix(GICA))
+  } else if (FORMAT == "GIFTI") {
+    if (is.character(GICA)) { GICA <- gifti::readgii(GICA) }
+    ghemi <- GICA$file_meta["AnatomicalStructurePrimary"]
+    if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+      stop("AnatomicalStructurePrimary metadata missing or invalid for GICA.")
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
+    GICA <- do.call(cbind, GICA$data)
   } else if (FORMAT == "NIFTI") {
     if (is.character(GICA)) { GICA <- RNifti::readNifti(GICA) }
     stopifnot(length(dim(GICA)) > 1)
-  } else {
+  } else if (FORMAT == "MATRIX") {
+    if (is.character(GICA)) { GICA <- readRDS(GICA) }
     stopifnot(is.matrix(GICA))
   }
   nQ <- dim(GICA)[length(dim(GICA))]
@@ -446,6 +499,7 @@ estimate_template <- function(
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array.
   # Check `GICA` and `mask` dimensions match.
+  # Append NIFTI header from GICA to `mask`.
   # Vectorize `GICA`.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
@@ -461,20 +515,27 @@ estimate_template <- function(
       if (length(dim(GICA)) != 2) {
         stopifnot(all(dim(GICA)[seq(length(dim(GICA))-1)] == nI))
       }
+      # Append NIFTI header.
+      mask <- RNifti::asNifti(array(mask, dim=c(dim(mask), 1)), reference=GICA)
+      # Vectorize `GICA`.
       if (all(dim(GICA)[seq(length(dim(GICA))-1)] == nI)) {
-        GICA <- matrix(GICA[rep(mask, nQ)], ncol=nQ)
+        GICA <- matrix(GICA[rep(as.logical(mask), nQ)], ncol=nQ)
         stopifnot(nrow(GICA) == nV)
       }
     }
   } else {
+    if (!is.null(mask)) {
+      warning("Ignoring `mask`, which is only applicable to NIFTI data.")
+      mask <- NULL
+    }
     nI <- nV <- nrow(GICA)
   }
 
   # Center `GICA` columns.
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- colCenter(GICA) }
+  if (center_Gcols) { GICA <- fMRItools::colCenter(GICA) }
 
-  # Process each scan ----------------------------------------------------------
+  # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }
   if (verbose) {
     cat("Data input format:             ", format2, "\n")
@@ -482,11 +543,15 @@ estimate_template <- function(
     if (FORMAT == "NIFTI") {
       cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
     }
+    if (FORMAT == "GIFTI") {
+      cat("Cortex Hemisphere:             ", ghemi, "\n")
+    }
     cat('Number of original group ICs:  ', nQ, "\n")
     cat('Number of template ICs:        ', nL, "\n")
     cat('Number of training subjects:   ', nN, "\n")
   }
 
+  # Process each scan ----------------------------------------------------------
   nM <- 2
 
   if (usePar) {
@@ -501,7 +566,7 @@ estimate_template <- function(
     # Loop over subjects.
     `%dopar%` <- foreach::`%dopar%`
     q <- foreach::foreach(ii = seq(nN)) %dopar% {
-      if (FORMAT=="CIFTI") {
+      if (FORMAT=="CIFTI" || FORMAT=="GIFTI") {
         # Load the workbench.
         if (is.null(wb_path)) {
           stop("`wb_path` is required for parallel computation.")
@@ -523,8 +588,11 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        keepA=FC,
         center_Bcols=center_Bcols,
-        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        scale=scale,
+        scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+        scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
         normA=normA,
         Q2=Q2, Q2_max=Q2_max,
@@ -536,12 +604,16 @@ estimate_template <- function(
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
       if (!is.null(DR_ii)) {
-        out$DR[1,,,] <- DR_ii$test[inds,]
-        out$DR[2,,,] <- DR_ii$retest[inds,]
+        out$DR[1,,,] <- DR_ii$test$S[inds,]
+        out$DR[2,,,] <- DR_ii$retest$S[inds,]
         if(FC) {
-          out$FC[1,,,] <- cov(DR_ii$test[,inds])
-          out$FC[2,,,] <- cov(DR_ii$retest[,inds])
+          out$FC[1,,,] <- cov(DR_ii$test$A[,inds])
+          out$FC[2,,,] <- cov(DR_ii$retest$A[,inds])
         }
+      } else {
+        if(verbose) { cat(paste0(
+          '\nSubject ', ii,' of ', nN, " was skipped (too many masked locations).\n"
+        )) }
       }
       out
     }
@@ -549,7 +621,7 @@ estimate_template <- function(
     # Aggregate.
     DR0 <- abind::abind(lapply(q, `[[`, "DR"), along=2)
     if (FC) { FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2) }
-    
+
     doParallel::stopImplicitCluster()
 
   } else {
@@ -559,7 +631,7 @@ estimate_template <- function(
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
-        '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+        '\nReading and analyzing data for subject ', ii,' of ', nN, '.\n'
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
@@ -567,8 +639,11 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        keepA=FC,
         center_Bcols=center_Bcols,
-        scale=scale, scale_sm_FWHM=scale_sm_FWHM, 
+        scale=scale,
+        scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+        scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
         normA=normA,
         Q2=Q2, Q2_max=Q2_max,
@@ -580,12 +655,16 @@ estimate_template <- function(
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
       if (!is.null(DR_ii)) {
-        DR0[1,ii,,] <- DR_ii$test[inds,]
-        DR0[2,ii,,] <- DR_ii$retest[inds,]
+        DR0[1,ii,,] <- DR_ii$test$S[inds,]
+        DR0[2,ii,,] <- DR_ii$retest$S[inds,]
         if(FC) {
-          FC0[1,ii,,] <- cov(DR_ii$test[,inds])
-          FC0[2,ii,,] <- cov(DR_ii$retest[,inds])
+          FC0[1,ii,,] <- cov(DR_ii$test$A[,inds])
+          FC0[2,ii,,] <- cov(DR_ii$retest$A[,inds])
         }
+      } else {
+        if(verbose) { cat(paste0(
+          '\tSubject ', ii,' was skipped (too many masked locations).\n'
+        )) }
       }
     }
     rm(DR_ii)
@@ -613,7 +692,6 @@ estimate_template <- function(
 
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
-  # FC0 <- array(FC1, dim=c(nM, nN, nL*nL))
 
   if (verbose) { cat("\nCalculating template.\n") }
   # Estimate the mean and variance templates.
@@ -625,51 +703,12 @@ estimate_template <- function(
 
   # Unmask the data matrices.
   if (use_mask) {
-    template <- lapply(template, unmask_mat, mask=maskAll)
-    var_decomp <- lapply(var_decomp, unmask_mat, mask=maskAll)
+    template <- lapply(template, fMRItools::unmask_mat, mask=maskAll)
+    var_decomp <- lapply(var_decomp, fMRItools::unmask_mat, mask=maskAll)
   }
 
   # Estimate FC template
-  if(FC){
-
-    # [TO DO]: move to a separate function.
-    mean_FC <- var_FC_tot <- var_FC_within <- NULL
-    # mean_FC <- (apply(FC1, c(2,3), mean, na.rm=TRUE) + apply(FC2, c(2,3), mean, na.rm=TRUE))/2
-    # var_FC_tot  <- (apply(FC1, c(2,3), var, na.rm=TRUE) + apply(FC2, c(2,3), var, na.rm=TRUE))/2
-    # var_FC_within  <- 1/2*(apply(FC1-FC2, c(2,3), var, na.rm=TRUE))
-    var_FC_between <- var_FC_tot - var_FC_within
-    var_FC_between[var_FC_between < 0] <- NA
-
-    #function to minimize w.r.t. k
-    fun <- function(nu, p, var_ij, xbar_ij, xbar_ii, xbar_jj){
-      LHS <- var_ij
-      phi_ij <- xbar_ij*(nu-p-1)
-      phi_ii <- xbar_ii*(nu-p-1)
-      phi_jj <- xbar_jj*(nu-p-1)
-      RHS_numer <- (nu-p+1)*phi_ij^2 + (nu-p-1)*phi_ii*phi_jj
-      RHS_denom <- (nu-p)*((nu-p-1)^2)*(nu-p-3)
-
-      sq_diff <- (LHS - RHS_numer/RHS_denom)^2
-      return(sq_diff)
-    }
-
-    nu_est <- matrix(NA, nL, nL)
-    for(q1 in 1:nL){
-      for(q2 in q1:nL){
-
-        #estimate k = nu - p - 1
-        nu_opt <- optimize(f=fun, interval=c(nL+1,nL*10), p=nL, var_ij=var_FC_between[q1,q2], xbar_ij=mean_FC[q1,q2], xbar_ii=mean_FC[q1,q1], xbar_jj=mean_FC[q2,q2])
-        nu_est[q1,q2] <- nu_opt$minimum
-      }
-    }
-    nu_est[lower.tri(nu_est, diag=FALSE)] <- NA
-    nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.1, na.rm = TRUE)
-
-    template_FC <- list(nu = nu_est1,
-                        psi = mean_FC*(nu_est1 - nL - 1))
-  } else {
-    template_FC <- NULL
-  }
+  if(FC){ template$FC <- estimate_template_FC(FC0) }
 
   # Format result ---------------------------------------------------
   # Keep DR
@@ -690,12 +729,15 @@ estimate_template <- function(
   }
   if (!keep_DR) { rm(DR0) }
 
-  # Params, formatted as length-one character vectors to put in "xifti" metadata
+  # Params, formatted as length-one character vectors to be compatible with
+  #   putting in "xifti" metadata
   indsp <- if (all(seq(nQ) %in% inds)) { paste("all", nQ) } else { inds }
   tparams <- list(
+    FC=FC,
     num_subjects=nN, num_visits=nM,
     inds=indsp, center_Bcols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT, normA=normA,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
@@ -720,9 +762,10 @@ estimate_template <- function(
   }
 
   dat_struct <- switch(FORMAT,
-    CIFTI = newdata_xifti(xii1, 0),
+    CIFTI = ciftiTools::newdata_xifti(xii1, 0),
+    GIFTI = list(hemisphere=ghemi),
     NIFTI = mask,
-    DATA = NULL
+    MATRIX = NULL
   )
 
   # Results list.
@@ -747,13 +790,14 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"), mask=NULL,
+  brainstructures=c("left","right"),
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
@@ -761,15 +805,50 @@ estimate_template.cifti <- function(
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, 
+    scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+    scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT,
     center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, 
+    Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
-    #FC=FC,
+    FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
-    usePar=usePar, wb_path=wb_path, 
+    usePar=usePar, wb_path=wb_path,
+    verbose=verbose
+  )
+}
+
+#' @rdname estimate_template
+#'
+estimate_template.gifti <- function(
+  BOLD, BOLD2=NULL,
+  GICA, inds=NULL,
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
+  detrend_DCT=0,
+  center_Bcols=FALSE, normA=FALSE,
+  Q2=0, Q2_max=NULL,
+  brainstructures=c("left","right"),
+  keep_DR=FALSE,
+  FC=FALSE,
+  varTol=1e-6, maskTol=.1, missingTol=.1,
+  usePar=FALSE, wb_path=NULL,
+  verbose=TRUE) {
+
+  estimate_template(
+    BOLD=BOLD, BOLD2=BOLD2,
+    GICA=GICA, inds=inds,
+    scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
+    scale_sm_FWHM=scale_sm_FWHM,
+    detrend_DCT=detrend_DCT,
+    center_Bcols=center_Bcols, normA=normA,
+    Q2=Q2, Q2_max=Q2_max,
+    brainstructures=brainstructures,
+    keep_DR=keep_DR,
+    FC=FC,
+    varTol=varTol, maskTol=maskTol, missingTol=missingTol,
+    usePar=usePar, wb_path=wb_path,
     verbose=verbose
   )
 }
@@ -779,29 +858,30 @@ estimate_template.cifti <- function(
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"), scale_sm_FWHM=2, 
+  scale=c("global", "local", "none"),
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
-  #FC=FALSE,
+  FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
-  usePar=FALSE, wb_path=NULL, 
+  usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
 
   estimate_template(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
-    scale=scale, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, 
+    scale=scale,
+    detrend_DCT=detrend_DCT,
     center_Bcols=center_Bcols, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, 
+    Q2=Q2, Q2_max=Q2_max,
     mask=mask,
     keep_DR=keep_DR,
-    #FC=FC,
+    FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,
     verbose=verbose
   )
 }
+

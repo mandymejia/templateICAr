@@ -3,7 +3,7 @@ citHeader("To cite {templateICAr} in publications use:")
 templateICAr_citations <- c(
 	bibentry(
 		bibtype      = "Article",
-		title        = " Template Independent Component Analysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors",
+		title        = "{T}emplate {I}ndependent {C}omponent {A}nalysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors",
 		author       = personList(
 			as.person("Amanda F Mejia"),
 			as.person("Mary Beth Nebel"),
@@ -17,7 +17,25 @@ templateICAr_citations <- c(
 		number       = "531",
 		pages        = "1151--1177",
 		publisher    = "American Statistical Association",
-		doi          = "10.1080/01621459.2019.1679638",
-		key          = "mejiaTemplateIndependentComponent2019a"
+		doi          = "10.1080/01621459.2019.1679638"
+	),
+
+	bibentry(
+		bibtype      = "Article",
+		title        = "{T}emplate {I}ndependent {C}omponent {A}nalysis with spatial priors for accurate subject-level brain network estimation and inference",
+		author       = personList(
+			as.person("Amanda F Mejia"),
+			as.person("David Bolin"),
+			as.person("Yu Ryan Yue"),
+			as.person("Jiongran Wang"),
+			as.person("Brian S Caffo"),
+			as.person("Mary Beth Nebel")
+		),
+		journal      = "Journal of Computational and Graphical Statistics",
+		year         = "2022",
+		number       = "just-accepted",
+		pages        = "1--35",
+		publisher    = "American Statistical Association",
+		doi          = "10.1080/10618600.2022.2104289"
 	)
 )

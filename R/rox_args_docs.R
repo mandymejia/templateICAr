@@ -42,8 +42,9 @@ NULL
 
 #' center_Bcols
 #' 
-#' @param center_Bcols Center BOLD across columns (each image)? Default: 
-#'  \code{FALSE} (not recommended).
+#' @param center_Bcols Center BOLD across columns (each image)? This
+#'  is equivalent to performing global signal regression. Default: 
+#'  \code{FALSE}. 
 #' 
 #' @name center_Bcols_Param
 #' @keywords internal

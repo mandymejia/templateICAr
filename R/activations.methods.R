@@ -4,11 +4,11 @@
 #'
 #' @param object Object of class \code{"tICA_act.cifti"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing the data and results for the activations analysis.
 #' @export
 #' @method summary tICA_act.cifti
 summary.tICA_act.cifti <- function(object, ...) {
-  act_counts <- colSums(as.matrix(object$active), na.rm=TRUE)
-
+  act_counts <- colSums(as.matrix(object$active)==2, na.rm=TRUE)
   x <- c(
     summary(object$active),
     list(act_counts=act_counts),
@@ -24,6 +24,7 @@ summary.tICA_act.cifti <- function(object, ...) {
 #'
 #' @param x The activations from \code{activations.cifti}
 #' @param ... further arguments passed to or from other methods.
+#' @return Nothing, invisibly.
 #' @method print summary.tICA_act.cifti
 print.summary.tICA_act.cifti <- function(x, ...) {
 
@@ -55,6 +56,9 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     }
   }
 
+  nMeasShow <- min(5, x$measurements)
+  nMeasTriC <- ifelse(nMeasShow > 5, ", ...", "")
+
   cat("====ACTIVATIONS STATS================\n")
   cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
@@ -62,16 +66,21 @@ print.summary.tICA_act.cifti <- function(x, ...) {
   # cat("Type:            ", x$type, "\n")
   # cat("Threshold:       ", x$u, "\n")
   # cat("Deviation:       ", x$deviation, "\n")
-  cat("Active Loc. (%): ", paste0(paste(apct[seq(5)], collapse=", "), ", ..."), "\n")
+  cat(
+    "Active Loc. (%): ", 
+    paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC), "\n"
+  )
   cat("\n")
 
   class(x) <- "summary.xifti"
   print(x)
+  invisible(NULL)
 }
 
 #' @rdname summary.tICA_act.cifti
 #' @export
 #'
+#' @return Nothing, invisibly.
 #' @method print tICA_act.cifti
 print.tICA_act.cifti <- function(x, ...) {
   print.summary.tICA_act.cifti(summary(x))
@@ -83,12 +92,15 @@ print.tICA_act.cifti <- function(x, ...) {
 #' @param stat \code{"active"} (default), \code{"pvals"}, \code{"pvals_adj"},
 #'  \code{"tstats"}, or \code{"vars"}.
 #' @param ... Additional arguments to \code{view_xifti}
-#' @return The plot
+#' @return The activations plot
 #' @export
-#' @importFrom ciftiTools view_xifti
 #' @method plot tICA_act.cifti
 plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstats", "se"), ...) {
   stopifnot(inherits(x, "tICA_act.cifti"))
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+  }
 
   # Check `...`
   args <- list(...)
@@ -115,7 +127,7 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
   if (stat == "active") {
     x <- x$active
   } else {
-    x <- newdata_xifti(x$se, as.matrix(x[[stat]]))
+    x <- ciftiTools::newdata_xifti(x$se, as.matrix(x[[stat]]))
   }
 
   ss <- stat # to match `plot.template.cifti`
@@ -143,37 +155,38 @@ plot.tICA_act.cifti <- function(x, stat=c("active", "pvals", "pvals_adj", "tstat
     args_ss$fname <- gsub(paste0(".", fext), "", args_ss$fname, fixed=TRUE)
     args_ss$fname <- paste0(args_ss$fname, "_", ss, ".", fext)
   }
-  do.call(view_xifti, c(list(x), args_ss))
+  do.call(ciftiTools::view_xifti, c(list(x), args_ss))
 }
 
-#' Summarize a \code{"tICA_act"} object
+#' Summarize a \code{"tICA_act.matrix"} object
 #'
-#' Summary method for class \code{"tICA_act"}
+#' Summary method for class \code{"tICA_act.matrix"}
 #'
-#' @param object Object of class \code{"tICA_act"}.
+#' @param object Object of class \code{"tICA_act.matrix"}.
 #' @param ... further arguments passed to or from other methods.
+#' @return A list summarizing the data and results for the activations analysis.
 #' @export
-#' @method summary tICA_act
-summary.tICA_act <- function(object, ...) {
+#' @method summary tICA_act.matrix
+summary.tICA_act.matrix <- function(object, ...) {
   act_counts <- colSums(as.matrix(object$active), na.rm=TRUE)
-
   x <- c(
     list(nV=nrow(object$active), nL=ncol(object$active)),
     list(act_counts=act_counts),
     object[c("u", "alpha", "type", "method_p", "deviation")]
   )
 
-  class(x) <- "summary.tICA_act"
+  class(x) <- "summary.tICA_act.matrix"
   return(x)
 }
 
-#' @rdname summary.tICA_act
+#' @rdname summary.tICA_act.matrix
 #' @export
 #'
 #' @param x The activations from \code{activations}
 #' @param ... further arguments passed to or from other methods.
-#' @method print summary.tICA_act
-print.summary.tICA_act <- function(x, ...) {
+#' @return Nothing, invisibly.
+#' @method print summary.tICA_act.matrix
+print.summary.tICA_act.matrix <- function(x, ...) {
 
   #mapct <- paste0(" (", round(mean(x$act_counts)/x$nV*100), "% of locations)")
   apct <- round(x$act_counts/x$nV*100)
@@ -203,6 +216,9 @@ print.summary.tICA_act <- function(x, ...) {
     }
   }
 
+  nMeasShow <- min(5, x$measurements)
+  nMeasTriC <- ifelse(nMeasShow > 5, ", ...", "")
+
   cat("====ACTIVATIONS STATS================\n")
   cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
@@ -210,17 +226,22 @@ print.summary.tICA_act <- function(x, ...) {
   # cat("Type:            ", x$type, "\n")
   # cat("Threshold:       ", x$u, "\n")
   # cat("Deviation:       ", x$deviation, "\n")
-  cat("Active Loc. (%): ", paste0(paste(apct[seq(5)], collapse=", "), ", ..."), "\n")
+  cat(
+    "Active Loc. (%): ", 
+    paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC), "\n"
+  )
   cat("-------------------------------------\n")
   cat("# Locations:     ", x$nL, "\n")
   cat("# Template ICs:  ", x$nV, "\n")
   cat("\n")
+  invisible(NULL)
 }
 
-#' @rdname summary.tICA_act
+#' @rdname summary.tICA_act.matrix
 #' @export
 #'
-#' @method print tICA_act
-print.tICA_act <- function(x, ...) {
-  print.summary.tICA_act(summary(x))
+#' @return Nothing, invisibly.
+#' @method print tICA_act.matrix
+print.tICA_act.matrix <- function(x, ...) {
+  print.summary.tICA_act.matrix(summary(x))
 }

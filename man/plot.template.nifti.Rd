@@ -4,16 +4,37 @@
 \alias{plot.template.nifti}
 \title{Plot template}
 \usage{
-\method{plot}{template.nifti}(x, ...)
+\method{plot}{template.nifti}(
+  x,
+  stat = c("mean", "sd", "var"),
+  plane = c("axial", "sagittal", "coronal"),
+  n_slices = 9,
+  slices = NULL,
+  var_method = c("non-negative", "unbiased"),
+  ...
+)
 }
 \arguments{
 \item{x}{The template from \code{estimate_template.nifti}}
 
-\item{...}{Additional arguments}
+\item{stat}{\code{"mean"} (default), \code{"sd"}, or \code{"var"}.
+(\code{"sd"} will show the square root of the variance template.)}
+
+\item{plane, n_slices, slices}{Anatomical plane and which slice indices to
+show.
+Default: 9 axial slices.}
+
+\item{var_method}{\code{"non-negative"} (default) or \code{"unbiased"}}
+
+\item{...}{Additional arguments to \code{oro.nifti::image}}
 }
 \value{
 The plot
 }
 \description{
-Plot template
+Based on \code{oro.nifti::image}.
+}
+\details{
+Consider using \code{struct_template} to obtain the 3D volumes to plot with a different
+viewer function (e.g. from \code{oro.nifti}) if desired.
 }

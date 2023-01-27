@@ -21,8 +21,7 @@
 #'
 #' @export
 #' 
-#' @importFrom ciftiTools is.xifti
-#' @importFrom fMRIscrub nuisance_regression dct_bases
+#' @importFrom fMRItools nuisance_regression dct_bases
 #'
 norm_BOLD <- function(
   BOLD, center_rows=TRUE, center_cols=FALSE,
@@ -44,7 +43,12 @@ norm_BOLD <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  if (!is.null(scale_sm_xifti)) { stopifnot(is.xifti(scale_sm_xifti)) }
+  if (!is.null(scale_sm_xifti)) { 
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
+    stopifnot(ciftiTools::is.xifti(scale_sm_xifti))
+  }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
@@ -96,11 +100,11 @@ norm_BOLD <- function(
         stop("`scale_sm_xifti` not compatible with `BOLD`: different spatial dimensions.")
       }
       if (!is.null(scale_sm_xifti$meta$cifti$intent) && scale_sm_xifti$meta$cifti$intent == 3007) {
-        scale_sm_xifti <- convert_xifti(scale_sm_xifti, "dscalar")
+        scale_sm_xifti <- ciftiTools::convert_xifti(scale_sm_xifti, "dscalar")
       }
       # Compute and smooth the SD.
-      sig <- newdata_xifti(select_xifti(scale_sm_xifti, 1), sig)
-      sig <- smooth_xifti(sig, surf_FWHM=scale_sm_FWHM, vol_FWHM=scale_sm_FWHM)
+      sig <- ciftiTools::newdata_xifti(ciftiTools::select_xifti(scale_sm_xifti, 1), sig)
+      sig <- ciftiTools::smooth_xifti(sig, surf_FWHM=scale_sm_FWHM, vol_FWHM=scale_sm_FWHM)
       sig <- c(as.matrix(sig))
     }
     # Apply local scaling.

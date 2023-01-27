@@ -4,57 +4,64 @@
 #'
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
 #' @param u Activation threshold. Default: \code{0}.
-#' @param alpha Significance level for joint PPM. Default: \code{0.1}.
+#' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
-#' @param method_p If the input is a \code{"tICA"} model object, the type of 
-#'  multiple comparisons correction to use for p-values, or \code{NULL} for no 
-#'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini & 
+#' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
+#'  multiple comparisons correction to use for p-values, or \code{NULL} for no
+#'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
 #'  Hochberg, i.e. the false discovery rate).
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: 
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default:
 #'  \code{FALSE}.
-#' @param which.ICs Indices of ICs for which to identify activations.  If 
+#' @param which.ICs Indices of ICs for which to identify activations.  If
 #'  \code{NULL} (default), use all ICs.
-#' @param deviation If \code{TRUE} identify significant deviations from the 
-#'  template mean, rather than significant areas of engagement. Default: 
+#' @param deviation If \code{TRUE} identify significant deviations from the
+#'  template mean, rather than significant areas of engagement. Default:
 #'  \code{FALSE}.
 #'
-#' @return A list containing activation maps for each IC and the joint and 
+#' @return A list containing activation maps for each IC and the joint and
 #'  marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
-#'  data, then the activations maps will be formatted accordingly. 
-#' 
+#'  data, then the activations maps will be formatted accordingly.
+#'
 #'  Use \code{summary} to obtain information about the activations results.
-#'  For CIFTI-format activations, use \code{plot} to visualize the activation 
+#'  For CIFTI-format activations, use \code{plot} to visualize the activation
 #'  maps.
 #'
 #' @export
 #'
 #' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
-#' @importFrom ciftiTools unmask_subcortex
 #'
 #' @examples
 #' \dontrun{
 #'  activations(tICA_result, alpha=.05, deviation=TRUE)
 #' }
 activations <- function(
-  tICA, u=0, alpha=0.01, type=">", method_p='BH', 
+  tICA, u=0, alpha=0.01, type=">", method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
-  is_tICA <- inherits(tICA, "tICA") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
-  is_stICA <- inherits(tICA, "stICA") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
+  is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
+  is_stICA <- inherits(tICA, "stICA.matrix") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
   if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
 
   FORMAT <- class(tICA)[grepl("tICA", class(tICA))]
   if (length(FORMAT) != 1) { stop("Not a tICA.") }
   FORMAT <- switch(FORMAT,
     tICA.cifti = "CIFTI",
+    tICA.gifti = "GIFTI",
     tICA.nifti = "NIFTI",
-    tICA = "DATA",
+    tICA.matrix = "DATA",
     stICA.cifti = "CIFTI",
+    stICA.gifti = "GIFTI",
     stICA.nifti = "NIFTI",
-    stICA = "DATA"
+    stICA.matrix = "DATA"
   )
+
+  if (FORMAT == "CIFTI") {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to read NIFTI data. Please install it.", call. = FALSE)
+    }
+  }
 
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
@@ -65,11 +72,11 @@ activations <- function(
 
   # Get needed metadata from `tICA`.
   Q <- tICA$omega
-  mask <- tICA$mask
+  mask <- tICA[["mask"]] # avoid grabbing mask_nii
 
   # Vectorize data.
   if (FORMAT == "CIFTI") {
-    xii1 <- newdata_xifti(select_xifti(tICA$subjICmean,1), 0)
+    xii1 <- ciftiTools::newdata_xifti(ciftiTools::select_xifti(tICA$subjICmean,1), 0)
     tICA$subjICmean <- as.matrix(tICA$subjICmean)
     tICA$subjICse <- as.matrix(tICA$subjICse)
   } else if (FORMAT == "NIFTI") {
@@ -165,21 +172,28 @@ activations <- function(
 
   # Format result. -------------------------------------------------------------
   # Unmask data.
-  if (use_mask) { result$active <- unmask_mat(result$active, mask) }
+  if (use_mask) { result$active <- fMRItools::unmask_mat(result$active, mask) }
 
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
-    result$active <- newdata_xifti(xii1, as.numeric(result$active))
-    result$active <- convert_xifti(result$active, "dlabel", values=c(0, 1), colors="red")
+    result$active <- ciftiTools::newdata_xifti(xii1, as.numeric(result$active))
+    result$active <- ciftiTools::move_from_mwall(result$active, -1)
+    result$active <- ciftiTools::convert_xifti(
+      result$active, "dlabel",
+      values=c(-1, 0, 1),
+      colors=c("grey", "white", "red"),
+      add_white=FALSE
+    )
+
     for (ii in seq(ncol(result$active))) {
-      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Inactive", "Active")
+      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Medial Wall", "Inactive", "Active") # add "NA" to first
     }
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
-    result$active <- unmask_subcortex(result$active, mask_nii, fill=NA)
+    result$active <- fMRItools::unvec_vol(result$active, mask_nii, fill=NA)
     class(result) <- "tICA_act.nifti"
   } else {
-    class(result) <- "tICA_act"
+    class(result) <- "tICA_act.matrix"
   }
 
   result

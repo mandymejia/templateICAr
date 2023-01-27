@@ -3,6 +3,7 @@
 \name{estimate_template}
 \alias{estimate_template}
 \alias{estimate_template.cifti}
+\alias{estimate_template.gifti}
 \alias{estimate_template.nifti}
 \title{Estimate template}
 \usage{
@@ -23,6 +24,7 @@ estimate_template(
   brainstructures = c("left", "right"),
   mask = NULL,
   keep_DR = FALSE,
+  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -37,6 +39,8 @@ estimate_template.cifti(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
@@ -44,8 +48,33 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
-  mask = NULL,
   keep_DR = FALSE,
+  FC = FALSE,
+  varTol = 1e-06,
+  maskTol = 0.1,
+  missingTol = 0.1,
+  usePar = FALSE,
+  wb_path = NULL,
+  verbose = TRUE
+)
+
+estimate_template.gifti(
+  BOLD,
+  BOLD2 = NULL,
+  GICA,
+  inds = NULL,
+  scale = c("global", "local", "none"),
+  scale_sm_surfL = NULL,
+  scale_sm_surfR = NULL,
+  scale_sm_FWHM = 2,
+  detrend_DCT = 0,
+  center_Bcols = FALSE,
+  normA = FALSE,
+  Q2 = 0,
+  Q2_max = NULL,
+  brainstructures = c("left", "right"),
+  keep_DR = FALSE,
+  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -60,7 +89,6 @@ estimate_template.nifti(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
-  scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   normA = FALSE,
@@ -68,6 +96,7 @@ estimate_template.nifti(
   Q2_max = NULL,
   mask = NULL,
   keep_DR = FALSE,
+  FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -78,10 +107,10 @@ estimate_template.nifti(
 }
 \arguments{
 \item{BOLD, BOLD2}{Vector of subject-level fMRI data in one of the following
-formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
-\code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where
-\eqn{V} is the number of data locations and \eqn{T} is the number of
-timepoints.
+formats: CIFTI file paths, \code{"xifti"} objects, GIFTI file paths,
+\code{"gifti"} objects, NIFTI file paths, \code{"nifti"} objects,
+or \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data
+locations and \eqn{T} is the number of timepoints.
 
 If \code{BOLD2} is provided it must be in the same format as \code{BOLD};
 \code{BOLD} will be the test data and \code{BOLD2} will be the retest data.
@@ -108,10 +137,10 @@ deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
 data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
-\code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
-smooth the standard deviation estimates used for local scaling, provide the
-surface geometries along which to smooth as GIFTI geometry files or
-\code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+\code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
+GIFTI). To smooth the standard deviation estimates used for local scaling,
+provide the surface geometries along which to smooth as GIFTI geometry files
+or \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
 
 If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 estimates will be performed.
@@ -127,8 +156,9 @@ resolution as the \code{BOLD} data.}
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default:
-\code{FALSE} (not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? This
+is equivalent to performing global signal regression. Default:
+\code{FALSE}.}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the
@@ -165,6 +195,9 @@ binary array of the same spatial dimensions as the fMRI data, with
 the DR estimates and only return the templates. If \code{TRUE}, the DR
 estimates are returned too. If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
+
+\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
+(not fully supported yet.)}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -232,7 +265,7 @@ estimate_template(BOLD=BOLD, GICA=mU)
 
 \dontrun{
  estimate_template(
-   run1_cifti_fnames, run2_cifti_fnames, 
+   run1_cifti_fnames, run2_cifti_fnames,
    gICA_cifti_fname, brainstructures="all",
    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
  )

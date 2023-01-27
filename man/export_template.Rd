@@ -14,13 +14,15 @@ export_template(
 \item{x}{The result of \code{estimate_template}}
 
 \item{out_fname}{Use \code{NULL} (default) to just return the template
-objects directly. Otherwise, use a length-3 character vector of file
+objects directly. Otherwise, use a character vector of length 3 or 4 of file
 path(s) to save the output to:
-the mean template, the variance template, and the variance decomposition,
-in that order. If one file name is provided, it will be appended with
+the mean template, the variance template, the variance decomposition, and
+the FC template if present, in that order. If one file name is provided,
+it will be appended with
 \code{"_mean.[file_ext]"} for the template mean map,
-\code{"_var.[file_ext]"} for the template variance map, and
-\code{"_varDecomp.rds"} for the variance decomposition, where \code{[file_ext]}
+\code{"_var.[file_ext]"} for the template variance map,
+\code{"_varDecomp.rds"} for the variance decomposition, and
+\code{"_FC.rds"} where \code{[file_ext]}
 will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
 and \code{"rds"} for data input.}
 
@@ -41,4 +43,5 @@ visualization or processing outside of \code{templateICAr}.
  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
  export_template(tm, out_fname="my_template", var_method="unbiased")
 }
+
 }

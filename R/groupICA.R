@@ -43,7 +43,7 @@
 #'  surface and volume arguments to \code{\link[ciftiTools]{smooth_cifti}}.
 #'  These arguments only apply if \code{smooth}.
 #'
-#' @importFrom ciftiTools read_cifti write_cifti smooth_cifti merge_xifti convert_xifti
+#' @importFrom fMRItools match_input sign_flip
 #' @importFrom ica icaimax
 #'
 #' @return \code{out_fname} if a file was written, or the GICA as a \code{"xifti"} object
@@ -71,6 +71,10 @@ groupICA.cifti <- function(
   smooth_subcortical_merged=FALSE#,
   #nRuns = 5
   ){
+
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+  }
 
   if (!is.null(out_fname)) {
     if(!dir.exists(dirname(out_fname))) stop("`out_fname` directory does not exist.")
@@ -139,7 +143,7 @@ groupICA.cifti <- function(
     )
   }
 
-  brainstructures <- match_input(
+  brainstructures <- fMRItools::match_input(
     brainstructures, c("left","right","subcortical","all"),
     user_value_label="brainstructures"
   )
@@ -172,7 +176,7 @@ groupICA.cifti <- function(
     # The call returns the path to the smoothed cifti, which will be in a temp dir.
     if (smooth) {
       for (jj in seq(length(fnames_ii))) {
-        fnames_ii[jj] <- smooth_cifti(
+        fnames_ii[jj] <- ciftiTools::smooth_cifti(
           fnames_ii[jj],
           cifti_target_fname=file.path(tempdir(), basename(fnames_ii[jj])),
           surf_FWHM = smooth_surf_FWHM, vol_FWHM = smooth_vol_FWHM,
@@ -185,12 +189,12 @@ groupICA.cifti <- function(
     }
 
     # Read in BOLD data.
-    BOLD_ii <- lapply(fnames_ii, read_cifti, brainstructures=brainstructures)
+    BOLD_ii <- lapply(fnames_ii, ciftiTools::read_cifti, brainstructures=brainstructures)
     # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
     BOLD_ii <- lapply(BOLD_ii, function(x){
-      newdata_xifti(x, norm_BOLD(
+      ciftiTools::newdata_xifti(x, norm_BOLD(
         as.matrix(x), center_cols=center_Bcols, 
-        scale=scale, scale_sm_xifti=select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
+        scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT
       ))
     })
@@ -198,7 +202,7 @@ groupICA.cifti <- function(
     # Concatenate and convert to matrix.
     # `merge_xifti` will check that voxels and vertices align;
     #   i.e. that the resolutions are the same.
-    BOLD_ii <- as.matrix(merge_xifti(xifti_list=BOLD_ii))
+    BOLD_ii <- as.matrix(ciftiTools::merge_xifti(xifti_list=BOLD_ii))
 
     # Check the total timepoints for this subject.
     #   Update the running total.
@@ -249,7 +253,7 @@ groupICA.cifti <- function(
   if (verbose) { cat("Performing group-level ICA.\n") }
   GICA <- ica::icaimax(bigY, nc=num_ICs, center=TRUE)
   rm(bigY)
-  GICA <- sign_flip(GICA)
+  GICA <- fMRItools::sign_flip(GICA)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # # Repeat GICA. Does not work with icaimax because there is no change, but works (badly) with fastica
@@ -318,16 +322,16 @@ groupICA.cifti <- function(
 
   # Format GICA as a xifti object and write out a cifti
 
-  xii_GICA <- read_cifti(
+  xii_GICA <- ciftiTools::read_cifti(
     fnames_ii[1], brainstructures=brainstructures,
     surfL_fname=surfL, surfR_fname=surfR,
   )
-  xii_GICA <- select_xifti(xii_GICA, rep(1, ncol(GICA$M)))
-  xii_GICA <- convert_xifti(xii_GICA, "dscalar")
-  xii_GICA <- newdata_xifti(xii_GICA, GICA$M)
+  xii_GICA <- ciftiTools::select_xifti(xii_GICA, rep(1, ncol(GICA$M)))
+  xii_GICA <- ciftiTools::convert_xifti(xii_GICA, "dscalar")
+  xii_GICA <- ciftiTools::newdata_xifti(xii_GICA, GICA$M)
 
   if(!is.null(out_fname)){
-    return(write_cifti(xii_GICA, out_fname, verbose=verbose))
+    return(ciftiTools::write_cifti(xii_GICA, out_fname, verbose=verbose))
   } else {
     return(xii_GICA)
   }

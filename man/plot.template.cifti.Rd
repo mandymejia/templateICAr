@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{template.cifti}(
   x,
-  stat = c("both", "mean", "var"),
+  stat = c("both", "mean", "sd", "var"),
   var_method = c("non-negative", "unbiased"),
   ...
 )
@@ -14,7 +14,9 @@
 \arguments{
 \item{x}{The template from \code{estimate_template.cifti}}
 
-\item{stat}{\code{"mean"}, \code{"var"}, or \code{"both"} (default)}
+\item{stat}{\code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
+default the square root of the variance template is shown; another option is
+\code{stat="var"} to instead display the variance template directly.}
 
 \item{var_method}{\code{"non-negative"} (default) or \code{"unbiased"}}
 

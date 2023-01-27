@@ -20,11 +20,11 @@ activations(
 
 \item{u}{Activation threshold. Default: \code{0}.}
 
-\item{alpha}{Significance level for joint PPM. Default: \code{0.1}.}
+\item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
 \item{type}{Type of region.  Default: \code{">"} (positive excursion region).}
 
-\item{method_p}{If the input is a \code{"tICA"} model object, the type of
+\item{method_p}{If the input is a \code{"tICA.[format]"} model object, the type of
 multiple comparisons correction to use for p-values, or \code{NULL} for no
 correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
 Hochberg, i.e. the false discovery rate).}

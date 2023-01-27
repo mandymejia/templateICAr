@@ -7,8 +7,9 @@
 dual_reg2(
   BOLD,
   BOLD2 = NULL,
-  format = c("CIFTI", "xifti", "NIFTI", "nifti", "data"),
+  format = c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
+  keepA = FALSE,
   scale = c("global", "local", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
@@ -45,6 +46,9 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 \item{GICA}{Group ICA maps as a (vectorized) numeric matrix
 (\eqn{V \times Q}). Its columns will be centered.}
 
+\item{keepA}{Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
+(default)?}
+
 \item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
 Global scaling will divide the entire data matrix by the mean image standard
 deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
@@ -70,8 +74,9 @@ resolution as the \code{BOLD} data.}
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
 to use for detrending. If \code{0} (default), do not detrend.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? Default:
-\code{FALSE} (not recommended).}
+\item{center_Bcols}{Center BOLD across columns (each image)? This
+is equivalent to performing global signal regression. Default:
+\code{FALSE}.}
 
 \item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
 regression estimates? Default: \code{FALSE} (not recommended). Note that the
@@ -122,7 +127,8 @@ the intersection of the masks is used.}
 \item{verbose}{Display progress updates? Default: \code{TRUE}.}
 }
 \value{
-The dual regression \strong{S} matrices, or \code{NULL} if dual
+The dual regression \strong{S} matrices, or both the \strong{S}
+and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual
 regression was skipped due to too many masked data locations.
 }
 \description{

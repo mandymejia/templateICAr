@@ -1,29 +1,58 @@
+## Test environments
+
+* Windows x86_64-w64-mingw32/x64, R 4.2.2
+* Mac x86_64-apple-darwin17.0, R 4.1.1
+
 ## R CMD check results
 
 0 errors v | 0 warnings v | 0 notes v
 
 R CMD check succeeded
 
-*This will be a new R extension.*
+*This R extension was previously on CRAN before it was archived.*
 
-## Resubmission
+## Downstream dependencies
 
-  > Please reduce the length of the title to less than 65 characters.
+None.
 
-The new title is less than 65 characters.
+## Tests
 
-  > Please add small executable examples in your Rd-files to illustrate the
-use of the exported function but also enable automatic testing.
+Passes all the tests in `tests/testthat.R`
 
-We added Rd examples for all major exported functions.
+# Resubmission 1 
 
-  > Please always add all authors, contributors and copyright holders in the 
-  Authors@R field with the appropriate roles. From CRAN policies you agreed to:
-  "Where copyrights are held by an entity other than the package authors,
-  this should preferably be indicated via ‘cph’ roles in the ‘Authors@R’
-  field, or using a ‘Copyright’ field (if necessary referring to an
-  inst/COPYRIGHTS file)."
-  e.g.: Martin Maechler, ETH Zurich
-  Please explain in the submission comments what you did about this issue.
+  Please add \value to .Rd files regarding exported methods and explain
+  the functions results in the documentation. Please write about the
+  structure of the output (class) and also what the output means. (If a
+  function does not return a value, please document that too, e.g.
+  \value{No return value, called for side effects} or similar)
+  Missing Rd-tags in up to 12 .Rd files, e.g.:
+        Gibbs_AS_posteriorCPP.Rd: \value
+        resample_template.Rd: \value
+        summary.template.cifti.Rd: \value
+        summary.template.gifti.Rd: \value
+        summary.template.matrix.Rd: \value
+        summary.template.nifti.Rd: \value
+        ...
 
-We added another person to Authors@R who helped write an older MATLAB version of the package. There are no further authors or copyright holders.
+Done! All exported functions should have \value now.
+
+  \dontrun{} should only be used if the example really cannot be executed
+  (e.g. because of missing additional software, missing API keys, ...) by
+  the user. That's why wrapping examples in \dontrun{} adds the comment
+  ("# Not run:") as a warning for the user. Does not seem necessary.
+  Please replace \dontrun with \donttest.
+
+  Please unwrap the examples if they are executable in < 5 sec, or replace
+  dontrun{} with \donttest{}.
+
+The instances of \dontrun indeed cannot be executed, because they require 
+intermediate results that would be too large to host within the package.
+The one for `estimate_template` shows the syntax for a typical use case, which
+takes as input multiple data file paths. And all other instances of \dontrun are
+for functions that require as input the template S3 object created by
+`estimate_template`. Since these examples illustrate how to use the function for
+the most typical use cases, but they cannot be run due to referencing objects
+that don't exist (and cannot be created easily on-the-fly), we think \dontrun
+is more appropriate than \donttest, and more appropriate than removing the
+examples outright.

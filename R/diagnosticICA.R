@@ -39,6 +39,7 @@
 #' @importFrom stats optim
 #' @importFrom abind abind
 #' @importFrom matrixStats rowVars
+#' @importFrom fMRItools dim_reduce
 #'
 #' @return A list containing the posterior probabilities of group membership,
 #'  the estimated independent components \strong{S} (a \eqn{VxL} matrix), their mixing matrix

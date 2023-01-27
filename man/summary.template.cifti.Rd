@@ -19,6 +19,14 @@
 
 \item{x}{The template from \code{estimate_template.cifti}}
 }
+\value{
+A list summarizing the template: data dimensions, options used for
+template estimation, etc.
+
+Nothing, invisibly.
+
+Nothing, invisibly.
+}
 \description{
 Summary method for class \code{"template.cifti"}
 }

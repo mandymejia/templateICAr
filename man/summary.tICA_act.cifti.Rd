@@ -19,6 +19,13 @@
 
 \item{x}{The activations from \code{activations.cifti}}
 }
+\value{
+A list summarizing the data and results for the activations analysis.
+
+Nothing, invisibly.
+
+Nothing, invisibly.
+}
 \description{
 Summary method for class \code{"tICA_act.cifti"}
 }

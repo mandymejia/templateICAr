@@ -9,7 +9,7 @@ struct_template(template, FORMAT, dat_struct, params)
 \arguments{
 \item{template}{The template}
 
-\item{FORMAT}{"CIFTI", "NIFTI", or "DATA"}
+\item{FORMAT}{"CIFTI", "GIFTI", "NIFTI", or "DATA"}
 
 \item{dat_struct}{The data structure}
 

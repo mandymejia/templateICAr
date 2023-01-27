@@ -8,12 +8,13 @@
 #' @param scale_sm_xifti,scale_sm_FWHM Only applies if \code{scale=="local"} and
 #'  \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
 #'  estimates used for local scaling, provide a \code{"xifti"} object with data
-#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM 
+#'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 #'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
-#'  not smooth. 
+#'  not smooth.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams normA_Param
 #'
+#' @importFrom fMRItools colCenter
 #' @importFrom matrixStats colVars
 #'
 #' @return A list containing
@@ -30,7 +31,7 @@
 #' BOLD <- mS + rnorm(nV*nT, sd=.05)
 #' GICA <- mU
 #' dual_reg(BOLD=BOLD, GICA=mU, scale="local")
-#' 
+#'
 dual_reg <- function(
   BOLD, GICA,
   scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
@@ -39,7 +40,7 @@ dual_reg <- function(
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
-  if (isTRUE(scale)) { 
+  if (isTRUE(scale)) {
     warning(
       "Setting `scale='global'`. Use `'global'` or `'local'` ",
       "instead of `TRUE`, which has been deprecated."
@@ -47,7 +48,7 @@ dual_reg <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  if (!is.null(scale_sm_xifti)) { stopifnot(is.xifti(scale_sm_xifti)) }
+  if (!is.null(scale_sm_xifti)) { stopifnot(ciftiTools::is.xifti(scale_sm_xifti)) }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   stopifnot(is.logical(normA) && length(normA)==1)
 
@@ -76,7 +77,7 @@ dual_reg <- function(
 
   # Center each group IC across space. (Used to be a function argument.)
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- colCenter(GICA) }
+  if (center_Gcols) { GICA <- fMRItools::colCenter(GICA) }
 
   # Estimate A (IC timeseries).
   # We need to center `BOLD` across space because the linear model has no intercept.
@@ -84,7 +85,7 @@ dual_reg <- function(
 
   # Center each subject IC timecourse across time.
   # (Redundant. Since BOLD is column-centered, A is already column-centered.)
-  # A <- colCenter(A)
+  # A <- fMRItools::colCenter(A)
 
   # Normalize each subject IC timecourse if `normA`.
   if (normA) { A <- scale(A) }
@@ -114,21 +115,23 @@ dual_reg <- function(
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps as a (vectorized) numeric matrix
 #'  (\eqn{V \times Q}). Its columns will be centered.
+#' @param keepA Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
+#'  (default)?
 #' @inheritParams scale_Param
-#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if 
-#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To 
+#' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
+#'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
-#'  surface geometries along which to smooth as GIFTI geometry files or 
+#'  surface geometries along which to smooth as GIFTI geometry files or
 #'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
-#' 
+#'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
-#' 
-#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and 
+#'
+#'  If \code{scale_sm_FWHM>0} but \code{scale_sm_surfL} and
 #'  \code{scale_sm_surfR} are not provided, the default inflated surfaces from
-#'  the HCP will be used. 
-#' 
-#'  To create a \code{"surf"} object from data, see 
+#'  the HCP will be used.
+#'
+#'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
@@ -172,15 +175,18 @@ dual_reg <- function(
 #'  the intersection of the masks is used.
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
-#' @return The dual regression \strong{S} matrices, or \code{NULL} if dual 
+#' @return The dual regression \strong{S} matrices, or both the \strong{S}
+#'  and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual
 #'  regression was skipped due to too many masked data locations.
 #'
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL, format=c("CIFTI", "xifti", "NIFTI", "nifti", "data"), 
-  GICA, 
-  scale=c("global", "local", "none"), 
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2, 
+  BOLD, BOLD2=NULL, 
+  format=c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
+  GICA,
+  keepA=FALSE,
+  scale=c("global", "local", "none"),
+  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE, normA=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
@@ -190,7 +196,8 @@ dual_reg2 <- function(
 
   if (verbose) { extime <- Sys.time() }
 
-  # No arg checks: check the args before calling this function.
+  keepA <- as.logical(keepA); stopifnot(length(keepA)==1)
+  # No other arg checks: check them before calling this function.
 
   # For `"xifti"` data for handling the medial wall and smoothing.
   xii1 <- NULL
@@ -200,36 +207,52 @@ dual_reg2 <- function(
 
   # Load helper variables.
   retest <- !is.null(BOLD2)
-  FORMAT <- switch(format,
-    CIFTI = "CIFTI",
-    xifti = "CIFTI",
-    NIFTI = "NIFTI",
-    nifti = "NIFTI",
-    data = "DATA"
-  )
+  format <- match.arg(format, c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"))
+  FORMAT <- get_FORMAT(format)
   nQ <- ncol(GICA)
   nI <- nV <- nrow(GICA)
 
-  if (format == "NIFTI") {
-    if (!requireNamespace("RNifti", quietly = TRUE)) {
-      stop("Package \"RNifti\" needed to read NIFTI data. Please install it.", call. = FALSE)
-    }
-  }
+  check_req_ifti_pkg(FORMAT)
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (verbose) { cat("\tReading and formatting data...") }
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
-    if (is.xifti(BOLD)) {
+    if (ciftiTools::is.xifti(BOLD)) {
       if (scale == "local") {
-        xii1 <- convert_xifti(select_xifti(BOLD, 1), "dscalar") * 0
+        xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(BOLD, 1), "dscalar") * 0
       }
       BOLD <- as.matrix(BOLD)
     }
     stopifnot(is.matrix(BOLD))
     if (retest) {
       if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
-      if (is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
+      if (ciftiTools::is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
+      stopifnot(is.matrix(BOLD2))
+    }
+    nI <- nV <- nrow(GICA)
+  } else if (FORMAT == "GIFTI") {
+    if (is.character(BOLD)) { BOLD <- gifti::readgii(BOLD) }
+    stopifnot(gifti::is.gifti(BOLD))
+    ghemi <- BOLD$file_meta["AnatomicalStructurePrimary"]
+    if (!(ghemi %in% c("CortexLeft", "CortexRight"))) {
+      stop("AnatomicalStructurePrimary metadata missing or invalid for GICA.")
+    }
+    ghemi <- switch(ghemi, CortexLeft="left", CortexRight="right")
+    if (scale == "local") {
+      if (ghemi == "left") {
+        xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexL=do.call(cbind, BOLD$data)), 1) * 0
+      } else if (ghemi == "right") {
+        xii1 <- ciftiTools::select_xifti(ciftiTools::as.xifti(cortexR=do.call(cbind, BOLD$data)), 1) * 0
+      } else { stop() }
+      xii1$meta$cifti$intent <- 3006
+    }
+    BOLD <- do.call(cbind, BOLD$data)
+
+    stopifnot(is.matrix(BOLD))
+    if (retest) {
+      if (is.character(BOLD2)) { BOLD2 <- gifti::readgii(BOLD2) }
+      if (inherits(BOLD2, "gifti")) { BOLD2 <- do.call(cbind, BOLD2$data) }
       stopifnot(is.matrix(BOLD2))
     }
     nI <- nV <- nrow(GICA)
@@ -241,12 +264,16 @@ dual_reg2 <- function(
       stopifnot(length(dim(BOLD2)) > 1)
     }
     stopifnot(!is.null(mask))
-    nI <- dim(mask); nV <- sum(mask)
-  } else {
+    nI <- dim(drop(mask)); nV <- sum(mask)
+  } else if (FORMAT == "MATRIX") {
+    if (is.character(BOLD)) { BOLD <- readRDS(BOLD) }
     stopifnot(is.matrix(BOLD))
-    if (retest) { stopifnot(is.matrix(BOLD2)) }
+    if (retest) {
+      if (is.character(BOLD2)) { BOLD2 <- readRDS(BOLD2) }
+      stopifnot(is.matrix(BOLD2))
+    }
     nI <- nV <- nrow(GICA)
-  }
+  } else { stop() }
   dBOLD <- dim(BOLD)
   ldB <- length(dim(BOLD))
   nT <- dim(BOLD)[ldB]
@@ -263,10 +290,10 @@ dual_reg2 <- function(
 
   # Vectorize `BOLD` (and `BOLD2`). --------------------------------------------
   if (FORMAT=="NIFTI") {
-    BOLD <- matrix(BOLD[rep(mask, dBOLD[ldB])], ncol=nT)
+    BOLD <- matrix(BOLD[rep(as.logical(mask), dBOLD[ldB])], ncol=nT)
     stopifnot(nrow(BOLD) == nV)
     if (retest) {
-      BOLD2 <- matrix(BOLD2[rep(mask, dBOLD[ldB])], ncol=nT)
+      BOLD2 <- matrix(BOLD2[rep(as.logical(mask), dBOLD[ldB])], ncol=nT)
       stopifnot(nrow(BOLD2) == nV)
     }
   }
@@ -281,12 +308,7 @@ dual_reg2 <- function(
     stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
     if (maskTol < 1) { maskTol <- maskTol * nV }
     # Skip this scan if `maskTol` is surpassed.
-    if (sum(!mask) > maskTol) {
-      if (verbose) {
-        cat("Skipping subject: too many masked locations (", sum(!mask), ").\n")
-      }
-      return(NULL)
-    }
+    if (sum(!mask) > maskTol) { return(NULL) }
     # Mask out the locations.
     BOLD <- BOLD[mask,,drop=FALSE]
     GICA <- GICA[mask,,drop=FALSE]
@@ -294,10 +316,11 @@ dual_reg2 <- function(
     if (!is.null(xii1)) {
       xiitmp <- as.matrix(xii1)
       xiitmp[!mask,] <- NA
-      xii1 <- move_to_mwall(newdata_xifti(xii1, xiitmp))
+      xii1 <- ciftiTools::move_to_mwall(ciftiTools::newdata_xifti(xii1, xiitmp))
     }
     nV <- nrow(BOLD)
 
+    # [TO DO]: replace with fMRIscrub::unmask_mat(..., mask_dim=2)
     # For later
     unmask <- function(S, mask) {
       S2 <- matrix(NA, nrow=nrow(S), ncol=length(mask))
@@ -307,7 +330,7 @@ dual_reg2 <- function(
   }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
-    xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
+    xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
   # Helper functions
@@ -318,13 +341,13 @@ dual_reg2 <- function(
   ) }
 
   dual_reg_yesNorm <- function(B){ dual_reg(
-    B, GICA, 
+    B, GICA,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA
   ) }
 
   dual_reg_noNorm <- function(B){ dual_reg(
-    B, GICA, 
+    B, GICA,
     scale="none", detrend_DCT=0, center_Bcols=FALSE, normA=normA
   ) }
 
@@ -338,7 +361,7 @@ dual_reg2 <- function(
     out$test <- dual_reg_yesNorm(BOLD[, part1, drop=FALSE])
     out$retest <- dual_reg_yesNorm(BOLD[, part2, drop=FALSE])
   } else {
-    # If retest, normalize `BOLD` and `BOLD2`, and then compute DR. 
+    # If retest, normalize `BOLD` and `BOLD2`, and then compute DR.
     BOLD <- this_norm_BOLD(BOLD)
     BOLD2 <- this_norm_BOLD(BOLD2)
     # (No need to normalize again.)
@@ -348,14 +371,16 @@ dual_reg2 <- function(
 
   # Return these DR results if denoising is not needed. ------------------------
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
-    out$test <- out$test$S
-    out$retest <- out$retest$S
-    if (use_mask) {
-      out$test <- unmask(out$test, mask)
-      out$retest <- unmask(out$retest, mask)
+    if (!keepA) {
+      out$test$A <- NULL
+      out$retest$A <- NULL
     }
-    cat(" Done!\n")
-    if(verbose) { print(Sys.time() - extime) }
+    if (use_mask) {
+      out$test$S <- unmask(out$test$S, mask)
+      out$retest$S <- unmask(out$retest$S, mask)
+    }
+    if (verbose) { cat(" Done!\n") }
+    if (verbose) { print(Sys.time() - extime) }
     return(out)
   }
 
@@ -389,19 +414,27 @@ dual_reg2 <- function(
 
   # Do DR again. ---------------------------------------------------------------
   if (verbose) { cat(" Computing DR again...") }
-  out$test_preclean <- out$test$S
-  out$test <- dual_reg_noNorm(BOLD)$S
-  out$retest_preclean <- out$retest$S
-  out$retest <- dual_reg_noNorm(BOLD2)$S
 
-  if (use_mask) {
-    out$test_preclean <- unmask(out$test_preclean, mask)
-    out$retest_preclean <- unmask(out$retest_preclean, mask)
-    out$test <- unmask(out$test, mask)
-    out$retest <- unmask(out$retest, mask)
+  out$test_preclean <- out$test
+  out$test <- dual_reg_noNorm(BOLD)
+  out$retest_preclean <- out$retest
+  out$retest <- dual_reg_noNorm(BOLD2)
+
+  if (!keepA) {
+    out$test_preclean$A <- NULL
+    out$test$A <- NULL
+    out$retest_preclean$A <- NULL
+    out$retest$A <- NULL
   }
 
-  cat(" Done!\n")
-  if(verbose) { print(Sys.time() - extime) }
+  if (use_mask) {
+    out$test_preclean$S <- unmask(out$test_preclean$S, mask)
+    out$retest_preclean$S <- unmask(out$retest_preclean$S, mask)
+    out$test$S <- unmask(out$test$S, mask)
+    out$retest$S <- unmask(out$retest$S, mask)
+  }
+
+  if (verbose) { cat(" Done!\n") }
+  if (verbose) { print(Sys.time() - extime) }
   out
 }
