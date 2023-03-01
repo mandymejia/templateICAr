@@ -715,6 +715,8 @@ templateICA <- function(
       epsilon=epsilon,
       verbose=verbose)
 
+    #HERE
+
     #EM Algorithm
     if(method_FC=='EM') resultEM <- EM_FCtemplateICA(
       template_mean = template$mean,
