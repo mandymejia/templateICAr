@@ -685,8 +685,8 @@ templateICA <- function(
     scale=FALSE, detrend_DCT=0, normA=normA
   )
 
-  # ----------------------------------------------------------------------------
-  # EM -------------------------------------------------------------------------
+  # Bayesian Computation -------------------------------------------------------
+
   #Three algorithms to choose from:
   #1) Template ICA
   #2) FC Template ICA (EM or VB)
@@ -746,9 +746,9 @@ templateICA <- function(
 
   #2) FC Template ICA ----------------------------------------------------------
 
-  if(do_FC) {
-    if (verbose) { cat("Estimating FC Template ICA model.\n") }
-    
+  if (do_FC) {
+
+    if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
     #VB Algorithm
