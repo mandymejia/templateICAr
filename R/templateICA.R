@@ -1,7 +1,7 @@
 #' Template ICA
 #'
 #' Perform template independent component analysis (ICA) using
-#'  expectation-maximization (EM).
+#'  expectation-maximization (EM) or variational Bayes (VB).
 #'
 #' @param BOLD Vector of subject-level fMRI data in one of the following
 #'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
@@ -95,7 +95,9 @@
 #'  boundary of wall.
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
-#'  estimation, but may result in more accurate results.
+#'  estimation, but may result in more accurate results. Ignored for FC template
+#'  ICA
+#' @param method_FC Bayesian estimation method for FC template ICA model.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
@@ -131,7 +133,8 @@
 #'  templateICA(newcii_fname, tm, spatial_model=TRUE, resamp_res=2000)
 #' }
 templateICA <- function(
-  BOLD, template, tvar_method=c("non-negative", "unbiased"),
+  BOLD, template, 
+  tvar_method=c("non-negative", "unbiased"),
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
@@ -143,6 +146,7 @@ templateICA <- function(
   varTol=1e-6,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
   reduce_dim=TRUE,
+  method_FC=c("VB", "EM")
   maxiter=100,
   epsilon=0.01,
   kappa_init=0.2,
@@ -684,21 +688,87 @@ templateICA <- function(
   # ----------------------------------------------------------------------------
   # EM -------------------------------------------------------------------------
   #Three algorithms to choose from:
-  #1) FC Template ICA
-  #2) Template ICA
+  #1) Template ICA
+  #2) FC Template ICA (EM or VB)
   #3) Spatial Template ICA (initialize with standard Template ICA)
   # ----------------------------------------------------------------------------
 
-  #1) FC Template ICA ----------------------------------------------------------
+  if (verbose) {
+    if (do_spatial | do_FC) { cat("Initializing with standard Template ICA.\n") }
+    if (!do_spatial & do_FC) { cat("Computing Template ICA.\n") }
+  }
+
+  #1) Template ICA -----------------------------------------------------------
+
+  if (reduce_dim) {
+    if (verbose) { cat("Reducing data dimensions.\n") }
+    # Reduce data dimensions
+    BOLD <- dim_reduce(BOLD, nL)
+    err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
+    BOLD2 <- BOLD$data_reduced
+    H <- BOLD$H
+    Hinv <- BOLD$H_inv
+    # In original template ICA model nu^2 is separate
+    #   for spatial template ICA it is part of C
+    C_diag <- BOLD$C_diag
+    if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
+    rm(BOLD)
+    # Apply dimension reduction
+    HA <- H %*% BOLD_DR$A
+    theta0 <- list(A = HA)
+    # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
+    # theta0$nu0_sq = dat_list$sigma_sq
+    # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
+  } else {
+    # [TO DO]: what if just compute eigenvalues? faster, right?
+    err_var <- dim_reduce(BOLD, nL)$sigma_sq
+    BOLD2 <- BOLD; rm(BOLD)
+    theta0 <- list(A = BOLD_DR$A)
+    C_diag <- rep(1, nT)
+    H <- Hinv <- NULL
+  }
+
+  theta00 <- theta0
+  theta00$nu0_sq <- err_var
+  resultEM <- EM_templateICA.independent(template_mean=template$mean,
+                                         template_var=template$var,
+                                         BOLD=BOLD2,
+                                         theta0=theta00,
+                                         C_diag=C_diag,
+                                         H=H, Hinv=Hinv,
+                                         maxiter=maxiter,
+                                         usePar=usePar,
+                                         epsilon=epsilon,
+                                         verbose=verbose)
+  if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
+  class(resultEM) <- 'tICA'
+  #end of standard template ICA estimation
+
+  #2) FC Template ICA ----------------------------------------------------------
+
   if(do_FC) {
     if (verbose) { cat("Estimating FC Template ICA model.\n") }
-
-    template_mean = template$mean
-    template_var = template$var
+    
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #EM_FCtemplateICA <- function(...){NULL}
-    resultEM <- EM_FCtemplateICA(
+    #VB Algorithm
+    if (method_FC=='VB') resultVB <- VB_FCtemplateICA(
+      template_mean = template$mean,
+      template_var = template$var,
+      template_FC = template_FC,
+      prior_params, #for prior on tau^2
+      BOLD=BOLD,
+      A0 = resultEM$A,
+      S0 = resultEM$subjICmean,
+      S0_var = (resultEM$subjICse)^2,
+      maxiter=maxiter,
+      epsilon=epsilon,
+      verbose=verbose)
+
+    #HERE
+
+    #EM Algorithm
+    if (method_FC=='EM') resultEM <- EM_FCtemplateICA(
       template_mean = template$mean,
       template_var = template$var,
       template_FC = template_FC,
@@ -709,53 +779,7 @@ templateICA <- function(
       epsilon=epsilon,
       verbose=verbose
     )
-  } else {
-
-    if (reduce_dim) {
-      if (verbose) { cat("Reducing data dimensions.\n") }
-      # Reduce data dimensions
-      BOLD <- dim_reduce(BOLD, nL)
-      err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
-      BOLD2 <- BOLD$data_reduced
-      H <- BOLD$H
-      Hinv <- BOLD$H_inv
-      # In original template ICA model nu^2 is separate
-      #   for spatial template ICA it is part of C
-      C_diag <- BOLD$C_diag
-      if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
-      rm(BOLD)
-      # Apply dimension reduction
-      HA <- H %*% BOLD_DR$A
-      theta0 <- list(A = HA)
-      # #initialize residual variance --- no longer do this, because we use dimension reduction-based estimate
-      # theta0$nu0_sq = dat_list$sigma_sq
-      # if(verbose) paste0('nu0_sq = ',round(theta0$nu0_sq,1)))
-    } else {
-      # [TO DO]: what if just compute eigenvalues? faster, right?
-      err_var <- dim_reduce(BOLD, nL)$sigma_sq
-      BOLD2 <- BOLD; rm(BOLD)
-      theta0 <- list(A = BOLD_DR$A)
-      C_diag <- rep(1, nT)
-    }
-
-    #2) Template ICA -----------------------------------------------------------
-    if (verbose) {
-      if (do_spatial) { cat("Initializing with standard Template ICA.\n") }
-      if (!do_spatial) { cat("Computing Template ICA.\n") }
-    }
-    theta00 <- theta0
-    theta00$nu0_sq <- err_var
-    resultEM <- EM_templateICA.independent(template$mean,
-                                           template$var,
-                                           BOLD=BOLD2,
-                                           theta0=theta00,
-                                           C_diag=C_diag,
-                                           maxiter=maxiter,
-                                           usePar=usePar,
-                                           epsilon=epsilon,
-                                           verbose=verbose)
-    if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
-    class(resultEM) <- 'tICA'
+  } # end of FC template ICA estimation
 
     #3) Spatial Template ICA ---------------------------------------------------
     if(do_spatial){
