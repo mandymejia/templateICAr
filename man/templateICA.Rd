@@ -25,6 +25,7 @@ templateICA(
   resamp_res = NULL,
   rm_mwall = TRUE,
   reduce_dim = TRUE,
+  method_FC = c("VB", "EM"),
   maxiter = 100,
   epsilon = 0.01,
   kappa_init = 0.2,
@@ -153,7 +154,10 @@ boundary of wall.}
 
 \item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
 Default: \code{TRUE}. Skipping dimension reduction will slow the model
-estimation, but may result in more accurate results.}
+estimation, but may result in more accurate results. Ignored for FC template
+ICA}
+
+\item{method_FC}{Bayesian estimation method for FC template ICA model.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
@@ -181,7 +185,7 @@ objects, respectively.
 }
 \description{
 Perform template independent component analysis (ICA) using
-expectation-maximization (EM).
+expectation-maximization (EM) or variational Bayes (VB).
 }
 \examples{
 \dontrun{

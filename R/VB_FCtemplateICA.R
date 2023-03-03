@@ -1,41 +1,50 @@
-#' @name VB_FCtemplateICA
-#' @rdname VB_FCtemplateICA
+#' VB_FCtemplateICA
 #'
-#' @title VB Algorithm for FC Template ICA Model
+#' VB Algorithm for FC Template ICA Model
 #'
-#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
-#'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
-#' @param template_FC (list) Parameters of functional connectivity template
-#' @param prior_params Alpha and beta parameters of IG prior on tau^2 (error variance)
-#' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
-#' @param AS_0 (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
-#'  and S (\eqn{QxV} matrix of spatial ICs)
-#' @param maxiter Maximum number of VB iterations. Default: 100.
-#' @param epsilon Smallest proportion change in parameter estimates between iterations. Default: 0.01.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in the
+#'  template, where \eqn{Q} is the number of ICs, and \eqn{V=nvox} is the number
+#'  of data locations.
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps
+#'  for each IC in the template.
+#' @param template_FC (list) Parameters of functional connectivity template.
+#' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2} 
+#'  (error variance).
+#' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data.
+#' @param A0,S0,S0_var Initial guesses at latent variables: \code{A} (\eqn{TxQ}
+#'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and 
+#'  covariance matrix \code{S0_var}.
+#' @param maxiter Maximum number of VB iterations. Default: \code{100}.
+#' @param epsilon Smallest proportion change in parameter estimates between 
+#'  iterations. Default: \code{0.01}.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: 
+#'  \code{FALSE}.
+#' 
+#' @return Large list of results.
+#' 
+#' @keywords internal
 #'
-#'
-VB_FCtemplateICA <- function(template_mean, #VxQ
-                              template_var, #VxQ
-                              template_FC,
-                              prior_params=c(0.001, 0.001),
-                              BOLD, #VxT
-                              A0, S0, S0_var,
-                              maxiter=100,
-                              epsilon=0.01,
-                              verbose=FALSE){
+VB_FCtemplateICA <- function(
+  template_mean, #VxQ
+  template_var, #VxQ
+  template_FC,
+  prior_params=c(0.001, 0.001),
+  BOLD, #VxT
+  A0, S0, S0_var,
+  maxiter=100,
+  epsilon=0.01,
+  verbose=FALSE){
 
-  if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
+  if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
   ntime <- ncol(BOLD) #length of timeseries
   nvox <- nrow(BOLD) #number of brain locations
-  if(ntime > nvox) warning('More time points than brain locations. Are you sure?')
-  if(nrow(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
+  if (ntime > nvox) warning('More time points than brain locations. Are you sure?')
+  if (nrow(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
 
   nICs <- nrow(template_FC$psi)   #number of ICs
-  if(ncol(template_mean) != nICs) stop('template_FC is incompatible with template_mean & template_var. Check number of ICs in each.')
-  if(nICs > nvox) stop('Cannot estimate more ICs than brain locations.')
-  if(nICs > ntime) stop('Cannot estimate more ICs than time points.')
+  if (ncol(template_mean) != nICs) stop('template_FC is incompatible with template_mean & template_var. Check number of ICs in each.')
+  if (nICs > nvox) stop('Cannot estimate more ICs than brain locations.')
+  if (nICs > ntime) stop('Cannot estimate more ICs than time points.')
 
   iter <- 1
   success <- 1
@@ -46,8 +55,8 @@ VB_FCtemplateICA <- function(template_mean, #VxQ
   mu_A <- A0 #TxQ
   mu_S <- S0 #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
-  for(v in 1:nvox){cov_S[,,nvox] <- diag(S0_var[,v]) }
-  mu_tau2 <- apply(BOLD - t(A %*% S),1,var) #Vx1
+  for (v in 1:nvox) { cov_S[,,nvox] <- diag(S0_var[,v]) }
+  mu_tau2 <- apply(BOLD - t(A0 %*% S0),1,var) #Vx1
   mu_alpha <- colMeans(A0)
   mu_G <- cov(A0)
   cov_alpha <- 1/ntime * mu_G
@@ -56,7 +65,7 @@ VB_FCtemplateICA <- function(template_mean, #VxQ
   #2. Iteratively update approximate posteriors
 
   err <- 1000 #large initial value for difference between iterations
-  while(err > epsilon){
+  while (err > epsilon) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -90,7 +99,7 @@ VB_FCtemplateICA <- function(template_mean, #VxQ
     change_tau2 <- mean(mu_tau2 - mu_tau2_new)^2
     mu_tau2 <- mu_tau2_new
 
-    if(verbose) print(Sys.time() - t00)
+    if (verbose) print(Sys.time() - t00)
 
     change <- c(change_A, change_S, change_G, change_tau2)
     err <- max(change)
@@ -99,32 +108,43 @@ VB_FCtemplateICA <- function(template_mean, #VxQ
 
     ### Move to next iteration
     iter <- iter + 1
-    if(iter > maxiter){
+    if (iter > maxiter) {
       success <- 0
       warning(paste0('Failed to converge within ', maxiter,' iterations'))
       break() #exit loop
     }
   } #end iterations
 
-  result <- list(S_mean = mu_S,
-                 S_cov = cov_S,
-                 A_mean = mu_A,
-                 A_cov = cov_A,
-                 G_mean = mu_G,
-                 success_flag=success,
-                 error=err,
-                 numiter=iter-1,
-                 template_mean,
-                 template_var,
-                 template_FC)
-
-  return(result)
-
-
-
+  list(
+    S_mean = mu_S,
+    S_cov = cov_S,
+    A_mean = mu_A,
+    A_cov = cov_A,
+    G_mean = mu_G,
+    success_flag=success,
+    error=err,
+    numiter=iter-1,
+    template_mean,
+    template_var,
+    template_FC
+  )
 }
 
-update_A <- function(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nvox){
+#' Update A for VB FC Template ICA
+#' 
+#' @param mu_tau2,mu_S,cov_S,mu_G,mu_alpha Most recent estimates of posterior
+#' moments for these variables.
+#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and 
+#'  the number of data locations.
+#' 
+#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' 
+#' @keywords internal
+update_A <- function(
+  mu_tau2, mu_S, cov_S, mu_G, mu_alpha, 
+  BOLD, 
+  ntime, nICs, nvox){
 
   G_inv <- solve(mu_G)
   cov_A <- array(0, dim = c(ntime, nICs, nICs)) #TxQxQ
@@ -151,8 +171,28 @@ update_A <- function(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nv
 
 }
 
+#' Update S for VB FC Template ICA
+#' 
+#' @param mu_tau2,mu_A,cov_A, Most recent estimates of posterior moments for 
+#'  these variables.
+#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in the
+#'  template, where \eqn{Q} is the number of ICs, and \eqn{V=nvox} is the number
+#'  of data locations.
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps
+#'  for each IC in the template.
+#' #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and 
+#'  the number of data locations.
+#' 
+#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' 
+#' @keywords internal
+update_S <- function(
+  mu_tau2, mu_A, cov_A, 
+  template_var, template_mean, 
+  BOLD, 
+  ntime, nICs, nvox){
 
-update_S <- function(mu_tau2, mu_A, cov_A, template_var, template_mean, BOLD, ntime, nICs, nvox){
   cov_S <- array(0, dim = c(nICs, nICs, nvox))
   for(v in 1:nvox){
     #sum over t=1...T part
@@ -177,7 +217,18 @@ update_S <- function(mu_tau2, mu_A, cov_A, template_var, template_mean, BOLD, nt
   return(list(mu_S, cov_S))
 }
 
-update_G <- function(mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs){
+#' Update G for VB FC Template ICA
+#' 
+#' @param mu_A,cov_A,mu_alpha,cov_alpha Most recent estimates of posterior
+#' moments for these variables.
+#' @param template_FC (list) Parameters of functional connectivity template.
+#' @param ntime,nICs Number of timepoints in data and number of ICs.
+#' 
+#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' 
+#' @keywords internal
+update_G <- function(
+  mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs){
 
   nu0 <- template_FC$nu
   psi0 <- template_FC$psi
@@ -198,7 +249,21 @@ update_G <- function(mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs)
 
 }
 
-update_tau2 <- function(BOLD, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox){
+#' Update tau for VB FC Template ICA
+#' 
+#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param mu_A,mu_S,cov_A,cov_S, Most recent estimates of posterior
+#' moments for these variables.
+#' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2} 
+#'  (error variance).
+#' @param ntime,nvox Number of timepoints in data and the number of data 
+#'  locations.
+#' 
+#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' 
+#' @keywords internal
+update_tau2 <- function(
+  BOLD, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox){
 
   alpha0 <- prior_params[1]
   beta0 <- prior_params[2]

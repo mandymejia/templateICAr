@@ -146,7 +146,7 @@ templateICA <- function(
   varTol=1e-6,
   spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
   reduce_dim=TRUE,
-  method_FC=c("VB", "EM")
+  method_FC=c("VB", "EM"),
   maxiter=100,
   epsilon=0.01,
   kappa_init=0.2,
@@ -730,16 +730,17 @@ templateICA <- function(
 
   theta00 <- theta0
   theta00$nu0_sq <- err_var
-  resultEM <- EM_templateICA.independent(template_mean=template$mean,
-                                         template_var=template$var,
-                                         BOLD=BOLD2,
-                                         theta0=theta00,
-                                         C_diag=C_diag,
-                                         H=H, Hinv=Hinv,
-                                         maxiter=maxiter,
-                                         usePar=usePar,
-                                         epsilon=epsilon,
-                                         verbose=verbose)
+  resultEM <- EM_templateICA.independent(
+    template_mean=template$mean,
+    template_var=template$var,
+    BOLD=BOLD2,
+    theta0=theta00,
+    C_diag=C_diag,
+    maxiter=maxiter,
+    epsilon=epsilon,
+    usePar=usePar,
+    verbose=verbose
+  )
   if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
   class(resultEM) <- 'tICA'
   #end of standard template ICA estimation
@@ -781,35 +782,36 @@ templateICA <- function(
     )
   } # end of FC template ICA estimation
 
-    #3) Spatial Template ICA ---------------------------------------------------
-    if(do_spatial){
-      resultEM_tICA <- resultEM
-      theta0$kappa <- rep(kappa_init, nL)
-      if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
-      t000 <- Sys.time()
-      resultEM <- EM_templateICA.spatial(template$mean,
-                                         template$var,
-                                         meshes,
-                                         BOLD=BOLD2,
-                                         theta0,
-                                         C_diag,
-                                         maxiter=maxiter,
-                                         usePar=usePar,
-                                         epsilon=epsilon,
-                                         verbose=verbose)
-      #common_smoothness=common_smoothness)
-      print(Sys.time() - t000)
+  #3) Spatial Template ICA ---------------------------------------------------
+  if (do_spatial) {
+    resultEM_tICA <- resultEM
+    theta0$kappa <- rep(kappa_init, nL)
+    if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
+    t000 <- Sys.time()
+    resultEM <- EM_templateICA.spatial(template$mean,
+                                        template$var,
+                                        meshes,
+                                        BOLD=BOLD2,
+                                        theta0,
+                                        C_diag,
+                                        maxiter=maxiter,
+                                        usePar=usePar,
+                                        epsilon=epsilon,
+                                        verbose=verbose)
+    #common_smoothness=common_smoothness)
+    print(Sys.time() - t000)
 
-      #organize estimates and variances in matrix form
-      resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=nL)
-      resultEM$subjICse <- sqrt(matrix(diag(resultEM$subjICcov), ncol=nL))
-      resultEM$A <- Hinv %*% resultEM$theta_MLE$A
+    #organize estimates and variances in matrix form
+    resultEM$subjICmean <- matrix(resultEM$subjICmean, ncol=nL)
+    resultEM$subjICse <- sqrt(matrix(diag(resultEM$subjICcov), ncol=nL))
+    resultEM$A <- Hinv %*% resultEM$theta_MLE$A
 
-      resultEM$result_tICA <- resultEM_tICA
-      class(resultEM) <- 'stICA'
-    }
-    if (usePar) { doParallel::stopImplicitCluster() }
+    resultEM$result_tICA <- resultEM_tICA
+    class(resultEM) <- 'stICA'
   }
+
+  # Wrapping up ----------------------------------------------------------------
+  if (usePar) { doParallel::stopImplicitCluster() }
 
   # Return DR estimates.
   resultEM$result_DR <- BOLD_DR
