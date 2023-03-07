@@ -4,7 +4,7 @@
 \alias{update_S}
 \title{Update S for VB FC Template ICA}
 \usage{
-update_S(mu_tau2, mu_A, cov_A, D_inv_S, BOLD, ntime, nICs, nvox)
+update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
 }
 \arguments{
 \item{mu_tau2, mu_A, cov_A, }{Most recent estimates of posterior moments for

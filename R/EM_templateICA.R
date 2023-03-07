@@ -639,7 +639,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     #   for(q in 1:Q){
     #     if(verbose) cat(paste('Optimization ',q,' of ',Q,' \n'))
     #     inds_q <- (1:nvox) + (q-1)*nvox
-    #     kappa_opt_q <- optimize(templateICAr::LL2_kappa, lower=0, upper=5, maximum=TRUE,
+    #     kappa_opt_q <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
     #                             Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW[[q]], u=u[inds_q], v=v[inds_q], Q=NULL)
     #     LL2[q] <- kappa_opt_q$objective
     #     kappa_opt[q] <- (kappa_opt_q$maximum)

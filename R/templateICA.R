@@ -226,10 +226,10 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   format <- fMRItools::infer_format_ifti(BOLD)[1]
-  FORMAT <- templateICAr:::get_FORMAT(format)
+  FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  templateICAr:::check_req_ifti_pkg(FORMAT)
+  check_req_ifti_pkg(FORMAT)
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
@@ -622,7 +622,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
   if (any(!mask3)) {
     if (do_spatial) {
@@ -665,7 +665,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- templateICAr:::rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
   BOLD <- x$BOLD
   Q2_est <- x$Q2
   rm(x)
@@ -730,7 +730,7 @@ templateICA <- function(
 
   theta00 <- theta0
   theta00$nu0_sq <- err_var
-  resultEM <- templateICAr:::EM_templateICA.independent(
+  resultEM <- EM_templateICA.independent(
     template_mean=template$mean,
     template_var=template$var,
     BOLD=BOLD2,
@@ -771,7 +771,7 @@ templateICA <- function(
       verbose=verbose)
 
     #EM Algorithm
-    if (method_FC=='EM') resultEM <- templateICAr:::EM_FCtemplateICA(
+    if (method_FC=='EM') resultEM <- EM_FCtemplateICA(
       template_mean = template$mean,
       template_var = template$var,
       template_FC = template_FC,
