@@ -27,7 +27,7 @@ templateICA(
   reduce_dim = TRUE,
   method_FC = c("VB", "EM"),
   maxiter = 100,
-  epsilon = 0.01,
+  epsilon = 0.001,
   kappa_init = 0.2,
   usePar = FALSE,
   verbose = TRUE
@@ -161,7 +161,7 @@ ICA}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
-\item{epsilon}{Smallest proportion change between iterations. Default: \code{.01}.}
+\item{epsilon}{Smallest proportion change between iterations. Default: \code{.001}.}
 
 \item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
 

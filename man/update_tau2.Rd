@@ -4,7 +4,7 @@
 \alias{update_tau2}
 \title{Update tau for VB FC Template ICA}
 \usage{
-update_tau2(BOLD, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
+update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
 }
 \arguments{
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}

@@ -14,7 +14,7 @@ VB_FCtemplateICA(
   S0,
   S0_var,
   maxiter = 100,
-  epsilon = 0.01,
+  epsilon = 0.001,
   verbose = FALSE
 )
 }
