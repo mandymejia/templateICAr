@@ -1,7 +1,7 @@
 #' Template ICA
 #'
-#' Perform template independent component analysis (ICA) using
-#'  expectation-maximization (EM) or variational Bayes (VB).
+#' Perform template independent component analysis (ICA) using variational Bayes
+#'  (VB) or expectation-maximization (EM).
 #'
 #' @param BOLD Vector of subject-level fMRI data in one of the following
 #'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
@@ -97,7 +97,8 @@
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results. Ignored for FC template
 #'  ICA
-#' @param method_FC Bayesian estimation method for FC template ICA model.
+#' @param method_FC Bayesian estimation method for FC template ICA model:
+#'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
@@ -123,7 +124,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce
+#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce is_1 is_posNum
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -168,30 +169,25 @@ templateICA <- function(
     scale <- "global"
   }
   scale <- match.arg(scale, c("global", "local", "none"))
-  stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
+  stopifnot(is_1(scale_sm_FWHM, "numeric"))
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
-  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
-  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
-  stopifnot(is.logical(normA) && length(normA)==1)
-  if (!is.null(Q2)) { stopifnot(Q2 >= 0) } # Q2_max checked later.
-  stopifnot(is.numeric(varTol) && length(varTol)==1)
-  if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
+  stopifnot(is_posNum(detrend_DCT, zero_ok=TRUE))
+  stopifnot(is_1(center_Bcols, "logical"))
+  stopifnot(is_1(normA, "logical"))
+  if (!is.null(Q2)) { stopifnot(is_posNum(Q2, zero_ok=TRUE)) } # Q2_max checked later.
+  stopifnot(is_posNum(varTol))
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
-    stopifnot(is.numeric(resamp_res) && length(resamp_res)==1)
-    stopifnot(round(resamp_res) == resamp_res && resamp_res >= 0)
+    stopifnot(is_posNum(resamp_res) && round(resamp_res) == resamp_res)
   }
-  stopifnot(is.logical(rm_mwall) && length(rm_mwall)==1)
-  stopifnot(is.numeric(maxiter) && length(maxiter)==1)
-  stopifnot(round(maxiter) == maxiter && maxiter >= 0)
-  stopifnot(is.numeric(epsilon) && length(epsilon)==1)
-  if (!is.null(kappa_init)) {
-    stopifnot(is.numeric(kappa_init) && length(kappa_init)==1)
-    if(kappa_init <= 0) stop('kappa_init must be a positive scalar or `NULL`.')
-  }
-  stopifnot((is.logical(usePar)||is.numeric(usePar)) && length(usePar)==1)
-  stopifnot(is.logical(verbose) && length(verbose)==1)
+  stopifnot(is_1(rm_mwall, "logical"))
+  stopifnot(is_1(reduce_dim, "logical"))
+  method_FC <- match.arg(method_FC, c("VB", "EM"))
+  stopifnot(is_posNum(maxiter))
+  stopifnot(is_posNum(epsilon))
+  if (!is.null(kappa_init)) { stopifnot(is_posNum(kappa_init)) }
+  stopifnot(is_1(usePar, "logical") || is_1(usePar, "numeric"))
+  stopifnot(is_1(verbose, "logical"))
 
   # `usePar`
   if (!isFALSE(usePar)) {
@@ -756,32 +752,33 @@ templateICA <- function(
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #VB Algorithm
-    if (method_FC=='VB') resultEM <- VB_FCtemplateICA(
-      template_mean = template$mean,
-      template_var = template$var,
-      template_FC = template_FC,
-      prior_params, #for prior on tau^2
-      BOLD=BOLD,
-      A0 = resultEM_tICA$A,
-      S0 = resultEM_tICA$subjICmean,
-      S0_var = (resultEM_tICA$subjICse)^2,
-      maxiter=maxiter,
-      epsilon=epsilon,
-      verbose=verbose)
-
-    #EM Algorithm
-    if (method_FC=='EM') resultEM <- EM_FCtemplateICA(
-      template_mean = template$mean,
-      template_var = template$var,
-      template_FC = template_FC,
-      prior_params, #for prior on tau^2
-      BOLD=BOLD,
-      AS_0 = BOLD_DR, #initial values for A and S
-      maxiter=maxiter,
-      epsilon=epsilon,
-      verbose=verbose
-    )
+    resultEM <- if (method_FC == "VB") {
+      VB_FCtemplateICA(
+        template_mean = template$mean,
+        template_var = template$var,
+        template_FC = template_FC,
+        prior_params, #for prior on tau^2
+        BOLD=BOLD,
+        A0 = resultEM_tICA$A,
+        S0 = resultEM_tICA$subjICmean,
+        S0_var = (resultEM_tICA$subjICse)^2,
+        maxiter=maxiter,
+        epsilon=epsilon,
+        verbose=verbose
+      )
+    } else {
+      EM_FCtemplateICA(
+        template_mean = template$mean,
+        template_var = template$var,
+        template_FC = template_FC,
+        prior_params, #for prior on tau^2
+        BOLD=BOLD,
+        AS_0 = BOLD_DR, #initial values for A and S
+        maxiter=maxiter,
+        epsilon=epsilon,
+        verbose=verbose
+      )
+    }
   } # end of FC template ICA estimation
 
   #3) Spatial Template ICA ---------------------------------------------------

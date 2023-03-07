@@ -10,16 +10,11 @@ update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
 \item{mu_tau2, mu_A, cov_A, }{Most recent estimates of posterior moments for
 these variables.}
 
+\item{D_inv, D_inv_S}{Some pre-computed quantities.
+#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.}
+
 \item{ntime, nICs, nvox}{Number of timepoints in data, number of ICs, and
 the number of data locations.}
-
-\item{template_mean}{(\eqn{V \times Q} matrix) mean maps for each IC in the
-template, where \eqn{Q} is the number of ICs, and \eqn{V=nvox} is the number
-of data locations.}
-
-\item{template_var}{(\eqn{V \times Q} matrix) between-subject variance maps
-for each IC in the template.
-#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.}
 }
 \value{
 List of length two: \code{mu_A} and \code{cov_A}.

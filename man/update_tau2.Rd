@@ -9,6 +9,9 @@ update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
 \arguments{
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
+\item{BOLD2_v}{A precomputed quantity: \code{colSums(BOLD^2)}, a numeric
+vector of length \eqn{V}.}
+
 \item{mu_A, mu_S, cov_A, cov_S, }{Most recent estimates of posterior
 moments for these variables.}
 

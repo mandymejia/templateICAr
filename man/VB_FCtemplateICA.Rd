@@ -29,7 +29,7 @@ for each IC in the template.}
 \item{template_FC}{(list) Parameters of functional connectivity template.}
 
 \item{prior_params}{Alpha and beta parameters of IG prior on \eqn{\tau^2}
-(error variance).}
+(error variance). Default: \code{0.001} for both.}
 
 \item{BOLD}{(\eqn{V \times T} matrix) preprocessed fMRI data.}
 
@@ -40,7 +40,7 @@ covariance matrix \code{S0_var}.}
 \item{maxiter}{Maximum number of VB iterations. Default: \code{100}.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between
-iterations. Default: \code{0.01}.}
+iterations. Default: \code{0.001}.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default:
 \code{FALSE}.}

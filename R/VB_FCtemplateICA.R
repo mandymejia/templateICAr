@@ -9,14 +9,14 @@
 #'  for each IC in the template.
 #' @param template_FC (list) Parameters of functional connectivity template.
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
-#'  (error variance).
+#'  (error variance). Default: \code{0.001} for both.
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data.
 #' @param A0,S0,S0_var Initial guesses at latent variables: \code{A} (\eqn{TxQ}
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  covariance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param epsilon Smallest proportion change in parameter estimates between
-#'  iterations. Default: \code{0.01}.
+#'  iterations. Default: \code{0.001}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default:
 #'  \code{FALSE}.
 #'
@@ -179,11 +179,7 @@ update_A <- function(
 #'
 #' @param mu_tau2,mu_A,cov_A, Most recent estimates of posterior moments for
 #'  these variables.
-#' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in the
-#'  template, where \eqn{Q} is the number of ICs, and \eqn{V=nvox} is the number
-#'  of data locations.
-#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps
-#'  for each IC in the template.
+#' @param D_inv,D_inv_S Some pre-computed quantities.
 #' #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
 #' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
 #'  the number of data locations.
@@ -246,6 +242,8 @@ update_G <- function(
 #' Update tau for VB FC Template ICA
 #'
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param BOLD2_v A precomputed quantity: \code{colSums(BOLD^2)}, a numeric
+#'  vector of length \eqn{V}.
 #' @param mu_A,mu_S,cov_A,cov_S, Most recent estimates of posterior
 #' moments for these variables.
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
@@ -279,5 +277,3 @@ update_tau2 <- function(
 
   return(list(alpha1, beta1))
 }
-
-

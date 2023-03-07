@@ -157,7 +157,8 @@ Default: \code{TRUE}. Skipping dimension reduction will slow the model
 estimation, but may result in more accurate results. Ignored for FC template
 ICA}
 
-\item{method_FC}{Bayesian estimation method for FC template ICA model.}
+\item{method_FC}{Bayesian estimation method for FC template ICA model:
+variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
@@ -184,8 +185,8 @@ If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
 objects, respectively.
 }
 \description{
-Perform template independent component analysis (ICA) using
-expectation-maximization (EM) or variational Bayes (VB).
+Perform template independent component analysis (ICA) using variational Bayes
+(VB) or expectation-maximization (EM).
 }
 \examples{
 \dontrun{
