@@ -242,10 +242,10 @@ EM_FCtemplateICA <- function(template_mean,
   # corA_post_mean <- sapply(corA_post, mean)
   # corA_post_SE <- sapply(corA_post, sd)
 
-  result <- list(S_post,
+  result <- list(S_post = S_post,
                  subjICmean = S_post_mean,
                  subjICse = S_post_SE,
-                 A_post,
+                 A_post = A_post,
                  A_post_mean_cor,
                  corA_post,
                  subjFCmean = corA_post_mean,

@@ -99,7 +99,7 @@
 #'  ICA
 #' @param method_FC Bayesian estimation method for FC template ICA model.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: \code{.01}.
+#' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
 #'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
@@ -133,7 +133,7 @@
 #'  templateICA(newcii_fname, tm, spatial_model=TRUE, resamp_res=2000)
 #' }
 templateICA <- function(
-  BOLD, template, 
+  BOLD, template,
   tvar_method=c("non-negative", "unbiased"),
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
@@ -148,7 +148,7 @@ templateICA <- function(
   reduce_dim=TRUE,
   method_FC=c("VB", "EM"),
   maxiter=100,
-  epsilon=0.01,
+  epsilon=0.001,
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=FALSE,
@@ -226,10 +226,10 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   format <- fMRItools::infer_format_ifti(BOLD)[1]
-  FORMAT <- get_FORMAT(format)
+  FORMAT <- templateICAr:::get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  check_req_ifti_pkg(FORMAT)
+  templateICAr:::check_req_ifti_pkg(FORMAT)
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
@@ -622,7 +622,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
 
   if (any(!mask3)) {
     if (do_spatial) {
@@ -665,7 +665,7 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  x <- templateICAr:::rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
   BOLD <- x$BOLD
   Q2_est <- x$Q2
   rm(x)
@@ -695,7 +695,7 @@ templateICA <- function(
 
   if (verbose) {
     if (do_spatial | do_FC) { cat("Initializing with standard Template ICA.\n") }
-    if (!do_spatial & do_FC) { cat("Computing Template ICA.\n") }
+    if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
   #1) Template ICA -----------------------------------------------------------
@@ -703,16 +703,16 @@ templateICA <- function(
   if (reduce_dim) {
     if (verbose) { cat("Reducing data dimensions.\n") }
     # Reduce data dimensions
-    BOLD <- dim_reduce(BOLD, nL)
-    err_var <- BOLD$sigma_sq # spw: need to run dim red to get this quantity
-    BOLD2 <- BOLD$data_reduced
-    H <- BOLD$H
-    Hinv <- BOLD$H_inv
+    BOLD_PCA <- dim_reduce(BOLD, nL)
+    err_var <- BOLD_PCA$sigma_sq # spw: need to run dim red to get this quantity
+    BOLD2 <- BOLD_PCA$data_reduced
+    H <- BOLD_PCA$H
+    Hinv <- BOLD_PCA$H_inv
     # In original template ICA model nu^2 is separate
     #   for spatial template ICA it is part of C
-    C_diag <- BOLD$C_diag
-    if (do_spatial) { C_diag <- C_diag * (BOLD$sigma_sq) } #(nu^2)HH' in paper
-    rm(BOLD)
+    C_diag <- BOLD_PCA$C_diag
+    if (do_spatial) { C_diag <- C_diag * (BOLD_PCA$sigma_sq) } #(nu^2)HH' in paper
+    rm(BOLD_PCA)
     # Apply dimension reduction
     HA <- H %*% BOLD_DR$A
     theta0 <- list(A = HA)
@@ -730,7 +730,7 @@ templateICA <- function(
 
   theta00 <- theta0
   theta00$nu0_sq <- err_var
-  resultEM <- EM_templateICA.independent(
+  resultEM <- templateICAr:::EM_templateICA.independent(
     template_mean=template$mean,
     template_var=template$var,
     BOLD=BOLD2,
@@ -747,29 +747,31 @@ templateICA <- function(
 
   #2) FC Template ICA ----------------------------------------------------------
 
+
+
   if (do_FC) {
+
+    resultEM_tICA <- resultEM
 
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
     #VB Algorithm
-    if (method_FC=='VB') resultVB <- VB_FCtemplateICA(
+    if (method_FC=='VB') resultEM <- VB_FCtemplateICA(
       template_mean = template$mean,
       template_var = template$var,
       template_FC = template_FC,
       prior_params, #for prior on tau^2
       BOLD=BOLD,
-      A0 = resultEM$A,
-      S0 = resultEM$subjICmean,
-      S0_var = (resultEM$subjICse)^2,
+      A0 = resultEM_tICA$A,
+      S0 = resultEM_tICA$subjICmean,
+      S0_var = (resultEM_tICA$subjICse)^2,
       maxiter=maxiter,
       epsilon=epsilon,
       verbose=verbose)
 
-    #HERE
-
     #EM Algorithm
-    if (method_FC=='EM') resultEM <- EM_FCtemplateICA(
+    if (method_FC=='EM') resultEM <- templateICAr:::EM_FCtemplateICA(
       template_mean = template$mean,
       template_var = template$var,
       template_FC = template_FC,
