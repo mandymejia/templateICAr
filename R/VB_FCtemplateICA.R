@@ -15,6 +15,7 @@
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  covariance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
+#' @param miniter Minimum number of VB iterations. Use this to look at the ELBO curve.
 #' @param epsilon Smallest proportion change in parameter estimates between
 #'  iterations. Default: \code{0.001}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default:
@@ -32,6 +33,7 @@ VB_FCtemplateICA <- function(
   BOLD, #VxT
   A0, S0, S0_var,
   maxiter=100,
+  miniter=30,
   epsilon=0.001,
   verbose=FALSE){
 
@@ -70,7 +72,7 @@ VB_FCtemplateICA <- function(
   #2. Iteratively update approximate posteriors
 
   err <- 1000 #large initial value for difference between iterations
-  while (err > epsilon) {
+  while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -276,4 +278,60 @@ update_tau2 <- function(
   }
 
   return(list(alpha1, beta1))
+}
+
+library(mvtnorm)
+ELBO <- function(mu_S, cov_S, #(nICs, nvox), (nICs, nICs, nvox)
+                 mu_A, cov_A, #TxQ, (QxQ) common across T
+                 mu_alpha, cov_alpha, #Q, QxQ
+                 mu_G, psi_G, nu_G, #QxQ, QxQ, 1
+                 mu_tau2, alpha, beta  #V, 1, V
+                 template_mean, template_var,
+                 BOLD, ntime, nICs, nvox){
+
+  ### ELBO Part 1
+
+  #convert mu_S and cov_S to lists to use sapply
+  mu_S_list <- split(mu_S, rep(1:nvox, each = nICs))
+  cov_S_mat <- matrix(cov_S, nICs*nICS, nvox)
+  cov_S_list <- split(cov_S_mat, rep(1:nvox, each = nICs*nICs)) #check this works. each QxQ matrix will be vectorized
+  mu_cov_S_list <- mapply(list, mu_S_list, cov_S_list, simplify=FALSE) #this actually returns a matrix where each column is a list
+
+  ELBO1_S <- sum(apply(mu_cov_S_list, 2,
+                    function(x){
+                      mu_v <- x[[1]]
+                      cov_v <- matrix(x[[2]], nrow=nICs, ncol=nICs)
+                      dmvnorm(x = mu_v, mean = mu_v, sigma = cov_v, log = TRUE)
+                    })) #maybe could just use mapply here?
+
+  #remember that cov_A common across time points
+  ELBO1_A <- sum(apply(mu_A, 1,
+                       function(x){
+                         dmvnorm(x = x, mean = x, sigma = cov_A, log = TRUE)
+                       }))
+
+  ELBO1_alpha <- dmvnorm(x = mu_alpha, mean = mu_alpha, sigma = cov_alpha, log = TRUE)
+
+  library(MCMCpack)
+  ELBO1_G <- log(diwish(W = mu_G, v = nu_G, S = psi_G))
+
+  library(invgamma) #check whether we can use dgamma instead
+  tmp <- cbind(mu_tau2, beta)
+  ELBO1_tau2 <- apply(tmp, 1,
+                      function(x){
+                        tau2_v <- tmp[1,]
+                        beta_v <- tmp[1,]
+                        dinvgamma(x = tau2_v, shape = alpha, scale = beta_v, log.p = TRUE) #CHECK THIS
+                      })
+
+  ELBO1 <- ELBO1_S + ELBO1_A + ELBO1_alpha + ELBO1_G + ELBO1_tau2
+
+  ### ELBO Part 2
+
+
+  ### ELBO Part 3
+
+  ELBO <- ELBO1 # + ELBO2 + ELBO3
+  return(ELBO)
+
 }
