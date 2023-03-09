@@ -280,20 +280,38 @@ update_tau2 <- function(
   return(list(alpha1, beta1))
 }
 
-library(mvtnorm)
-ELBO <- function(mu_S, cov_S, #(nICs, nvox), (nICs, nICs, nvox)
-                 mu_A, cov_A, #TxQ, (QxQ) common across T
-                 mu_alpha, cov_alpha, #Q, QxQ
-                 mu_G, psi_G, nu_G, #QxQ, QxQ, 1
-                 mu_tau2, alpha, beta  #V, 1, V
-                 template_mean, template_var,
-                 BOLD, ntime, nICs, nvox){
+#' ELBO
+#' 
+#' Does ELBO ...
+#' 
+#' @param mu_S,cov_S (nICs, nvox) and (nICs, nICs, nvox)
+#' @param mu_A,cov_A TxQ, (QxQ) common across T
+#' @param mu_alpha,cov_alpha Q, QxQ
+#' @param mu_G,psi_G,nu_G QxQ, QxQ, 1
+#' @param mu_tau2,alpha,beta #V, 1, V
+#' @param template_mean,template_var The templates
+#' @param BOLD,ntime,nICs,nvox ...
+#' 
+#' @return ... 
+#' 
+#' @keywords internal
+#' @importFrom mvtnorm dmvnorm
+#' @importFrom MCMCpack diwish
+#' @importFrom invgamma dinvgamma
+ELBO <- function(
+  mu_S, cov_S, 
+  mu_A, cov_A,
+  mu_alpha, cov_alpha, 
+  mu_G, psi_G, nu_G, 
+  mu_tau2, alpha, beta, 
+  template_mean, template_var,
+  BOLD, ntime, nICs, nvox){
 
-  ### ELBO Part 1
+  # ELBO Part 1. ---------------------------------------------------------------
 
   #convert mu_S and cov_S to lists to use sapply
   mu_S_list <- split(mu_S, rep(1:nvox, each = nICs))
-  cov_S_mat <- matrix(cov_S, nICs*nICS, nvox)
+  cov_S_mat <- matrix(cov_S, nICs*nICs, nvox)
   cov_S_list <- split(cov_S_mat, rep(1:nvox, each = nICs*nICs)) #check this works. each QxQ matrix will be vectorized
   mu_cov_S_list <- mapply(list, mu_S_list, cov_S_list, simplify=FALSE) #this actually returns a matrix where each column is a list
 
@@ -311,27 +329,24 @@ ELBO <- function(mu_S, cov_S, #(nICs, nvox), (nICs, nICs, nvox)
                        }))
 
   ELBO1_alpha <- dmvnorm(x = mu_alpha, mean = mu_alpha, sigma = cov_alpha, log = TRUE)
+  ELBO1_G <- log(MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G))
 
-  library(MCMCpack)
-  ELBO1_G <- log(diwish(W = mu_G, v = nu_G, S = psi_G))
-
-  library(invgamma) #check whether we can use dgamma instead
   tmp <- cbind(mu_tau2, beta)
-  ELBO1_tau2 <- apply(tmp, 1,
-                      function(x){
-                        tau2_v <- tmp[1,]
-                        beta_v <- tmp[1,]
-                        dinvgamma(x = tau2_v, shape = alpha, scale = beta_v, log.p = TRUE) #CHECK THIS
-                      })
+  ELBO1_tau2 <- apply(
+    tmp, 1,
+    function(x){
+      tau2_v <- tmp[1,]
+      beta_v <- tmp[1,]
+      invgamma::dinvgamma(x = tau2_v, shape = alpha, scale = beta_v, log.p = TRUE) #CHECK THIS
+    }
+  )
 
   ELBO1 <- ELBO1_S + ELBO1_A + ELBO1_alpha + ELBO1_G + ELBO1_tau2
 
-  ### ELBO Part 2
+  # ELBO Part 2. ---------------------------------------------------------------
 
 
-  ### ELBO Part 3
+  # ELBO Part 3. ---------------------------------------------------------------
 
   ELBO <- ELBO1 # + ELBO2 + ELBO3
-  return(ELBO)
-
 }

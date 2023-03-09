@@ -14,6 +14,7 @@ VB_FCtemplateICA(
   S0,
   S0_var,
   maxiter = 100,
+  miniter = 30,
   epsilon = 0.001,
   verbose = FALSE
 )
@@ -38,6 +39,8 @@ mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 covariance matrix \code{S0_var}.}
 
 \item{maxiter}{Maximum number of VB iterations. Default: \code{100}.}
+
+\item{miniter}{Minimum number of VB iterations. Use this to look at the ELBO curve.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between
 iterations. Default: \code{0.001}.}
