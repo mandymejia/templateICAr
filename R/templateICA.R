@@ -222,10 +222,10 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
   format <- fMRItools::infer_format_ifti(BOLD)[1]
-  FORMAT <- get_FORMAT(format)
+  FORMAT <- templateICAr:::get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  check_req_ifti_pkg(FORMAT)
+  templateICAr:::check_req_ifti_pkg(FORMAT)
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
@@ -618,7 +618,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
 
   if (any(!mask3)) {
     if (do_spatial) {
@@ -650,7 +650,7 @@ templateICA <- function(
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
-  BOLD <- lapply(BOLD, norm_BOLD,
+  BOLD <- lapply(BOLD, templateICAr:::norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT
@@ -661,13 +661,13 @@ templateICA <- function(
   nT <- sum(nT)
 
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
+  x <- templateICAr:::rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
   BOLD <- x$BOLD
   Q2_est <- x$Q2
   rm(x)
 
   # Center and scale `BOLD` again, but do not detrend again. -------------------
-  BOLD <- norm_BOLD(
+  BOLD <- templateICAr:::norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=FALSE
@@ -676,7 +676,7 @@ templateICA <- function(
   # Initialize with the dual regression-based estimate -------------------------
   if (verbose) { cat("Computing DR.\n") }
 
-  BOLD_DR <- dual_reg(
+  BOLD_DR <- templateICAr:::dual_reg(
     BOLD, template$mean, center_Bcols=FALSE,
     scale=FALSE, detrend_DCT=0, normA=normA
   )
@@ -726,7 +726,7 @@ templateICA <- function(
 
   theta00 <- theta0
   theta00$nu0_sq <- err_var
-  resultEM <- EM_templateICA.independent(
+  resultEM <- templateICAr:::EM_templateICA.independent(
     template_mean=template$mean,
     template_var=template$var,
     BOLD=BOLD2,
@@ -751,6 +751,8 @@ templateICA <- function(
 
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
+
+    #save.image(file='test/test_setup_VB.RData')
 
     resultEM <- if (method_FC == "VB") {
       VB_FCtemplateICA(

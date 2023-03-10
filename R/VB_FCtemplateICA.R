@@ -95,23 +95,29 @@ VB_FCtemplateICA <- function(
     cov_alpha <- mu_G/ntime
 
     #c2. UPDATE G
-    system.time(G_new <- update_G(mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs))
-    mu_G_new <- G_new[[2]] / G_new[[1]]
+    G_new <- update_G(mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs)
+    psi_G <- G_new[[2]]
+    nu_G <- G_new[[1]]
+    mu_G_new <- psi_G / nu_G
     change_G <- mean(abs(mu_G - mu_G_new)/(abs(mu_G)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_G <- mu_G_new
 
     #d. UPDATE tau^2
-    system.time(tau2_new <- update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox))
+    tau2_new <- update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
     mu_tau2_new <- tau2_new[[2]]/(tau2_new[[1]] - 1)
     change_tau2 <- mean(abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_tau2 <- mu_tau2_new
 
     if (verbose) print(Sys.time() - t00)
 
+    #change in estimates
     change <- c(change_A, change_S, change_G, change_tau2)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ': Proportional Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
+
+    #ELBO
+
 
     ### Move to next iteration
     iter <- iter + 1
@@ -317,20 +323,24 @@ ELBO <- function(
   cov_S_list <- split(cov_S_mat, rep(1:nvox, each = nICs*nICs)) #check this works. each QxQ matrix will be vectorized
   mu_cov_S_list <- mapply(list, mu_S_list, cov_S_list, simplify=FALSE) #this actually returns a matrix where each column is a list
 
-  ELBO1_S <- sum(apply(mu_cov_S_list, 2,
-                    function(x){
-                      mu_v <- x[[1]]
-                      cov_v <- matrix(x[[2]], nrow=nICs, ncol=nICs)
-                      dmvnorm(x = mu_v, mean = mu_v, sigma = cov_v, log = TRUE)
-                    })) #maybe could just use mapply here?
+  ELBO1_S <- mapply(function(mu_v, cov_v_vec){
+    cov_v <- matrix(cov_v_vec, nrow=nICs, ncol=nICs)
+    dmvnorm(x = mu_v, mean = mu_v, sigma = cov_v, log = TRUE)
+  },
+  as.data.frame(mu_S),
+  as.data.frame(cov_S_mat), USE.NAMES=FALSE)
+
+  ## TO DO: sum ELBO1_S after subtracting ELBO3_S
 
   #remember that cov_A common across time points
-  ELBO1_A <- sum(apply(mu_A, 1,
-                       function(x){
-                         dmvnorm(x = x, mean = x, sigma = cov_A, log = TRUE)
-                       }))
+  #So g(mu_A_t, mu_A_t, cov_A) will be the same for all t,
+  #since it's the peak density of a MVN with fixed covariance
+  ELBO1_A <- ntime * dmvnorm(x = mu_A[1,], mean = mu_A[1,], sigma = cov_A, log = TRUE)
+
+  ## TO DO: multiply ELBO1_A by ntime after subtracting ELBO3_A ?
 
   ELBO1_alpha <- dmvnorm(x = mu_alpha, mean = mu_alpha, sigma = cov_alpha, log = TRUE)
+
   ELBO1_G <- log(MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G))
 
   tmp <- cbind(mu_tau2, beta)
@@ -391,3 +401,32 @@ ELBO <- function(
   ELBO <- ELBO1 + ELBO2 + ELBO3
   return(ELBO)
 }
+
+MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G)
+
+# Compute the parts of the IW density that change with W or S
+# Note that nu = n0 + ntime is fixed, so it won't change across iterations
+log_diwish <- function(W, nu, S){
+  p <- nrow(S)
+
+  #compute the first term
+  cholS <- chol(S)
+  halflogdetS <- sum(log(diag(cholS)))
+  #gammapart <- sum(lgamma((nu + 1 - 1:p)/2))
+  #ldenom <- gammapart + 0.5 * nu * p * log(2) + 0.25 * p * (p - 1) * log(pi)
+  part1 <- nu * halflogdetS - ldenom
+
+  #compute det(W) part
+  cholW <- chol(W)
+  halflogdetW <- sum(log(diag(cholW)))
+  part2 <- - 1*(nu + p + 1) * halflogdetW
+
+  #compute exponential trace part
+  invW <- chol2inv(cholW)
+  part3 <- - 0.5 * sum(S * invW) #trace shortcut
+
+  return(part1 + part2 + part3)
+
+}
+
+
