@@ -104,7 +104,9 @@ VB_FCtemplateICA <- function(
 
     #d. UPDATE tau^2
     tau2_new <- update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
-    mu_tau2_new <- tau2_new[[2]]/(tau2_new[[1]] - 1)
+    beta1 <- tau2_new[[2]] #length V
+    alpha1 <- tau2_new[[1]] #scalar
+    mu_tau2_new <- beta1/(alpha1 - 1)
     change_tau2 <- mean(abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_tau2 <- mu_tau2_new
 
@@ -296,44 +298,38 @@ update_tau2 <- function(
 #' @param mu_G,psi_G,nu_G QxQ, QxQ, 1
 #' @param mu_tau2,alpha,beta #V, 1, V
 #' @param template_mean,template_var,template_FC The templates
-#' @param BOLD,ntime,nICs,nvox ...
+#' @param BOLD, #TxV (has been transposed)
+#' @param ntime,nICs,nvox ...
 #' @param prior_params
 #'
 #' @return ...
 #'
 #' @keywords internal
 #' @importFrom mvtnorm dmvnorm
-#' @importFrom MCMCpack diwish
-#' @importFrom invgamma dinvgamma
+#' @importFrom stats dgamma
 ELBO <- function(
   mu_S, cov_S,
   mu_A, cov_A,
   mu_alpha, cov_alpha,
   mu_G, psi_G, nu_G,
-  mu_tau2, alpha, beta,
+  mu_tau2, alpha1, beta1,
   template_mean, template_var, template_FC,
   BOLD, ntime, nICs, nvox,
   prior_params){
 
   # ELBO Part 1. ---------------------------------------------------------------
 
-  #convert mu_S and cov_S to lists to use sapply
-  mu_S_list <- split(mu_S, rep(1:nvox, each = nICs))
   cov_S_mat <- matrix(cov_S, nICs*nICs, nvox)
-  cov_S_list <- split(cov_S_mat, rep(1:nvox, each = nICs*nICs)) #check this works. each QxQ matrix will be vectorized
-  mu_cov_S_list <- mapply(list, mu_S_list, cov_S_list, simplify=FALSE) #this actually returns a matrix where each column is a list
-
   ELBO1_S <- mapply(function(mu_v, cov_v_vec){
     cov_v <- matrix(cov_v_vec, nrow=nICs, ncol=nICs)
     dmvnorm(x = mu_v, mean = mu_v, sigma = cov_v, log = TRUE)
   },
   as.data.frame(mu_S),
   as.data.frame(cov_S_mat), USE.NAMES=FALSE)
-
   ## TO DO: sum ELBO1_S after subtracting ELBO3_S
+  ## This might be more efficient if we consider that it's the peak density. Some of the different density terms might be common across v.
 
-  #remember that cov_A common across time points
-  #So g(mu_A_t, mu_A_t, cov_A) will be the same for all t,
+  #cov_A common across time point, so g(mu_A_t, mu_A_t, cov_A) will be the same for all t,
   #since it's the peak density of a MVN with fixed covariance
   ELBO1_A <- ntime * dmvnorm(x = mu_A[1,], mean = mu_A[1,], sigma = cov_A, log = TRUE)
 
@@ -341,29 +337,41 @@ ELBO <- function(
 
   ELBO1_alpha <- dmvnorm(x = mu_alpha, mean = mu_alpha, sigma = cov_alpha, log = TRUE)
 
-  ELBO1_G <- log(MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G))
+  ELBO1_G <- log_diwish(W = mu_G, nu = nu_G, S = psi_G)
 
-  tmp <- cbind(mu_tau2, beta)
+
+  log_digamma <- function(x, alpha, beta){ alpha*log(beta) - lgamma(alpha) - (alpha+1)*log(x) - beta/x }
+  # log_digamma <- function(x, alpha, beta){ dgamma(1/x, shape=alpha, rate=beta, log = TRUE) - 2 * log(x) }
+  tau2_beta <- cbind(mu_tau2, beta1)
   ELBO1_tau2 <- sum(apply(
-    tmp, 1,
+    tau2_beta, 1,
     function(x){
-      tau2_v <- tmp[1,]
-      beta_v <- tmp[1,]
-      invgamma::dinvgamma(x = tau2_v, shape = alpha, scale = beta_v, log.p = TRUE) #CHECK THIS
+      tau2_v <- x[1]
+      beta_v <- x[2]
+      log_digamma(x = tau2_v, alpha1, beta_v)
     }
   ))
+
+  ## TO DO: add ELBO1_S and ELBO1_tau2 and other length-v vectors before summing over the vector elements?
 
   ELBO1 <- ELBO1_S + ELBO1_A + ELBO1_alpha + ELBO1_G + ELBO1_tau2
 
   # ELBO Part 2. ---------------------------------------------------------------
 
+  #compute log of univariate gaussian density element-wise
   AS <- mu_A %*% mu_S
-  ELBO2 <- sum(mapply(function(BOLD_v, AS_v, tau2_v){
-    dmvnorm(x=BOLD_v, mean=AS_v, sigma=diag(tau2_v, ntime), log = TRUE)
-  },
-  as.data.frame(t(BOLD)),
-  as.data.frame(t(AS)),
-  as.data.frame(t(mu_tau2))))
+  mu_tau2_mat <- matrix(mu_tau2, nrow=ntime, ncol=nvox, byrow=TRUE)
+  log_dnorm <- -1*log(2*pi) - log(mu_tau2_mat) - 0.5*(BOLD - AS)^2/mu_tau2_mat
+  ELBO2 <- colSums(log_dnorm) #vector of length V
+
+  # ELBO2 <- sum(mapply(function(BOLD_v, AS_v, tau2_v){
+  #   dmvnorm(x=BOLD_v, mean=AS_v, sigma=diag(tau2_v, ntime), log = TRUE)
+  # },
+  # as.data.frame(BOLD),
+  # as.data.frame(AS),
+  # as.data.frame(t(mu_tau2))))
+
+  #HERE
 
   # ELBO Part 3. ---------------------------------------------------------------
 
@@ -402,10 +410,7 @@ ELBO <- function(
   return(ELBO)
 }
 
-MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G)
-
-# Compute the parts of the IW density that change with W or S
-# Note that nu = n0 + ntime is fixed, so it won't change across iterations
+# Compute the log of the IW density
 log_diwish <- function(W, nu, S){
   p <- nrow(S)
 
@@ -428,5 +433,8 @@ log_diwish <- function(W, nu, S){
   return(part1 + part2 + part3)
 
 }
+
+
+
 
 
