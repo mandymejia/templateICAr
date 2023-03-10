@@ -281,31 +281,33 @@ update_tau2 <- function(
 }
 
 #' ELBO
-#' 
+#'
 #' Does ELBO ...
-#' 
+#'
 #' @param mu_S,cov_S (nICs, nvox) and (nICs, nICs, nvox)
 #' @param mu_A,cov_A TxQ, (QxQ) common across T
 #' @param mu_alpha,cov_alpha Q, QxQ
 #' @param mu_G,psi_G,nu_G QxQ, QxQ, 1
 #' @param mu_tau2,alpha,beta #V, 1, V
-#' @param template_mean,template_var The templates
+#' @param template_mean,template_var,template_FC The templates
 #' @param BOLD,ntime,nICs,nvox ...
-#' 
-#' @return ... 
-#' 
+#' @param prior_params
+#'
+#' @return ...
+#'
 #' @keywords internal
 #' @importFrom mvtnorm dmvnorm
 #' @importFrom MCMCpack diwish
 #' @importFrom invgamma dinvgamma
 ELBO <- function(
-  mu_S, cov_S, 
+  mu_S, cov_S,
   mu_A, cov_A,
-  mu_alpha, cov_alpha, 
-  mu_G, psi_G, nu_G, 
-  mu_tau2, alpha, beta, 
-  template_mean, template_var,
-  BOLD, ntime, nICs, nvox){
+  mu_alpha, cov_alpha,
+  mu_G, psi_G, nu_G,
+  mu_tau2, alpha, beta,
+  template_mean, template_var, template_FC,
+  BOLD, ntime, nICs, nvox,
+  prior_params){
 
   # ELBO Part 1. ---------------------------------------------------------------
 
@@ -332,21 +334,60 @@ ELBO <- function(
   ELBO1_G <- log(MCMCpack::diwish(W = mu_G, v = nu_G, S = psi_G))
 
   tmp <- cbind(mu_tau2, beta)
-  ELBO1_tau2 <- apply(
+  ELBO1_tau2 <- sum(apply(
     tmp, 1,
     function(x){
       tau2_v <- tmp[1,]
       beta_v <- tmp[1,]
       invgamma::dinvgamma(x = tau2_v, shape = alpha, scale = beta_v, log.p = TRUE) #CHECK THIS
     }
-  )
+  ))
 
   ELBO1 <- ELBO1_S + ELBO1_A + ELBO1_alpha + ELBO1_G + ELBO1_tau2
 
   # ELBO Part 2. ---------------------------------------------------------------
 
+  AS <- mu_A %*% mu_S
+  ELBO2 <- sum(mapply(function(BOLD_v, AS_v, tau2_v){
+    dmvnorm(x=BOLD_v, mean=AS_v, sigma=diag(tau2_v, ntime), log = TRUE)
+  },
+  as.data.frame(t(BOLD)),
+  as.data.frame(t(AS)),
+  as.data.frame(t(mu_tau2))))
 
   # ELBO Part 3. ---------------------------------------------------------------
 
-  ELBO <- ELBO1 # + ELBO2 + ELBO3
+  ELBO3_S <- sum(mapply(function(x, mean, vars){
+    sigma = diag(vars);
+    dmvnorm(x = x, mean = mean, sigma = sigma, log = TRUE)
+    },
+    as.data.frame(mu_S),
+    as.data.frame(t(template_mean)),
+    as.data.frame(t(template_var))))
+
+  ELBO3_A <- sum(apply(mu_A, 1,
+                       function(x){
+                         dmvnorm(x = x, mean = mu_alpha, sigma = mu_G, log = TRUE)
+                       }))
+
+  ELBO3_alpha <- 0 #infinite prior variance, so essentially flat prior, so fixed at some large negative number
+
+  nu0 <- template_FC$nu
+  psi0 <- template_FC$psi
+  ELBO3_G <- log(MCMCpack::diwish(W = mu_G, v = nu0, S = psi0))
+
+  alpha0 <- prior_params[1]
+  beta0 <- prior_params[2]
+  ELBO3_tau2 <- sum(sapply(
+    mu_tau2, 1,
+    function(x){
+      invgamma::dinvgamma(x = x, shape = alpha0, scale = beta0, log.p = TRUE) #CHECK THIS
+    }
+  ))
+
+  ELBO3 <- ELBO3_S + ELBO3_A + ELBO3_alpha + ELBO3_G + ELBO3_tau2
+
+
+  ELBO <- ELBO1 + ELBO2 + ELBO3
+  return(ELBO)
 }
