@@ -40,7 +40,8 @@ covariance matrix \code{S0_var}.}
 
 \item{maxiter}{Maximum number of VB iterations. Default: \code{100}.}
 
-\item{miniter}{Minimum number of VB iterations. Use this to look at the ELBO curve.}
+\item{miniter}{Minimum number of VB iterations. Use this to look at the ELBO
+curve. Default: \code{30}.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between
 iterations. Default: \code{0.001}.}

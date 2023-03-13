@@ -15,7 +15,8 @@
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  covariance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
-#' @param miniter Minimum number of VB iterations. Use this to look at the ELBO curve.
+#' @param miniter Minimum number of VB iterations. Use this to look at the ELBO
+#'  curve. Default: \code{30}.
 #' @param epsilon Smallest proportion change in parameter estimates between
 #'  iterations. Default: \code{0.001}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default:
@@ -147,7 +148,6 @@ VB_FCtemplateICA <- function(
     template_var,
     template_FC
   )
-
 }
 
 #' Update A for VB FC Template ICA
@@ -181,8 +181,7 @@ update_A <- function(
   mu_A <- array(0, dim = c(ntime, nICs)) #TxQ
   for(t in 1:ntime) mu_A[t,] <- cov_A %*% tmp2[t,]
 
-  return(list(mu_A, cov_A))
-
+  list(mu_A=mu_A, cov_A=cov_A)
 }
 
 #' Update S for VB FC Template ICA
@@ -194,7 +193,7 @@ update_A <- function(
 #' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
 #'  the number of data locations.
 #'
-#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' @return List of length two: \code{mu_S} and \code{cov_S}.
 #'
 #' @keywords internal
 update_S <- function(
@@ -218,7 +217,7 @@ update_S <- function(
     mu_S[,v] <- cov_S[,,v] %*% ( (1/mu_tau2[v]) * tmp[v,] + D_inv_S[v,] )
   }
 
-  return(list(mu_S, cov_S))
+  list(mu_S=mu_S, cov_S=cov_S)
 }
 
 #' Update G for VB FC Template ICA
@@ -228,7 +227,7 @@ update_S <- function(
 #' @param template_FC (list) Parameters of functional connectivity template.
 #' @param ntime,nICs Number of timepoints in data and number of ICs.
 #'
-#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' @return List of length two: \code{nu1} and \code{psi1}.
 #'
 #' @keywords internal
 update_G <- function(
@@ -245,8 +244,7 @@ update_G <- function(
     2*tcrossprod(mu_alpha, tmp2) +
     ntime * (tcrossprod(mu_alpha) + cov_alpha)
 
-  return(list(nu1, psi1))
-
+  list(nu1=nu1, psi1=psi1)
 }
 
 #' Update tau for VB FC Template ICA
@@ -261,7 +259,7 @@ update_G <- function(
 #' @param ntime,nvox Number of timepoints in data and the number of data
 #'  locations.
 #'
-#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' @return List of length two: \code{alpha1} and \code{beta1}.
 #'
 #' @keywords internal
 update_tau2 <- function(
@@ -285,7 +283,7 @@ update_tau2 <- function(
     beta1[v] <- beta0 + (1/2)*BOLD2_v[v] - tmp1v + (1/2)*Tr_v
   }
 
-  return(list(alpha1, beta1))
+  list(alpha1=alpha1, beta1=beta1)
 }
 
 #' ELBO
@@ -296,13 +294,14 @@ update_tau2 <- function(
 #' @param mu_A,cov_A TxQ, (QxQ) common across T
 #' @param mu_alpha,cov_alpha Q, QxQ
 #' @param mu_G,psi_G,nu_G QxQ, QxQ, 1
-#' @param mu_tau2,alpha,beta #V, 1, V
+#' @param mu_tau2,alpha1,beta1 #V, 1, V
 #' @param template_mean,template_var,template_FC The templates
 #' @param BOLD, #TxV (has been transposed)
-#' @param ntime,nICs,nvox ...
+#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
+#'  the number of data locations.
 #' @param prior_params
 #'
-#' @return ...
+#' @return ELBO
 #'
 #' @keywords internal
 #' @importFrom mvtnorm dmvnorm
@@ -407,10 +406,17 @@ ELBO <- function(
 
 
   ELBO <- ELBO1 + ELBO2 + ELBO3
-  return(ELBO)
+  ELBO
 }
 
-# Compute the log of the IW density
+#' Compute the log of the IW density
+#' 
+#' Compute the log of the IW density
+#' 
+#' @param W,nu,S The arguments ...
+#' @return The log of the IW density
+#' 
+#' @keywords internal
 log_diwish <- function(W, nu, S){
   p <- nrow(S)
 
@@ -431,7 +437,6 @@ log_diwish <- function(W, nu, S){
   part3 <- - 0.5 * sum(S * invW) #trace shortcut
 
   return(part1 + part2 + part3)
-
 }
 
 

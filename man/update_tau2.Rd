@@ -22,7 +22,7 @@ moments for these variables.}
 locations.}
 }
 \value{
-List of length two: \code{mu_A} and \code{cov_A}.
+List of length two: \code{alpha1} and \code{beta1}.
 }
 \description{
 Update tau for VB FC Template ICA

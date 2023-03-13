@@ -17,7 +17,7 @@ these variables.}
 the number of data locations.}
 }
 \value{
-List of length two: \code{mu_A} and \code{cov_A}.
+List of length two: \code{mu_S} and \code{cov_S}.
 }
 \description{
 Update S for VB FC Template ICA

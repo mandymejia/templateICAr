@@ -15,14 +15,16 @@ ELBO(
   psi_G,
   nu_G,
   mu_tau2,
-  alpha,
-  beta,
+  alpha1,
+  beta1,
   template_mean,
   template_var,
+  template_FC,
   BOLD,
   ntime,
   nICs,
-  nvox
+  nvox,
+  prior_params
 )
 }
 \arguments{
@@ -34,14 +36,19 @@ ELBO(
 
 \item{mu_G, psi_G, nu_G}{QxQ, QxQ, 1}
 
-\item{mu_tau2, alpha, beta}{#V, 1, V}
+\item{mu_tau2, alpha1, beta1}{#V, 1, V}
 
-\item{template_mean, template_var}{The templates}
+\item{template_mean, template_var, template_FC}{The templates}
 
-\item{BOLD, ntime, nICs, nvox}{...}
+\item{BOLD, }{#TxV (has been transposed)}
+
+\item{ntime, nICs, nvox}{Number of timepoints in data, number of ICs, and
+the number of data locations.}
+
+\item{prior_params}{}
 }
 \value{
-...
+ELBO
 }
 \description{
 Does ELBO ...

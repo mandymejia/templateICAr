@@ -15,7 +15,7 @@ moments for these variables.}
 \item{ntime, nICs}{Number of timepoints in data and number of ICs.}
 }
 \value{
-List of length two: \code{mu_A} and \code{cov_A}.
+List of length two: \code{nu1} and \code{psi1}.
 }
 \description{
 Update G for VB FC Template ICA
