@@ -2,55 +2,29 @@
 % Please edit documentation in R/VB_FCtemplateICA.R
 \name{ELBO}
 \alias{ELBO}
-\title{ELBO}
+\title{ELBO (Evidence Lower Bound)}
 \usage{
-ELBO(
-  mu_S,
-  cov_S,
-  mu_A,
-  cov_A,
-  mu_alpha,
-  cov_alpha,
-  mu_G,
-  psi_G,
-  nu_G,
-  mu_tau2,
-  alpha1,
-  beta1,
-  template_mean,
-  template_var,
-  template_FC,
-  BOLD,
-  ntime,
-  nICs,
-  nvox,
-  prior_params
-)
+ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
 }
 \arguments{
-\item{mu_S, cov_S}{(nICs, nvox) and (nICs, nICs, nvox)}
+\item{mu_S}{(Q x V)}
 
-\item{mu_A, cov_A}{TxQ, (QxQ) common across T}
+\item{cov_S}{(Q x Q x V)}
 
-\item{mu_alpha, cov_alpha}{Q, QxQ}
+\item{cov_A}{(Q x Q) (common across all a_t)}
 
-\item{mu_G, psi_G, nu_G}{QxQ, QxQ, 1}
+\item{cov_alpha}{(Q x Q)}
 
-\item{mu_tau2, alpha1, beta1}{#V, 1, V}
+\item{template_mean}{(VxQ) The template mean for S}
 
-\item{template_mean, template_var, template_FC}{The templates}
+\item{template_var}{(VxQ) The template variance for S}
 
-\item{BOLD, }{#TxV (has been transposed)}
-
-\item{ntime, nICs, nvox}{Number of timepoints in data, number of ICs, and
-the number of data locations.}
-
-\item{prior_params}{}
+\item{ntime}{Number of timepoints in data}
 }
 \value{
 ELBO
 }
 \description{
-Does ELBO ...
+Computes the Evidence Lower Bound for the VB Algorithm for FC Template ICA
 }
 \keyword{internal}

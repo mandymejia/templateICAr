@@ -15,12 +15,11 @@
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  covariance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
-#' @param miniter Minimum number of VB iterations. Use this to look at the ELBO
-#'  curve. Default: \code{30}.
-#' @param epsilon Smallest proportion change in parameter estimates between
-#'  iterations. Default: \code{0.001}.
-#' @param verbose If \code{TRUE}, display progress of algorithm. Default:
-#'  \code{FALSE}.
+#' @param miniter Minimum number of VB iterations. Default: \code{5}.
+#' @param epsilon Smallest proportion change in ELBO between iterations.
+#' Default: \code{0.01} percent.
+#' @param verbose If \code{TRUE}, display progress of algorithm.
+#' Default: \code{FALSE}.
 #'
 #' @return Large list of results.
 #'
@@ -34,8 +33,8 @@ VB_FCtemplateICA <- function(
   BOLD, #VxT
   A0, S0, S0_var,
   maxiter=100,
-  miniter=30,
-  epsilon=0.001,
+  miniter=5,
+  epsilon=0.0001,
   verbose=FALSE){
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -73,6 +72,7 @@ VB_FCtemplateICA <- function(
   #2. Iteratively update approximate posteriors
 
   err <- 1000 #large initial value for difference between iterations
+  ELBO_vals <- rep(NA, maxiter)
   while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
@@ -120,7 +120,11 @@ VB_FCtemplateICA <- function(
     if(verbose) cat(paste0('Iteration ',iter, ': Proportional Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
 
     #ELBO
-
+    ELBO_vals[iter] <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
+    if(iter > 1) {
+      err <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
+      if(verbose) cat(paste0('Iteration ',iter, ': Proportional Change in ELBO is ',round(100*err, 3),'% \n'))
+    }
 
     ### Move to next iteration
     iter <- iter + 1
@@ -286,20 +290,17 @@ update_tau2 <- function(
   list(alpha1=alpha1, beta1=beta1)
 }
 
-#' ELBO
+#' ELBO (Evidence Lower Bound)
 #'
-#' Does ELBO ...
+#' Computes the Evidence Lower Bound for the VB Algorithm for FC Template ICA
 #'
-#' @param mu_S,cov_S (nICs, nvox) and (nICs, nICs, nvox)
-#' @param mu_A,cov_A TxQ, (QxQ) common across T
-#' @param mu_alpha,cov_alpha Q, QxQ
-#' @param mu_G,psi_G,nu_G QxQ, QxQ, 1
-#' @param mu_tau2,alpha1,beta1 #V, 1, V
-#' @param template_mean,template_var,template_FC The templates
-#' @param BOLD, #TxV (has been transposed)
-#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
-#'  the number of data locations.
-#' @param prior_params
+#' @param mu_S (Q x V)
+#' @param cov_S (Q x Q x V)
+#' @param cov_A (Q x Q) (common across all a_t)
+#' @param cov_alpha (Q x Q)
+#' @param template_mean (VxQ) The template mean for S
+#' @param template_var (VxQ) The template variance for S
+#' @param ntime Number of timepoints in data
 #'
 #' @return ELBO
 #'
@@ -308,135 +309,28 @@ update_tau2 <- function(
 #' @importFrom stats dgamma
 ELBO <- function(
   mu_S, cov_S,
-  mu_A, cov_A,
-  mu_alpha, cov_alpha,
-  mu_G, psi_G, nu_G,
-  mu_tau2, alpha1, beta1,
-  template_mean, template_var, template_FC,
-  BOLD, ntime, nICs, nvox,
-  prior_params){
+  cov_A,
+  cov_alpha,
+  template_mean, template_var,
+  ntime){
 
-  # ELBO Part 1. ---------------------------------------------------------------
+  #compute det(X)
+  halflogdetX <- function(X){
+    cholX <- chol(X)
+    sum(log(diag(cholX)))
+  }
 
-  cov_S_mat <- matrix(cov_S, nICs*nICs, nvox)
-  ELBO1_S <- mapply(function(mu_v, cov_v_vec){
-    cov_v <- matrix(cov_v_vec, nrow=nICs, ncol=nICs)
-    dmvnorm(x = mu_v, mean = mu_v, sigma = cov_v, log = TRUE)
-  },
-  as.data.frame(mu_S),
-  as.data.frame(cov_S_mat), USE.NAMES=FALSE)
-  ## TO DO: sum ELBO1_S after subtracting ELBO3_S
-  ## This might be more efficient if we consider that it's the peak density. Some of the different density terms might be common across v.
+  #first part of ELBO
+  halflogdet_cov_S_v <- apply(cov_S, 3, halflogdetX)
+  halflogdet_cov_A <- halflogdetX(cov_A) #scalar
+  halflogdet_cov_alpha <- halflogdetX(cov_alpha) #scalar
 
-  #cov_A common across time point, so g(mu_A_t, mu_A_t, cov_A) will be the same for all t,
-  #since it's the peak density of a MVN with fixed covariance
-  ELBO1_A <- ntime * dmvnorm(x = mu_A[1,], mean = mu_A[1,], sigma = cov_A, log = TRUE)
+  #second part of ELBO
+  var_S <- apply(cov_S, 3, diag) #grab the diagonal elements of QxQ cov matrices -- QxV
+  part2_v <- 1/2 * colSums((var_S + mu_S^2 - 2*t(template_mean)*mu_S)/t(template_var))
 
-  ## TO DO: multiply ELBO1_A by ntime after subtracting ELBO3_A ?
-
-  ELBO1_alpha <- dmvnorm(x = mu_alpha, mean = mu_alpha, sigma = cov_alpha, log = TRUE)
-
-  ELBO1_G <- log_diwish(W = mu_G, nu = nu_G, S = psi_G)
-
-
-  log_digamma <- function(x, alpha, beta){ alpha*log(beta) - lgamma(alpha) - (alpha+1)*log(x) - beta/x }
-  # log_digamma <- function(x, alpha, beta){ dgamma(1/x, shape=alpha, rate=beta, log = TRUE) - 2 * log(x) }
-  tau2_beta <- cbind(mu_tau2, beta1)
-  ELBO1_tau2 <- sum(apply(
-    tau2_beta, 1,
-    function(x){
-      tau2_v <- x[1]
-      beta_v <- x[2]
-      log_digamma(x = tau2_v, alpha1, beta_v)
-    }
-  ))
-
-  ## TO DO: add ELBO1_S and ELBO1_tau2 and other length-v vectors before summing over the vector elements?
-
-  ELBO1 <- ELBO1_S + ELBO1_A + ELBO1_alpha + ELBO1_G + ELBO1_tau2
-
-  # ELBO Part 2. ---------------------------------------------------------------
-
-  #compute log of univariate gaussian density element-wise
-  AS <- mu_A %*% mu_S
-  mu_tau2_mat <- matrix(mu_tau2, nrow=ntime, ncol=nvox, byrow=TRUE)
-  log_dnorm <- -1*log(2*pi) - log(mu_tau2_mat) - 0.5*(BOLD - AS)^2/mu_tau2_mat
-  ELBO2 <- colSums(log_dnorm) #vector of length V
-
-  # ELBO2 <- sum(mapply(function(BOLD_v, AS_v, tau2_v){
-  #   dmvnorm(x=BOLD_v, mean=AS_v, sigma=diag(tau2_v, ntime), log = TRUE)
-  # },
-  # as.data.frame(BOLD),
-  # as.data.frame(AS),
-  # as.data.frame(t(mu_tau2))))
-
-  #HERE
-
-  # ELBO Part 3. ---------------------------------------------------------------
-
-  ELBO3_S <- sum(mapply(function(x, mean, vars){
-    sigma = diag(vars);
-    dmvnorm(x = x, mean = mean, sigma = sigma, log = TRUE)
-    },
-    as.data.frame(mu_S),
-    as.data.frame(t(template_mean)),
-    as.data.frame(t(template_var))))
-
-  ELBO3_A <- sum(apply(mu_A, 1,
-                       function(x){
-                         dmvnorm(x = x, mean = mu_alpha, sigma = mu_G, log = TRUE)
-                       }))
-
-  ELBO3_alpha <- 0 #infinite prior variance, so essentially flat prior, so fixed at some large negative number
-
-  nu0 <- template_FC$nu
-  psi0 <- template_FC$psi
-  ELBO3_G <- log(MCMCpack::diwish(W = mu_G, v = nu0, S = psi0))
-
-  alpha0 <- prior_params[1]
-  beta0 <- prior_params[2]
-  ELBO3_tau2 <- sum(sapply(
-    mu_tau2, 1,
-    function(x){
-      invgamma::dinvgamma(x = x, shape = alpha0, scale = beta0, log.p = TRUE) #CHECK THIS
-    }
-  ))
-
-  ELBO3 <- ELBO3_S + ELBO3_A + ELBO3_alpha + ELBO3_G + ELBO3_tau2
-
-
-  ELBO <- ELBO1 + ELBO2 + ELBO3
+  ELBO <- sum(-halflogdet_cov_S_v + part2_v) - ntime*halflogdet_cov_A - halflogdet_cov_alpha
   ELBO
-}
-
-#' Compute the log of the IW density
-#' 
-#' Compute the log of the IW density
-#' 
-#' @param W,nu,S The arguments ...
-#' @return The log of the IW density
-#' 
-#' @keywords internal
-log_diwish <- function(W, nu, S){
-  p <- nrow(S)
-
-  #compute the first term
-  cholS <- chol(S)
-  halflogdetS <- sum(log(diag(cholS)))
-  #gammapart <- sum(lgamma((nu + 1 - 1:p)/2))
-  #ldenom <- gammapart + 0.5 * nu * p * log(2) + 0.25 * p * (p - 1) * log(pi)
-  part1 <- nu * halflogdetS - ldenom
-
-  #compute det(W) part
-  cholW <- chol(W)
-  halflogdetW <- sum(log(diag(cholW)))
-  part2 <- - 1*(nu + p + 1) * halflogdetW
-
-  #compute exponential trace part
-  invW <- chol2inv(cholW)
-  part3 <- - 0.5 * sum(S * invW) #trace shortcut
-
-  return(part1 + part2 + part3)
 }
 
 

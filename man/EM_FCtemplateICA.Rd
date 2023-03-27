@@ -12,7 +12,7 @@ EM_FCtemplateICA(
   BOLD,
   AS_0,
   maxiter = 100,
-  epsilon = 0.01,
+  epsilon = 1e-04,
   verbose
 )
 }
@@ -33,7 +33,8 @@ and S (\eqn{QxV} matrix of spatial ICs)}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{epsilon}{Smallest proportion change in parameter estimates between iterations. Default: 0.01.}
+\item{epsilon}{Smallest proportion change in parameter estimates between iterations.
+Default: \code{0.0001}.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
