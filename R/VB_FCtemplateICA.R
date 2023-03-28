@@ -320,14 +320,16 @@ ELBO <- function(
     sum(log(diag(cholX)))
   }
 
+  nvox <- ncol(mu_S)
+
   #first part of ELBO
-  halflogdet_cov_S_v <- apply(cov_S, 3, halflogdetX)
-  halflogdet_cov_A <- halflogdetX(cov_A) #scalar
-  halflogdet_cov_alpha <- halflogdetX(cov_alpha) #scalar
+  halflogdet_cov_S_v <- apply(cov_S, 3, halflogdetX)/(nvox*ntime)
+  halflogdet_cov_A <- halflogdetX(cov_A)/(nvox*ntime) #scalar
+  halflogdet_cov_alpha <- halflogdetX(cov_alpha)/(nvox*ntime) #scalar
 
   #second part of ELBO
   var_S <- apply(cov_S, 3, diag) #grab the diagonal elements of QxQ cov matrices -- QxV
-  part2_v <- 1/2 * colSums((var_S + mu_S^2 - 2*t(template_mean)*mu_S)/t(template_var))
+  part2_v <- 1/2 * colSums((var_S + mu_S^2 - 2*t(template_mean)*mu_S)/t(template_var))/(nvox*ntime)
 
   ELBO <- sum(-halflogdet_cov_S_v + part2_v) - ntime*halflogdet_cov_A - halflogdet_cov_alpha
   ELBO
