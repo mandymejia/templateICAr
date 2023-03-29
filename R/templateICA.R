@@ -742,9 +742,6 @@ templateICA <- function(
   #end of standard template ICA estimation
 
   #2) FC Template ICA ----------------------------------------------------------
-
-
-
   if (do_FC) {
 
     resultEM_tICA <- resultEM
@@ -785,7 +782,7 @@ templateICA <- function(
 
   #3) Spatial Template ICA ---------------------------------------------------
   if (do_spatial) {
-    resultEM_tICA <- resultEM
+    resultEM_tICA <- resultEM #this is the standard template ICA result
     theta0$kappa <- rep(kappa_init, nL)
     if(verbose) cat('ESTIMATING SPATIAL MODEL\n')
     t000 <- Sys.time()

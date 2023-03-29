@@ -148,6 +148,7 @@ VB_FCtemplateICA <- function(
     success_flag=success,
     error=err,
     numiter=iter-1,
+    ELBO=ELBO_vals,
     template_mean,
     template_var,
     template_FC
