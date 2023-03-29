@@ -12,6 +12,7 @@
 #' @param AS_0 (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
+#' @param miniter Minimum number of VB iterations. Default: \code{5}.
 #' @param epsilon Smallest proportion change in parameter estimates between iterations.
 #' Default: \code{0.0001}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
@@ -40,6 +41,7 @@ EM_FCtemplateICA <- function(template_mean,
                              BOLD,
                              AS_0,
                              maxiter=100,
+                             miniter=5,
                              epsilon=0.0001,
                              verbose){
 
@@ -116,23 +118,6 @@ EM_FCtemplateICA <- function(template_mean,
       ))
     S = post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
 
-    # post_sums <-
-    #   Gibbs_AS_posterior(
-    #     nsamp = 100,
-    #     nburn = 0,
-    #     template_mean = template_mean,
-    #     template_var = template_var,
-    #     S = S,
-    #     G = theta_old[[3]],
-    #     tau_v = theta_old[[1]],
-    #     Y = BOLD,
-    #     alpha = theta_old[[2]],
-    #     final = F
-    #   )
-    # S = post_sums$S_post #update S because it is used to start the Gibbs sampler
-
-    #plot.FC_template(cov(A_init), zlim=c(-0.0002, 0.0004), break_by=0.0002, cor=FALSE, title='Initial')
-
     #this function returns a list of tau_sq, alpha, G
     # This is the M-step. It might be better to perform the E-step first, as the
     # M-step assumes that we have a good estimate of the first level of the posterior
@@ -151,6 +136,7 @@ EM_FCtemplateICA <- function(template_mean,
         sigma2_alpha,
         TRUE
       )
+
     # theta_new <- UpdateTheta_FCtemplateICA(
     #     template_mean,
     #     template_var,
@@ -161,6 +147,12 @@ EM_FCtemplateICA <- function(template_mean,
     #   )
 
     if(verbose) print(Sys.time() - t00)
+
+    ### Compute change in LL
+
+    LL_iter <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+
+
 
     ### Compute change in parameters
 
@@ -467,3 +459,45 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #'                 total_time = total_time))
 #'   }
 #' }
+
+
+compute_LL <- function(post_sums,
+                       theta_new,
+                       prior_params,
+                       template_FC,
+                       ntime, nICs, nvox,
+                       BOLD){
+
+  #parameter estimates
+  tau_hat <- theta_new$tau_sq
+  alpha_hat <- theta_new$alpha
+  G_hat <- theta_new$G
+
+  #part1
+  alpha0 <- prior_params[1]
+  beta0 <- prior_params[2]
+  part1 <- -1 * sum(1/nvox * (ntime/2 + alpha0 + 1) * log(tau_hat)) #divide by V for numerical reasons
+
+  #part2
+  part2_sumt <- rowSums(BOLD^2) - 2*post_sums$yAS_sum + post_sums$AS_sq_sum
+  part2 <- -1 * sum(1/nvox * 1/(2*tau_hat) * (2*beta0 + part2_sumt) )
+
+  #part3
+  G_hat_inv <- solve(G_hat)
+  part3 <- (1/nvox) * ((-1)*sum(diag(G_hat_inv %*% post_sums$AtA_sum)) + 2*t(alpha_hat) %*% G_hat_inv %*% post_sums$A_sum - ntime * t(alpha_hat) %*% G_hat_inv %*% alpha_hat)
+
+  #part4
+  nu0 <- template_FC$nu
+  Psi0 <- template_FC$psi
+
+  #compute det(X)
+  halflogdetX <- function(X){
+    cholX <- chol(X)
+    sum(log(diag(cholX)))
+  }
+  G_hat_det <- 2*halflogdetX(G_hat)
+  part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(diag(Psi0 %*% G_hat_inv)) )
+
+  c(part1 + part2 + part3 + part4)
+
+}
