@@ -1,7 +1,6 @@
-#' @name EM_FCtemplateICA
-#' @rdname EM_FCtemplateICA
-#'
-#' @title EM Algorithm for FC Template ICA Model
+#' EM Template ICA
+#' 
+#' EM Algorithm for FC Template ICA Model
 #'
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
@@ -33,6 +32,7 @@
 #' @details \code{EM_FCtemplateICA} implements the expectation-maximization
 #'  (EM) algorithm for the functional connectivity (FC) template ICA model
 #'
+#' @keywords internal
 #'
 EM_FCtemplateICA <- function(template_mean,
                              template_var,
@@ -255,8 +255,10 @@ EM_FCtemplateICA <- function(template_mean,
 }
 
 
-#' @rdname UpdateTheta_FCtemplateICA
-#' @title Update FC Template ICA parameters (tau_sq, alpha, G)
+#' Update FC Template ICA Parameters
+#' 
+#' Update FC Template ICA parameters (tau_sq, alpha, G)
+#' 
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template
 #' @param template_var (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param template_FC (list) Parameters of functional connectivity template
@@ -264,6 +266,10 @@ EM_FCtemplateICA <- function(template_mean,
 #' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param post_sums TBD
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#' 
+#' @return List of new parameter estimates
+#' 
+#' @keywords internal
 UpdateTheta_FCtemplateICA <- function(template_mean,
                                       template_var,
                                       template_FC,
@@ -314,153 +320,165 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 }
 
 # R mirror of CPP function.  Would need to be updated with return_samp argument
-#' #' Find expectations from the posterior of A and S using MCMC
-#' #'
-#' #' @param nsamp number of usable samples
-#' #' @param nburn number of burn-in samples
-#' #' @param template_mean V by Q matrix of template mean values
-#' #' @param template_var V by Q matrix of template variance values
-#' #' @param S V by Q matrix of starting values for ICs
-#' #' @param G Q by Q prior covariance of A
-#' #' @param tau_v vector of length V of observational variance for each data location
-#' #' @param Y V by T matrix of observed BOLD values
-#' #' @param alpha length Q vector prior mean of A
-#' #' @param final (logical) should this output samples? Otherwise, summaries are output
-#' #'
-#' #' @return a list of posterior summaries or a list of MCMC samples
-#' #' @importFrom Matrix Diagonal solve
-#' #' @import parallel
-#' #' @export
-#' Gibbs_AS_posterior <- function(nsamp = 1000,
-#'                                nburn = 100,
-#'                                template_mean,
-#'                                template_var,
-#'                                S,
-#'                                G,
-#'                                tau_v,
-#'                                Y,
-#'                                alpha,
-#'                                final = FALSE) {
-#'   # number_samples = 1000
-#'   niter <- nsamp + nburn
-#'   Q = ncol(G)
-#'   V = length(tau_v)
-#'   tau_v <- rep(mean(tau_v), V) #TO DO: FORMALIZE THIS
-#'   if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
-#'   ntime <- ncol(Y)
-#'
-#'   if(!final){
-#'     A_sum = numeric(Q)
-#'     AtA_sum = matrix(0,Q,Q)
-#'     yAS_sum = numeric(V)
-#'     AS_sq_sum = numeric(V)
-#'     S_post = matrix(0, V, Q)
-#'   } else {
-#'     A_final = array(0, dim=c(ntime, Q))
-#'     covA_final = array(0, dim=c(Q, Q, nsamp)) #save samples of cov(A)
-#'     S_final = array(0, dim=c(V, Q, nsamp))
-#'   }
-#'
-#'   G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
-#'   G_inv <- solve(G)
-#'   alphaGinv <- as.numeric(t(alpha)%*%G_inv)
-#'   YG <- t(Y) %*% G_tau_inv
-#'
-#'   ### A is T by Q
-#'   start_time <- proc.time()[3]
-#'   for(i in 1:niter){
-#'     #### update A
-#'
-#'     sigma_a_inv <- as.matrix(t(S) %*% G_tau_inv %*% S + G_inv)
-#'     chol_sigma_a_inv <- chol(sigma_a_inv)
-#'     YGS <- YG %*% S
-#'     YGSalphaGinv <- as.matrix(YGS + matrix(alphaGinv, nrow=ntime, ncol=Q, byrow=TRUE))
-#'     mu_a <- as.matrix(Matrix::solve(sigma_a_inv,t(YGSalphaGinv)))
-#'
-#'     #generate samples from N(mu_at, Sigma_a) for each t=1,...,ntime
-#'     cl <- parallel::makeCluster(parallel::detectCores() - 2)
-#'     A <- t(parallel::parApply(cl,mu_a,2, function(mu_at, chol_sigma_a_inv){
-#'       Qa <- length(mu_at)
-#'       Za <- rnorm(Qa)
-#'       at <- mu_at + as.numeric(Matrix::solve(chol_sigma_a_inv,Za))
-#'       return(at)
-#'     }, chol_sigma_a_inv = chol_sigma_a_inv))
-#'     parallel::stopCluster(cl)
-#'
-#'     #### update S
-#'     for(v in 1:V){
-#'       G_sv_inv = Matrix::Diagonal(x = 1/template_var[v,])
-#'       sigma_sv_inv <- (1/tau_v[v]) * crossprod(A) + G_sv_inv
-#'       chol_sigma_sv_inv <- chol(sigma_sv_inv)
-#'       sigma_sv = solve(sigma_sv_inv)
-#'       AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + G_sv_inv %*% template_mean[v,]
-#'       mu_sv = as.numeric(Matrix::solve(sigma_sv_inv, AtYvtempVarMean))
-#'       Zs <- rnorm(Q)
-#'       S[v,] <- mu_sv + as.numeric(Matrix::solve(chol_sigma_sv_inv,Zs))
-#'     }
-#'
-#'     # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
-#'
-#'     if(i > nburn) {
-#'
-#'       if(!final){
-#'         A_sum = A_sum + colSums(A)
-#'
-#'         #AS_sq = sum_t (a_t's_v)^2
-#'         AtS <- A %*% t(S)
-#'         AS_sq_sum = AS_sq_sum + apply(AtS^2,2,sum)
-#'         #AS_sq = sum_t (a_t's_v)^2
-#'         yAS_sum = yAS_sum + colSums(t(Y) * AtS)
-#'
-#'         #AtA = sum_t a_t a_t' = A'A
-#'         AtA_sum = AtA_sum + crossprod(A)
-#'
-#'         #S
-#'         S_post = S_post + S
-#'       } else {
-#'         print(paste0('Saving sample ',i))
-#'         A_final = A_final + A
-#'         covA_final[,,i] <- cov(A)
-#'         S_final[,,i] = S
-#'       }
-#'     }
-#'
-#'     if(niter >= 10 & i %% round(niter / 10) == 0) {
-#'       cat("Posterior sample",i,"of",niter,". Estimated time remaining:", (proc.time()[3] - start_time) / i * (niter - i)," sec\n")
-#'     }
-#'   }
-#'   #### return estimates of A = A_sum_init, #only actually need sum over t
-#'   #AtA = AtA_sum_init,  #only actually need sum over t
-#'   #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
-#'   #AS_sq = AS_sq_sum_init
-#'
-#'   if(!final){
-#'     A_sum = A_sum/nsamp
-#'     AtA_sum = AtA_sum/nsamp
-#'     yAS_sum = yAS_sum/nsamp
-#'     AS_sq_sum = AS_sq_sum/nsamp
-#'     S_post = S_post/nsamp
-#'   } else {
-#'     A_final = A_final/nsamp
-#'   }
-#'   total_time <- proc.time()[3] - start_time
-#'
-#'   if(!final){
-#'     return(list(A_sum = A_sum,
-#'                 AtA_sum = AtA_sum,
-#'                 yAS_sum = yAS_sum,
-#'                 AS_sq_sum = AS_sq_sum,
-#'                 S_post = S_post,
-#'                 total_time = total_time))
-#'   } else {
-#'     return(list(A_final = A_final,
-#'                 covA_final = covA_final,
-#'                 S_final = S_final,
-#'                 total_time = total_time))
-#'   }
-#' }
+# #' Find expectations from the posterior of A and S using MCMC
+# #'
+# #' @param nsamp number of usable samples
+# #' @param nburn number of burn-in samples
+# #' @param template_mean V by Q matrix of template mean values
+# #' @param template_var V by Q matrix of template variance values
+# #' @param S V by Q matrix of starting values for ICs
+# #' @param G Q by Q prior covariance of A
+# #' @param tau_v vector of length V of observational variance for each data location
+# #' @param Y V by T matrix of observed BOLD values
+# #' @param alpha length Q vector prior mean of A
+# #' @param final (logical) should this output samples? Otherwise, summaries are output
+# #'
+# #' @return a list of posterior summaries or a list of MCMC samples
+# #' @importFrom Matrix Diagonal solve
+# #' @import parallel
+# #' @export
+# Gibbs_AS_posterior <- function(nsamp = 1000,
+#                                nburn = 100,
+#                                template_mean,
+#                                template_var,
+#                                S,
+#                                G,
+#                                tau_v,
+#                                Y,
+#                                alpha,
+#                                final = FALSE) {
+#   # number_samples = 1000
+#   niter <- nsamp + nburn
+#   Q = ncol(G)
+#   V = length(tau_v)
+#   tau_v <- rep(mean(tau_v), V) #TO DO: FORMALIZE THIS
+#   if(ncol(S) == V) S <- t(S) # This is to make sure the dimensions are correct
+#   ntime <- ncol(Y)
+#
+#   if(!final){
+#     A_sum = numeric(Q)
+#     AtA_sum = matrix(0,Q,Q)
+#     yAS_sum = numeric(V)
+#     AS_sq_sum = numeric(V)
+#     S_post = matrix(0, V, Q)
+#   } else {
+#     A_final = array(0, dim=c(ntime, Q))
+#     covA_final = array(0, dim=c(Q, Q, nsamp)) #save samples of cov(A)
+#     S_final = array(0, dim=c(V, Q, nsamp))
+#   }
+#
+#   G_tau_inv <- Matrix::Diagonal(x = 1/tau_v)
+#   G_inv <- solve(G)
+#   alphaGinv <- as.numeric(t(alpha)%*%G_inv)
+#   YG <- t(Y) %*% G_tau_inv
+#
+#   ### A is T by Q
+#   start_time <- proc.time()[3]
+#   for(i in 1:niter){
+#     #### update A
+#
+#     sigma_a_inv <- as.matrix(t(S) %*% G_tau_inv %*% S + G_inv)
+#     chol_sigma_a_inv <- chol(sigma_a_inv)
+#     YGS <- YG %*% S
+#     YGSalphaGinv <- as.matrix(YGS + matrix(alphaGinv, nrow=ntime, ncol=Q, byrow=TRUE))
+#     mu_a <- as.matrix(Matrix::solve(sigma_a_inv,t(YGSalphaGinv)))
+#
+#     #generate samples from N(mu_at, Sigma_a) for each t=1,...,ntime
+#     cl <- parallel::makeCluster(parallel::detectCores() - 2)
+#     A <- t(parallel::parApply(cl,mu_a,2, function(mu_at, chol_sigma_a_inv){
+#       Qa <- length(mu_at)
+#       Za <- rnorm(Qa)
+#       at <- mu_at + as.numeric(Matrix::solve(chol_sigma_a_inv,Za))
+#       return(at)
+#     }, chol_sigma_a_inv = chol_sigma_a_inv))
+#     parallel::stopCluster(cl)
+#
+#     #### update S
+#     for(v in 1:V){
+#       G_sv_inv = Matrix::Diagonal(x = 1/template_var[v,])
+#       sigma_sv_inv <- (1/tau_v[v]) * crossprod(A) + G_sv_inv
+#       chol_sigma_sv_inv <- chol(sigma_sv_inv)
+#       sigma_sv = solve(sigma_sv_inv)
+#       AtYvtempVarMean <- (1/tau_v[v]) * crossprod(A,Y[v,]) + G_sv_inv %*% template_mean[v,]
+#       mu_sv = as.numeric(Matrix::solve(sigma_sv_inv, AtYvtempVarMean))
+#       Zs <- rnorm(Q)
+#       S[v,] <- mu_sv + as.numeric(Matrix::solve(chol_sigma_sv_inv,Zs))
+#     }
+#
+#     # S = mvtnorm::rmvnorm(n = 1, mean = mu_s, sigma = sigma_s)
+#
+#     if(i > nburn) {
+#
+#       if(!final){
+#         A_sum = A_sum + colSums(A)
+#
+#         #AS_sq = sum_t (a_t's_v)^2
+#         AtS <- A %*% t(S)
+#         AS_sq_sum = AS_sq_sum + apply(AtS^2,2,sum)
+#         #AS_sq = sum_t (a_t's_v)^2
+#         yAS_sum = yAS_sum + colSums(t(Y) * AtS)
+#
+#         #AtA = sum_t a_t a_t' = A'A
+#         AtA_sum = AtA_sum + crossprod(A)
+#
+#         #S
+#         S_post = S_post + S
+#       } else {
+#         print(paste0('Saving sample ',i))
+#         A_final = A_final + A
+#         covA_final[,,i] <- cov(A)
+#         S_final[,,i] = S
+#       }
+#     }
+#
+#     if(niter >= 10 & i %% round(niter / 10) == 0) {
+#       cat("Posterior sample",i,"of",niter,". Estimated time remaining:", (proc.time()[3] - start_time) / i * (niter - i)," sec\n")
+#     }
+#   }
+#   #### return estimates of A = A_sum_init, #only actually need sum over t
+#   #AtA = AtA_sum_init,  #only actually need sum over t
+#   #yAS = yAS_sum_init,  #only actually need sum over t of Y*AS (element-wise product)
+#   #AS_sq = AS_sq_sum_init
+#
+#   if(!final){
+#     A_sum = A_sum/nsamp
+#     AtA_sum = AtA_sum/nsamp
+#     yAS_sum = yAS_sum/nsamp
+#     AS_sq_sum = AS_sq_sum/nsamp
+#     S_post = S_post/nsamp
+#   } else {
+#     A_final = A_final/nsamp
+#   }
+#   total_time <- proc.time()[3] - start_time
+#
+#   if(!final){
+#     return(list(A_sum = A_sum,
+#                 AtA_sum = AtA_sum,
+#                 yAS_sum = yAS_sum,
+#                 AS_sq_sum = AS_sq_sum,
+#                 S_post = S_post,
+#                 total_time = total_time))
+#   } else {
+#     return(list(A_final = A_final,
+#                 covA_final = covA_final,
+#                 S_final = S_final,
+#                 total_time = total_time))
+#   }
+# }
 
-
+#' Compute LL
+#' 
+#' Compute the log likelihood for EM FC Template ICA
+#' 
+#' @param post_sums Posterior sums from \code{Gibbs_AS_posteriorCPP}
+#' @param theta_new List with \code{tau_sq}, \code{alpha}, and \code{G}.
+#' @param template_FC FC template, for \code{nu} and \code{psi}
+#' @param ntime,nICs,nvox Number of timepoints, ICs, and voxels
+#' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
+#' 
+#' @return The log likelihood
+#' 
+#' @keywords internal
 compute_LL <- function(post_sums,
                        theta_new,
                        prior_params,

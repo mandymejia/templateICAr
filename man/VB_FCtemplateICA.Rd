@@ -36,7 +36,7 @@ for each IC in the template.}
 
 \item{A0, S0, S0_var}{Initial guesses at latent variables: \code{A} (\eqn{TxQ}
 mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
-covariance matrix \code{S0_var}.}
+variance matrix \code{S0_var}.}
 
 \item{maxiter}{Maximum number of VB iterations. Default: \code{100}.}
 

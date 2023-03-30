@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_FCtemplateICA.R
 \name{EM_FCtemplateICA}
 \alias{EM_FCtemplateICA}
-\title{EM Algorithm for FC Template ICA Model}
+\title{EM Template ICA}
 \usage{
 EM_FCtemplateICA(
   template_mean,
@@ -12,6 +12,7 @@ EM_FCtemplateICA(
   BOLD,
   AS_0,
   maxiter = 100,
+  miniter = 5,
   epsilon = 1e-04,
   verbose
 )
@@ -32,6 +33,8 @@ where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations
 and S (\eqn{QxV} matrix of spatial ICs)}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
+
+\item{miniter}{Minimum number of VB iterations. Default: \code{5}.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between iterations.
 Default: \code{0.0001}.}
@@ -54,3 +57,4 @@ EM Algorithm for FC Template ICA Model
 \code{EM_FCtemplateICA} implements the expectation-maximization
 (EM) algorithm for the functional connectivity (FC) template ICA model
 }
+\keyword{internal}

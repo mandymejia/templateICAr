@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_FCtemplateICA.R
 \name{UpdateTheta_FCtemplateICA}
 \alias{UpdateTheta_FCtemplateICA}
-\title{Update FC Template ICA parameters (tau_sq, alpha, G)}
+\title{Update FC Template ICA Parameters}
 \usage{
 UpdateTheta_FCtemplateICA(
   template_mean,
@@ -29,6 +29,10 @@ UpdateTheta_FCtemplateICA(
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
+\value{
+List of new parameter estimates
+}
 \description{
 Update FC Template ICA parameters (tau_sq, alpha, G)
 }
+\keyword{internal}
