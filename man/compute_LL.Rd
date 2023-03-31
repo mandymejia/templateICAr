@@ -27,9 +27,9 @@ compute_LL(
 \item{BOLD}{(\eqn{V \times T} matrix) preprocessed fMRI data}
 }
 \value{
-The log likelihood
+The expected log posterior at the current values
 }
 \description{
-Compute the log likelihood for EM FC Template ICA
+Compute the expected log posterior for EM FC Template ICA
 }
 \keyword{internal}

@@ -13,7 +13,8 @@ EM_FCtemplateICA(
   AS_0,
   maxiter = 100,
   miniter = 5,
-  epsilon = 1e-04,
+  epsilon = 10^(-6),
+  eps_inter = 10^c(-2, -3, -4, -5),
   verbose
 )
 }
@@ -36,8 +37,10 @@ and S (\eqn{QxV} matrix of spatial ICs)}
 
 \item{miniter}{Minimum number of VB iterations. Default: \code{5}.}
 
-\item{epsilon}{Smallest proportion change in parameter estimates between iterations.
-Default: \code{0.0001}.}
+\item{epsilon}{Smallest proportion change in ELBO between iterations. Default: \code{10e-6}}
+
+\item{eps_inter}{Intermediate values of epsilon at which to save results (used
+to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
@@ -49,6 +52,7 @@ subICvar (variance of subject-level ICs),
 mixing_mean (estimates of subject-level mixing matrix),
 mixing_var (variance of subject-level mixing matrix),
 success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+etc.
 }
 \description{
 EM Algorithm for FC Template ICA Model

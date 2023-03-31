@@ -1,5 +1,5 @@
 #' EM Template ICA
-#' 
+#'
 #' EM Algorithm for FC Template ICA Model
 #'
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
@@ -12,8 +12,9 @@
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in parameter estimates between iterations.
-#' Default: \code{0.0001}.
+#' @param epsilon Smallest proportion change in ELBO between iterations. Default: \code{10e-6}
+#' @param eps_inter Intermediate values of epsilon at which to save results (used
+#' to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
@@ -28,6 +29,7 @@
 #' mixing_mean (estimates of subject-level mixing matrix),
 #' mixing_var (variance of subject-level mixing matrix),
 #' success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
+#' etc.
 #'
 #' @details \code{EM_FCtemplateICA} implements the expectation-maximization
 #'  (EM) algorithm for the functional connectivity (FC) template ICA model
@@ -42,7 +44,8 @@ EM_FCtemplateICA <- function(template_mean,
                              AS_0,
                              maxiter=100,
                              miniter=5,
-                             epsilon=0.0001,
+                             epsilon=10^(-6),
+                             eps_inter=10^c(-2,-3,-4,-5),
                              verbose){
 
   #get initial values for A and S with dual regression - DONE
@@ -92,9 +95,21 @@ EM_FCtemplateICA <- function(template_mean,
                     AtA = AtA_sum_init,
                     yAS = yAS_sum_init,
                     AS_sq = AS_sq_sum_init)
+  LL_init <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+
+  #save intermediate results
+  save_inter <- !is.null(eps_inter)
+  if(save_inter){
+    results_inter <- vector('list', length(eps_inter))
+    names(results_inter) <- paste0('epsilon_',eps_inter)
+    next_eps <- eps_inter[1]
+  } else {
+    results_inter <- NULL
+  }
 
   err <- 1000 #large initial value for difference between iterations
-  while(err > epsilon){
+  LL_vals <- rep(NA, maxiter) #keep track of expected LL at each iteration (convergence criterion)
+  while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ EM ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     theta_old <- theta_new
@@ -148,12 +163,6 @@ EM_FCtemplateICA <- function(template_mean,
 
     if(verbose) print(Sys.time() - t00)
 
-    ### Compute change in LL
-
-    LL_iter <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
-
-
-
     ### Compute change in parameters
 
     G_old <- theta_old[[3]]
@@ -175,9 +184,39 @@ EM_FCtemplateICA <- function(template_mean,
     alpha_change <- sqrt(sum((expm::sqrtm(solve(G_new)) %*% alpha_new - expm::sqrtm(solve(G_old)) %*% alpha_old)^2))
 
     change <- c(G_change, tau_change, alpha_change)
-    err <- max(change)
+    #err <- max(change)
     change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for G, ',change[2],' for tau^2, ',change[3],' for alpha \n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Proportional Difference is ',change[1],' for G, ',change[2],' for tau^2, ',change[3],' for alpha \n'))
+
+    ### Compute change in LL (actually the log posterior)
+
+    LL_vals[iter] <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+    if(iter == 1) err <- (LL_vals[iter] - LL_init)/abs(LL_init)
+    if(iter > 1) err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
+    if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'))
+
+    ### Save intermediate result?
+
+    if(save_inter){
+      #only consider convergence for positive change
+      if(err > 0){
+        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+          #obtain posterior estimates of S, A, and cor(A)
+          post_AS <- Gibbs_AS_posteriorCPP(nsamp = 1000, nburn = 50, template_mean = template_mean, template_var = template_var,
+              S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
+              final = TRUE, return_samp = TRUE)
+          S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
+          A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+          corA_post <- apply(A_post, 3, cor)
+          #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
+          results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
+                                             A = apply(A_post, c(1,2), mean),
+                                             FC = matrix(rowMeans(corA_post), nrow=nICs),
+                                             theta=theta_new, error=err, numiter=iter)
+        }
+      }
+    }
 
     ### Move to next iteration
     theta_old <- theta_new
@@ -247,6 +286,8 @@ EM_FCtemplateICA <- function(template_mean,
                  success_flag=success,
                  error=err,
                  numiter=iter-1,
+                 log_posterior=LL_vals[1:(iter-1)],
+                 results_inter = results_inter,
                  template_mean,
                  template_var,
                  template_FC)
@@ -256,9 +297,9 @@ EM_FCtemplateICA <- function(template_mean,
 
 
 #' Update FC Template ICA Parameters
-#' 
+#'
 #' Update FC Template ICA parameters (tau_sq, alpha, G)
-#' 
+#'
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template
 #' @param template_var (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
 #' @param template_FC (list) Parameters of functional connectivity template
@@ -266,9 +307,9 @@ EM_FCtemplateICA <- function(template_mean,
 #' @param BOLD  (\eqn{V \times Q} matrix) dimension-reduced fMRI data
 #' @param post_sums TBD
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
-#' 
+#'
 #' @return List of new parameter estimates
-#' 
+#'
 #' @keywords internal
 UpdateTheta_FCtemplateICA <- function(template_mean,
                                       template_var,
@@ -467,17 +508,17 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 # }
 
 #' Compute LL
-#' 
-#' Compute the log likelihood for EM FC Template ICA
-#' 
+#'
+#' Compute the expected log posterior for EM FC Template ICA
+#'
 #' @param post_sums Posterior sums from \code{Gibbs_AS_posteriorCPP}
 #' @param theta_new List with \code{tau_sq}, \code{alpha}, and \code{G}.
 #' @param template_FC FC template, for \code{nu} and \code{psi}
 #' @param ntime,nICs,nvox Number of timepoints, ICs, and voxels
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
-#' 
-#' @return The log likelihood
-#' 
+#'
+#' @return The expected log posterior at the current values
+#'
 #' @keywords internal
 compute_LL <- function(post_sums,
                        theta_new,
@@ -487,9 +528,15 @@ compute_LL <- function(post_sums,
                        BOLD){
 
   #parameter estimates
-  tau_hat <- theta_new$tau_sq
-  alpha_hat <- theta_new$alpha
-  G_hat <- theta_new$G
+  tau_hat <- theta_new[[1]]
+  alpha_hat <- theta_new[[2]]
+  G_hat <- theta_new[[3]]
+
+  #posterior quantities
+  A <- post_sums[[1]]
+  AtA <- post_sums[[2]]
+  yAS <- post_sums[[3]]
+  AS_sq <- post_sums[[4]]
 
   #part1
   alpha0 <- prior_params[1]
@@ -497,24 +544,21 @@ compute_LL <- function(post_sums,
   part1 <- -1 * sum(1/nvox * (ntime/2 + alpha0 + 1) * log(tau_hat)) #divide by V for numerical reasons
 
   #part2
-  part2_sumt <- rowSums(BOLD^2) - 2*post_sums$yAS_sum + post_sums$AS_sq_sum
+  part2_sumt <- rowSums(BOLD^2) - 2*yAS + AS_sq
   part2 <- -1 * sum(1/nvox * 1/(2*tau_hat) * (2*beta0 + part2_sumt) )
+
+  #Note: Trace(A %*% B) = sum(A * B) when A and B are symmetric
 
   #part3
   G_hat_inv <- solve(G_hat)
-  part3 <- (1/nvox) * ((-1)*sum(diag(G_hat_inv %*% post_sums$AtA_sum)) + 2*t(alpha_hat) %*% G_hat_inv %*% post_sums$A_sum - ntime * t(alpha_hat) %*% G_hat_inv %*% alpha_hat)
+  part3 <- (1/nvox) * ((-1)*sum(G_hat_inv*AtA) + 2*t(alpha_hat) %*% G_hat_inv %*% A - ntime * t(alpha_hat) %*% G_hat_inv %*% alpha_hat)
 
   #part4
   nu0 <- template_FC$nu
   Psi0 <- template_FC$psi
-
-  #compute det(X)
-  halflogdetX <- function(X){
-    cholX <- chol(X)
-    sum(log(diag(cholX)))
-  }
+  halflogdetX <- function(X){ sum(log(diag(chol(X)))) }
   G_hat_det <- 2*halflogdetX(G_hat)
-  part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(diag(Psi0 %*% G_hat_inv)) )
+  part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(Psi0 * G_hat_inv) )
 
   c(part1 + part2 + part3 + part4)
 

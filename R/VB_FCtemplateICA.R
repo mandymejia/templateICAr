@@ -16,8 +16,9 @@
 #'  variance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in ELBO between iterations.
-#' Default: \code{0.01} percent.
+#' @param epsilon Smallest proportion change in ELBO between iterations. Default: \code{10e-6}
+#' @param eps_inter Intermediate values of epsilon at which to save results (used
+#' to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}
 #' @param verbose If \code{TRUE}, display progress of algorithm.
 #' Default: \code{FALSE}.
 #'
@@ -34,7 +35,8 @@ VB_FCtemplateICA <- function(
   A0, S0, S0_var,
   maxiter=100,
   miniter=5,
-  epsilon=0.0001,
+  epsilon=10^(-6),
+  eps_inter=10^c(-2,-3,-4,-5),
   verbose=FALSE){
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -71,11 +73,21 @@ VB_FCtemplateICA <- function(
   D_inv_S <- D_inv * template_mean
   BOLD2_v <- colSums(BOLD^2) #sum over t=1,...,T
 
+  #save intermediate results
+  save_inter <- !is.null(eps_inter)
+  if(save_inter){
+    results_inter <- vector('list', length(eps_inter))
+    names(results_inter) <- paste0('epsilon_',eps_inter)
+    next_eps <- eps_inter[1]
+  } else {
+    results_inter <- NULL
+  }
+
   #2. Iteratively update approximate posteriors
 
   err <- 1000 #large initial value for difference between iterations
-  ELBO_vals <- rep(NA, maxiter)
-  while (err > epsilon | iter <= miniter) {
+  ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
+  while (abs(err) > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -87,7 +99,7 @@ VB_FCtemplateICA <- function(
     mu_A <- A_new[[1]]
     cov_A <- A_new[[2]]
 
-    if(iter==1) ELBO_vals_init <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
+    if(iter==1) ELBO_init <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
 
     #b. UPDATE S
     S_new <- update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
@@ -125,9 +137,21 @@ VB_FCtemplateICA <- function(
 
     #ELBO
     ELBO_vals[iter] <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
-    if(iter == 1) err <- (ELBO_vals[iter] - ELBO_vals_init)/ELBO_vals_init
+    if(iter == 1) err <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
     if(iter > 1) err <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
-    if(verbose) cat(paste0('Iteration ',iter, ': Proportional Change in ELBO is ',round(100*err, 3),'% \n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Current value of ELBO is ',round(ELBO_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'))
+
+    #Save intermediate result?
+
+    if(save_inter){
+      #only consider convergence for positive change
+      if(err > 0){
+        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+        }
+      }
+    }
 
     ### Move to next iteration
     iter <- iter + 1
@@ -148,10 +172,12 @@ VB_FCtemplateICA <- function(
     A = mu_A,
     A_cov = cov_A,
     G_mean = mu_G,
+    tau2_mean = mu_tau2_new,
     success_flag=success,
     error=err,
     numiter=iter-1,
-    ELBO=ELBO_vals,
+    ELBO=ELBO_vals[1:(iter-1)],
+    results_inter = results_inter,
     template_mean,
     template_var,
     template_FC
