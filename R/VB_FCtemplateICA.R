@@ -16,14 +16,19 @@
 #'  variance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in ELBO between iterations. Default: \code{10e-6}
+#' @param epsilon Smallest proportion change in ELBO between iterations. 
+#'  Default: \code{10e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#' to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}
+#'  to assess benefit of more stringent convergence rules). Default: 
+#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#'  (larger to smaller error) and all values should be between zero and 
+#'  \code{epsilon}.
 #' @param verbose If \code{TRUE}, display progress of algorithm.
 #' Default: \code{FALSE}.
 #'
-#' @return Large list of results.
+#' @return A list of computed values, including the final parameter estimates.
 #'
+#' @importFrom fMRItools is_posNum
 #' @keywords internal
 #'
 VB_FCtemplateICA <- function(
@@ -38,6 +43,17 @@ VB_FCtemplateICA <- function(
   epsilon=10^(-6),
   eps_inter=10^c(-2,-3,-4,-5),
   verbose=FALSE){
+
+  stopifnot(length(prior_params)==2)
+  stopifnot(is.numeric(prior_params))
+  stopifnot(is_posNum(maxiter, "numeric") && maxiter==round(maxiter))
+  stopifnot(is_posNum(miniter, "numeric") && miniter==round(miniter))
+  stopifnot(miniter < maxiter)
+  stopifnot(is_posNum(epsilon))
+  if (!is.null(eps_inter)) {
+    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]<epsilon)
+  }
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
   ntime <- ncol(BOLD) #length of timeseries
@@ -343,12 +359,6 @@ ELBO <- function(
   cov_alpha,
   template_mean, template_var,
   ntime){
-
-  #compute det(X)
-  halflogdetX <- function(X){
-    cholX <- chol(X)
-    sum(log(diag(cholX)))
-  }
 
   nvox <- ncol(mu_S)
 

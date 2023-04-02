@@ -100,7 +100,13 @@
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: \code{.001}.
+#' @param epsilon Smallest proportion change between iterations. Default: 
+#'  \code{.001}.
+#' @param eps_inter Intermediate values of epsilon at which to save results (used
+#'  to assess benefit of more stringent convergence rules). Default: 
+#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#'  (larger to smaller error) and all values should be between zero and 
+#'  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
 #'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
@@ -150,6 +156,7 @@ templateICA <- function(
   method_FC=c("VB", "EM"),
   maxiter=100,
   epsilon=0.001,
+  eps_inter=10^c(-2,-3,-4,-5),
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=FALSE,
@@ -185,6 +192,10 @@ templateICA <- function(
   method_FC <- match.arg(method_FC, c("VB", "EM"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(epsilon))
+  if (!is.null(eps_inter)) {
+    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]<epsilon)
+  }
   if (!is.null(kappa_init)) { stopifnot(is_posNum(kappa_init)) }
   stopifnot(is_1(usePar, "logical") || is_1(usePar, "numeric"))
   stopifnot(is_1(verbose, "logical"))
@@ -733,7 +744,6 @@ templateICA <- function(
     theta0=theta00,
     C_diag=C_diag,
     maxiter=maxiter,
-    epsilon=epsilon,
     usePar=usePar,
     verbose=verbose
   )
@@ -763,6 +773,7 @@ templateICA <- function(
         S0_var = (resultEM_tICA$subjICse)^2,
         maxiter=maxiter,
         epsilon=epsilon,
+        eps_inter=eps_inter,
         verbose=verbose
       )
     } else {
@@ -775,6 +786,7 @@ templateICA <- function(
         AS_0 = BOLD_DR, #initial values for A and S
         maxiter=maxiter,
         epsilon=epsilon,
+        eps_inter=eps_inter,
         verbose=verbose
       )
     }
@@ -844,6 +856,7 @@ templateICA <- function(
     reduce_dim=reduce_dim,
     maxiter=maxiter,
     epsilon=epsilon,
+    eps_inter=eps_inter,
     kappa_init=kappa_init
   )
   tICA_params <- lapply(

@@ -43,16 +43,20 @@ variance matrix \code{S0_var}.}
 
 \item{miniter}{Minimum number of VB iterations. Default: \code{5}.}
 
-\item{epsilon}{Smallest proportion change in ELBO between iterations. Default: \code{10e-6}}
+\item{epsilon}{Smallest proportion change in ELBO between iterations.
+Default: \code{10e-6}.}
 
 \item{eps_inter}{Intermediate values of epsilon at which to save results (used
-to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}}
+to assess benefit of more stringent convergence rules). Default:
+\code{10e-2} to \code{10e-5}. These values should be in decreasing order
+(larger to smaller error) and all values should be between zero and
+\code{epsilon}.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm.
 Default: \code{FALSE}.}
 }
 \value{
-Large list of results.
+A list of computed values, including the final parameter estimates.
 }
 \description{
 VB Algorithm for FC Template ICA Model

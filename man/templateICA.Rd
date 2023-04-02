@@ -28,6 +28,7 @@ templateICA(
   method_FC = c("VB", "EM"),
   maxiter = 100,
   epsilon = 0.001,
+  eps_inter = 10^c(-2, -3, -4, -5),
   kappa_init = 0.2,
   usePar = FALSE,
   verbose = TRUE
@@ -162,7 +163,14 @@ variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.}
 
 \item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
-\item{epsilon}{Smallest proportion change between iterations. Default: \code{.001}.}
+\item{epsilon}{Smallest proportion change between iterations. Default:
+\code{.001}.}
+
+\item{eps_inter}{Intermediate values of epsilon at which to save results (used
+to assess benefit of more stringent convergence rules). Default:
+\code{10e-2} to \code{10e-5}. These values should be in decreasing order
+(larger to smaller error) and all values should be between zero and
+\code{epsilon}.}
 
 \item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
 

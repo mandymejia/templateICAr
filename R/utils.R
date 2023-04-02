@@ -187,3 +187,14 @@ check_req_ifti_pkg <- function(FORMAT){
 
   invisible(NULL)
 }
+
+#' Half log determinant
+#' 
+#' Computes half log determinant of \code{X}, by \code{sum(log(diag(chol(X))))}.
+#' 
+#' @param X A numeric matrix
+#' 
+#' @return The half log determinant of \code{X}.
+#' 
+#' @keywords internal
+halflogdetX <- function(X){ sum(log(diag(chol(X)))) }

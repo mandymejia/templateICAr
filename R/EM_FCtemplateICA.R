@@ -12,9 +12,13 @@
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in ELBO between iterations. Default: \code{10e-6}
+#' @param epsilon Smallest proportion change in ELBO between iterations. 
+#'  Default: \code{10e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#' to assess benefit of more stringent convergence rules). Default: \code{10e-2} to \code{10e-5}
+#'  to assess benefit of more stringent convergence rules). Default: 
+#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#'  (larger to smaller error) and all values should be between zero and 
+#'  \code{epsilon}.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
@@ -22,14 +26,7 @@
 #' @importFrom matrixStats rowVars
 #' @importFrom stats sd cor
 #'
-#' @return  A list:
-#' theta (list of final parameter estimates),
-#' subICmean (estimates of subject-level ICs),
-#' subICvar (variance of subject-level ICs),
-#' mixing_mean (estimates of subject-level mixing matrix),
-#' mixing_var (variance of subject-level mixing matrix),
-#' success (flag indicating convergence (\code{TRUE}) or not (\code{FALSE}))
-#' etc.
+#' @return A list of computed values, including the final parameter estimates.
 #'
 #' @details \code{EM_FCtemplateICA} implements the expectation-maximization
 #'  (EM) algorithm for the functional connectivity (FC) template ICA model
@@ -56,6 +53,17 @@ EM_FCtemplateICA <- function(template_mean,
 
   #in Gibbs_AS_posterior, have an argument to determine whether you want the final posterior mean/variance or the elements necessary for the M-step
   #Ani pointed out that we don't want to save all of the samples for computational reasons.  We can compute sums as we go.  Can compute sums in chunks of samples of 100, say, then decide how many chunks to drop before calculating the final means.
+
+  stopifnot(length(prior_params)==2)
+  stopifnot(is.numeric(prior_params))
+  stopifnot(is_posNum(maxiter, "numeric") && maxiter==round(maxiter))
+  stopifnot(is_posNum(miniter, "numeric") && miniter==round(miniter))
+  stopifnot(miniter < maxiter)
+  stopifnot(is_posNum(epsilon))
+  if (!is.null(eps_inter)) {
+    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]<epsilon)
+  }
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
   ntime <- ncol(BOLD) #length of timeseries
@@ -556,7 +564,6 @@ compute_LL <- function(post_sums,
   #part4
   nu0 <- template_FC$nu
   Psi0 <- template_FC$psi
-  halflogdetX <- function(X){ sum(log(diag(chol(X)))) }
   G_hat_det <- 2*halflogdetX(G_hat)
   part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(Psi0 * G_hat_inv) )
 

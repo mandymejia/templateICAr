@@ -1,6 +1,6 @@
 test_that("Data normalization completes", {
-  nr <- 170
-  nc <- 1000
-  x <- norm_BOLD(matrix(rnorm(nr*nc), nrow=nr))
-  testthat::expect_true(all(dim(x) == c(nr, nc)))
+  nv <- 1000
+  nt <- 170
+  x <- norm_BOLD(matrix(rnorm(nv*nt), nrow=nv))
+  testthat::expect_true(all(dim(x) == c(nv, nt)))
 })
