@@ -52,7 +52,7 @@ VB_FCtemplateICA <- function(
   stopifnot(is_posNum(epsilon))
   if (!is.null(eps_inter)) {
     stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
-    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]<epsilon)
+    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
   }
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
