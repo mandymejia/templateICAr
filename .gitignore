@@ -5,6 +5,4 @@
 .Ruserdata
 *.pper
 EM_templateICA2.R 
-tests/testWithData/data
-tests/testWithData-temporary
-tests/data
+tests/data_notInPackage
