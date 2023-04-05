@@ -233,12 +233,13 @@ EM_templateICA.independent <- function(
   template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance
 
   err <- 1000 #large initial value for difference between iterations
+  LL_vals <- rep(NA, maxiter)
   while(err > epsilon){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
-
     t00 <- Sys.time()
     theta_new = UpdateTheta_templateICA.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
+    theta_old <- theta_new
     if(verbose) print(Sys.time() - t00)
 
     ### Compute change in parameters
@@ -259,6 +260,10 @@ EM_templateICA.independent <- function(
 
     ### Move to next iteration
     theta <- theta_new
+
+    browser()
+    LL_vals[iter] <- compute_LL_std(theta, template_mean, C_diag, BOLD)
+
     iter <- iter + 1
     if(iter > maxiter){
       success <- 0
@@ -315,6 +320,84 @@ EM_templateICA.independent <- function(
   return(result)
 }
 
+
+#' Compute LL for EM Template ICA
+#'
+#' Compute the expected log posterior for EM Standard Template ICA
+#'
+#' @param post_sums Posterior sums from \code{Gibbs_AS_posteriorCPP}
+#' @param theta_new List with \code{tau_sq}, \code{alpha}, and \code{G}.
+#' @param template template, for \code{nu} and \code{psi}
+#' @param ntime,nICs,nvox Number of timepoints, ICs, and voxels
+#' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
+#'
+#' @return The expected log posterior at the current values
+#'
+#' @keywords internal
+#'
+compute_LL_std <- function(theta, template_mean, C_diag, BOLD){
+
+  # Define the variables -------------------------------------------------------
+  nu0_sq <- theta$nu0_sq # length-1 scalar
+  # [TO DO]: write using nL instead of nQ if diff. 
+  A_i1 <- theta$A # nQ x nQ
+  S_0 <- t(template_mean) # nQ x nV
+  C_inv <- diag(1/C_diag)  # nQ x nQ
+  Y_i <- t(BOLD) # nQ x nV
+  S_i1_expect <- S_iq_expect <- solve(A_i1) %*% Y_i # nQ x nV
+
+  # V is the number of locations
+  # Q is the number of components
+  nV <- nrow(Y)
+  nQ <- length(C_diag)
+
+  nuq_sq <- rep(1, nV) # [TO DO]
+
+  browser()
+
+  # Compute the quantities -----------------------------------------------------
+  # Note the inclusion of dividing by nV and then multiplying after is for 
+  #   numeric stability. 
+
+  # Q1
+  Q1 <- rep(0, 5)
+  # Q1[1] <- -1 * nQ * nV / 2 * log(nu0_sq) / nV
+  # Q1[2] <- -1 * nV / 2 * sum(log(C_diag)) / nV
+  # Q1[3] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
+  #   t(Y_i[,vv]) %*% C_inv %*% Y_i[,vv] / nV
+  # }, 0))
+  Q1[4] <- 1 / nu0_sq * sum(vapply(seq(nV), function(vv){
+    t(Y_i[,vv]) %*% C_inv %*% A_i1 %*% S_i1_expect[,vv] / nV
+  }, 0))
+  # Version without using Trace shortcut
+  # Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
+  #   trace(t(A_i1) %*% C_inv %*% A_i * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
+  # }, 0)) 
+  Q1_5A <- t(A_i1) %*% C_inv %*% A_i
+  Q1_5B <- (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))
+  Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
+    sum(Q1_5A * Q1_5B) / nV
+  }, 0)) 
+  Q1 <- sum(Q1) * nV
+
+  # Q2
+  Q2 <- rep(0, 2)
+  # Q2_1 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
+  #   log(n0_q_sq[vv]) / nV
+  # }, 0))}, 0))
+  Q2_2_m <- S_iq_expect[l_vec,] - 2 * S_iq_expect[l_vec,] * S_0[l_vec,] + S_0[l_vec,]^2
+  # Version that follows formula
+  # Q2_2 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
+  #   1 / nuq_sq[vv] * (Q2_2_m[qq,vv]) / nV
+  # }, 0))}, 0))
+  # Version that is more efficient
+  Q2_2 <- -1 / 2 * sum(vapply(seq(nL), function(qq){ 
+    mean(nuq_sq * Q2_2_m[qq,])
+  }, 0))
+  Q2 <- sum(Q2) * nV
+
+  Q1 + Q2
+}
 
 #' @name UpdateTheta_templateICA
 #' @rdname UpdateTheta_templateICA

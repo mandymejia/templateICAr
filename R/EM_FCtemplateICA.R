@@ -103,7 +103,7 @@ EM_FCtemplateICA <- function(template_mean,
                     AtA = AtA_sum_init,
                     yAS = yAS_sum_init,
                     AS_sq = AS_sq_sum_init)
-  LL_init <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+  LL_init <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
 
   #save intermediate results
   save_inter <- !is.null(eps_inter)
@@ -198,7 +198,7 @@ EM_FCtemplateICA <- function(template_mean,
 
     ### Compute change in LL (actually the log posterior)
 
-    LL_vals[iter] <- compute_LL(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+    LL_vals[iter] <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
     if(iter == 1) err <- (LL_vals[iter] - LL_init)/abs(LL_init)
     if(iter > 1) err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
     if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'))
@@ -515,7 +515,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #   }
 # }
 
-#' Compute LL
+#' Compute LL for EM FC Template ICA
 #'
 #' Compute the expected log posterior for EM FC Template ICA
 #'
@@ -528,7 +528,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #' @return The expected log posterior at the current values
 #'
 #' @keywords internal
-compute_LL <- function(post_sums,
+compute_LL_FC <- function(post_sums,
                        theta_new,
                        prior_params,
                        template_FC,

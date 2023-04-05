@@ -848,7 +848,7 @@ templateICA <- function(
   tICA_params <- list(
     time_inds=time_inds, center_Bcols=center_Bcols,
     scale=scale, detrend_DCT=detrend_DCT, normA=normA,
-    Q2=Q2, Q2_max=Q2_max, Q2_est = Q2_est,
+    Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
     brainstructures=brainstructures,
     tvar_method=tvar_method,
     spatial_model=do_spatial,
