@@ -39,7 +39,7 @@ xii1 <- select_xifti(read_cifti(GICA_fname["cii"]), 1) * 0
 ### Test 1: basic
 tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
-  keep_DR=TRUE, FC=FALSE
+  keep_DR=TRUE, FC=FALSE, inds=c(1,2,3,7,11,12)
 )
 
 # `templateICA`

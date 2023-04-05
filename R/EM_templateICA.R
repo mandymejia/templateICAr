@@ -234,6 +234,7 @@ EM_templateICA.independent <- function(
 
   err <- 1000 #large initial value for difference between iterations
   LL_vals <- rep(NA, maxiter)
+
   while(err > epsilon){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
@@ -253,19 +254,28 @@ EM_templateICA.independent <- function(
     # nu0_sq_new <- theta_new$nu0_sq
     nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
 
-    change <- c(A_change, nu0_sq_change)
-    err <- max(change)
-    change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
+    # From when we looked at both theta values
+    # change <- c(A_change, nu0_sq_change)
+    # err <- max(change)
+    # change <- format(change, digits=3, nsmall=3)
+    # if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
 
     ### Move to next iteration
     theta <- theta_new
 
-    browser()
-    LL_vals[iter] <- compute_LL_std(theta, template_mean, C_diag, BOLD)
+    LL_vals[iter] <- compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
+    if (iter > 1) {
+      err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
+      if(verbose) {
+        cat(paste0(
+          'Iteration ',iter, ': Current expected log posterior is ',
+          round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'
+        ))
+      }
+    }
 
     iter <- iter + 1
-    if(iter > maxiter){
+    if (iter > maxiter) {
       success <- 0
       warning(paste0('Failed to converge within ', maxiter,' iterations'))
       break() #exit loop
@@ -325,39 +335,40 @@ EM_templateICA.independent <- function(
 #'
 #' Compute the expected log posterior for EM Standard Template ICA
 #'
-#' @param post_sums Posterior sums from \code{Gibbs_AS_posteriorCPP}
-#' @param theta_new List with \code{tau_sq}, \code{alpha}, and \code{G}.
-#' @param template template, for \code{nu} and \code{psi}
-#' @param ntime,nICs,nvox Number of timepoints, ICs, and voxels
+#' @param theta The current parameter estimates
+#' @param template_mean,template_var The template
+#' @param C_diag The C matrix
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
 #'
 #' @return The expected log posterior at the current values
 #'
 #' @keywords internal
 #'
-compute_LL_std <- function(theta, template_mean, C_diag, BOLD){
+compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
 
   # Define the variables -------------------------------------------------------
   nu0_sq <- theta$nu0_sq # length-1 scalar
-  # [TO DO]: write using nL instead of nQ if diff. 
   A_i1 <- theta$A # nQ x nQ
   S_0 <- t(template_mean) # nQ x nV
+  nu <- template_var
   C_inv <- diag(1/C_diag)  # nQ x nQ
   Y_i <- t(BOLD) # nQ x nV
-  S_i1_expect <- S_iq_expect <- solve(A_i1) %*% Y_i # nQ x nV
+  S_i1_expect <- compute_mu_s(
+
+  )
+  #S_i1_expect <- S_iq_expect <- solve(A_i1) %*% Y_i # nQ x nV
 
   # V is the number of locations
   # Q is the number of components
-  nV <- nrow(Y)
-  nQ <- length(C_diag)
+  nV <- ncol(Y_i)
+  nQ <- nL <- length(C_diag)
+  l_vec <- seq(nQ)
 
   nuq_sq <- rep(1, nV) # [TO DO]
 
-  browser()
-
   # Compute the quantities -----------------------------------------------------
-  # Note the inclusion of dividing by nV and then multiplying after is for 
-  #   numeric stability. 
+  # Note the inclusion of dividing by nV and then multiplying after is for
+  #   numeric stability.
 
   # Q1
   Q1 <- rep(0, 5)
@@ -371,13 +382,12 @@ compute_LL_std <- function(theta, template_mean, C_diag, BOLD){
   }, 0))
   # Version without using Trace shortcut
   # Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
-  #   trace(t(A_i1) %*% C_inv %*% A_i * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
-  # }, 0)) 
-  Q1_5A <- t(A_i1) %*% C_inv %*% A_i
-  Q1_5B <- (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))
+  #   trace(t(A_i1) %*% C_inv %*% A_i1 * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
+  # }, 0))
+  Q1_5_m <- t(A_i1) %*% C_inv %*% A_i1
   Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
-    sum(Q1_5A * Q1_5B) / nV
-  }, 0)) 
+    sum(Q1_5_m * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
+  }, 0))
   Q1 <- sum(Q1) * nV
 
   # Q2
@@ -387,12 +397,12 @@ compute_LL_std <- function(theta, template_mean, C_diag, BOLD){
   # }, 0))}, 0))
   Q2_2_m <- S_iq_expect[l_vec,] - 2 * S_iq_expect[l_vec,] * S_0[l_vec,] + S_0[l_vec,]^2
   # Version that follows formula
-  # Q2_2 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
-  #   1 / nuq_sq[vv] * (Q2_2_m[qq,vv]) / nV
+  # Q2[2] <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
+  #   1 / nu[vv,qq] * (Q2_2_m[qq,vv]) / nV
   # }, 0))}, 0))
   # Version that is more efficient
-  Q2_2 <- -1 / 2 * sum(vapply(seq(nL), function(qq){ 
-    mean(nuq_sq * Q2_2_m[qq,])
+  Q2[2] <- -1 / 2 * sum(vapply(seq(nL), function(qq){
+    mean(nu[,qq] * Q2_2_m[qq,])
   }, 0))
   Q2 <- sum(Q2) * nV
 
@@ -1112,7 +1122,7 @@ LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_d
 }
 
 
-#' Compute part of appa log-likelihood
+#' Compute part of kappa log-likelihood
 #'
 #' Compute part of log-likelihood involving kappa (or kappa_q) for numerical optimization
 #'
