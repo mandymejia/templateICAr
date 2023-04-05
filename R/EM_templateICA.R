@@ -383,8 +383,6 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   nQ <- nL <- length(C_diag)
   l_vec <- seq(nQ)
 
-  nuq_sq <- rep(1, nV) # [TO DO]
-
   # Compute the quantities -----------------------------------------------------
   # Note the inclusion of dividing by nV and then multiplying after is for
   #   numeric stability.
