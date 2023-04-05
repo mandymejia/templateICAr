@@ -353,10 +353,29 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   nu <- template_var
   C_inv <- diag(1/C_diag)  # nQ x nQ
   Y_i <- t(BOLD) # nQ x nV
-  S_i1_expect <- compute_mu_s(
+  S_i_expect <- t(theta$Estep$miu_s) # nQ x nV
+  S_i_sq_expect <- theta$Estep$miu_ssT # nV x nQ x nQ
 
-  )
-  #S_i1_expect <- S_iq_expect <- solve(A_i1) %*% Y_i # nQ x nV
+  # For reference: code from UpdateTheta_templateICA.independent
+  # A <- theta$A # TxQ
+  # nu0_sq <- theta$nu0_sq # const
+  # nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code # TxT
+  # At_nu0Cinv <- crossprod(A, nu0C_inv) # QxT
+  # At_nu0Cinv_A <- At_nu0Cinv %*% A # QxQ
+  # ...
+  # E_v_inv <- diag(1/template_var[vv,]) # QxQ
+  # Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A) # QxQ
+  # miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
+  # miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
+  # miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
+  # miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
+  # ...
+  # Estep <- list(
+  #   E_v_inv=E_v_inv,
+  #   Sigma_s_v=Sigma_s_v,
+  #   miu_s=miu_s,
+  #   miu_ssT=miu_ssT
+  # )
 
   # V is the number of locations
   # Q is the number of components
@@ -370,7 +389,7 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   # Note the inclusion of dividing by nV and then multiplying after is for
   #   numeric stability.
 
-  # Q1
+  # Q1/nV
   Q1 <- rep(0, 5)
   # Q1[1] <- -1 * nQ * nV / 2 * log(nu0_sq) / nV
   # Q1[2] <- -1 * nV / 2 * sum(log(C_diag)) / nV
@@ -378,35 +397,32 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   #   t(Y_i[,vv]) %*% C_inv %*% Y_i[,vv] / nV
   # }, 0))
   Q1[4] <- 1 / nu0_sq * sum(vapply(seq(nV), function(vv){
-    t(Y_i[,vv]) %*% C_inv %*% A_i1 %*% S_i1_expect[,vv] / nV
+    t(Y_i[,vv]) %*% C_inv %*% A_i1 %*% S_i_expect[,vv] / nV
   }, 0))
   # Version without using Trace shortcut
   # Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
-  #   trace(t(A_i1) %*% C_inv %*% A_i1 * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
+  #   trace(t(A_i1) %*% C_inv %*% A_i1 * (S_i_expect[,vv] %*% t(S_i_expect[,vv]))) / nV
   # }, 0))
   Q1_5_m <- t(A_i1) %*% C_inv %*% A_i1
   Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
-    sum(Q1_5_m * (S_i1_expect[,vv] %*% t(S_i1_expect[,vv]))) / nV
+    sum(Q1_5_m * (S_i_sq_expect[vv,,])) / nV
   }, 0))
-  Q1 <- sum(Q1) * nV
+  Q1 <- sum(Q1)
 
-  # Q2
+  # Q2/nV
   Q2 <- rep(0, 2)
   # Q2_1 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
   #   log(n0_q_sq[vv]) / nV
   # }, 0))}, 0))
-  Q2_2_m <- S_iq_expect[l_vec,] - 2 * S_iq_expect[l_vec,] * S_0[l_vec,] + S_0[l_vec,]^2
-  # Version that follows formula
   # Q2[2] <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
-  #   1 / nu[vv,qq] * (Q2_2_m[qq,vv]) / nV
+  #   1 / nu[vv,qq] * (S_i_sq_expect[vv,qq,qq] - 2*S_0[qq,vv] + S_0[qq,vv]^2) / nV
   # }, 0))}, 0))
-  # Version that is more efficient
   Q2[2] <- -1 / 2 * sum(vapply(seq(nL), function(qq){
-    mean(nu[,qq] * Q2_2_m[qq,])
+    mean(1 / nu[,qq] * (S_i_sq_expect[,qq,qq] - 2*S_0[qq,] + S_0[qq,]^2))
   }, 0))
-  Q2 <- sum(Q2) * nV
+  Q2 <- sum(Q2)
 
-  Q1 + Q2
+  (Q1 + Q2) * nV
 }
 
 #' @name UpdateTheta_templateICA
@@ -773,8 +789,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
-  # miu_s <- matrix(NA, nrow=nV, ncol=nQ) # not used anymore
-  # miu_ssT <- array(NA, dim=c(nV, nQ, nQ)) # not used anymore
+  miu_s <- matrix(NA, nrow=nV, ncol=nQ)
+  miu_ssT <- array(NA, dim=c(nV, nQ, nQ))
 
   for (vv in 1:nV) {
     y_v <- BOLD[vv,] # T
@@ -788,8 +804,8 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A) # QxQ
     miu_s_v <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
     miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
-    # miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
-    # miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
+    miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
+    miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
@@ -798,6 +814,13 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     A_part1 <- A_part1 + tcrossprod(as.matrix(y_v), miu_s_v) #TxQ + (Tx1)*(1xQ)
     A_part2 <- A_part2 + miu_ssT_v #QxQ
   }
+
+  Estep <- list(
+    E_v_inv=E_v_inv,
+    Sigma_s_v=Sigma_s_v,
+    miu_s=miu_s,
+    miu_ssT=miu_ssT
+  )
 
   #A_hat <- orthonorm(A_part1 %*% solve(A_part2))
   A_hat <- (A_part1 %*% solve(A_part2))
@@ -830,6 +853,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   # RETURN NEW PARAMETER ESTIMATES
   theta_new$A <- A_hat
   theta_new$nu0_sq <- nu0sq_hat[1]
+  theta_new$Estep <- Estep
   return(theta_new)
 }
 

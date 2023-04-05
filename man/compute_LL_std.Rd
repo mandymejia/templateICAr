@@ -4,18 +4,16 @@
 \alias{compute_LL_std}
 \title{Compute LL for EM Template ICA}
 \usage{
-compute_LL_std(theta, template_mean, C_diag, BOLD)
+compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
 }
 \arguments{
+\item{theta}{The current parameter estimates}
+
+\item{template_mean, template_var}{The template}
+
+\item{C_diag}{The C matrix}
+
 \item{BOLD}{(\eqn{V \times T} matrix) preprocessed fMRI data}
-
-\item{post_sums}{Posterior sums from \code{Gibbs_AS_posteriorCPP}}
-
-\item{theta_new}{List with \code{tau_sq}, \code{alpha}, and \code{G}.}
-
-\item{template}{template, for \code{nu} and \code{psi}}
-
-\item{ntime, nICs, nvox}{Number of timepoints, ICs, and voxels}
 }
 \value{
 The expected log posterior at the current values

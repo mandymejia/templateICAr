@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_templateICA.R
 \name{LL2_kappa}
 \alias{LL2_kappa}
-\title{Compute part of appa log-likelihood}
+\title{Compute part of kappa log-likelihood}
 \usage{
 LL2_kappa(
   kappa,
