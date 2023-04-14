@@ -99,13 +99,14 @@
 #'  ICA
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
-#' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: 
+#' @param miniter Minimum number of EM or VB iterations. Default: \code{5}.
+#' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
+#' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default: 
+#'  to assess benefit of more stringent convergence rules). Default:
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and 
+#'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
@@ -155,7 +156,8 @@ templateICA <- function(
   reduce_dim=TRUE,
   method_FC=c("VB", "EM"),
   maxiter=100,
-  epsilon=0.001,
+  miniter=5,
+  epsilon=1e-6,
   eps_inter=10^c(-2,-3,-4,-5),
   kappa_init=0.2,
   #common_smoothness=TRUE,
@@ -191,6 +193,8 @@ templateICA <- function(
   stopifnot(is_1(reduce_dim, "logical"))
   method_FC <- match.arg(method_FC, c("VB", "EM"))
   stopifnot(is_posNum(maxiter))
+  stopifnot(is_posNum(miniter))
+  stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
   if (!is.null(eps_inter)) {
     stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
@@ -744,6 +748,7 @@ templateICA <- function(
     theta0=theta00,
     C_diag=C_diag,
     maxiter=maxiter,
+    miniter=miniter,
     usePar=usePar,
     verbose=verbose
   )
@@ -771,6 +776,7 @@ templateICA <- function(
         A0 = resultEM_tICA$A,
         S0 = resultEM_tICA$subjICmean,
         S0_var = (resultEM_tICA$subjICse)^2,
+        miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
         eps_inter=eps_inter,
@@ -784,6 +790,7 @@ templateICA <- function(
         prior_params, #for prior on tau^2
         BOLD=BOLD,
         AS_0 = BOLD_DR, #initial values for A and S
+        miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
         eps_inter=eps_inter,
@@ -804,6 +811,7 @@ templateICA <- function(
                                         BOLD=BOLD2,
                                         theta0,
                                         C_diag,
+                                        miniter=miniter,
                                         maxiter=maxiter,
                                         usePar=usePar,
                                         epsilon=epsilon,
@@ -854,6 +862,7 @@ templateICA <- function(
     spatial_model=do_spatial,
     rm_mwall=rm_mwall,
     reduce_dim=reduce_dim,
+    miniter=miniter,
     maxiter=maxiter,
     epsilon=epsilon,
     eps_inter=eps_inter,

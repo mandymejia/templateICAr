@@ -214,7 +214,7 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, miniter=5, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -235,7 +235,7 @@ EM_templateICA.independent <- function(
   err <- 1000 #large initial value for difference between iterations
   LL_vals <- rep(NA, maxiter)
 
-  while(err > epsilon){
+  while(abs(err) > epsilon | iter <= miniter){
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -255,20 +255,24 @@ EM_templateICA.independent <- function(
     nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
 
     # From when we looked at both theta values
-    # change <- c(A_change, nu0_sq_change)
+    change <- c(A_change, nu0_sq_change)
     # err <- max(change)
-    # change <- format(change, digits=3, nsmall=3)
-    # if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
+    change <- format(change, digits=3, nsmall=3)
+    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
 
     ### Move to next iteration
     theta <- theta_new
+
+    #HERE -- figure out why LL seems to be going down instead of up!  try updating the err var too.
+    # THAT WORKED!!
+    # CONVERGENCE IS SLOW BASED ON LL, MAY CONSIDER USING SQUAREM
 
     LL_vals[iter] <- compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
     if (iter > 1) {
       err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
       if(verbose) {
         cat(paste0(
-          'Iteration ',iter, ': Current expected log posterior is ',
+          'Iteration ',iter, ': Current expected log likelihood is ',
           round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'
         ))
       }
@@ -350,7 +354,7 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   nu0_sq <- theta$nu0_sq # length-1 scalar
   A_i1 <- theta$A # nQ x nQ
   S_0 <- t(template_mean) # nQ x nV
-  nu <- template_var
+  nu <- template_var # nV x nQ
   C_inv <- diag(1/C_diag)  # nQ x nQ
   Y_i <- t(BOLD) # nQ x nV
   S_i_expect <- t(theta$Estep$miu_s) # nQ x nV
@@ -389,23 +393,34 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
 
   # Q1/nV
   Q1 <- rep(0, 5)
-  # Q1[1] <- -1 * nQ * nV / 2 * log(nu0_sq) / nV
-  # Q1[2] <- -1 * nV / 2 * sum(log(C_diag)) / nV
+  Q1[1] <- -1 * nQ * nV / 2 * log(nu0_sq) / nV
+  # Q1[2] <- -1 * nV / 2 * sum(log(C_diag)) / nV  #all fixed quantities
+  # Damon's version
   # Q1[3] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
   #   t(Y_i[,vv]) %*% C_inv %*% Y_i[,vv] / nV
   # }, 0))
-  Q1[4] <- 1 / nu0_sq * sum(vapply(seq(nV), function(vv){
-    t(Y_i[,vv]) %*% C_inv %*% A_i1 %*% S_i_expect[,vv] / nV
-  }, 0))
+  # Mandy's version ( Use Trace instead of summing over V, and use the trick that Tr(AB) = Tr(BA) where AB is nV x nV and BA is nQ x nQ )
+  Q1[3] <- -1 / 2 / nu0_sq * sum(diag(C_inv %*% Y_i %*% t(Y_i)))  / nV
+  # Damon's version
+  # Q1[4] <- 1 / nu0_sq * sum(vapply(seq(nV), function(vv){
+  #   t(Y_i[,vv]) %*% C_inv %*% A_i1 %*% S_i_expect[,vv] / nV
+  # }, 0))
+  # Mandy's version ( Use Trace instead of summing over V, and use the trick that Tr(AB) = Tr(BA) where AB is nV x nV and BA is nQ x nQ )
+  Q1[4] <- 1 / nu0_sq * sum(diag(S_i_expect %*% t(Y_i) %*% C_inv %*% A_i1)) / nV
   # Version without using Trace shortcut
   # Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
   #   trace(t(A_i1) %*% C_inv %*% A_i1 * (S_i_expect[,vv] %*% t(S_i_expect[,vv]))) / nV
   # }, 0))
-  Q1_5_m <- t(A_i1) %*% C_inv %*% A_i1
-  Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
-    sum(Q1_5_m * (S_i_sq_expect[vv,,])) / nV
-  }, 0))
+  # Damon's version
+  # Q1_5_m <- t(A_i1) %*% C_inv %*% A_i1
+  # Q1[5] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
+  #   sum(Q1_5_m * (S_i_sq_expect[vv,,])) / nV
+  # }, 0))
+  # Mandy's version (sum over V really only applies to E[s_v s_v'])
+  S_i_sq_expect_sumv <- apply(S_i_sq_expect, 2:3, sum) / nV
+  Q1[5] <- -1 / 2 / nu0_sq * sum(diag(t(A_i1) %*% C_inv %*% A_i1 %*% S_i_sq_expect_sumv))
   Q1 <- sum(Q1)
+  print(Q1)
 
   # Q2/nV
   Q2 <- rep(0, 2)
@@ -416,11 +431,12 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   #   1 / nu[vv,qq] * (S_i_sq_expect[vv,qq,qq] - 2*S_0[qq,vv] + S_0[qq,vv]^2) / nV
   # }, 0))}, 0))
   Q2[2] <- -1 / 2 * sum(vapply(seq(nL), function(qq){
-    mean(1 / nu[,qq] * (S_i_sq_expect[,qq,qq] - 2*S_0[qq,] + S_0[qq,]^2))
+    sum(1 / nu[,qq] * (S_i_sq_expect[,qq,qq] - 2*S_0[qq,]*S_i_expect[qq,] + S_0[qq,]^2)) / nV
   }, 0))
   Q2 <- sum(Q2)
+  print(Q2)
 
-  (Q1 + Q2) * nV
+  (Q1 + Q2) #really multiplied by nV but avoid for computational stability
 }
 
 #' @name UpdateTheta_templateICA
@@ -827,25 +843,25 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
   ##########################################
 
-  # cat('Updating Error Variance nu0_sq \n')
-  #
-  # #use A-hat or A?
-  #
-  # Cinv <- diag(1/C_diag)
-  # Cinv_A <- Cinv %*% A_hat
-  # At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
-  # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
-  #
-  # for(vv in 1:nV){
-  #
-  #   y_v <- BOLD[,vv]
-  #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[,vv]
-  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[,,vv]))
-  # }
-  #
-  # nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-  nu0sq_hat <- theta$nu0_sq
+  cat('Updating Error Variance nu0_sq \n')
+
+  #use A-hat or A?
+
+  Cinv <- diag(1/C_diag)
+  Cinv_A <- Cinv %*% A_hat
+  At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
+  nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
+
+  for(vv in 1:nV){
+
+    y_v <- BOLD[vv,]
+    nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+    nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[vv,]
+    nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
+  }
+
+  nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+  #nu0sq_hat <- theta$nu0_sq
 
 
   # RETURN NEW PARAMETER ESTIMATES
