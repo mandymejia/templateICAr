@@ -27,7 +27,8 @@ UpdateTheta_templateICA.independent(
   BOLD,
   theta,
   C_diag,
-  verbose
+  verbose,
+  return_MAP = FALSE
 )
 }
 \arguments{

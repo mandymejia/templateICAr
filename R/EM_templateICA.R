@@ -182,7 +182,7 @@ EM_templateICA.spatial <- function(
   theta_MLE$kappa <- result_squarem$par[(Q^2)+(1:Q)]
   theta_MLE$LL <- as.numeric(names(result_squarem$par)[1])
 
-  #success <- (result_squarem$convergence==0) #0 indicates convergence, 1 indicates failure to converge within maxiter
+  success <- result_squarem$convergence
   numiter <- result_squarem$fpevals #number of parameter update steps (approximately 3x the number of SQUAREM iterations)
 
   ### Compute final posterior mean of subject ICs
@@ -205,6 +205,7 @@ EM_templateICA.spatial <- function(
                  Omega = mu_cov_s$Omega_s,
                  theta_MLE=theta_MLE,
                  theta_path=theta_path,
+                 success=success,
                  numiter=numiter,
                  squarem = result_squarem,
                  template_mean = template_mean,
@@ -227,110 +228,161 @@ EM_templateICA.independent <- function(
   if(Q > nvox) stop('Cannot estimate more ICs than brain locations.')
   if(Q > ntime) stop('Cannot estimate more ICs than time points.')
 
-  iter <- 1
-  theta <- theta0
-  success <- 1
+  #iter <- 1
+  #theta <- theta0
+  #success <- 1
   template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance
 
-  err <- 1000 #large initial value for difference between iterations
-  LL_vals <- rep(NA, maxiter)
+  #err <- 1000 #large initial value for difference between iterations
+  #LL_vals <- rep(NA, maxiter)
 
-  while(abs(err) > epsilon | iter <= miniter){
+  ### RUN SQUAREM ALGORITHM UNTIL CONVERGENCE
 
-    if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
-    t00 <- Sys.time()
-    theta_new = UpdateTheta_templateICA.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
-    theta_old <- theta_new
-    if(verbose) print(Sys.time() - t00)
+  #theta0 <- theta1 #last tested value of kappa0
+  theta0$LL <- 0 #log likelihood
+  theta0_vec <- unlist(theta0[1:2]) #everything but LL
+  names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (hack required for squarem)
 
-    ### Compute change in parameters
+  t00000 <- Sys.time()
+  # saveRDS(list(
+  #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+  #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter, miniter=miniter),
+  #   tmean=template_mean, tvar=template_var, meshes=NULL,
+  #   BOLD=BOLD, C_diag=C_diag, s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
+  # ), "tICA_pre_squarem1")
+  result_squarem <- squarem(
+    par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
+    control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
+    template_mean, template_var, meshes=NULL,
+    BOLD, C_diag, s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
+  )
+  if(verbose) print(Sys.time() - t00000)
 
-    # A_old <- theta$A
-    # A_new <- theta_new$A
-    #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
-    A_change <- norm(as.vector(theta_new$A - theta$A), type="2") / norm(as.vector(theta$A), type="2")
+  path_A <- result_squarem$p.inter[,1:(Q^2)]
+  path_nu0sq <- result_squarem$p.inter[,(Q^2)+1]
+  path_LL <- result_squarem$p.inter[,ncol(result_squarem$p.inter)] #note: this is the negative LL so it decreases
+  theta_path <- list(A=path_A, nu0sq=path_nu0sq, LL=path_LL)
 
-    # nu0_sq_old <- theta$nu0_sq
-    # nu0_sq_new <- theta_new$nu0_sq
-    nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
+  theta_MLE <- theta0 #initialize for format
+  theta_MLE$A <- matrix(result_squarem$par[1:(Q^2)], Q, Q)
+  theta_MLE$nu0_sq <- as.numeric(result_squarem$par[(Q^2)+1])
+  theta_MLE$LL <- as.numeric(names(result_squarem$par)[1])
 
-    # From when we looked at both theta values
-    change <- c(A_change, nu0_sq_change)
-    # err <- max(change)
-    change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
+  success <- result_squarem$convergence
+  numiter <- result_squarem$fpevals #number of parameter update steps (approximately 3x the number of SQUAREM iterations)
 
-    ### Move to next iteration
-    theta <- theta_new
+  ### Compute final posterior mean of subject ICs
+  if(verbose) cat('Computing final posterior mean of subject ICs \n')
+  mu_cov_s <- UpdateTheta_templateICA.independent(template_mean,
+                                              template_var,
+                                              BOLD,
+                                              theta_MLE[1:2],
+                                              C_diag,
+                                              verbose=verbose,
+                                              return_MAP=TRUE)
+  miu_s <- mu_cov_s$miu_s
+  var_s <- mu_cov_s$var_s
 
-    #HERE -- figure out why LL seems to be going down instead of up!  try updating the err var too.
-    # THAT WORKED!!
-    # CONVERGENCE IS SLOW BASED ON LL, MAY CONSIDER USING SQUAREM
+  ## Previous version before SQUAREM
 
-    LL_vals[iter] <- compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
-    if (iter > 1) {
-      err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
-      if(verbose) {
-        cat(paste0(
-          'Iteration ',iter, ': Current expected log likelihood is ',
-          round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'
-        ))
-      }
-    }
-
-    iter <- iter + 1
-    if (iter > maxiter) {
-      success <- 0
-      warning(paste0('Failed to converge within ', maxiter,' iterations'))
-      break() #exit loop
-    }
-  }
+  # while(abs(err) > epsilon | iter <= miniter){
+  #
+  #   if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
+  #   t00 <- Sys.time()
+  #   theta_new = UpdateTheta_templateICA.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
+  #   theta_old <- theta_new
+  #   if(verbose) print(Sys.time() - t00)
+  #
+  #   ### Compute change in parameters
+  #
+  #   # A_old <- theta$A
+  #   # A_new <- theta_new$A
+  #   #2-norm <- largest eigenvalue <- sqrt of largest eigenvalue of AA'
+  #   A_change <- norm(as.vector(theta_new$A - theta$A), type="2") / norm(as.vector(theta$A), type="2")
+  #
+  #   # nu0_sq_old <- theta$nu0_sq
+  #   # nu0_sq_new <- theta_new$nu0_sq
+  #   nu0_sq_change <- abs(theta_new$nu0_sq - theta$nu0_sq)/theta$nu0_sq
+  #
+  #   # From when we looked at both theta values
+  #   change <- c(A_change, nu0_sq_change)
+  #   # err <- max(change)
+  #   change <- format(change, digits=3, nsmall=3)
+  #   if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for nu0_sq \n'))
+  #
+  #   ### Move to next iteration
+  #   theta <- theta_new
+  #
+  #   #HERE -- figure out why LL seems to be going down instead of up!  try updating the err var too.
+  #   # THAT WORKED!!
+  #   # CONVERGENCE IS SLOW BASED ON LL, MAY CONSIDER USING SQUAREM
+  #
+  #   LL_vals[iter] <- compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
+  #   if (iter > 1) {
+  #     err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
+  #     if(verbose) {
+  #       cat(paste0(
+  #         'Iteration ',iter, ': Current expected log likelihood is ',
+  #         round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'
+  #       ))
+  #     }
+  #   }
+  #
+  #   iter <- iter + 1
+  #   if (iter > maxiter) {
+  #     success <- 0
+  #     warning(paste0('Failed to converge within ', maxiter,' iterations'))
+  #     break() #exit loop
+  #   }
+  # }
 
   ### Compute final posterior mean of subject ICs
 
-  #A = theta$A
-  At_nu0Cinv <- crossprod(theta$A, diag(1/(C_diag*theta$nu0_sq)))
-  At_nu0Cinv_A <- At_nu0Cinv %*% theta$A
-
-  if (usePar) {
-    if (!requireNamespace("foreach", quietly = TRUE)) {
-      stop(
-        "Package \"foreach\" needed to parallel loop over voxels. Please install it.",
-        call. = FALSE
-      )
-    }
-
-    `%dopar%` <- foreach::`%dopar%`
-    q <- foreach::foreach(v = seq(nvox), .combine=rbind) %dopar% {
-      y_v <- BOLD[v,]
-      s0_v <- template_mean[v,]
-      E_v_inv <- diag(1/template_var[v,])
-      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
-      c(Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v), diag(Sigma_s_v))
-    }
-    miu_s <- q[,seq(Q)]
-    var_s <- q[,seq(Q+1, Q*2)]
-  } else {
-    miu_s <- matrix(NA, nrow=nvox, ncol=Q)
-    var_s <- matrix(NA, nrow=nvox, ncol=Q)
-    for (v in seq(nvox)) {
-      y_v <- BOLD[v,]
-      s0_v <- template_mean[v,]
-      E_v_inv <- diag(1/template_var[v,])
-      Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
-      miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
-      var_s[v,] <- diag(Sigma_s_v)
-    }
-  }
+  # #A = theta$A
+  # At_nu0Cinv <- crossprod(theta_MLE$A, diag(1/(C_diag*theta_MLE$nu0_sq)))
+  # At_nu0Cinv_A <- At_nu0Cinv %*% theta_MLE$A
+  #
+  # if (usePar) {
+  #   if (!requireNamespace("foreach", quietly = TRUE)) {
+  #     stop(
+  #       "Package \"foreach\" needed to parallel loop over voxels. Please install it.",
+  #       call. = FALSE
+  #     )
+  #   }
+  #
+  #   `%dopar%` <- foreach::`%dopar%`
+  #   q <- foreach::foreach(v = seq(nvox), .combine=rbind) %dopar% {
+  #     y_v <- BOLD[v,]
+  #     s0_v <- template_mean[v,]
+  #     E_v_inv <- diag(1/template_var[v,])
+  #     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+  #     c(Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v), diag(Sigma_s_v))
+  #   }
+  #   miu_s <- q[,seq(Q)]
+  #   var_s <- q[,seq(Q+1, Q*2)]
+  # } else {
+  #   miu_s <- matrix(NA, nrow=nvox, ncol=Q)
+  #   var_s <- matrix(NA, nrow=nvox, ncol=Q)
+  #   for (v in seq(nvox)) {
+  #     y_v <- BOLD[v,]
+  #     s0_v <- template_mean[v,]
+  #     E_v_inv <- diag(1/template_var[v,])
+  #     Sigma_s_v <- solve(E_v_inv + At_nu0Cinv_A)
+  #     miu_s[v,] <- Sigma_s_v	%*% (At_nu0Cinv %*% y_v + E_v_inv %*% s0_v) #Qx1
+  #     var_s[v,] <- diag(Sigma_s_v)
+  #   }
+  # }
 
   result <- list(subjICmean=miu_s,
                  subjICse=sqrt(var_s),
-                 theta_MLE=theta,
-                 success_flag=success,
-                 error=err,
-                 numiter=iter-1,
+                 theta_MLE=theta_MLE,
+                 theta_path=theta_path,
+                 success=success,
+                 numiter=numiter,
+                 squarem = result_squarem,
                  template_mean = template_mean,
                  template_var = template_var)
+
   return(result)
 }
 
@@ -782,7 +834,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 }
 
 #' @rdname UpdateTheta_templateICA
-UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose){
+UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, verbose, return_MAP=FALSE){
 
   nQ <- ncol(template_mean)
   nV <- nrow(BOLD)
@@ -805,6 +857,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   #store posterior moments for M-step of nu0_sq
   miu_s <- matrix(NA, nrow=nV, ncol=nQ)
   miu_ssT <- array(NA, dim=c(nV, nQ, nQ))
+  var_s <- matrix(NA, nrow=nV, ncol=nQ)
 
   for (vv in 1:nV) {
     y_v <- BOLD[vv,] # T
@@ -820,6 +873,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     miu_ssT_v <- tcrossprod(miu_s_v) + Sigma_s_v #QxQ
     miu_s[vv,] <- miu_s_v #save for M-step of nu0_sq
     miu_ssT[vv,,] <- miu_ssT_v #save for M-step of nu0_sq
+    var_s[vv,] <- diag(Sigma_s_v)
 
     ##########################################
     ### M-STEP FOR A: CONSTRUCT PARAMETER ESTIMATES
@@ -833,8 +887,11 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
     E_v_inv=E_v_inv,
     Sigma_s_v=Sigma_s_v,
     miu_s=miu_s,
-    miu_ssT=miu_ssT
+    miu_ssT=miu_ssT,
+    var_s=var_s
   )
+
+  if(return_MAP) return(Estep)
 
   #A_hat <- orthonorm(A_part1 %*% solve(A_part2))
   A_hat <- (A_part1 %*% solve(A_part2))
@@ -850,15 +907,21 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   Cinv <- diag(1/C_diag)
   Cinv_A <- Cinv %*% A_hat
   At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
-  nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
 
-  for(vv in 1:nV){
+  # #old version
+  # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
+  # for(vv in 1:nV){
+  #
+  #   y_v <- BOLD[vv,]
+  #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[vv,]
+  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
+  # }
 
-    y_v <- BOLD[vv,]
-    nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-    nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[vv,]
-    nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
-  }
+  #new version (use Trace instead of summing over v, and use trick that Tr(AB) = TR(BA) when AB is VxV but BA is QxQ)
+  nu0sq_part1 <- sum(diag(Cinv %*% t(BOLD) %*% BOLD))
+  nu0sq_part2 <- sum(diag(Cinv_A %*% t(miu_s) %*% BOLD))
+  nu0sq_part3 <- sum(diag(At_Cinv_A %*% apply(miu_ssT, 2:3, sum) ))
 
   nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
   #nu0sq_hat <- theta$nu0_sq
@@ -868,6 +931,10 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   theta_new$A <- A_hat
   theta_new$nu0_sq <- nu0sq_hat[1]
   theta_new$Estep <- Estep
+
+  # COMPUTE LL FOR SQUAREM
+  theta_new$LL[1] <- compute_LL_std(theta_new, template_mean, template_var, C_diag, BOLD)
+
   return(theta_new)
 }
 
@@ -1100,29 +1167,51 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
   nvox <- nrow(BOLD) #number of data locations
   Q <- ncol(template_mean)
 
+  #spatial template ICA or standard template ICA?
+  if(is.null(meshes)) do_spatial <- FALSE else do_spatial <- TRUE
+
   #convert theta vector to list format
   A <- theta_vec[1:(Q*ntime)]
-  #nu0_sq <- theta_vec[(Q^2)+1]
-  kappa <- theta_vec[(Q*ntime)+(1:Q)]
-  theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
-                #nu0_sq = nu0_sq,
-                kappa = kappa)
+  if(!do_spatial) {
+    nu0_sq <- theta_vec[(Q^2)+1]
+    theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
+                  nu0_sq = nu0_sq)
+  }
+  if(do_spatial) {
+    kappa <- theta_vec[(Q*ntime)+(1:Q)]
+    theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
+                  #nu0_sq = nu0_sq,
+                  kappa = kappa)
+  }
 
   #update theta parameters
   if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
-  theta_new <- UpdateTheta_templateICA.spatial(
-    template_mean,
-    template_var,
-    meshes,
-    BOLD,
-    theta,
-    C_diag,
-    s0_vec,
-    D,
-    Dinv_s0,
-    #common_smoothness=common_smoothness,
-    verbose=verbose
-  )
+
+  if(do_spatial){
+    theta_new <- UpdateTheta_templateICA.spatial(
+      template_mean,
+      template_var,
+      meshes,
+      BOLD,
+      theta,
+      C_diag,
+      s0_vec,
+      D,
+      Dinv_s0,
+      #common_smoothness=common_smoothness,
+      verbose=verbose
+    )
+  }
+  if(!do_spatial){
+    theta_new <- UpdateTheta_templateICA.independent(
+      template_mean,
+      template_var,
+      BOLD,
+      theta,
+      C_diag,
+      verbose=verbose
+    )
+  }
 
   #convert theta_new list to vector format
   theta_new$A <- as.matrix(theta_new$A)

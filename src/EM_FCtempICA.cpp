@@ -51,6 +51,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   // Eigen::VectorXd A = Eigen::VectorXd (post_sums["A_sum"]);
   // Eigen::MatrixXd AtA = Eigen::MatrixXd (post_sums["AtA_sum"]);
   Eigen::VectorXd alpha_new(nICs);
+  // Eigen::VectorXd alpha_new_old(nICs);
   double nu0 = double (template_FC["nu"]);
   // Eigen::MatrixXd psi0 = Eigen::MatrixXd (template_FC["psi"]);
   // UPDATE TAU^2 (ERROR VARIANCE)
@@ -63,18 +64,19 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
     tau_sq_new(v) = tau_sq_num / tau_sq_den;
     // tau_sq_new(v) = 1/(ntime + 2*alpha_tau + 2) * (AS_sq(v) - 2*yAS(v) + 2*beta_tau);
   }
-  double tau_mean = tau_sq_new.mean();
-  for(int v=0;v<nvox;v++){
-    tau_sq_new(v) = tau_mean;
-  }
+  // double tau_mean = tau_sq_new.mean();
+  //for(int v=0;v<nvox;v++){
+  //  tau_sq_new(v) = tau_mean;
+  // }
   // UPDATE ALPHA (TEMPORAL INTERCEPT)
-  Eigen::MatrixXd alpha_part = Eigen::MatrixXd::Identity(nICs,nICs);
+  // Eigen::MatrixXd alpha_part = Eigen::MatrixXd::Identity(nICs,nICs);
   Eigen::MatrixXd G_inv = G.inverse();
-  alpha_part /= sigma2_alpha;
-  alpha_part += ntime * G_inv;
-  Eigen::MatrixXd alpha_part_inv = alpha_part.inverse();
-  alpha_part_inv *= G_inv;
-  alpha_new = alpha_part_inv * A;
+  // alpha_part /= sigma2_alpha;
+  // alpha_part += ntime * G_inv;
+  // Eigen::MatrixXd alpha_part_inv = alpha_part.inverse();
+  // alpha_part_inv *= G_inv;
+  // alpha_new_old = alpha_part_inv * A;
+  alpha_new = A / ntime;
   // UPDATE G (TEMPORAL COVARIANCE, I.E. FUNCTIONAL CONNECTIVITY)
   Eigen::MatrixXd alpha_alpha_t = alpha_new * alpha_new.transpose();
   Eigen::MatrixXd tmp = AtA - 2 * A * alpha_new.transpose() + ntime*alpha_alpha_t + psi0;
@@ -82,9 +84,11 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   // RETURN NEW PARAMETER ESTIMATES
   Rcpp::NumericVector tau_sq_newX(wrap(tau_sq_new));
   Rcpp::NumericVector alpha_newX(wrap(alpha_new));
+  // Rcpp::NumericVector alpha_new_oldX(wrap(alpha_new_old));
   Rcpp::NumericMatrix G_newX(wrap(G_new));
   return Rcpp::List::create(Rcpp::Named("tau_sq") = tau_sq_newX,
                             Rcpp::Named("alpha") = alpha_newX,
+                            // Rcpp::Named("alpha_old") = alpha_new_oldX,
                             Rcpp::Named("G") = G_newX);
 }
 

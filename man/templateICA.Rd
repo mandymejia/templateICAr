@@ -27,7 +27,8 @@ templateICA(
   reduce_dim = TRUE,
   method_FC = c("VB", "EM"),
   maxiter = 100,
-  epsilon = 0.001,
+  miniter = 5,
+  epsilon = 1e-06,
   eps_inter = 10^c(-2, -3, -4, -5),
   kappa_init = 0.2,
   usePar = FALSE,
@@ -161,7 +162,9 @@ ICA}
 \item{method_FC}{Bayesian estimation method for FC template ICA model:
 variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.}
 
-\item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
+\item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
+
+\item{miniter}{Minimum number of EM or VB iterations. Default: \code{5}.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default:
 \code{.001}.}

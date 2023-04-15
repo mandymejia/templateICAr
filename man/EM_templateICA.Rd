@@ -25,6 +25,7 @@ EM_templateICA.independent(
   BOLD,
   theta0,
   C_diag,
+  miniter = 5,
   maxiter = 100,
   epsilon = 0.01,
   usePar = FALSE,
