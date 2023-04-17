@@ -10,7 +10,7 @@ NULL
 #' normA
 #' 
 #' @param normA Scale each IC timeseries (column of \eqn{A}) in the dual
-#'  regression estimates? Default: \code{FALSE} (not recommended). Note that the
+#'  regression estimates? Default: \code{FALSE}. Note that the
 #'  product \eqn{A \times S} remains the same with either option.
 #' 
 #' @name normA_Param

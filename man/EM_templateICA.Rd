@@ -14,6 +14,7 @@ EM_templateICA.spatial(
   theta0,
   C_diag,
   maxiter = 100,
+  miniter = 5,
   usePar = FALSE,
   epsilon = 1e-06,
   verbose = FALSE
@@ -54,6 +55,8 @@ of the spatial template ICA model, which assumes that all IC's have the
 same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
+
+\item{miniter}{Minimum number of EM iterations. Default: 5.}
 
 \item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial

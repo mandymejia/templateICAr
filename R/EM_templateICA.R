@@ -18,6 +18,7 @@
 # @param common_smoothness If \code{TRUE}, use the common smoothness version
 #'  of the spatial template ICA model, which assumes that all IC's have the
 #'  same smoothness parameter, \eqn{\kappa}
+#' @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
