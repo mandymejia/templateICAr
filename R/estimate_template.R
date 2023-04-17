@@ -126,18 +126,21 @@ estimate_template_FC <- function(FC0){
   stopifnot(nL == dim(FC0)[4])
 
   FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
-  mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
-  var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
-  var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
-  var_FC_between <- var_FC_tot - var_FC_within
-  var_FC_between[var_FC_between < 0] <- NA
+  FCavg <- (FC1 + FC2)/2
+  mean_FC <- apply(FCavg, c(2,3), mean, na.rm=TRUE)
+  var_FC_between <- apply(FCavg, c(2,3), var, na.rm=TRUE) #this may be an overestimate but that's ok
+  # mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
+  # var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+  # #var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
+  # var_FC_between <- var_FC_tot # var_FC_within #to avoid under-estimating the variance, given that within-subject variance in FC is often high
+  # var_FC_between[var_FC_between < 0] <- NA
 
-  nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
-  nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
+  nu_est <- estimate_nu(var_FC_between, mean_FC)
+  nu_est <- max(nL+2, nu_est*.75)
 
-  psi <- mean_FC*(nu_est1 - nL - 1)
+  list(nu = nu_est,
+       psi = mean_FC*(nu_est - nL - 1))
 
-  list(nu = nu_est1, psi = psi)
 }
 
 #' Estimate template

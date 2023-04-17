@@ -14,7 +14,6 @@ EM_templateICA.spatial(
   theta0,
   C_diag,
   maxiter = 100,
-  miniter = 5,
   usePar = FALSE,
   epsilon = 1e-06,
   verbose = FALSE
@@ -56,8 +55,6 @@ same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{miniter}{Minimum number of EM iterations. Default: 5.}
-
 \item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
 template ICA.}
@@ -65,6 +62,8 @@ template ICA.}
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
+
+\item{miniter}{Minimum number of EM iterations. Default: 5.}
 }
 \value{
 A list: theta (list of final parameter estimates), subICmean

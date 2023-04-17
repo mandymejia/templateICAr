@@ -226,20 +226,23 @@ EM_FCtemplateICA <- function(template_mean,
     if(save_inter){
       #only consider convergence for positive change
       if(err > 0){
-        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
-        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-          #obtain posterior estimates of S, A, and cor(A)
-          post_AS <- Gibbs_AS_posteriorCPP(nsamp = 1000, nburn = 50, template_mean = template_mean, template_var = template_var,
-              S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
-              final = TRUE, return_samp = TRUE)
-          S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
-          A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
-          corA_post <- apply(A_post, 3, cor)
-          #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
-          results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
-                                             A = apply(A_post, c(1,2), mean),
-                                             FC = matrix(rowMeans(corA_post), nrow=nICs),
-                                             theta=theta_new, error=err, numiter=iter)
+        if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
+          which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+          if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+            #obtain posterior estimates of S, A, and cor(A)
+            post_AS <- Gibbs_AS_posteriorCPP(nsamp = 1000, nburn = 50, template_mean = template_mean, template_var = template_var,
+                                             S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
+                                             final = TRUE, return_samp = TRUE)
+            S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
+            A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+            corA_post <- apply(A_post, 3, cor)
+            #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
+            results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
+                                               A = apply(A_post, c(1,2), mean),
+                                               FC = matrix(rowMeans(corA_post), nrow=nICs),
+                                               theta=theta_new, error=err, numiter=iter)
+
+          }
         }
       }
     }
