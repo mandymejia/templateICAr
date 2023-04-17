@@ -573,6 +573,8 @@ compute_LL_FC <- function(post_sums,
   part2_sumt <- rowSums(BOLD^2) - 2*yAS + AS_sq
   part2 <- -1 * sum(1/nvox * 1/(2*tau_hat) * (2*beta0 + part2_sumt) )
 
+  part12 <- part1 + part2
+
   #Note: Trace(A %*% B) = sum(A * B) when A and B are symmetric
 
   #part3
@@ -585,7 +587,9 @@ compute_LL_FC <- function(post_sums,
   G_hat_det <- 2*halflogdetX(G_hat)
   part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(Psi0 * G_hat_inv) )
 
-  LL <- c(part1, part2, part3, part4)
+  part34 <- part3 + part4
+
+  LL <- c(part12, part34)
   print(LL)
   sum(LL)
 

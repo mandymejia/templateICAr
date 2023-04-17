@@ -4,7 +4,7 @@
 \alias{compute_LL_std}
 \title{Compute LL for EM Template ICA}
 \usage{
-compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
+compute_LL_std(theta, template_mean, template_var, C_diag, BOLD, verbose)
 }
 \arguments{
 \item{theta}{The current parameter estimates}
@@ -14,6 +14,8 @@ compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
 \item{C_diag}{The C matrix}
 
 \item{BOLD}{(\eqn{V \times T} matrix) preprocessed fMRI data}
+
+\item{verbose}{Print LL components?}
 }
 \value{
 The expected log posterior at the current values

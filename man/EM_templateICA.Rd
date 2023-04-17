@@ -15,7 +15,7 @@ EM_templateICA.spatial(
   C_diag,
   maxiter = 100,
   usePar = FALSE,
-  epsilon = 0.01,
+  epsilon = 1e-06,
   verbose = FALSE
 )
 
@@ -27,7 +27,7 @@ EM_templateICA.independent(
   C_diag,
   miniter = 5,
   maxiter = 100,
-  epsilon = 0.01,
+  epsilon = 1e-06,
   usePar = FALSE,
   verbose
 )

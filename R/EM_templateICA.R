@@ -52,7 +52,7 @@ NULL
 #'
 EM_templateICA.spatial <- function(
   template_mean, template_var, meshes, BOLD,
-  theta0, C_diag, maxiter=100,  usePar=FALSE, epsilon=0.01, verbose=FALSE){
+  theta0, C_diag, maxiter=100,  usePar=FALSE, epsilon=1e-6, verbose=FALSE){
 
   INLA_check()
 
@@ -162,13 +162,13 @@ EM_templateICA.spatial <- function(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     tmean=template_mean, tvar=template_var, meshes=meshes,
-    BOLD=BOLD, C_diag=C_diag, s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=TRUE
+    BOLD=BOLD, C_diag=C_diag, s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=verbose
   ), "tICA_spatial_pre_squarem1")
   result_squarem <- squarem(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes,
-    BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=TRUE
+    BOLD, C_diag, s0_vec, D, Dinv_s0, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
 
@@ -215,7 +215,7 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, miniter=5, maxiter=100, epsilon=0.01, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, miniter=5, maxiter=100, epsilon=1e-6, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -254,7 +254,7 @@ EM_templateICA.independent <- function(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes=NULL,
-    BOLD, C_diag, s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
+    BOLD, C_diag, s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
 
@@ -313,9 +313,6 @@ EM_templateICA.independent <- function(
   #   ### Move to next iteration
   #   theta <- theta_new
   #
-  #   #HERE -- figure out why LL seems to be going down instead of up!  try updating the err var too.
-  #   # THAT WORKED!!
-  #   # CONVERGENCE IS SLOW BASED ON LL, MAY CONSIDER USING SQUAREM
   #
   #   LL_vals[iter] <- compute_LL_std(theta, template_mean, template_var, C_diag, BOLD)
   #   if (iter > 1) {
@@ -395,12 +392,13 @@ EM_templateICA.independent <- function(
 #' @param template_mean,template_var The template
 #' @param C_diag The C matrix
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
+#' @param verbose Print LL components?
 #'
 #' @return The expected log posterior at the current values
 #'
 #' @keywords internal
 #'
-compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
+compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, verbose){
 
   # Define the variables -------------------------------------------------------
   nu0_sq <- theta$nu0_sq # length-1 scalar
@@ -472,7 +470,6 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
   S_i_sq_expect_sumv <- apply(S_i_sq_expect, 2:3, sum) / nV
   Q1[5] <- -1 / 2 / nu0_sq * sum(diag(t(A_i1) %*% C_inv %*% A_i1 %*% S_i_sq_expect_sumv))
   Q1 <- sum(Q1)
-  print(Q1)
 
   # Q2/nV
   Q2 <- rep(0, 2)
@@ -486,9 +483,10 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD){
     sum(1 / nu[,qq] * (S_i_sq_expect[,qq,qq] - 2*S_0[qq,]*S_i_expect[qq,] + S_0[qq,]^2)) / nV
   }, 0))
   Q2 <- sum(Q2)
-  print(Q2)
 
-  (Q1 + Q2) #really multiplied by nV but avoid for computational stability
+  LL <- c(Q1, Q2)
+  if(verbose) print(LL)
+  sum(LL) #really multiplied by nV but avoid for computational stability
 }
 
 #' @name UpdateTheta_templateICA
@@ -583,7 +581,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
   }
 
   if(update_A){
-    if(verbose) cat('Updating A \n')
+    #if(verbose) cat('Updating A \n')
     #t00 <- Sys.time()
 
     #Compute first matrix appearing in A-hat
@@ -852,7 +850,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   At_nu0Cinv <- crossprod(A, nu0C_inv) # QxT
   At_nu0Cinv_A <- At_nu0Cinv %*% A # QxQ
 
-  if(verbose) cat('Updating A \n')
+  #if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
   miu_s <- matrix(NA, nrow=nV, ncol=nQ)
@@ -900,7 +898,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   ### M-STEP FOR nu0^2: CONSTRUCT PARAMETER ESTIMATES
   ##########################################
 
-  cat('Updating Error Variance nu0_sq \n')
+  #cat('Updating Error Variance nu0_sq \n')
 
   #use A-hat or A?
 
@@ -933,7 +931,7 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   theta_new$Estep <- Estep
 
   # COMPUTE LL FOR SQUAREM
-  theta_new$LL[1] <- compute_LL_std(theta_new, template_mean, template_var, C_diag, BOLD)
+  theta_new$LL[1] <- compute_LL_std(theta_new, template_mean, template_var, C_diag, BOLD, verbose=verbose)
 
   return(theta_new)
 }
@@ -1185,7 +1183,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
   }
 
   #update theta parameters
-  if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
+  #if(verbose) cat('~~~~~~~~~~~ UPDATING PARAMETER ESTIMATES ~~~~~~~~~~~ \n')
 
   if(do_spatial){
     theta_new <- UpdateTheta_templateICA.spatial(
