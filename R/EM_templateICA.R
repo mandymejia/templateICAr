@@ -1232,6 +1232,8 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
       BOLD,
       theta,
       C_diag,
+      H,
+      Hinv,
       verbose=verbose
     )
   }
@@ -1242,7 +1244,6 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
   names(theta_new_vec)[1] <- sum(theta_new$LL)
   return(theta_new_vec)
 }
-
 
 #' Log-likelihood SQUAREM
 #'
