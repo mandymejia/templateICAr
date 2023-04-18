@@ -746,7 +746,6 @@ templateICA <- function(
     C_diag=C_diag,
     H=H, Hinv=Hinv,
     maxiter=maxiter,
-    miniter=miniter,
     usePar=usePar,
     verbose=verbose
   )

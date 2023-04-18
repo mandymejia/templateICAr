@@ -19,7 +19,7 @@
 # @param common_smoothness If \code{TRUE}, use the common smoothness version
 #'  of the spatial template ICA model, which assumes that all IC's have the
 #'  same smoothness parameter, \eqn{\kappa}
-#' @param miniter Minimum number of EM iterations. Default: 5.
+# @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
@@ -222,7 +222,7 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, miniter=5, maxiter=100, epsilon=1e-6, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=1e-6, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -253,9 +253,10 @@ EM_templateICA.independent <- function(
   t00000 <- Sys.time()
   # saveRDS(list(
   #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
-  #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter, miniter=miniter),
+  #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
   #   tmean=template_mean, tvar=template_var, meshes=NULL,
-  #   BOLD=BOLD, C_diag=C_diag, s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
+  #   BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv, 
+  #   s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
   # ), "tICA_pre_squarem1")
   result_squarem <- squarem(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,

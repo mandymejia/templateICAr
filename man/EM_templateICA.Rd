@@ -29,7 +29,6 @@ EM_templateICA.independent(
   C_diag,
   H,
   Hinv,
-  miniter = 5,
   maxiter = 100,
   epsilon = 1e-06,
   usePar = FALSE,
@@ -68,8 +67,6 @@ template ICA.}
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
-
-\item{miniter}{Minimum number of EM iterations. Default: 5.}
 }
 \value{
 A list: theta (list of final parameter estimates), subICmean
