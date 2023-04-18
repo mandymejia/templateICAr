@@ -12,7 +12,6 @@
 #'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 #'  not smooth.
 #' @inheritParams detrend_DCT_Param
-#' @inheritParams normA_Param
 #'
 #' @importFrom fMRItools colCenter
 #' @importFrom matrixStats colVars
@@ -35,7 +34,7 @@
 dual_reg <- function(
   BOLD, GICA,
   scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0, center_Bcols=FALSE, normA=FALSE){
+  detrend_DCT=0, center_Bcols=FALSE){
 
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
@@ -50,7 +49,6 @@ dual_reg <- function(
   scale <- match.arg(scale, c("global", "local", "none"))
   if (!is.null(scale_sm_xifti)) { stopifnot(ciftiTools::is.xifti(scale_sm_xifti)) }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
-  stopifnot(is.logical(normA) && length(normA)==1)
 
   if (any(is.na(BOLD))) { stop("`NA` values in `BOLD` not supported with DR.") }
   if (any(is.na(GICA))) { stop("`NA` values in `GICA` not supported with DR.") }
@@ -87,7 +85,8 @@ dual_reg <- function(
   # (Redundant. Since BOLD is column-centered, A is already column-centered.)
   # A <- fMRItools::colCenter(A)
 
-  # Normalize each subject IC timecourse if `normA`.
+  # Normalize each subject IC timecourse. (Used to be a function argument.)
+  normA <- TRUE
   if (normA) { A <- scale(A) }
 
   # Estimate S (IC maps).
@@ -136,7 +135,6 @@ dual_reg <- function(
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams center_Bcols_Param
-#' @inheritParams normA_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -188,7 +186,7 @@ dual_reg2 <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE, 
   Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures=c("left", "right"), mask=NULL,
   varTol=1e-6, maskTol=.1,
@@ -343,12 +341,12 @@ dual_reg2 <- function(
   dual_reg_yesNorm <- function(B){ dual_reg(
     B, GICA,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, center_Bcols=center_Bcols, normA=normA
+    detrend_DCT=detrend_DCT, center_Bcols=center_Bcols
   ) }
 
   dual_reg_noNorm <- function(B){ dual_reg(
     B, GICA,
-    scale="none", detrend_DCT=0, center_Bcols=FALSE, normA=normA
+    scale="none", detrend_DCT=0, center_Bcols=FALSE
   ) }
 
   # Get the first dual regression results. -------------------------------------

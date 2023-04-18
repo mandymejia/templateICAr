@@ -62,13 +62,13 @@ plot(tm_cii); plot(tm_gii)
 ### Test 2: with various parameters changed
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4,6)], GICA = GICA_fname["cii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4, normA=TRUE,
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4,
   maskTol=.9, brainstructures="left", wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4, normA=TRUE,
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4,
   maskTol=.9, wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
@@ -158,7 +158,7 @@ close3d(); close3d()
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
   GICA=GICA_fname["cii"], scale="local", detrend_DCT=3,
-  normA=TRUE, brainstructures="right", varTol=1, verbose=FALSE
+  brainstructures="right", varTol=1, verbose=FALSE
 )
 tm
 plot(tm, "var")
@@ -167,7 +167,7 @@ close3d()
 tm2 <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
   GICA=GICA_fname["cii"], scale="local", detrend_DCT=3, scale_FWHM=20,
-  normA=TRUE, brainstructures="right", varTol=1, verbose=FALSE
+  brainstructures="right", varTol=1, verbose=FALSE
 )
 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="left")

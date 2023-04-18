@@ -19,6 +19,8 @@
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
 #'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
+#' @param Gibbs_nsamp the number of Gibbs posterior samples of A and S to output after burn-in
+#' @param Gibbs_nburn the number of Gibbs posterior samples of A and S to throw away before saving
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
@@ -42,6 +44,8 @@ EM_FCtemplateICA <- function(template_mean,
                              maxiter=100,
                              miniter=5,
                              epsilon=10^(-6),
+                             Gibbs_nsamp=10000,
+                             Gibbs_nburn=50,
                              eps_inter=10^c(-2,-3,-4,-5),
                              verbose){
 
@@ -145,8 +149,8 @@ EM_FCtemplateICA <- function(template_mean,
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
   system.time(post_sums <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 1000,
-      nburn = 50,
+      nsamp = Gibbs_nsamp,
+      nburn = Gibbs_nburn,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
@@ -230,11 +234,11 @@ EM_FCtemplateICA <- function(template_mean,
           which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
           if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
             #obtain posterior estimates of S, A, and cor(A)
-            post_AS <- Gibbs_AS_posteriorCPP(nsamp = 1000, nburn = 50, template_mean = template_mean, template_var = template_var,
+            post_AS <- Gibbs_AS_posteriorCPP(nsamp = Gibbs_nsamp, nburn = Gibbs_nburn, template_mean = template_mean, template_var = template_var,
                                              S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
                                              final = TRUE, return_samp = TRUE)
-            S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
-            A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+            S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, Gibbs_nsamp))
+            A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, Gibbs_nsamp))
             corA_post <- apply(A_post, 3, cor)
             #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
             results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
@@ -263,8 +267,8 @@ EM_FCtemplateICA <- function(template_mean,
 
   post_AS <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 1000,
-      nburn = 50,
+      nsamp = Gibbs_nsamp,
+      nburn = Gibbs_nburn,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
@@ -278,10 +282,10 @@ EM_FCtemplateICA <- function(template_mean,
 
 
   #[TO DO]: Fix indexing issue where first iteration is zero (only affects burn-in)
-  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
+  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, Gibbs_nsamp))
   S_post_mean <- apply(S_post, c(1,2), mean)
   S_post_SE <- apply(S_post, c(1,2), sd)
-  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, Gibbs_nsamp))
   A_post_mean <- apply(A_post, c(1,2), mean)
   A_post_mean_cor <- cor(A_post_mean)
 
@@ -303,12 +307,12 @@ EM_FCtemplateICA <- function(template_mean,
   # corA_post_mean <- sapply(corA_post, mean)
   # corA_post_SE <- sapply(corA_post, sd)
 
-  result <- list(S_post = S_post,
+  result <- list(S_samples = S_post,
                  subjICmean = S_post_mean,
                  subjICse = S_post_SE,
-                 A_post = A_post,
+                 A_samples = A_post,
                  A_post_mean_cor,
-                 corA_post,
+                 FC_samples = corA_post,
                  subjFCmean = corA_post_mean,
                  subjFCse = corA_post_SE,
                  theta_MLE=theta_new,

@@ -13,6 +13,8 @@ UpdateTheta_templateICA.spatial(
   BOLD,
   theta,
   C_diag,
+  H,
+  Hinv,
   s0_vec,
   D,
   Dinv_s0,
@@ -27,6 +29,8 @@ UpdateTheta_templateICA.independent(
   BOLD,
   theta,
   C_diag,
+  H,
+  Hinv,
   verbose,
   return_MAP = FALSE
 )
@@ -45,6 +49,8 @@ objects of class "templateICA_mesh" containing the triangular mesh (see
 \item{theta}{(list) current parameter estimates}
 
 \item{C_diag}{\eqn{(Qx1)} diagonal elements of residual covariance after dimension reduction}
+
+\item{H, Hinv}{For dimension reduction}
 
 \item{s0_vec}{Vectorized template means}
 

@@ -39,7 +39,6 @@
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
-#' @inheritParams normA_Param
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
 #'  removing nuisance ICs. It may result in a cleaner estimate for smaller
 #'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
@@ -147,7 +146,6 @@ templateICA <- function(
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE,
-  normA=FALSE,
   Q2=NULL,
   Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
@@ -182,7 +180,6 @@ templateICA <- function(
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is_posNum(detrend_DCT, zero_ok=TRUE))
   stopifnot(is_1(center_Bcols, "logical"))
-  stopifnot(is_1(normA, "logical"))
   if (!is.null(Q2)) { stopifnot(is_posNum(Q2, zero_ok=TRUE)) } # Q2_max checked later.
   stopifnot(is_posNum(varTol))
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
@@ -339,7 +336,7 @@ templateICA <- function(
   pmatch <- c(
     scale=scale, #scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols, normA=normA,
+    center_Bcols=center_Bcols,
     # Q2=Q2, Q2_max=Q2_max,
     varTol=varTol
   )
@@ -693,7 +690,7 @@ templateICA <- function(
 
   BOLD_DR <- dual_reg(
     BOLD, template$mean, center_Bcols=FALSE,
-    scale=FALSE, detrend_DCT=0, normA=normA
+    scale=FALSE, detrend_DCT=0
   )
 
   # Bayesian Computation -------------------------------------------------------
@@ -811,7 +808,6 @@ templateICA <- function(
                                         BOLD=BOLD2,
                                         theta0,
                                         C_diag,
-                                        miniter=miniter,
                                         maxiter=maxiter,
                                         usePar=usePar,
                                         epsilon=epsilon,
@@ -855,7 +851,7 @@ templateICA <- function(
   # Params, formatted as length-one character vectors to put in "xifti" metadata
   tICA_params <- list(
     time_inds=time_inds, center_Bcols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    scale=scale, detrend_DCT=detrend_DCT,
     Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
     brainstructures=brainstructures,
     tvar_method=tvar_method,

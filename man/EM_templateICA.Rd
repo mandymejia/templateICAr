@@ -13,6 +13,8 @@ EM_templateICA.spatial(
   BOLD,
   theta0,
   C_diag,
+  H,
+  Hinv,
   maxiter = 100,
   usePar = FALSE,
   epsilon = 1e-06,
@@ -25,6 +27,8 @@ EM_templateICA.independent(
   BOLD,
   theta0,
   C_diag,
+  H,
+  Hinv,
   miniter = 5,
   maxiter = 100,
   epsilon = 1e-06,
@@ -49,7 +53,9 @@ nu0_sq (residual variance from first level) and (for spatial model only)
 kappa (SPDE smoothness parameter for each IC map)}
 
 \item{C_diag}{(\eqn{Qx1}) diagonal elements of matrix proportional to
-residual variance.
+residual variance.}
+
+\item{H, Hinv}{For dimension reduction
 of the spatial template ICA model, which assumes that all IC's have the
 same smoothness parameter, \eqn{\kappa}}
 
