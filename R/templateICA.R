@@ -100,12 +100,12 @@
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: 
+#' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default: 
+#'  to assess benefit of more stringent convergence rules). Default:
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and 
+#'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
