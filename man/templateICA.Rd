@@ -14,7 +14,6 @@ templateICA(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
   Q2 = NULL,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
@@ -27,7 +26,8 @@ templateICA(
   reduce_dim = TRUE,
   method_FC = c("VB", "EM"),
   maxiter = 100,
-  epsilon = 0.001,
+  miniter = 5,
+  epsilon = 1e-06,
   eps_inter = 10^c(-2, -3, -4, -5),
   kappa_init = 0.2,
   usePar = FALSE,
@@ -83,10 +83,6 @@ to use for detrending. If \code{0} (default), do not detrend.}
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
 \code{FALSE}.}
-
-\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
-regression estimates? Default: \code{FALSE} (not recommended). Note that the
-product \eqn{A \times S} remains the same with either option.}
 
 \item{Q2, Q2_max}{Denoise the BOLD data? Denoising is based on modeling and
 removing nuisance ICs. It may result in a cleaner estimate for smaller
@@ -161,7 +157,9 @@ ICA}
 \item{method_FC}{Bayesian estimation method for FC template ICA model:
 variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.}
 
-\item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
+\item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
+
+\item{miniter}{Minimum number of EM or VB iterations. Default: \code{5}.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default:
 \code{.001}.}

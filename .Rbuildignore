@@ -19,3 +19,4 @@
 ^R/plot_FC\.R$
 ^tests/data_notInPackage$
 ^tests/results_notInPackage$
+^tests/run_templateICAr_tests_notInPackage.R$

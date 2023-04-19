@@ -126,18 +126,21 @@ estimate_template_FC <- function(FC0){
   stopifnot(nL == dim(FC0)[4])
 
   FC1 <- FC0[1,,,]; FC2 <- FC0[2,,,]
-  mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
-  var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
-  var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
-  var_FC_between <- var_FC_tot - var_FC_within
-  var_FC_between[var_FC_between < 0] <- NA
+  FCavg <- (FC1 + FC2)/2
+  mean_FC <- apply(FCavg, c(2,3), mean, na.rm=TRUE)
+  var_FC_between <- apply(FCavg, c(2,3), var, na.rm=TRUE) #this may be an overestimate but that's ok
+  # mean_FC <- (colMeans(FC1, na.rm=TRUE) + colMeans(FC2, na.rm=TRUE)) / 2
+  # var_FC_tot  <- (apply(FC1, c(2, 3), var, na.rm=TRUE) + apply(FC2, c(2, 3), var, na.rm=TRUE))/2
+  # #var_FC_within  <- 1/2*(apply(FC1-FC2, c(2, 3), var, na.rm=TRUE))
+  # var_FC_between <- var_FC_tot # var_FC_within #to avoid under-estimating the variance, given that within-subject variance in FC is often high
+  # var_FC_between[var_FC_between < 0] <- NA
 
-  nu_est <- estimate_nu_matrix(var_FC_between, mean_FC)
-  nu_est1 <- quantile(nu_est[upper.tri(nu_est, diag=TRUE)], 0.01, na.rm = TRUE)
+  nu_est <- estimate_nu(var_FC_between, mean_FC)
+  nu_est <- max(nL+2, nu_est*.75)
 
-  psi <- mean_FC*(nu_est1 - nL - 1)
+  list(nu = nu_est,
+       psi = mean_FC*(nu_est - nL - 1))
 
-  list(nu = nu_est1, psi = psi)
 }
 
 #' Estimate template
@@ -193,7 +196,6 @@ estimate_template_FC <- function(FC0){
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
 #' @inheritParams center_Bcols_Param
-#' @inheritParams normA_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -297,7 +299,7 @@ estimate_template <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE, 
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
@@ -322,7 +324,6 @@ estimate_template <- function(
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(fMRItools::is_integer(detrend_DCT, nneg=TRUE))
   stopifnot(fMRItools::is_1(center_Bcols, "logical"))
-  stopifnot(fMRItools::is_1(normA, "logical"))
   if (!is.null(Q2)) { # Q2_max checked later.
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
@@ -594,7 +595,6 @@ estimate_template <- function(
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
-        normA=normA,
         Q2=Q2, Q2_max=Q2_max,
         brainstructures=brainstructures, mask=mask,
         varTol=varTol, maskTol=maskTol,
@@ -645,7 +645,6 @@ estimate_template <- function(
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
         detrend_DCT=detrend_DCT,
-        normA=normA,
         Q2=Q2, Q2_max=Q2_max,
         brainstructures=brainstructures, mask=mask,
         varTol=varTol, maskTol=maskTol,
@@ -737,7 +736,7 @@ estimate_template <- function(
     num_subjects=nN, num_visits=nM,
     inds=indsp, center_Bcols=center_Bcols,
     scale=scale, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, normA=normA,
+    detrend_DCT=detrend_DCT,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
@@ -793,7 +792,7 @@ estimate_template.cifti <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
   keep_DR=FALSE,
@@ -808,7 +807,7 @@ estimate_template.cifti <- function(
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols, normA=normA,
+    center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
@@ -827,7 +826,7 @@ estimate_template.gifti <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
   keep_DR=FALSE,
@@ -842,7 +841,7 @@ estimate_template.gifti <- function(
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols, normA=normA,
+    center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
@@ -860,7 +859,7 @@ estimate_template.nifti <- function(
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
   detrend_DCT=0,
-  center_Bcols=FALSE, normA=FALSE,
+  center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
@@ -874,7 +873,7 @@ estimate_template.nifti <- function(
     GICA=GICA, inds=inds,
     scale=scale,
     detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols, normA=normA,
+    center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     mask=mask,
     keep_DR=keep_DR,

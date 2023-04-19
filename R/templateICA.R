@@ -39,7 +39,6 @@
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams detrend_DCT_Param
-#' @inheritParams normA_Param
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
 #'  removing nuisance ICs. It may result in a cleaner estimate for smaller
 #'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
@@ -99,7 +98,8 @@
 #'  ICA
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
-#' @param maxiter Maximum number of EM iterations. Default: \code{100}.
+#' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
+#' @param miniter Minimum number of EM or VB iterations. Default: \code{5}.
 #' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
@@ -146,7 +146,6 @@ templateICA <- function(
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
   center_Bcols=FALSE,
-  normA=FALSE,
   Q2=NULL,
   Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
@@ -155,7 +154,8 @@ templateICA <- function(
   reduce_dim=TRUE,
   method_FC=c("VB", "EM"),
   maxiter=100,
-  epsilon=0.001,
+  miniter=5,
+  epsilon=1e-6,
   eps_inter=10^c(-2,-3,-4,-5),
   kappa_init=0.2,
   #common_smoothness=TRUE,
@@ -180,7 +180,6 @@ templateICA <- function(
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is_posNum(detrend_DCT, zero_ok=TRUE))
   stopifnot(is_1(center_Bcols, "logical"))
-  stopifnot(is_1(normA, "logical"))
   if (!is.null(Q2)) { stopifnot(is_posNum(Q2, zero_ok=TRUE)) } # Q2_max checked later.
   stopifnot(is_posNum(varTol))
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
@@ -191,6 +190,8 @@ templateICA <- function(
   stopifnot(is_1(reduce_dim, "logical"))
   method_FC <- match.arg(method_FC, c("VB", "EM"))
   stopifnot(is_posNum(maxiter))
+  stopifnot(is_posNum(miniter))
+  stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
   if (!is.null(eps_inter)) {
     stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
@@ -335,7 +336,7 @@ templateICA <- function(
   pmatch <- c(
     scale=scale, #scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols, normA=normA,
+    center_Bcols=center_Bcols,
     # Q2=Q2, Q2_max=Q2_max,
     varTol=varTol
   )
@@ -689,7 +690,7 @@ templateICA <- function(
 
   BOLD_DR <- dual_reg(
     BOLD, template$mean, center_Bcols=FALSE,
-    scale=FALSE, detrend_DCT=0, normA=normA
+    scale=FALSE, detrend_DCT=0
   )
 
   # Bayesian Computation -------------------------------------------------------
@@ -743,6 +744,7 @@ templateICA <- function(
     BOLD=BOLD2,
     theta0=theta00,
     C_diag=C_diag,
+    H=H, Hinv=Hinv,
     maxiter=maxiter,
     usePar=usePar,
     verbose=verbose
@@ -771,6 +773,7 @@ templateICA <- function(
         A0 = resultEM_tICA$A,
         S0 = resultEM_tICA$subjICmean,
         S0_var = (resultEM_tICA$subjICse)^2,
+        miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
         eps_inter=eps_inter,
@@ -784,6 +787,7 @@ templateICA <- function(
         prior_params, #for prior on tau^2
         BOLD=BOLD,
         AS_0 = BOLD_DR, #initial values for A and S
+        miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
         eps_inter=eps_inter,
@@ -804,6 +808,7 @@ templateICA <- function(
                                         BOLD=BOLD2,
                                         theta0,
                                         C_diag,
+                                        H=H, Hinv=Hinv,
                                         maxiter=maxiter,
                                         usePar=usePar,
                                         epsilon=epsilon,
@@ -847,13 +852,14 @@ templateICA <- function(
   # Params, formatted as length-one character vectors to put in "xifti" metadata
   tICA_params <- list(
     time_inds=time_inds, center_Bcols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT, normA=normA,
+    scale=scale, detrend_DCT=detrend_DCT,
     Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
     brainstructures=brainstructures,
     tvar_method=tvar_method,
     spatial_model=do_spatial,
     rm_mwall=rm_mwall,
     reduce_dim=reduce_dim,
+    miniter=miniter,
     maxiter=maxiter,
     epsilon=epsilon,
     eps_inter=eps_inter,

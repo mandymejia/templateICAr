@@ -14,6 +14,8 @@ EM_FCtemplateICA(
   maxiter = 100,
   miniter = 5,
   epsilon = 10^(-6),
+  Gibbs_nsamp = 10000,
+  Gibbs_nburn = 50,
   eps_inter = 10^c(-2, -3, -4, -5),
   verbose
 )
@@ -33,12 +35,16 @@ where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations
 \item{AS_0}{(list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 and S (\eqn{QxV} matrix of spatial ICs)}
 
-\item{maxiter}{Maximum number of EM iterations. Default: 100.}
+\item{maxiter}{Maximum number of EM iterations. Default: \code{100}.}
 
-\item{miniter}{Minimum number of VB iterations. Default: \code{5}.}
+\item{miniter}{Minimum number of EM iterations. Default: \code{5}.}
 
-\item{epsilon}{Smallest proportion change in ELBO between iterations.
-Default: \code{10e-6}.}
+\item{epsilon}{Smallest proportion change in log-posterior between iterations.
+Default: \code{1e-6}.}
+
+\item{Gibbs_nsamp}{the number of Gibbs posterior samples of A and S to output after burn-in}
+
+\item{Gibbs_nburn}{the number of Gibbs posterior samples of A and S to throw away before saving}
 
 \item{eps_inter}{Intermediate values of epsilon at which to save results (used
 to assess benefit of more stringent convergence rules). Default:

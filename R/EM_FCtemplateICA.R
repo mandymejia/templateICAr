@@ -10,15 +10,17 @@
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
 #' @param AS_0 (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
-#' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in ELBO between iterations. 
-#'  Default: \code{10e-6}.
+#' @param maxiter Maximum number of EM iterations. Default: \code{100}.
+#' @param miniter Minimum number of EM iterations. Default: \code{5}.
+#' @param epsilon Smallest proportion change in log-posterior between iterations.
+#'  Default: \code{1e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default: 
+#'  to assess benefit of more stringent convergence rules). Default:
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and 
+#'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
+#' @param Gibbs_nsamp the number of Gibbs posterior samples of A and S to output after burn-in
+#' @param Gibbs_nburn the number of Gibbs posterior samples of A and S to throw away before saving
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
@@ -42,6 +44,8 @@ EM_FCtemplateICA <- function(template_mean,
                              maxiter=100,
                              miniter=5,
                              epsilon=10^(-6),
+                             Gibbs_nsamp=10000,
+                             Gibbs_nburn=50,
                              eps_inter=10^c(-2,-3,-4,-5),
                              verbose){
 
@@ -88,12 +92,13 @@ EM_FCtemplateICA <- function(template_mean,
   # These next are empirical estimates of the hyperparameters that we are estimating with the EM
   tau_v_init <- apply(BOLD - t(A %*% S),1,var)
   alpha_init <- apply(A,2,mean)
-  sigma2_alpha <- max(apply(A,2,var))
+  sigma2_alpha <- 1000 #this is supposed to be set to Inf.  need to check what happens as it increases
   G_init <- cov(A)
-  theta_new <- list(tau_v_init, alpha_init, G_init)
+  theta0 <- list(tau2 = tau_v_init, alpha = alpha_init, G = G_init)
   S <- t(S)
 
   #pre-compute sums over t
+  Y_sq_sum <- rowSums(BOLD^2) # This is a shortcut in computation for the CPP version
   A_sum_init <- colSums(A_init) #vector length Q
   AS_sq_sum_init <- colSums(AS_sq_init) #vector length V
   yAS_init <- t(BOLD) * AS_init #element-wise product -- for the terms y_tv * E[a_t's_v]
@@ -103,8 +108,24 @@ EM_FCtemplateICA <- function(template_mean,
                     AtA = AtA_sum_init,
                     yAS = yAS_sum_init,
                     AS_sq = AS_sq_sum_init)
-  LL_init <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
 
+  # # SQUAREM
+  #
+  # #theta0 <- theta1 #last tested value of kappa0
+  # theta0$LL <- 0 #log likelihood
+  # theta0_vec <- unlist(theta0[1:3]) #everything but LL
+  # names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (hack required for squarem)
+  #
+  # t00000 <- Sys.time()
+  # result_squarem <- squarem(
+  #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_FCtemplateICA, objfn=LL_SQUAREM_FC,
+  #   control=list(trace=verbose, intermed=TRUE, tol=1e-6, maxiter=maxiter),
+  #   template_mean, template_var, template_FC, BOLD, S, Y_sq_sum, prior_params, sigma2_alpha, verbose, post_sums
+  # )
+  # if(verbose) print(Sys.time() - t00000)
+
+
+  LL_init <- compute_LL_FC(post_sums, theta0, prior_params, template_FC, ntime, nICs, nvox, BOLD)
   #save intermediate results
   save_inter <- !is.null(eps_inter)
   if(save_inter){
@@ -117,7 +138,8 @@ EM_FCtemplateICA <- function(template_mean,
 
   err <- 1000 #large initial value for difference between iterations
   LL_vals <- rep(NA, maxiter) #keep track of expected LL at each iteration (convergence criterion)
-  while (err > epsilon | iter <= miniter) {
+  theta_new <- theta0
+  while (abs(err) > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ EM ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     theta_old <- theta_new
@@ -125,20 +147,20 @@ EM_FCtemplateICA <- function(template_mean,
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-    system.time(post_sums <-
-      Gibbs_AS_posteriorCPP(
-        nsamp = 1000,
-        nburn = 50,
-        template_mean = template_mean,
-        template_var = template_var,
-        S = S,
-        G = theta_old[[3]],
-        tau_v = theta_old[[1]],
-        Y = BOLD,
-        alpha = theta_old[[2]],
-        final = F,
-        return_samp = FALSE
-      ))
+  system.time(post_sums <-
+    Gibbs_AS_posteriorCPP(
+      nsamp = Gibbs_nsamp,
+      nburn = Gibbs_nburn,
+      template_mean = template_mean,
+      template_var = template_var,
+      S = S,
+      G = theta_old[[3]],
+      tau_v = theta_old[[1]],
+      Y = BOLD,
+      alpha = theta_old[[2]],
+      final = F,
+      return_samp = FALSE
+    ))
     S = post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
 
     #this function returns a list of tau_sq, alpha, G
@@ -208,20 +230,23 @@ EM_FCtemplateICA <- function(template_mean,
     if(save_inter){
       #only consider convergence for positive change
       if(err > 0){
-        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
-        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-          #obtain posterior estimates of S, A, and cor(A)
-          post_AS <- Gibbs_AS_posteriorCPP(nsamp = 1000, nburn = 50, template_mean = template_mean, template_var = template_var,
-              S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
-              final = TRUE, return_samp = TRUE)
-          S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
-          A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
-          corA_post <- apply(A_post, 3, cor)
-          #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
-          results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
-                                             A = apply(A_post, c(1,2), mean),
-                                             FC = matrix(rowMeans(corA_post), nrow=nICs),
-                                             theta=theta_new, error=err, numiter=iter)
+        if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
+          which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+          if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+            #obtain posterior estimates of S, A, and cor(A)
+            post_AS <- Gibbs_AS_posteriorCPP(nsamp = Gibbs_nsamp, nburn = Gibbs_nburn, template_mean = template_mean, template_var = template_var,
+                                             S = S, G = theta_new[[3]], tau_v = theta_new[[1]], Y = BOLD, alpha = theta_new[[2]],
+                                             final = TRUE, return_samp = TRUE)
+            S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, Gibbs_nsamp))
+            A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, Gibbs_nsamp))
+            corA_post <- apply(A_post, 3, cor)
+            #intermediate estimates: S, A, cor(A), theta=(alpha, G, tau^2)
+            results_inter[[which_eps]] <- list(S = apply(S_post, c(1,2), mean),
+                                               A = apply(A_post, c(1,2), mean),
+                                               FC = matrix(rowMeans(corA_post), nrow=nICs),
+                                               theta=theta_new, error=err, numiter=iter)
+
+          }
         }
       }
     }
@@ -242,8 +267,8 @@ EM_FCtemplateICA <- function(template_mean,
 
   post_AS <-
     Gibbs_AS_posteriorCPP(
-      nsamp = 1000,
-      nburn = 50,
+      nsamp = Gibbs_nsamp,
+      nburn = Gibbs_nburn,
       template_mean = template_mean,
       template_var = template_var,
       S = S,
@@ -257,10 +282,10 @@ EM_FCtemplateICA <- function(template_mean,
 
 
   #[TO DO]: Fix indexing issue where first iteration is zero (only affects burn-in)
-  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, 1000-50))
+  S_post <- array(post_AS$S_samp, dim=c(nvox, nICs, Gibbs_nsamp))
   S_post_mean <- apply(S_post, c(1,2), mean)
   S_post_SE <- apply(S_post, c(1,2), sd)
-  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, 1000-50))
+  A_post <- array(post_AS$A_samp, dim=c(ntime, nICs, Gibbs_nsamp))
   A_post_mean <- apply(A_post, c(1,2), mean)
   A_post_mean_cor <- cor(A_post_mean)
 
@@ -282,12 +307,12 @@ EM_FCtemplateICA <- function(template_mean,
   # corA_post_mean <- sapply(corA_post, mean)
   # corA_post_SE <- sapply(corA_post, sd)
 
-  result <- list(S_post = S_post,
+  result <- list(S_samples = S_post,
                  subjICmean = S_post_mean,
                  subjICse = S_post_SE,
-                 A_post = A_post,
+                 A_samples = A_post,
                  A_post_mean_cor,
-                 corA_post,
+                 FC_samples = corA_post,
                  subjFCmean = corA_post_mean,
                  subjFCse = corA_post_SE,
                  theta_MLE=theta_new,
@@ -555,6 +580,8 @@ compute_LL_FC <- function(post_sums,
   part2_sumt <- rowSums(BOLD^2) - 2*yAS + AS_sq
   part2 <- -1 * sum(1/nvox * 1/(2*tau_hat) * (2*beta0 + part2_sumt) )
 
+  part12 <- part1 + part2
+
   #Note: Trace(A %*% B) = sum(A * B) when A and B are symmetric
 
   #part3
@@ -567,6 +594,122 @@ compute_LL_FC <- function(post_sums,
   G_hat_det <- 2*halflogdetX(G_hat)
   part4 <- -1 * (1/nvox) * ( (ntime + nu0 + nICs + 1) * G_hat_det + sum(Psi0 * G_hat_inv) )
 
-  c(part1 + part2 + part3 + part4)
+  part34 <- part3 + part4
+
+  LL <- c(part12, part34)
+  print(LL)
+  sum(LL)
 
 }
+
+
+# #' Update theta SQUAREM
+# #'
+# #' Helper function for SQUAREM for estimating parameters
+# #'
+# #' @param theta_vec Vector of initial parameter values
+# #' @param template_mean Passed to UpdateTheta_templateICA function
+# #' @param template_var Passed to UpdateTheta_templateICA function
+# #' @param meshes Passed to UpdateTheta_templateICA function
+# #' @param BOLD Passed to UpdateTheta_templateICA function
+# #' @param C_diag Passed to UpdateTheta_templateICA function
+# #' @param s0_vec Passed to UpdateTheta_templateICA function
+# #' @param D Passed to UpdateTheta_templateICA function
+# #' @param Dinv_s0 Passed to UpdateTheta_templateICA function
+# # @param common_smoothness Passed to UpdateTheta_templateICA function
+# #' @param verbose Passed to UpdateTheta_templateICA function
+# #'
+# #' @return Vector of updated parameter values
+# #'
+# #' @keywords internal
+# #'
+# UpdateThetaSQUAREM_FCtemplateICA <- function(theta_vec, template_mean, template_var, template_FC, BOLD, S, Y_sq_sum, prior_params, sigma2_alpha, verbose, post_sums){
+#'
+#'
+#'   ntime <- ncol(BOLD) #length of timeseries
+#'   nvox <- nrow(BOLD) #number of data locations
+#'   nICs <- ncol(template_mean)
+#'
+#'   #convert theta vector to list format
+#'   tau_sq <- theta_vec[1:nvox]
+#'   alpha <- theta_vec[nvox + (1:nICs)]
+#'   G <- matrix(theta_vec[nvox + nICs + (1:nICs^2)], nrow=nICs, ncol=nICs)
+#'   theta <- list(tau_sq = tau_sq,
+#'                 alpha = alpha,
+#'                 G = G)
+#'
+#'   # #increase nsamp and nburn after testing
+#'   # post_sums <- Gibbs_AS_posteriorCPP(
+#'   #                 nsamp = 1000,
+#'   #                 nburn = 50,
+#'   #                 template_mean = template_mean,
+#'   #                 template_var = template_var,
+#'   #                 S = S,
+#'   #                 G = G,
+#'   #                 tau_v = tau_sq,
+#'   #                 Y = BOLD,
+#'   #                 alpha = alpha,
+#'   #                 final = FALSE,
+#'   #                 return_samp = FALSE
+#'   #               )
+#'   S <- post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
+#'
+#'   #this function returns a list of tau_sq, alpha, G
+#'   # This is the M-step. It might be better to perform the E-step first, as the
+#'   # M-step assumes that we have a good estimate of the first level of the posterior
+#'
+#'   theta_new <-
+#'     UpdateTheta_FCtemplateICAcpp(
+#'       template_mean,
+#'       template_var,
+#'       template_FC,
+#'       G,
+#'       prior_params,
+#'       BOLD,
+#'       Y_sq_sum,
+#'       post_sums,
+#'       sigma2_alpha,
+#'       TRUE
+#'     )
+#'
+#'   # Calculate LL
+#'
+#'   LL <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+#'   cat(paste0('Current expected log posterior is ',round(LL, 2)))
+#'
+#'   #convert theta_new list to vector format
+#'   theta_new_vec <- unlist(theta_new[1:3]) #everything but LL
+#'   names(theta_new_vec)[1] <- LL
+#'   return(theta_new_vec)
+#' }
+#'
+# #' Log-likelihood SQUAREM for FC Template ICA
+# #'
+# #' Helper function for SQUAREM for extracting log likelihood
+# #'
+# #' @param theta_vec Vector of current parameter values
+# #' @param template_mean Not used, but squarem will return error without
+# #' @param template_var  Not used, but squarem will return error without
+# #' @param template_FC  Not used, but squarem will return error without
+# #' @param BOLD  Not used, but squarem will return error without
+# #' @param S  Not used, but squarem will return error without
+# #' @param Y_sq_sum  Not used, but squarem will return error without
+# #' @param prior_params  Not used, but squarem will return error without
+# #' @param sigma2_alpha  Not used, but squarem will return error without
+# #' @param verbose  Not used, but squarem will return error without
+# #'
+# #' @return Negative log-likelihood given current values of parameters
+# #'
+# #' @keywords internal
+# #'
+# LL_SQUAREM_FC <- function(theta_vec, template_mean, template_var, template_FC, BOLD, S, Y_sq_sum, prior_params, sigma2_alpha, verbose, post_sums){
+#
+#   LL <- as.numeric(names(theta_vec)[1])
+#   return(-1*LL)
+#
+# }
+
+## NOTE: Tried to implement SQUAREM in April 2023 but it didn't go past the first iteration.
+## Empirically, have observed that the log-posterior first decreases before increasing.
+## Could be that we need to first run the algorithm for a couple of iterations before running SQUAREM
+## Could also be that the stochastic nature of the Gibbs sampler makes it possible for the log-posterior to decrease rather than always increasing

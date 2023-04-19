@@ -11,6 +11,8 @@ UpdateThetaSQUAREM_templateICA(
   meshes,
   BOLD,
   C_diag,
+  H,
+  Hinv,
   s0_vec,
   D,
   Dinv_s0,

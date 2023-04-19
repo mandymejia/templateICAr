@@ -1,9 +1,9 @@
 #' Create a mask based on vertices that are invalid
 #'
 #' @param BOLD A \eqn{V \times T} numeric matrix. Each row is a location.
-#' @param meanTol,varTol Tolerance for mean and variance of each data location. 
+#' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
-#'  Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for 
+#'  Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for
 #'  {varTol}.
 #' @param verbose Print messages counting how many locations are removed?
 #'
@@ -140,11 +140,11 @@ loglik_kappa_est <- function(par, delta, D_diag, mesh, C1 = 1/(4*pi), Q=NULL){
 }
 
 #' Get FORMAT from format
-#' 
+#'
 #' @param format the file format
 #' @return The file FORMAT
 #' @keywords internal
-#' 
+#'
 get_FORMAT <- function(format){
   switch(format,
     CIFTI = "CIFTI",
@@ -159,7 +159,7 @@ get_FORMAT <- function(format){
 }
 
 #' Check required packages for the data format
-#' 
+#'
 #' @param FORMAT The data FORMAT
 #' @return \code{NULL}, invisibly
 #' @keywords internal
@@ -189,12 +189,12 @@ check_req_ifti_pkg <- function(FORMAT){
 }
 
 #' Half log determinant
-#' 
+#'
 #' Computes half log determinant of \code{X}, by \code{sum(log(diag(chol(X))))}.
-#' 
+#'
 #' @param X A numeric matrix
-#' 
+#'
 #' @return The half log determinant of \code{X}.
-#' 
+#'
 #' @keywords internal
 halflogdetX <- function(X){ sum(log(diag(chol(X)))) }

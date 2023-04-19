@@ -18,7 +18,6 @@ estimate_template(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
@@ -44,7 +43,6 @@ estimate_template.cifti(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
@@ -69,7 +67,6 @@ estimate_template.gifti(
   scale_sm_FWHM = 2,
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = c("left", "right"),
@@ -91,7 +88,6 @@ estimate_template.nifti(
   scale = c("global", "local", "none"),
   detrend_DCT = 0,
   center_Bcols = FALSE,
-  normA = FALSE,
   Q2 = 0,
   Q2_max = NULL,
   mask = NULL,
@@ -159,10 +155,6 @@ to use for detrending. If \code{0} (default), do not detrend.}
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
 \code{FALSE}.}
-
-\item{normA}{Scale each IC timeseries (column of \eqn{A}) in the dual
-regression estimates? Default: \code{FALSE} (not recommended). Note that the
-product \eqn{A \times S} remains the same with either option.}
 
 \item{Q2, Q2_max}{Obtain dual regression estimates after denoising? Denoising is
 based on modeling and removing nuisance ICs. It may result in a cleaner

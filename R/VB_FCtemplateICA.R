@@ -16,12 +16,12 @@
 #'  variance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{5}.
-#' @param epsilon Smallest proportion change in ELBO between iterations. 
+#' @param epsilon Smallest proportion change in ELBO between iterations.
 #'  Default: \code{10e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default: 
+#'  to assess benefit of more stringent convergence rules). Default:
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and 
+#'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
 #' @param verbose If \code{TRUE}, display progress of algorithm.
 #' Default: \code{FALSE}.
@@ -75,7 +75,6 @@ VB_FCtemplateICA <- function(
   mu_A <- A0 #TxQ
   mu_S <- t(S0) #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
-  print(dim(S0_var))
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
   #cov_S <- cov_S*10
   mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
@@ -115,7 +114,7 @@ VB_FCtemplateICA <- function(
     mu_A <- A_new[[1]]
     cov_A <- A_new[[2]]
 
-    if(iter==1) ELBO_init <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
+    if(iter==1) ELBO_init <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
 
     #b. UPDATE S
     S_new <- update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
@@ -152,10 +151,10 @@ VB_FCtemplateICA <- function(
     if(verbose) cat(paste0('Iteration ',iter, ': Proportional Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
 
     #ELBO
-    ELBO_vals[iter] <- ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
+    ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
     if(iter == 1) err <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
     if(iter > 1) err <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
-    if(verbose) cat(paste0('Iteration ',iter, ': Current value of ELBO is ',round(ELBO_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Current value of ELBO is ',round(ELBO_vals[iter], 6),' (Proportional Change = ',round(err, 7),')\n'))
 
     #Save intermediate result?
 
@@ -336,7 +335,7 @@ update_tau2 <- function(
   list(alpha1=alpha1, beta1=beta1)
 }
 
-#' ELBO (Evidence Lower Bound)
+#' Compute ELBO (Evidence Lower Bound)
 #'
 #' Computes the Evidence Lower Bound for the VB Algorithm for FC Template ICA
 #'
@@ -353,7 +352,7 @@ update_tau2 <- function(
 #' @keywords internal
 #' @importFrom mvtnorm dmvnorm
 #' @importFrom stats dgamma
-ELBO <- function(
+compute_ELBO <- function(
   mu_S, cov_S,
   cov_A,
   cov_alpha,
