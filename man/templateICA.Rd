@@ -155,7 +155,8 @@ estimation, but may result in more accurate results. Ignored for FC template
 ICA}
 
 \item{method_FC}{Bayesian estimation method for FC template ICA model:
-variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.}
+variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
+or EM initialized with VB, \code{"EM_VB"}.}
 
 \item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
 
