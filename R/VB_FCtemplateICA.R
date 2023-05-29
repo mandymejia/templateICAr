@@ -161,9 +161,11 @@ VB_FCtemplateICA <- function(
     if(save_inter){
       #only consider convergence for positive change
       if(err > 0){
-        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
-        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+        if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
+          which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+          if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+            results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+        }
         }
       }
     }
