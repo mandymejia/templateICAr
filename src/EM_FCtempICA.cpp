@@ -70,7 +70,7 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   // }
   // UPDATE ALPHA (TEMPORAL INTERCEPT)
   // Eigen::MatrixXd alpha_part = Eigen::MatrixXd::Identity(nICs,nICs);
-  Eigen::MatrixXd G_inv = G.inverse();
+  // Eigen::MatrixXd G_inv = G.inverse();
   // alpha_part /= sigma2_alpha;
   // alpha_part += ntime * G_inv;
   // Eigen::MatrixXd alpha_part_inv = alpha_part.inverse();
@@ -175,20 +175,20 @@ Rcpp::List Gibbs_AS_posteriorCPP(const int nsamp, const int nburn,
   // Start the Gibbs sampler
   for(int i=0;i < niter; i++) {
     // Update A
-    SGti = S.transpose() * G_tau_inv;
-    sig_inv_A = SGti * S;
-    sig_inv_A += G_inv;
-    chol_sig_inv_A.compute(sig_inv_A);
-    chol_sig_A = chol_sig_inv_A.matrixL().toDenseMatrix().inverse();
-    YGS = YtG_tau_inv * S;
+    SGti = S.transpose() * G_tau_inv; // Calculate the product of the transpose of S and G_tau_inv and assign it to SGti
+    sig_inv_A = SGti * S; // Calculate the product of SGti and S and assign it to sig_inv_A
+    sig_inv_A += G_inv; // Add G_inv to complete calculation of sig_inv_A
+    chol_sig_inv_A.compute(sig_inv_A); // Perform a Cholesky decomposition on sig_inv_A = LL'
+    chol_sig_A = chol_sig_inv_A.matrixL().toDenseMatrix().inverse(); // Calculate L^-1, the inverse of the lower triangular matrix obtained from Cholesky decomposition
+    YGS = YtG_tau_inv * S; // Begin calculation of mu_A_t: Calculate the product of YtG_tau_inv and S and assign it to YGS
     for(int t = 0;t < ntime; t++) {
-      ygs_alphaGinv = YGS.row(t) + alphaGinv.transpose();
-      mu_at = chol_sig_inv_A.solve(ygs_alphaGinv);
-      Z = rnorm(Q);
-      Eigen::Map<Eigen::VectorXd> ZZ = as<Eigen::Map<Eigen::VectorXd> >(Z);
-      At = chol_sig_A * ZZ;
-      At += mu_at;
-      A.row(t) = At;
+      ygs_alphaGinv = YGS.row(t) + alphaGinv.transpose(); // Add the transpose of alphaGinv to YGS(t,) and assign it to ygs_alphaGinv
+      mu_at = chol_sig_inv_A.solve(ygs_alphaGinv); // Calculate mu_at: Solve the linear system sig_inv_A * x = ygs_alphaGinv using the Cholesky decomposition of sig_inv_A
+      Z = rnorm(Q);  // Generate a Q-dimensional N(0,I) random vector
+      Eigen::Map<Eigen::VectorXd> ZZ = as<Eigen::Map<Eigen::VectorXd> >(Z); // Map the vector Z to an Eigen VectorXd object named ZZ
+      At = chol_sig_A * ZZ;  // Multiply chol_sig_A by ZZ to make the covariance sig_A
+      At += mu_at;  // Add mu_at to make the mean mu_at
+      A.row(t) = At; // Save result in A(t,)
     }
     // Enforcing columnwise centering and variance = 1
     for(int q = 0;q < Q;q++) {

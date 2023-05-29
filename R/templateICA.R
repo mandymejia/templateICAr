@@ -97,7 +97,8 @@
 #'  estimation, but may result in more accurate results. Ignored for FC template
 #'  ICA
 #' @param method_FC Bayesian estimation method for FC template ICA model:
-#'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
+#'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
+#'  or EM initialized with VB, \code{"EM_VB"}.
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of EM or VB iterations. Default: \code{5}.
 #' @param epsilon Smallest proportion change between iterations. Default:
@@ -188,7 +189,7 @@ templateICA <- function(
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
-  method_FC <- match.arg(method_FC, c("VB", "EM"))
+  method_FC <- match.arg(method_FC, c("VB", "EM", "EM_VB"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(miniter))
   stopifnot(miniter <= maxiter)
@@ -763,8 +764,9 @@ templateICA <- function(
 
     #save.image(file='test/test_setup_VB.RData')
 
-    resultEM <- if (method_FC == "VB") {
-      VB_FCtemplateICA(
+    #run or initialize with VB
+    if(method_FC %in% c('VB','EM_VB')){
+    resultEM <- templateICAr:::VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
@@ -779,8 +781,11 @@ templateICA <- function(
         eps_inter=eps_inter,
         verbose=verbose
       )
-    } else {
-      EM_FCtemplateICA(
+    }
+
+    if(method_FC=='EM'){
+      if(method_FC == 'EM_VB'){ BOLD_DR$A <- resultEM$A; BOLD_DR$S <- t(resultEM$subjICmean) }
+      resultEM <- templateICAr:::EM_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
@@ -791,7 +796,7 @@ templateICA <- function(
         maxiter=maxiter,
         epsilon=epsilon,
         eps_inter=eps_inter,
-        verbose=verbose
+        verbose=TRUE
       )
     }
   } # end of FC template ICA estimation
