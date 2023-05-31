@@ -14,7 +14,7 @@ VB_FCtemplateICA(
   S0,
   S0_var,
   maxiter = 100,
-  miniter = 5,
+  miniter = 3,
   epsilon = 10^(-6),
   eps_inter = 10^c(-2, -3, -4, -5),
   verbose = FALSE
@@ -41,7 +41,7 @@ variance matrix \code{S0_var}.}
 
 \item{maxiter}{Maximum number of VB iterations. Default: \code{100}.}
 
-\item{miniter}{Minimum number of VB iterations. Default: \code{5}.}
+\item{miniter}{Minimum number of VB iterations. Default: \code{3}.}
 
 \item{epsilon}{Smallest proportion change in ELBO between iterations.
 Default: \code{10e-6}.}

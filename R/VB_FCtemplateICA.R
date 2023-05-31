@@ -15,7 +15,7 @@
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  variance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
-#' @param miniter Minimum number of VB iterations. Default: \code{5}.
+#' @param miniter Minimum number of VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change in ELBO between iterations.
 #'  Default: \code{10e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
@@ -39,7 +39,7 @@ VB_FCtemplateICA <- function(
   BOLD, #VxT
   A0, S0, S0_var,
   maxiter=100,
-  miniter=5,
+  miniter=3,
   epsilon=10^(-6),
   eps_inter=10^c(-2,-3,-4,-5),
   verbose=FALSE){

@@ -1,6 +1,7 @@
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
 #include <Rcpp.h>
 #include <RcppEigen.h>
+//#include <omp.h>
 
 using namespace Rcpp;
 using namespace Eigen;
@@ -57,7 +58,8 @@ Rcpp::List UpdateTheta_FCtemplateICAcpp(Eigen::MatrixXd template_mean,
   // UPDATE TAU^2 (ERROR VARIANCE)
   tau_sq_den = ntime + 2*alpha_tau;
   tau_sq_den += 2;
-  for(int v=0;v < nvox; v++){
+  //#pragma omp parallel for // requires OpenMP via Clang, which would make it difficult for users to install the package
+  for(int v=0; v < nvox; v++){
     tau_sq_num = AS_sq(v) - 2*yAS(v);
     tau_sq_num += Y_sq_sum(v);
     tau_sq_num += 2*beta_tau;

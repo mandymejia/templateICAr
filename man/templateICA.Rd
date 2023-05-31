@@ -26,7 +26,7 @@ templateICA(
   reduce_dim = TRUE,
   method_FC = c("VB", "EM"),
   maxiter = 100,
-  miniter = 5,
+  miniter = 3,
   epsilon = 1e-06,
   eps_inter = 10^c(-2, -3, -4, -5),
   kappa_init = 0.2,
@@ -160,7 +160,7 @@ or EM initialized with VB, \code{"EM_VB"}.}
 
 \item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
 
-\item{miniter}{Minimum number of EM or VB iterations. Default: \code{5}.}
+\item{miniter}{Minimum number of EM or VB iterations. Default: \code{3}.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default:
 \code{.001}.}

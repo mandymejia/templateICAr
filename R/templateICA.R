@@ -100,7 +100,7 @@
 #'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
 #'  or EM initialized with VB, \code{"EM_VB"}.
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
-#' @param miniter Minimum number of EM or VB iterations. Default: \code{5}.
+#' @param miniter Minimum number of EM or VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
@@ -155,7 +155,7 @@ templateICA <- function(
   reduce_dim=TRUE,
   method_FC=c("VB", "EM"),
   maxiter=100,
-  miniter=5,
+  miniter=3,
   epsilon=1e-6,
   eps_inter=10^c(-2,-3,-4,-5),
   kappa_init=0.2,
@@ -783,7 +783,7 @@ templateICA <- function(
       )
     }
 
-    if(method_FC=='EM'){
+    if(method_FC %in% c('EM', 'EM_VB')){
       if(method_FC == 'EM_VB'){ BOLD_DR$A <- resultEM$A; BOLD_DR$S <- t(resultEM$subjICmean) }
       resultEM <- templateICAr:::EM_FCtemplateICA(
         template_mean = template$mean,

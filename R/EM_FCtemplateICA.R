@@ -11,7 +11,7 @@
 #' @param AS_0 (list) initial guess at latent variables: A (\eqn{TxQ} mixing matrix),
 #'  and S (\eqn{QxV} matrix of spatial ICs)
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param miniter Minimum number of EM iterations. Default: \code{5}.
+#' @param miniter Minimum number of EM iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change in log-posterior between iterations.
 #'  Default: \code{1e-6}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
@@ -21,12 +21,16 @@
 #'  \code{epsilon}.
 #' @param Gibbs_nsamp the number of Gibbs posterior samples of A and S to output after burn-in
 #' @param Gibbs_nburn the number of Gibbs posterior samples of A and S to throw away before saving
+#' @param Gibbs_nchain the number of simultaneous Gibbs chains to run
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @importFrom expm sqrtm
 #' @importFrom Matrix Diagonal
 #' @importFrom matrixStats rowVars
 #' @importFrom stats sd cor
+#' @import foreach
+#' @importFrom parallel makeCluster detectCores stopCluster
+#' @importFrom doParallel registerDoParallel
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
@@ -42,10 +46,11 @@ EM_FCtemplateICA <- function(template_mean,
                              BOLD,
                              AS_0,
                              maxiter=100,
-                             miniter=5,
+                             miniter=3,
                              epsilon=10^(-6),
-                             Gibbs_nsamp=10000,
+                             Gibbs_nsamp=1000,
                              Gibbs_nburn=50,
+                             Gibbs_nchain=10,
                              eps_inter=10^c(-2,-3,-4,-5),
                              verbose){
 
@@ -109,22 +114,6 @@ EM_FCtemplateICA <- function(template_mean,
                     yAS = yAS_sum_init,
                     AS_sq = AS_sq_sum_init)
 
-  # # SQUAREM
-  #
-  # #theta0 <- theta1 #last tested value of kappa0
-  # theta0$LL <- 0 #log likelihood
-  # theta0_vec <- unlist(theta0[1:3]) #everything but LL
-  # names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (hack required for squarem)
-  #
-  # t00000 <- Sys.time()
-  # result_squarem <- squarem(
-  #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_FCtemplateICA, objfn=LL_SQUAREM_FC,
-  #   control=list(trace=verbose, intermed=TRUE, tol=1e-6, maxiter=maxiter),
-  #   template_mean, template_var, template_FC, BOLD, S, Y_sq_sum, prior_params, sigma2_alpha, verbose, post_sums
-  # )
-  # if(verbose) print(Sys.time() - t00000)
-
-
   LL_init <- compute_LL_FC(post_sums, theta0, prior_params, template_FC, ntime, nICs, nvox, BOLD)
   #save intermediate results
   save_inter <- !is.null(eps_inter)
@@ -147,20 +136,53 @@ EM_FCtemplateICA <- function(template_mean,
     ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
-  system.time(post_sums <-
-    Gibbs_AS_posteriorCPP(
-      nsamp = Gibbs_nsamp,
-      nburn = Gibbs_nburn,
-      template_mean = template_mean,
-      template_var = template_var,
-      S = S,
-      G = theta_old[[3]],
-      tau_v = theta_old[[1]],
-      Y = BOLD,
-      alpha = theta_old[[2]],
-      final = F,
-      return_samp = FALSE
-    ))
+
+    if(Gibbs_nchain == 1){
+      post_sums <- Gibbs_AS_posteriorCPP(
+        nsamp = Gibbs_nsamp,
+        nburn = Gibbs_nburn,
+        template_mean = template_mean,
+        template_var = template_var,
+        S = S,
+        G = theta_old[[3]],
+        tau_v = theta_old[[1]],
+        Y = BOLD,
+        alpha = theta_old[[2]],
+        final = F,
+        return_samp = FALSE
+      )
+    } else {
+      num_threads <- min(parallel::detectCores(), Gibbs_nchain)
+      cl <- parallel::makeCluster(num_threads)
+      registerDoParallel(cl)
+
+      post_sums_list <- foreach(ii = 1:Gibbs_nchain) %dopar% {
+        templateICAr:::Gibbs_AS_posteriorCPP(
+          nsamp = Gibbs_nsamp,
+          nburn = Gibbs_nburn,
+          template_mean = template_mean,
+          template_var = template_var,
+          S = S,
+          G = theta_old[[3]],
+          tau_v = theta_old[[1]],
+          Y = BOLD,
+          alpha = theta_old[[2]],
+          final = F,
+          return_samp = FALSE
+        )
+        }
+     parallel::stopCluster(cl)
+
+     #Average the list elements
+     post_sums_names <- names(post_sums_list[[1]])
+     post_sums <- post_sums_list[[1]] #initialize
+     for(ii in 1:length(post_sums_names)){
+       post_sums_ii <- lapply(post_sums_list, function(x) x[[ii]]) #extract ii-th element of post_sums_list
+       if(is.null(dim(post_sums_ii[[1]]))) dims0 <- length(post_sums_ii[[1]]) else dims0 <- dim(post_sums_ii[[1]]) #prepare to convert from list to array
+       post_sum_ii_array <- array(unlist(post_sums_ii), dim=c(dims0, Gibbs_nchain)) #convert from list to array
+       post_sums[[ii]] <- apply(post_sum_ii_array, seq(length(dims0)), mean) #average over Gibbs chains (all same length)
+     }
+    }
     S = post_sums$S_post #need to update S because it is used to initialize the Gibbs sampler
 
     #this function returns a list of tau_sq, alpha, G
@@ -220,10 +242,10 @@ EM_FCtemplateICA <- function(template_mean,
 
     ### Compute change in LL (actually the log posterior)
 
-    LL_vals[iter] <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+    LL_vals[iter] <- templateICAr:::compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
     if(iter == 1) err <- (LL_vals[iter] - LL_init)/abs(LL_init)
     if(iter > 1) err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
-    if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 2),' (Proportional Change = ',round(err, 7),')\n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 4),' (Proportional Change = ',round(err, 7),')\n'))
 
     ### Save intermediate result?
 
