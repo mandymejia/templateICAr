@@ -17,10 +17,10 @@
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change in ELBO between iterations.
-#'  Default: \code{10e-6}.
+#'  Default: \code{0.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
 #'  to assess benefit of more stringent convergence rules). Default:
-#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#'  \code{NULL} (do not save). These values should be in decreasing order
 #'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
 #' @param verbose If \code{TRUE}, display progress of algorithm.
@@ -40,8 +40,8 @@ VB_FCtemplateICA <- function(
   A0, S0, S0_var,
   maxiter=100,
   miniter=3,
-  epsilon=10^(-6),
-  eps_inter=10^c(-2,-3,-4,-5),
+  epsilon=0.001,
+  eps_inter=NULL,
   verbose=FALSE){
 
   stopifnot(length(prior_params)==2)

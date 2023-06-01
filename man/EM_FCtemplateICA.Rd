@@ -13,11 +13,11 @@ EM_FCtemplateICA(
   AS_0,
   maxiter = 100,
   miniter = 3,
-  epsilon = 10^(-6),
+  epsilon = 0.001,
   Gibbs_nsamp = 1000,
   Gibbs_nburn = 50,
   Gibbs_nchain = 10,
-  eps_inter = 10^c(-2, -3, -4, -5),
+  eps_inter = NULL,
   verbose
 )
 }
@@ -41,7 +41,7 @@ and S (\eqn{QxV} matrix of spatial ICs)}
 \item{miniter}{Minimum number of EM iterations. Default: \code{3}.}
 
 \item{epsilon}{Smallest proportion change in log-posterior between iterations.
-Default: \code{1e-6}.}
+Default: \code{0.001}.}
 
 \item{Gibbs_nsamp}{the number of Gibbs posterior samples of A and S to output after burn-in}
 
@@ -51,7 +51,7 @@ Default: \code{1e-6}.}
 
 \item{eps_inter}{Intermediate values of epsilon at which to save results (used
 to assess benefit of more stringent convergence rules). Default:
-\code{10e-2} to \code{10e-5}. These values should be in decreasing order
+\code{NULL} (do not save). These values should be in decreasing order
 (larger to smaller error) and all values should be between zero and
 \code{epsilon}.}
 

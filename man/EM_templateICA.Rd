@@ -17,7 +17,7 @@ EM_templateICA.spatial(
   Hinv,
   maxiter = 100,
   usePar = FALSE,
-  epsilon = 1e-06,
+  epsilon = 0.001,
   verbose = FALSE
 )
 
@@ -30,7 +30,7 @@ EM_templateICA.independent(
   H,
   Hinv,
   maxiter = 100,
-  epsilon = 1e-06,
+  epsilon = 0.001,
   usePar = FALSE,
   verbose
 )
@@ -64,7 +64,7 @@ same smoothness parameter, \eqn{\kappa}}
 to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
 template ICA.}
 
-\item{epsilon}{Smallest proportion change between iterations. Default: 0.01.}
+\item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }

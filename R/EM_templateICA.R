@@ -24,7 +24,7 @@
 #' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
 #'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
 #'  template ICA.
-#' @param epsilon Smallest proportion change between iterations. Default: 0.01.
+#' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return  A list: theta (list of final parameter estimates), subICmean
@@ -55,7 +55,7 @@ NULL
 EM_templateICA.spatial <- function(
   template_mean, template_var, meshes, BOLD,
   theta0, C_diag, H, Hinv,
-  maxiter=100,  usePar=FALSE, epsilon=1e-6, verbose=FALSE){
+  maxiter=100,  usePar=FALSE, epsilon=0.001, verbose=FALSE){
 
   INLA_check()
 
@@ -222,7 +222,7 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=1e-6, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=0.001, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -255,14 +255,14 @@ EM_templateICA.independent <- function(
   #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
   #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
   #   tmean=template_mean, tvar=template_var, meshes=NULL,
-  #   BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv, 
+  #   BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv,
   #   s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
   # ), "tICA_pre_squarem1")
   result_squarem <- squarem(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes=NULL,
-    BOLD, C_diag, H=H, Hinv=Hinv, 
+    BOLD, C_diag, H=H, Hinv=Hinv,
     s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
@@ -644,7 +644,7 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     A_hat <- Hinv %*% A_hat
     A_hat <- scale(A_hat)
     A_hat <- H %*% A_hat
-    
+
     theta_new$A <- A_hat
 
     #first part of Q1: sum_v 2 y(v)' C^{-1} A t(v) = sum_v Trace{ 2 C^{-1} A t(v) y(v)' } = Trace{ 2 C^{-1} A sum_v [ t(v) y(v)' ] }, where sum_v [ t(v) y(v)' ] = A_part1'
@@ -1217,7 +1217,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
       BOLD,
       theta,
       C_diag,
-      H, 
+      H,
       Hinv,
       s0_vec,
       D,
