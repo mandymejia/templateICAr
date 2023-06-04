@@ -57,12 +57,12 @@ Suggests:
     oro.nifti,
     gifti,
     covr,
+    parallel,
     doParallel,
     foreach,
     knitr,
     rmarkdown,
     INLA,
-    parallel,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3

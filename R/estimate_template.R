@@ -359,22 +359,8 @@ estimate_template <- function(
 
   # `usePar`
   if (!isFALSE(usePar)) {
-    parPkgs <- c("parallel", "doParallel")
-    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
-    if (any(parPkgs_missing)) {
-      if (all(parPkgs_missing)) {
-        stop(paste0(
-          "Packages `parallel` and `doParallel` needed ",
-          "for `usePar` to loop over subjects. Please install them."), call.=FALSE
-        )
-      } else {
-        stop(paste0(
-          "Package `", parPkgs[parPkgs_missing], "` needed ",
-          "for `usePar` to loop over subjects. Please install it."), call.=FALSE
-        )
-      }
-    }
 
+    check_parallel_packages()
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
     if (nCores < 2) {
@@ -556,13 +542,7 @@ estimate_template <- function(
   nM <- 2
 
   if (usePar) {
-    # Check `foreach`.
-    if (!requireNamespace("foreach", quietly = TRUE)) {
-      stop(
-        "Package \"foreach\" needed to parallel loop over scans. Please install it.",
-        call. = FALSE
-      )
-    }
+    check_parallel_packages()
 
     # Loop over subjects.
     `%dopar%` <- foreach::`%dopar%`

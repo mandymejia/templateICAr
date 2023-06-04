@@ -28,9 +28,6 @@
 #' @importFrom Matrix Diagonal
 #' @importFrom matrixStats rowVars
 #' @importFrom stats sd cor
-#' @import foreach
-#' @importFrom parallel makeCluster detectCores stopCluster
-#' @importFrom doParallel registerDoParallel
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
@@ -152,12 +149,15 @@ EM_FCtemplateICA <- function(template_mean,
         return_samp = FALSE
       )
     } else {
+
+      check_parallel_packages()
       num_threads <- min(parallel::detectCores(), Gibbs_nchain)
       cl <- parallel::makeCluster(num_threads)
-      registerDoParallel(cl)
+      doParallel::registerDoParallel(cl)
 
-      post_sums_list <- foreach(ii = 1:Gibbs_nchain) %dopar% {
-        templateICAr:::Gibbs_AS_posteriorCPP(
+      `%dopar%` <- foreach::`%dopar%`
+      post_sums_list <- foreach::foreach(ii = 1:Gibbs_nchain) %dopar% {
+        Gibbs_AS_posteriorCPP(
           nsamp = Gibbs_nsamp,
           nburn = Gibbs_nburn,
           template_mean = template_mean,
@@ -242,7 +242,7 @@ EM_FCtemplateICA <- function(template_mean,
 
     ### Compute change in LL (actually the log posterior)
 
-    LL_vals[iter] <- templateICAr:::compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+    LL_vals[iter] <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
     if(iter == 1) err <- (LL_vals[iter] - LL_init)/abs(LL_init)
     if(iter > 1) err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
     if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 4),' (Proportional Change = ',round(err, 7),')\n'))

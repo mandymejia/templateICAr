@@ -204,21 +204,7 @@ templateICA <- function(
 
   # `usePar`
   if (!isFALSE(usePar)) {
-    parPkgs <- c("parallel", "doParallel")
-    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
-    if (any(parPkgs_missing)) {
-      if (all(parPkgs_missing)) {
-        stop(paste0(
-          "Packages `parallel` and `doParallel` needed ",
-          "for `usePar` to loop over voxels. Please install them."), call.=FALSE
-        )
-      } else {
-        stop(paste0(
-          "Package `", parPkgs[parPkgs_missing], "` needed ",
-          "for `usePar` to loop over voxels. Please install it."), call.=FALSE
-        )
-      }
-    }
+    check_parallel_packages()
 
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
@@ -766,7 +752,7 @@ templateICA <- function(
 
     #run or initialize with VB
     if(method_FC %in% c('VB','EM_VB')){
-    resultEM <- templateICAr:::VB_FCtemplateICA(
+    resultEM <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
@@ -785,7 +771,7 @@ templateICA <- function(
 
     if(method_FC %in% c('EM', 'EM_VB')){
       if(method_FC == 'EM_VB'){ BOLD_DR$A <- resultEM$A; BOLD_DR$S <- t(resultEM$subjICmean) }
-      resultEM <- templateICAr:::EM_FCtemplateICA(
+      resultEM <- EM_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
