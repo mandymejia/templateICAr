@@ -41,9 +41,9 @@ formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
 is the number of data locations and \eqn{T} is the number of timepoints.
 
 If multiple BOLD data are provided, they will be independently centered,
-scaled, and detrended (if applicable), and then they will be concatenated
-together followed by denoising (if applicable) and computing the initial
-dual regression estimate.}
+scaled, detrended (if applicable), and denoised (if applicable). Then they
+will be concatenated together followed by computing the initial dual
+regression estimate.}
 
 \item{template}{Template estimates in a format compatible with \code{BOLD},
 from \code{\link{estimate_template}}.}
