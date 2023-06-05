@@ -232,7 +232,7 @@ templateICA <- function(
 
   # `BOLD` ---------------------------------------------------------------------
   # Determine the format of `BOLD`.
-  format <- fMRItools::infer_format_ifti(BOLD)[1]
+  format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
   FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
