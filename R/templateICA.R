@@ -95,7 +95,7 @@
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results. Ignored for FC template
-#'  ICA
+#'  ICA (never reduce dim) and spatial template ICA (always reduce dim).
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
 #'  or EM initialized with VB, \code{"EM_VB"}.
@@ -707,6 +707,17 @@ templateICA <- function(
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
+  if(do_FC) {
+    if(reduce_dim) warning("Setting reduce_dim to FALSE for FC template ICA")
+    reduce_dim <- FALSE
+  }
+
+  if(do_spatial) {
+    if(!reduce_dim) warning("Setting reduce_dim to TRUE for spatial template ICA")
+    reduce_dim <- TRUE
+  }
+
+
   #1) Template ICA -----------------------------------------------------------
 
   if (reduce_dim) {
@@ -731,7 +742,7 @@ templateICA <- function(
   } else {
     # [TO DO]: what if just compute eigenvalues? faster, right?
     err_var <- dim_reduce(BOLD, nL)$sigma_sq
-    BOLD2 <- BOLD; rm(BOLD)
+    BOLD2 <- BOLD
     theta0 <- list(A = BOLD_DR$A)
     C_diag <- rep(1, nT)
     H <- Hinv <- NULL
@@ -747,10 +758,13 @@ templateICA <- function(
     C_diag=C_diag,
     H=H, Hinv=Hinv,
     maxiter=maxiter,
+    epsilon=epsilon,
+    reduce_dim=reduce_dim,
     usePar=usePar,
     verbose=verbose
   )
   if (reduce_dim) { resultEM$A <- Hinv %*% resultEM$theta_MLE$A }
+  if (!reduce_dim) { resultEM$A <- resultEM$theta_MLE$A }
   class(resultEM) <- 'tICA'
   #end of standard template ICA estimation
 
@@ -766,7 +780,7 @@ templateICA <- function(
 
     #run or initialize with VB
     if(method_FC %in% c('VB','EM_VB')){
-    resultEM <- templateICAr:::VB_FCtemplateICA(
+    resultEM <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
@@ -785,7 +799,7 @@ templateICA <- function(
 
     if(method_FC %in% c('EM', 'EM_VB')){
       if(method_FC == 'EM_VB'){ BOLD_DR$A <- resultEM$A; BOLD_DR$S <- t(resultEM$subjICmean) }
-      resultEM <- templateICAr:::EM_FCtemplateICA(
+      resultEM <- EM_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
@@ -799,6 +813,9 @@ templateICA <- function(
         verbose=TRUE
       )
     }
+
+    resultEM$result_tICA <- resultEM_tICA
+
   } # end of FC template ICA estimation
 
   #3) Spatial Template ICA ---------------------------------------------------

@@ -114,7 +114,7 @@ EM_FCtemplateICA <- function(template_mean,
                     yAS = yAS_sum_init,
                     AS_sq = AS_sq_sum_init)
 
-  LL_init <- compute_LL_FC(post_sums, theta0, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+  LL_init <- compute_LL_FC(post_sums, theta0, prior_params, template_FC, ntime, nICs, nvox, BOLD, verbose=verbose)
   #save intermediate results
   save_inter <- !is.null(eps_inter)
   if(save_inter){
@@ -157,7 +157,7 @@ EM_FCtemplateICA <- function(template_mean,
       registerDoParallel(cl)
 
       post_sums_list <- foreach(ii = 1:Gibbs_nchain) %dopar% {
-        templateICAr:::Gibbs_AS_posteriorCPP(
+        Gibbs_AS_posteriorCPP(
           nsamp = Gibbs_nsamp,
           nburn = Gibbs_nburn,
           template_mean = template_mean,
@@ -204,6 +204,12 @@ EM_FCtemplateICA <- function(template_mean,
         TRUE
       )
 
+    #may decrease due to update of A and S
+    #compute_LL_FC(post_sums, theta_old, prior_params, template_FC, ntime, nICs, nvox, BOLD, verbose=FALSE)
+
+    #increases due to update of MAPs
+    #compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD, verbose=FALSE)
+
     # theta_new <- UpdateTheta_FCtemplateICA(
     #     template_mean,
     #     template_var,
@@ -242,7 +248,7 @@ EM_FCtemplateICA <- function(template_mean,
 
     ### Compute change in LL (actually the log posterior)
 
-    LL_vals[iter] <- templateICAr:::compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD)
+    LL_vals[iter] <- compute_LL_FC(post_sums, theta_new, prior_params, template_FC, ntime, nICs, nvox, BOLD, verbose=verbose)
     if(iter == 1) err <- (LL_vals[iter] - LL_init)/abs(LL_init)
     if(iter > 1) err <- (LL_vals[iter] - LL_vals[iter - 1])/abs(LL_vals[iter - 1])
     if(verbose) cat(paste0('Iteration ',iter, ': Current expected log posterior is ',round(LL_vals[iter], 4),' (Proportional Change = ',round(err, 7),')\n'))
@@ -571,6 +577,7 @@ UpdateTheta_FCtemplateICA <- function(template_mean,
 #' @param template_FC FC template, for \code{nu} and \code{psi}
 #' @param ntime,nICs,nvox Number of timepoints, ICs, and voxels
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data
+#' @param verbose Print updates?
 #'
 #' @return The expected log posterior at the current values
 #'
@@ -580,7 +587,8 @@ compute_LL_FC <- function(post_sums,
                        prior_params,
                        template_FC,
                        ntime, nICs, nvox,
-                       BOLD){
+                       BOLD,
+                       verbose=FALSE){
 
   #parameter estimates
   tau_hat <- theta_new[[1]]
@@ -619,7 +627,7 @@ compute_LL_FC <- function(post_sums,
   part34 <- part3 + part4
 
   LL <- c(part12, part34)
-  print(LL)
+  if(verbose) print(LL)
   sum(LL)
 
 }

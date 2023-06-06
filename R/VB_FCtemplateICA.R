@@ -72,7 +72,7 @@ VB_FCtemplateICA <- function(
 
   #1. Compute initial estimates of posterior moments for G, A, S, V(S), tau^2
 
-  mu_A <- A0 #TxQ
+  mu_A <- scale(A0, center=FALSE) #TxQ
   mu_S <- t(S0) #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
@@ -113,6 +113,11 @@ VB_FCtemplateICA <- function(
     change_A <- mean(abs(A_new[[1]] - mu_A)/(abs(mu_A)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_A <- A_new[[1]]
     cov_A <- A_new[[2]]
+
+    #constrain each column of A to have var=1
+    sd_A <- apply(mu_A, 2, sd)
+    mu_A <- scale(mu_A, center=FALSE)
+    cov_A <- diag(1/sd_A) %*% cov_A %*% diag(1/sd_A)
 
     if(iter==1) ELBO_init <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
 

@@ -12,7 +12,8 @@ compute_LL_FC(
   ntime,
   nICs,
   nvox,
-  BOLD
+  BOLD,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ compute_LL_FC(
 \item{ntime, nICs, nvox}{Number of timepoints, ICs, and voxels}
 
 \item{BOLD}{(\eqn{V \times T} matrix) preprocessed fMRI data}
+
+\item{verbose}{Print updates?}
 }
 \value{
 The expected log posterior at the current values

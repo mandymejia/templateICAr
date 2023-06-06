@@ -25,6 +25,9 @@
 #'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
 #'  template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
+#' @param reduce_dim Reduce the temporal dimension of the data using PCA?
+#'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
+#'  estimation, but may result in more accurate results.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return  A list: theta (list of final parameter estimates), subICmean
@@ -55,7 +58,7 @@ NULL
 EM_templateICA.spatial <- function(
   template_mean, template_var, meshes, BOLD,
   theta0, C_diag, H, Hinv,
-  maxiter=100,  usePar=FALSE, epsilon=0.001, verbose=FALSE){
+  maxiter=100,  usePar=FALSE, epsilon=0.001, reduce_dim=TRUE, verbose=FALSE){
 
   INLA_check()
 
@@ -174,7 +177,7 @@ EM_templateICA.spatial <- function(
     template_mean, template_var, meshes,
     BOLD, C_diag, H=H, Hinv=Hinv,
     s0_vec, D, Dinv_s0, verbose=verbose
-  )
+  ) #control(minimize=TRUE) is default, so maximize negative expected LL
   if(verbose) print(Sys.time() - t00000)
 
   path_A <- result_squarem$p.inter[,1:(Q^2)]
@@ -222,7 +225,7 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=0.001, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=0.001, reduce_dim, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -267,15 +270,21 @@ EM_templateICA.independent <- function(
   )
   if(verbose) print(Sys.time() - t00000)
 
-  path_A <- result_squarem$p.inter[,1:(Q^2)]
-  path_nu0sq <- result_squarem$p.inter[,(Q^2)+1]
-  path_LL <- result_squarem$p.inter[,ncol(result_squarem$p.inter)] #note: this is the negative LL so it decreases
-  theta_path <- list(A=path_A, nu0sq=path_nu0sq, LL=path_LL)
-
   theta_MLE <- theta0 #initialize for format
-  theta_MLE$A <- matrix(result_squarem$par[1:(Q^2)], Q, Q)
-  theta_MLE$nu0_sq <- as.numeric(result_squarem$par[(Q^2)+1])
+  if(reduce_dim){
+    theta_MLE$A <- matrix(result_squarem$par[1:(Q^2)], Q, Q)
+    theta_MLE$nu0_sq <- as.numeric(result_squarem$par[(Q^2)+1])
+    path_A <- result_squarem$p.inter[,1:(Q^2)]
+    path_nu0sq <- result_squarem$p.inter[,(Q^2)+1]
+  } else {
+    theta_MLE$A <- matrix(result_squarem$par[1:(Q*ntime)], ntime, Q)
+    theta_MLE$nu0_sq <- as.numeric(result_squarem$par[(Q*ntime)+1])
+    path_A <- result_squarem$p.inter[,1:(Q*ntime)]
+    path_nu0sq <- result_squarem$p.inter[,(Q*ntime)+1]
+  }
   theta_MLE$LL <- as.numeric(names(result_squarem$par)[1])
+  path_LL <- result_squarem$p.inter[,ncol(result_squarem$p.inter)] #note: this is the negative LL so it should generally decrease
+  theta_path <- list(A=path_A, nu0sq=path_nu0sq, LL=path_LL)
 
   success <- result_squarem$convergence
   numiter <- result_squarem$fpevals #number of parameter update steps (approximately 3x the number of SQUAREM iterations)
@@ -415,8 +424,8 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
   A_i1 <- theta$A # nQ x nQ
   S_0 <- t(template_mean) # nQ x nV
   nu <- template_var # nV x nQ
-  C_inv <- diag(1/C_diag)  # nQ x nQ
-  Y_i <- t(BOLD) # nQ x nV
+  C_inv <- diag(1/C_diag)  # (nQ x nQ) or (nT x nT)
+  Y_i <- t(BOLD) # (nQ x nV) or (nT x nV)
   S_i_expect <- t(theta$Estep$miu_s) # nQ x nV
   S_i_sq_expect <- theta$Estep$miu_ssT # nV x nQ x nQ
 
@@ -444,7 +453,8 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
   # V is the number of locations
   # Q is the number of components
   nV <- ncol(Y_i)
-  nQ <- nL <- length(C_diag)
+  nT <- length(C_diag)
+  nQ <- nrow(S_0)
   l_vec <- seq(nQ)
 
   # Compute the quantities -----------------------------------------------------
@@ -453,7 +463,7 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
 
   # Q1/nV
   Q1 <- rep(0, 5)
-  Q1[1] <- -1 * nQ * nV / 2 * log(nu0_sq) / nV
+  Q1[1] <- -1 * nT * nV / 2 * log(nu0_sq) / nV
   # Q1[2] <- -1 * nV / 2 * sum(log(C_diag)) / nV  #all fixed quantities
   # Damon's version
   # Q1[3] <- -1 / 2 / nu0_sq * sum(vapply(seq(nV), function(vv){
@@ -483,13 +493,13 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
 
   # Q2/nV
   Q2 <- rep(0, 2)
-  # Q2_1 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
+  # Q2_1 <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nQ), function(qq){
   #   log(n0_q_sq[vv]) / nV
   # }, 0))}, 0))
-  # Q2[2] <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nL), function(qq){
+  # Q2[2] <- -1 / 2 * sum(vapply(seq(nV), function(vv){ sum(vapply(seq(nQ), function(qq){
   #   1 / nu[vv,qq] * (S_i_sq_expect[vv,qq,qq] - 2*S_0[qq,vv] + S_0[qq,vv]^2) / nV
   # }, 0))}, 0))
-  Q2[2] <- -1 / 2 * sum(vapply(seq(nL), function(qq){
+  Q2[2] <- -1 / 2 * sum(vapply(seq(nQ), function(qq){
     sum(1 / nu[,qq] * (S_i_sq_expect[,qq,qq] - 2*S_0[qq,]*S_i_expect[qq,] + S_0[qq,]^2)) / nV
   }, 0))
   Q2 <- sum(Q2)
@@ -924,8 +934,6 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
 
   #cat('Updating Error Variance nu0_sq \n')
 
-  #use A-hat or A?
-
   Cinv <- diag(1/C_diag)
   Cinv_A <- Cinv %*% A_hat
   At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
@@ -940,14 +948,15 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
   # }
 
-  #new version (use Trace instead of summing over v, and use trick that Tr(AB) = TR(BA) when AB is VxV but BA is QxQ)
+  #new version (use Trace instead of summing over v, and use trick that Tr(AB) = TR(BA) when AB is VxV but BA is QxQ or TxT)
   nu0sq_part1 <- sum(diag(Cinv %*% t(BOLD) %*% BOLD))
   nu0sq_part2 <- sum(diag(Cinv_A %*% t(miu_s) %*% BOLD))
   nu0sq_part3 <- sum(diag(At_Cinv_A %*% apply(miu_ssT, 2:3, sum) ))
 
-  nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-  #nu0sq_hat <- theta$nu0_sq
+  nu0sq_hat <- 1/(nT*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
 
+  #keep initial estimate of nu0sq
+  #nu0sq_hat <- theta$nu0_sq
 
   # RETURN NEW PARAMETER ESTIMATES
   theta_new$A <- A_hat
@@ -1193,16 +1202,14 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
   if(is.null(meshes)) do_spatial <- FALSE else do_spatial <- TRUE
 
   #convert theta vector to list format
-  A <- theta_vec[1:(Q*ntime)]
+  A <- matrix(theta_vec[1:(Q*ntime)], nrow=ntime, ncol=Q)
   if(!do_spatial) {
-    nu0_sq <- theta_vec[(Q^2)+1]
-    theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
-                  nu0_sq = nu0_sq)
+    nu0_sq <- theta_vec[(Q*ntime)+1]
+    theta <- list(A = A, nu0_sq = nu0_sq)
   }
   if(do_spatial) {
     kappa <- theta_vec[(Q*ntime)+(1:Q)]
-    theta <- list(A = matrix(A, nrow=ntime, ncol=Q),
-                  #nu0_sq = nu0_sq,
+    theta <- list(A = A, #nu0_sq = nu0_sq,
                   kappa = kappa)
   }
 
@@ -1271,7 +1278,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, H, Hinv, s0_vec, D, Dinv_s0, verbose){
 
   LL <- as.numeric(names(theta_vec)[1])
-  return(-1*LL)
+  return(-1*LL) #default in squarem is minimization
 
 }
 

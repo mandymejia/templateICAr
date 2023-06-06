@@ -118,12 +118,12 @@ estimate_nu <- function(var_FC, mean_FC){
   interval_LB <- nL+1
   interval_UB <- nL*100
   nu_vals <- seq(interval_LB, interval_UB)
-  penalty <- sapply(nu_vals, var_sq_err_constrained, p=nL, var=var_FC_UT, xbar = mean_FC_UT)
-  penalty[penalty >= 10000] <- NA
+  penalty <- sapply(nu_vals, templateICAr:::var_sq_err_constrained, p=nL, var=var_FC_UT, xbar = mean_FC_UT)
+  penalty[penalty >= 10000] <- NA #exclude values of nu for which IW variance would be smaller than empirical variance for at least 1 FC pair
   interval_UB <- nu_vals[max(which(!is.na(penalty)))] + 1
   interval_LB <- nu_vals[min(which(!is.na(penalty)))] - 1
 
-  nu_opt <- optimize(f=var_sq_err_constrained, interval=c(interval_LB,interval_UB), p=nL, var=var_FC_UT, xbar = mean_FC_UT)
+  nu_opt <- optimize(f=templateICAr:::var_sq_err_constrained, interval=c(interval_LB,interval_UB), p=nL, var=var_FC_UT, xbar = mean_FC_UT)
   return(nu_opt$minimum)
 
 }
