@@ -39,7 +39,6 @@ Encoding: UTF-8
 LazyData: true
 Imports:
     abind,
-    doParallel,
     excursions,
     expm,
     fMRItools (>= 0.2.2),
