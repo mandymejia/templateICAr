@@ -28,9 +28,6 @@
 #' @importFrom Matrix Diagonal
 #' @importFrom matrixStats rowVars
 #' @importFrom stats sd cor
-#' @import foreach
-#' @importFrom parallel makeCluster detectCores stopCluster
-#' @importFrom doParallel registerDoParallel
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
@@ -152,9 +149,11 @@ EM_FCtemplateICA <- function(template_mean,
         return_samp = FALSE
       )
     } else {
+
+      check_parallel_packages()
       num_threads <- min(parallel::detectCores(), Gibbs_nchain)
       cl <- parallel::makeCluster(num_threads)
-      registerDoParallel(cl)
+      doParallel::registerDoParallel(cl)
 
       post_sums_list <- foreach(ii = 1:Gibbs_nchain) %dopar% {
         Gibbs_AS_posteriorCPP(

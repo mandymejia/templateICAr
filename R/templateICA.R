@@ -9,9 +9,9 @@
 #'  is the number of data locations and \eqn{T} is the number of timepoints.
 #'
 #'  If multiple BOLD data are provided, they will be independently centered,
-#'  scaled, and detrended (if applicable), and then they will be concatenated
-#'  together followed by denoising (if applicable) and computing the initial
-#'  dual regression estimate.
+#'  scaled, detrended (if applicable), and denoised (if applicable). Then they
+#'  will be concatenated together followed by computing the initial dual 
+#'  regression estimate.
 #' @param template Template estimates in a format compatible with \code{BOLD},
 #'  from \code{\link{estimate_template}}.
 #' @param tvar_method Which calculation of the template variance to use:
@@ -131,7 +131,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce is_1 is_posNum
+#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol is_1 is_posNum
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'
@@ -204,21 +204,7 @@ templateICA <- function(
 
   # `usePar`
   if (!isFALSE(usePar)) {
-    parPkgs <- c("parallel", "doParallel")
-    parPkgs_missing <- !vapply(parPkgs, function(x){requireNamespace(x, quietly=TRUE)}, FALSE)
-    if (any(parPkgs_missing)) {
-      if (all(parPkgs_missing)) {
-        stop(paste0(
-          "Packages `parallel` and `doParallel` needed ",
-          "for `usePar` to loop over voxels. Please install them."), call.=FALSE
-        )
-      } else {
-        stop(paste0(
-          "Package `", parPkgs[parPkgs_missing], "` needed ",
-          "for `usePar` to loop over voxels. Please install it."), call.=FALSE
-        )
-      }
-    }
+    check_parallel_packages()
 
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
@@ -233,8 +219,9 @@ templateICA <- function(
   # `out_fname`?
 
   # `BOLD` ---------------------------------------------------------------------
+  cat("\n")
   # Determine the format of `BOLD`.
-  format <- fMRItools::infer_format_ifti(BOLD)[1]
+  format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
   FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
@@ -335,8 +322,9 @@ templateICA <- function(
 
   # Check that parameters match.
   pmatch <- c(
-    scale=scale, #scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT,
+    scale=scale, 
+    #scale_sm_FWHM=scale_sm_FWHM,
+    #detrend_DCT=detrend_DCT,
     center_Bcols=center_Bcols,
     # Q2=Q2, Q2_max=Q2_max,
     varTol=varTol
@@ -350,6 +338,13 @@ templateICA <- function(
         pmatch[pname], " here. These should match. (Proceeding anyway.)\n"
       ))
     }
+  }
+  if (detrend_DCT != template$params$detrend_DCT) {
+    warning(
+      "The `detrend_DCT` parameter was ",
+      template$params$detrend_DCT, " for the template, but is ",
+      detrend_DCT, " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
+    )
   }
 
   #check for FC template
@@ -669,22 +664,27 @@ templateICA <- function(
     detrend_DCT=detrend_DCT
   )
 
-  # Concatenate the data.
-  BOLD <- do.call(cbind, BOLD)
-  nT <- sum(nT)
-
   # Estimate and deal with nuisance ICs ----------------------------------------
-  x <- rm_nuisIC(BOLD, template_mean=template$mean, Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE)
-  BOLD <- x$BOLD
-  Q2_est <- x$Q2
+  x <- lapply(
+    BOLD, rm_nuisIC,
+    template_mean=template$mean, 
+    Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE
+  )
+  BOLD <- lapply(x, '[[', "BOLD")
+  Q2_est <- lapply(x, '[[', "Q2")
   rm(x)
 
   # Center and scale `BOLD` again, but do not detrend again. -------------------
-  BOLD <- norm_BOLD(
-    BOLD, center_rows=TRUE, center_cols=center_Bcols,
+  BOLD <- lapply(
+    BOLD, norm_BOLD,
+    center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     detrend_DCT=FALSE
   )
+
+  # Concatenate the data. ------------------------------------------------------
+  BOLD <- do.call(cbind, BOLD)
+  nT <- sum(nT)
 
   # Initialize with the dual regression-based estimate -------------------------
   if (verbose) { cat("Computing DR.\n") }
