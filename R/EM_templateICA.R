@@ -269,6 +269,10 @@ EM_templateICA.independent <- function(
     s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
+  # Because `result_squarem$p.intermed` is not always a matrix?
+  if (!is.matrix(result_squarem$p.intermed)) {
+    result_squarem$p.intermed <- t(as.matrix(result_squarem$p.intermed))
+  }
 
   theta_MLE <- theta0 #initialize for format
   if(reduce_dim){
