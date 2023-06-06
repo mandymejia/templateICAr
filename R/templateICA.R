@@ -683,7 +683,7 @@ templateICA <- function(
   }
 
   if (verbose) { cat("Pre-processing BOLD data.\n") }
-  # Nuisance regression --------------------------------------------------------
+  # Nuisance regression and scrubbing ------------------------------------------
   if (is.list(nuisance)) { stopifnot(length(nuisance)==nN) }
   if (is.list(scrub)) { stopifnot(length(scrub)==nN) }
   if (is.list(detrend_DCT)) { detrend_DCT <- as.numeric(detrend_DCT) }
@@ -694,7 +694,7 @@ templateICA <- function(
   }
 
   nmat <- vector("list", nN)
-  for (nn in seq(length(BOLD))) {
+  for (nn in seq(nN)) {
     # Collect nuisance matrix columns.
     nmat[nn] <- list(NULL)
     if (!is.null(nuisance)) {
@@ -725,7 +725,14 @@ templateICA <- function(
       BOLD[[nn]] <- nuisance_regression(BOLD[[nn]], nmat[[nn]])
     }
     # Drop scrubbed volumes, if applicable.
-    if (!is.null(scrub_nn)) { BOLD[[nn]] <- BOLD[[nn]][,-scrub_nn] }
+    if (!is.null(scrub_nn)) {
+      BOLD[[nn]] <- BOLD[[nn]][,-scrub_nn]
+      if (nn == nN) {
+        dBOLDs <- lapply(BOLD, dim)
+        nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
+        nTmin <- min(nT)
+      }
+    }
   }
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
 
