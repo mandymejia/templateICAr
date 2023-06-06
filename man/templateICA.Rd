@@ -12,6 +12,8 @@ templateICA(
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
+  nuisance = NULL,
+  scrub = NULL,
   detrend_DCT = 0,
   center_Bcols = FALSE,
   Q2 = NULL,
@@ -77,8 +79,29 @@ To create a \code{"surf"} object from data, see
 \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 resolution as the \code{BOLD} data.}
 
+\item{nuisance}{(Optional) Signals to regress from the data, given as a
+numeric matrix with the same number of rows as there are volumes in the
+\code{BOLD} data. If multiple sessions \code{BOLD} sessions are provided,
+this argument can be a list to use different nuisance regressors for
+different sessions. Nuisance regression is performed as a first step, before
+centering, scaling, and denoising. An intercept column will automatically be
+added to \code{nuisance}. If \code{NULL}, no extra nuisance signals will be
+regressed from the data, but a nuisance regression will still be used if
+warranted by \code{scrub} or \code{detrend_DCT}.}
+
+\item{scrub}{(Optional) A numeric vector of integers indicating the indices
+of volumes to scrub from the BOLD data. (List the volumes to remove, not the
+ones to keep.) If multiple sessions \code{BOLD} sessions are provided, this
+argument can be a list to remove different volumes for different sessions.
+Scrubbing is performed within nuisance regression by adding a spike
+regressor to the nuisance design matrix for each volume to scrub. If
+\code{NULL}, do not scrub.}
+
 \item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend.}
+to use for detrending. If \code{0} (default), do not detrend. Detrending
+is performed within nuisance regression by regressing out the DCT bases
+alongside other \code{nuisance} signals or spike regressors to \code{scrub}
+unwanted volumes.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
@@ -110,9 +133,12 @@ file paths or \code{"nifti"} objects. This is a brain map formatted as a
 binary array of the same spatial dimensions as the fMRI data, with
 \code{TRUE} corresponding to in-mask voxels.}
 
-\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis.
-If \code{NULL} (default), use all volumes. Subsetting is performed before
-any centering, scaling, detrending, and denoising.}
+\item{time_inds}{Subset of fMRI BOLD volumes to include in analysis, as a
+vector of numeric integers. If \code{NULL} (default), use all volumes.
+Subsetting is performed before any centering, scaling, detrending, and
+denoising. If multiple \code{BOLD} are provided, \code{time_inds} can be a
+list of the same length, with each element being a vector of numeric
+integers indicating the timepoints to include for each BOLD.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -184,8 +210,9 @@ A (spatial) template ICA object, which is a list containing:
 \code{subjICmean}, the \eqn{V \times L} estimated independent components
 \strong{S}; \code{subjICse}, the standard errors of \strong{S}; the
 \code{mask} of locations without template values due to too many low
-variance or missing values; and the function \code{params} such as
-the type of scaling and detrending performed.
+variance or missing values; the \code{nuisance} design matrix or matrices if
+applicable; and the function \code{params} such as the type of scaling and
+detrending performed.
 
 If \code{BOLD} represented CIFTI or NIFTI data, \code{subjICmean} and
 \code{subjICse} will be formatted as \code{"xifti"} or \code{"nifti"}

@@ -43,6 +43,7 @@ Imports:
     excursions,
     expm,
     fMRItools (>= 0.2.2),
+    fMRIscrub,
     foreach,
     ica,
     Matrix,

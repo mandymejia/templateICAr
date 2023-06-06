@@ -18,6 +18,7 @@ EM_templateICA.spatial(
   maxiter = 100,
   usePar = FALSE,
   epsilon = 0.001,
+  reduce_dim = TRUE,
   verbose = FALSE
 )
 
@@ -31,6 +32,7 @@ EM_templateICA.independent(
   Hinv,
   maxiter = 100,
   epsilon = 0.001,
+  reduce_dim,
   usePar = FALSE,
   verbose
 )
@@ -65,6 +67,10 @@ to use or \code{TRUE}, which will use the number on the PC minus two. Not implem
 template ICA.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
+
+\item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
+Default: \code{TRUE}. Skipping dimension reduction will slow the model
+estimation, but may result in more accurate results.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
