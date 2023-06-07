@@ -274,7 +274,7 @@ EM_templateICA.independent <- function(
   if(reduce_dim){
     theta_MLE$A <- matrix(result_squarem$par[1:(Q^2)], Q, Q)
     theta_MLE$nu0_sq <- as.numeric(result_squarem$par[(Q^2)+1])
-    path_A <- result_squarem$p.inter[,1:(Q^2)]
+    path_A <- result_squarem$p.inter[,1:(Q^2)] #CHECK THIS WHEN reduce_dim==TRUE
     path_nu0sq <- result_squarem$p.inter[,(Q^2)+1]
   } else {
     theta_MLE$A <- matrix(result_squarem$par[1:(Q*ntime)], ntime, Q)
