@@ -389,6 +389,7 @@ templateICA <- function(
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
     xii1 <- template$dat_struct
+    if (!is.null(resamp_res)) { xii1 <- resample_xifti(xii1, resamp_res = resamp_res) }
     # Check brainstructures.
     tbs <- names(xii1$data)[!vapply(xii1$data, is.null, FALSE)]
     bs2 <- c(left="cortex_left", right="cortex_right", subcortical="subcort")[brainstructures]
@@ -694,6 +695,7 @@ templateICA <- function(
   }
 
   nmat <- vector("list", nN)
+  nT_pre <- nT
   for (nn in seq(nN)) {
     # Collect nuisance matrix columns.
     nmat[nn] <- list(NULL)
@@ -708,8 +710,8 @@ templateICA <- function(
       scrub_nn <- if (is.list(scrub)) { scrub[[nn]] } else { scrub }
       if (is.logical(scrub_nn)) { scrub_nn <- which(scrub_nn) }
       if (length(scrub_nn) > 0) {
-        scrub_nn <- fMRIscrub::flags_to_nuis_spikes(scrub_nn, nT[nn])
-        nmat[[nn]] <- add_to_nuis(scrub_nn, nmat[[nn]])
+        scrub_nn_mat <- fMRIscrub::flags_to_nuis_spikes(scrub_nn, nT[nn])
+        nmat[[nn]] <- add_to_nuis(scrub_nn_mat, nmat[[nn]])
       } else {
         scrub_nn <- NULL
       }
@@ -727,13 +729,15 @@ templateICA <- function(
     # Drop scrubbed volumes, if applicable.
     if (!is.null(scrub_nn)) {
       BOLD[[nn]] <- BOLD[[nn]][,-scrub_nn]
-      if (nn == nN) {
-        dBOLDs <- lapply(BOLD, dim)
-        nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
-        nTmin <- min(nT)
-      }
+      dBOLDs <- lapply(BOLD, dim)
+      nT <- vapply(dBOLDs, function(x){x[ldB]}, 0)
+      nTmin <- min(nT)
     }
   }
+  if (sum(nT) != sum(nT_pre)) {
+    cat('Timepoints after scrubbing:    ', sum(nT), "\n")
+  }
+
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
 
   # Center and scale `BOLD` ----------------------------------------------------
