@@ -225,7 +225,8 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, maxiter=100, epsilon=0.001, reduce_dim, usePar=FALSE, verbose){
+  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, 
+  maxiter=100, epsilon=0.001, reduce_dim=TRUE, usePar=FALSE, verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 

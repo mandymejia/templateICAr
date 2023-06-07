@@ -32,7 +32,7 @@ EM_templateICA.independent(
   Hinv,
   maxiter = 100,
   epsilon = 0.001,
-  reduce_dim,
+  reduce_dim = TRUE,
   usePar = FALSE,
   verbose
 )
