@@ -12,6 +12,10 @@
 resample_template <- function(x, resamp_res, verbose=FALSE){
   stopifnot(inherits(x, "template.cifti"))
 
+  if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+  }
+
   # Resample the data.
   if (verbose) { cat("Resampling templates.\n") }
   x$template <- lapply(x$template, function(y){

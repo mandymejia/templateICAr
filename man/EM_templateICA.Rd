@@ -32,7 +32,7 @@ EM_templateICA.independent(
   Hinv,
   maxiter = 100,
   epsilon = 0.001,
-  reduce_dim = TRUE,
+  reduce_dim = FALSE,
   usePar = FALSE,
   verbose
 )
@@ -69,8 +69,8 @@ template ICA.}
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
 \item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
-Default: \code{TRUE}. Skipping dimension reduction will slow the model
-estimation, but may result in more accurate results.}
+Default: \code{TRUE} for the spatial EM algorithm, and \code{FALSE} for the
+independent EM algorithm.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }

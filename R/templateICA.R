@@ -389,7 +389,12 @@ templateICA <- function(
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
     xii1 <- template$dat_struct
-    if (!is.null(resamp_res)) { xii1 <- resample_xifti(xii1, resamp_res = resamp_res) }
+    if (!is.null(resamp_res)) { 
+      if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+        stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+      }
+      xii1 <- ciftiTools::resample_xifti(xii1, resamp_res = resamp_res)
+    }
     # Check brainstructures.
     tbs <- names(xii1$data)[!vapply(xii1$data, is.null, FALSE)]
     bs2 <- c(left="cortex_left", right="cortex_right", subcortical="subcort")[brainstructures]
