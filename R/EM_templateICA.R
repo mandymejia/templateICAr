@@ -5,7 +5,8 @@
 #'
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps for each IC in template
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps 
+#'  for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
 #'  \code{\link{make_mesh}}) for each brain structure.
@@ -21,9 +22,9 @@
 #'  same smoothness parameter, \eqn{\kappa}
 # @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
-#'  to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
-#'  template ICA.
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. 
+#'  Can be the number of cores to use or \code{TRUE}, which will use the number 
+#'  on the PC minus two. Not implemented yet for spatial template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
 #'  Default: \code{TRUE} for the spatial EM algorithm, and \code{FALSE} for the
@@ -62,7 +63,9 @@ EM_templateICA.spatial <- function(
 
   INLA_check()
 
-  if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
+  if(!all.equal(dim(template_var), dim(template_mean))) {
+    stop('The dimensions of template_mean and template_var must match.')
+  }
 
   ntime <- ncol(BOLD) #length of timeseries
   nvox <- nrow(BOLD) #number of data locations
@@ -164,19 +167,22 @@ EM_templateICA.spatial <- function(
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (required for squarem)
 
   t00000 <- Sys.time()
+  update_nu0sq <- FALSE # for spatial
   saveRDS(list(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     tmean=template_mean, tvar=template_var, meshes=meshes,
     BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv,
-    s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, verbose=verbose
+    s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, 
+    update_nu0sq=update_nu0sq, verbose=verbose
   ), "tICA_spatial_pre_squarem1")
   result_squarem <- squarem(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes,
     BOLD, C_diag, H=H, Hinv=Hinv,
-    s0_vec, D, Dinv_s0, verbose=verbose
+    s0_vec, D, Dinv_s0,
+    update_nu0sq=update_nu0sq, verbose=verbose
   ) #control(minimize=TRUE) is default, so maximize negative expected LL
   if(verbose) print(Sys.time() - t00000)
 
@@ -210,23 +216,25 @@ EM_templateICA.spatial <- function(
                                              verbose=verbose,
                                              return_MAP=TRUE)
 
-  result <- list(subjICmean=mu_cov_s$mu_s,
-                 subjICcov=mu_cov_s$cov_s,
-                 Omega = mu_cov_s$Omega_s,
-                 theta_MLE=theta_MLE,
-                 theta_path=theta_path,
-                 success=success,
-                 numiter=numiter,
-                 squarem = result_squarem,
-                 template_mean = template_mean,
-                 template_var=template_var)
-  return(result)
+  list(
+    subjICmean=mu_cov_s$mu_s,
+    subjICcov=mu_cov_s$cov_s,
+    Omega = mu_cov_s$Omega_s,
+    theta_MLE=theta_MLE,
+    theta_path=theta_path,
+    success=success,
+    numiter=numiter,
+    squarem = result_squarem,
+    template_mean = template_mean,
+    template_var=template_var
+  )
 }
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
   template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, 
-  maxiter=100, epsilon=0.001, reduce_dim=FALSE, usePar=FALSE, verbose){
+  maxiter=100, epsilon=0.001, reduce_dim=FALSE, usePar=FALSE, 
+  verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
 
@@ -255,19 +263,22 @@ EM_templateICA.independent <- function(
   names(theta0_vec)[1] <- 0 #store LL value in names of theta0_vec (hack required for squarem)
 
   t00000 <- Sys.time()
+  update_nu0sq <- !reduce_dim
   # saveRDS(list(
   #   par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
   #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
   #   tmean=template_mean, tvar=template_var, meshes=NULL,
   #   BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv,
-  #   s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=TRUE
+  #   s0_vec=NULL, D=NULL, Dinv_s0=NULL, 
+  #   update_nu0sq=update_nu0sq, verbose=TRUE
   # ), "tICA_pre_squarem1")
   result_squarem <- squarem(
     par=theta0_vec, fixptfn = UpdateThetaSQUAREM_templateICA, objfn=LL_SQUAREM,
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes=NULL,
     BOLD, C_diag, H=H, Hinv=Hinv,
-    s0_vec=NULL, D=NULL, Dinv_s0=NULL, verbose=verbose
+    s0_vec=NULL, D=NULL, Dinv_s0=NULL, 
+    update_nu0sq=update_nu0sq, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
   # Because `result_squarem$p.intermed` is not always a matrix?
@@ -296,14 +307,17 @@ EM_templateICA.independent <- function(
 
   ### Compute final posterior mean of subject ICs
   if(verbose) cat('Computing final posterior mean of subject ICs \n')
-  mu_cov_s <- UpdateTheta_templateICA.independent(template_mean,
-                                              template_var,
-                                              BOLD,
-                                              theta_MLE[1:2],
-                                              C_diag,
-                                              H, Hinv,
-                                              verbose=verbose,
-                                              return_MAP=TRUE)
+  mu_cov_s <- UpdateTheta_templateICA.independent(
+    template_mean,
+    template_var,
+    BOLD,
+    theta_MLE[1:2],
+    C_diag,
+    H, Hinv,
+    update_nu0sq=update_nu0sq,
+    return_MAP=TRUE,
+    verbose=verbose
+  )
   miu_s <- mu_cov_s$miu_s
   var_s <- mu_cov_s$var_s
 
@@ -313,7 +327,7 @@ EM_templateICA.independent <- function(
   #
   #   if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
   #   t00 <- Sys.time()
-  #   theta_new = UpdateTheta_templateICA.independent(template_mean, template_var, BOLD, theta, C_diag, verbose=verbose)
+  #   theta_new = UpdateTheta_templateICA.independent(template_mean, template_var, BOLD, theta, C_diag, update_nu0sq=!reduce_dim, verbose=verbose)
   #   theta_old <- theta_new
   #   if(verbose) print(Sys.time() - t00)
   #
@@ -394,17 +408,17 @@ EM_templateICA.independent <- function(
   #   }
   # }
 
-  result <- list(subjICmean=miu_s,
-                 subjICse=sqrt(var_s),
-                 theta_MLE=theta_MLE,
-                 theta_path=theta_path,
-                 success=success,
-                 numiter=numiter,
-                 squarem = result_squarem,
-                 template_mean = template_mean,
-                 template_var = template_var)
-
-  return(result)
+  list(
+    subjICmean=miu_s,
+    subjICse=sqrt(var_s),
+    theta_MLE=theta_MLE,
+    theta_path=theta_path,
+    success=success,
+    numiter=numiter,
+    squarem = result_squarem,
+    template_mean = template_mean,
+    template_var = template_var
+  )
 }
 
 
@@ -531,13 +545,18 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
 #' @param s0_vec Vectorized template means
 #' @param D Sparse diagonal matrix of template standard deviations
 #' @param Dinv_s0 The inverse of D times s0_vec
-# @param common_smoothness If \code{TRUE}. use the common smoothness version of the spatial template ICA model, which assumes that all IC's have the same smoothness parameter, \eqn{\kappa}
+# @param common_smoothness If \code{TRUE}. use the common smoothness version 
+# of the spatial template ICA model, which assumes that all IC's have the same 
+# smoothness parameter, \eqn{\kappa}
+#' @param update_nu0sq For non-spatial model: updating \code{nu0sq} is recommended
+#'  if dimension reduction was not performed, and is not recommended if it was.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #' @param return_MAP If \code{TRUE}. return the posterior mean and precision of
 #'  the latent fields instead of the parameter estimates. Default: \code{FALSE}.
 #' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
 #'
-#' @return An updated list of parameter estimates, theta, OR if return_MAP=TRUE, the posterior mean and precision of the latent fields
+#' @return An updated list of parameter estimates, theta, OR if 
+#'  \code{return_MAP=TRUE}, the posterior mean and precision of the latent fields
 #'
 NULL
 
@@ -546,7 +565,10 @@ NULL
 #' @importFrom stats optimize
 # @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix Matrix sparseMatrix
-UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes, BOLD, theta, C_diag, H, Hinv, s0_vec, D, Dinv_s0, verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
+UpdateTheta_templateICA.spatial <- function(
+  template_mean, template_var, meshes, 
+  BOLD, theta, C_diag, H, Hinv, s0_vec, D, Dinv_s0, 
+  verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
   INLA_check()
 
@@ -834,8 +856,12 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
     # }
 
     #if(common_smoothness){
-      kappa_opt <- optimize(LL2_kappa, lower=0, upper=5, maximum=TRUE,
-                            Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, OplusW=OplusW, u=u, v=v, Q=Q) #Q=Q to indicate common smoothness model to the LL2_kappa function
+      kappa_opt <- optimize(
+        LL2_kappa, lower=0, upper=5, maximum=TRUE,
+        Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, 
+        OplusW=OplusW, u=u, v=v, 
+        Q=Q #Q=Q to indicate common smoothness model to the LL2_kappa function
+      )
       LL2 <- kappa_opt$objective
       kappa_opt <- rep(kappa_opt$maximum, Q)
     # } else {
@@ -863,7 +889,10 @@ UpdateTheta_templateICA.spatial <- function(template_mean, template_var, meshes,
 }
 
 #' @rdname UpdateTheta_templateICA
-UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOLD, theta, C_diag, H, Hinv, verbose, return_MAP=FALSE){
+UpdateTheta_templateICA.independent <- function(
+  template_mean, template_var, BOLD, 
+  theta, C_diag, H, Hinv, 
+  update_nu0sq =TRUE, return_MAP=FALSE, verbose=TRUE){
 
   nQ <- ncol(template_mean)
   nV <- nrow(BOLD)
@@ -880,8 +909,6 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   nu0C_inv <- diag(1/(C_diag*nu0_sq)) #Sigma0_inv in matlab code # TxT
   At_nu0Cinv <- crossprod(A, nu0C_inv) # QxT
   At_nu0Cinv_A <- At_nu0Cinv %*% A # QxQ
-
-  #if(verbose) cat('Updating A \n')
 
   #store posterior moments for M-step of nu0_sq
   miu_s <- matrix(NA, nrow=nV, ncol=nQ)
@@ -943,25 +970,25 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   Cinv_A <- Cinv %*% A_hat
   At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
 
-  # #old version
-  # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
-  # for(vv in 1:nV){
-  #
-  #   y_v <- BOLD[vv,]
-  #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
-  #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[vv,]
-  #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
-  # }
-
-  #new version (use Trace instead of summing over v, and use trick that Tr(AB) = TR(BA) when AB is VxV but BA is QxQ or TxT)
-  nu0sq_part1 <- sum(diag(Cinv %*% t(BOLD) %*% BOLD))
-  nu0sq_part2 <- sum(diag(Cinv_A %*% t(miu_s) %*% BOLD))
-  nu0sq_part3 <- sum(diag(At_Cinv_A %*% apply(miu_ssT, 2:3, sum) ))
-
-  nu0sq_hat <- 1/(nT*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
-
-  #keep initial estimate of nu0sq
-  #nu0sq_hat <- theta$nu0_sq
+  if (update_nu0sq) {
+    # #old version
+    # nu0sq_part1 <- nu0sq_part2 <- nu0sq_part3 <- 0
+    # for(vv in 1:nV){
+    #
+    #   y_v <- BOLD[vv,]
+    #   nu0sq_part1 <- nu0sq_part1 + t(y_v) %*% Cinv %*% y_v
+    #   nu0sq_part2 <- nu0sq_part2 + t(y_v) %*% Cinv_A %*% miu_s[vv,]
+    #   nu0sq_part3 <- nu0sq_part3 + sum(diag(At_Cinv_A %*% miu_ssT[vv,,]))
+    # }
+    #new version (use Trace instead of summing over v, and use trick that Tr(AB) = TR(BA) when AB is VxV but BA is QxQ or TxT)
+    nu0sq_part1 <- sum(diag(Cinv %*% t(BOLD) %*% BOLD))
+    nu0sq_part2 <- sum(diag(Cinv_A %*% t(miu_s) %*% BOLD))
+    nu0sq_part3 <- sum(diag(At_Cinv_A %*% apply(miu_ssT, 2:3, sum) ))
+    nu0sq_hat <- 1/(nT*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+  } else {
+    #keep initial estimate of nu0sq
+    nu0sq_hat <- theta$nu0_sq
+  }
 
   # RETURN NEW PARAMETER ESTIMATES
   theta_new$A <- A_hat
@@ -969,7 +996,9 @@ UpdateTheta_templateICA.independent <- function(template_mean, template_var, BOL
   theta_new$Estep <- Estep
 
   # COMPUTE LL FOR SQUAREM
-  theta_new$LL[1] <- compute_LL_std(theta_new, template_mean, template_var, C_diag, BOLD, verbose=verbose)
+  theta_new$LL[1] <- compute_LL_std(
+    theta_new, template_mean, template_var, C_diag, BOLD, verbose=verbose
+  )
 
   return(theta_new)
 }
@@ -1191,13 +1220,20 @@ bdiag_m <- function(lmat) {
 #' @param D Passed to UpdateTheta_templateICA function
 #' @param Dinv_s0 Passed to UpdateTheta_templateICA function
 # @param common_smoothness Passed to UpdateTheta_templateICA function
+#' @param update_nu0sq For non-spatial model: updating \code{nu0sq} is recommended
+#'  if dimension reduction was not performed, and is not recommended if it was.
 #' @param verbose Passed to UpdateTheta_templateICA function
 #'
 #' @return Vector of updated parameter values
 #'
 #' @keywords internal
 #'
-UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, H, Hinv, s0_vec, D, Dinv_s0, verbose){
+UpdateThetaSQUAREM_templateICA <- function(
+  theta_vec, 
+  template_mean, template_var, meshes, 
+  BOLD, C_diag, H, Hinv, 
+  s0_vec, D, Dinv_s0, 
+  update_nu0sq, verbose){
 
   ntime <- ncol(BOLD) #length of timeseries
   nvox <- nrow(BOLD) #number of data locations
@@ -1247,6 +1283,7 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
       C_diag,
       H,
       Hinv,
+      update_nu0sq=update_nu0sq,
       verbose=verbose
     )
   }
@@ -1263,28 +1300,15 @@ UpdateThetaSQUAREM_templateICA <- function(theta_vec, template_mean, template_va
 #' Helper function for SQUAREM for extracting log likelihood
 #'
 #' @param theta_vec Vector of current parameter values
-#' @param template_mean Not used, but squarem will return error without
-#' @param template_var  Not used, but squarem will return error without
-#' @param meshes  Not used, but squarem will return error without
-#' @param BOLD  Not used, but squarem will return error without
-#' @param C_diag  Not used, but squarem will return error without
-#' @param H  Not used, but squarem will return error without
-#' @param Hinv  Not used, but squarem will return error without
-#' @param s0_vec  Not used, but squarem will return error without
-#' @param D  Not used, but squarem will return error without
-#' @param Dinv_s0  Not used, but squarem will return error without
-# @param common_smoothness  Not used, but squarem will return error without
-#' @param verbose  Not used, but squarem will return error without
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
 #' @keywords internal
 #'
-LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_diag, H, Hinv, s0_vec, D, Dinv_s0, verbose){
+LL_SQUAREM <- function(theta_vec, ...){
 
   LL <- as.numeric(names(theta_vec)[1])
   return(-1*LL) #default in squarem is minimization
-
 }
 
 
@@ -1313,7 +1337,8 @@ LL_SQUAREM <- function(theta_vec, template_mean, template_var, meshes, BOLD, C_d
 #' template ICA.  In the model where \eqn{\kappa_q} can be different for each IC \eqn{q}, the optimization function factorizes over the \eqn{\kappa_q}'s.  This function computes
 #' the value of the part of the optimization function pertaining to one of the \eqn{\kappa_q}'s.
 #'
-LL2_kappa <- function(kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
+LL2_kappa <- function(
+  kappa, Amat, Fmat, Gmat, GFinvG, OplusW, u, v, C1 = 1/(4*pi), Q=NULL){
 
   #get data and nodata indices of mesh vertices
   N <- ncol(Amat) #number of mesh locations

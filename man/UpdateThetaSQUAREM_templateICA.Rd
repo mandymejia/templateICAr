@@ -16,6 +16,7 @@ UpdateThetaSQUAREM_templateICA(
   s0_vec,
   D,
   Dinv_s0,
+  update_nu0sq,
   verbose
 )
 }
@@ -37,6 +38,9 @@ UpdateThetaSQUAREM_templateICA(
 \item{D}{Passed to UpdateTheta_templateICA function}
 
 \item{Dinv_s0}{Passed to UpdateTheta_templateICA function}
+
+\item{update_nu0sq}{For non-spatial model: updating \code{nu0sq} is recommended
+if dimension reduction was not performed, and is not recommended if it was.}
 
 \item{verbose}{Passed to UpdateTheta_templateICA function}
 }

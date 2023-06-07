@@ -718,25 +718,14 @@ compute_LL_FC <- function(post_sums,
 # #' Helper function for SQUAREM for extracting log likelihood
 # #'
 # #' @param theta_vec Vector of current parameter values
-# #' @param template_mean Not used, but squarem will return error without
-# #' @param template_var  Not used, but squarem will return error without
-# #' @param template_FC  Not used, but squarem will return error without
-# #' @param BOLD  Not used, but squarem will return error without
-# #' @param S  Not used, but squarem will return error without
-# #' @param Y_sq_sum  Not used, but squarem will return error without
-# #' @param prior_params  Not used, but squarem will return error without
-# #' @param sigma2_alpha  Not used, but squarem will return error without
-# #' @param verbose  Not used, but squarem will return error without
 # #'
 # #' @return Negative log-likelihood given current values of parameters
 # #'
 # #' @keywords internal
 # #'
-# LL_SQUAREM_FC <- function(theta_vec, template_mean, template_var, template_FC, BOLD, S, Y_sq_sum, prior_params, sigma2_alpha, verbose, post_sums){
-#
+# LL_SQUAREM_FC <- function(theta_vec){
 #   LL <- as.numeric(names(theta_vec)[1])
 #   return(-1*LL)
-#
 # }
 
 ## NOTE: Tried to implement SQUAREM in April 2023 but it didn't go past the first iteration.

@@ -4,45 +4,10 @@
 \alias{LL_SQUAREM}
 \title{Log-likelihood SQUAREM}
 \usage{
-LL_SQUAREM(
-  theta_vec,
-  template_mean,
-  template_var,
-  meshes,
-  BOLD,
-  C_diag,
-  H,
-  Hinv,
-  s0_vec,
-  D,
-  Dinv_s0,
-  verbose
-)
+LL_SQUAREM(theta_vec, ...)
 }
 \arguments{
 \item{theta_vec}{Vector of current parameter values}
-
-\item{template_mean}{Not used, but squarem will return error without}
-
-\item{template_var}{Not used, but squarem will return error without}
-
-\item{meshes}{Not used, but squarem will return error without}
-
-\item{BOLD}{Not used, but squarem will return error without}
-
-\item{C_diag}{Not used, but squarem will return error without}
-
-\item{H}{Not used, but squarem will return error without}
-
-\item{Hinv}{Not used, but squarem will return error without}
-
-\item{s0_vec}{Not used, but squarem will return error without}
-
-\item{D}{Not used, but squarem will return error without}
-
-\item{Dinv_s0}{Not used, but squarem will return error without}
-
-\item{verbose}{Not used, but squarem will return error without}
 }
 \value{
 Negative log-likelihood given current values of parameters
