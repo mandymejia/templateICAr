@@ -155,7 +155,8 @@ EM_FCtemplateICA <- function(template_mean,
       cl <- parallel::makeCluster(num_threads)
       doParallel::registerDoParallel(cl)
 
-      post_sums_list <- foreach(ii = 1:Gibbs_nchain) %dopar% {
+      `%dopar%` <- foreach::`%dopar%`
+      post_sums_list <- foreach::foreach(ii = 1:Gibbs_nchain) %dopar% {
         Gibbs_AS_posteriorCPP(
           nsamp = Gibbs_nsamp,
           nburn = Gibbs_nburn,
