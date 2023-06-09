@@ -32,7 +32,7 @@ EM_templateICA.independent(
   Hinv,
   maxiter = 100,
   epsilon = 0.001,
-  reduce_dim,
+  reduce_dim = FALSE,
   usePar = FALSE,
   verbose
 )
@@ -41,7 +41,8 @@ EM_templateICA.independent(
 \item{template_mean}{(\eqn{V \times Q} matrix) mean maps for each IC in template,
 where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.}
 
-\item{template_var}{(\eqn{V \times Q} matrix) between-subject variance maps for each IC in template}
+\item{template_var}{(\eqn{V \times Q} matrix) between-subject variance maps
+for each IC in template}
 
 \item{meshes}{\code{NULL} for spatial independence model, otherwise a list of
 objects of class "templateICA_mesh" containing the triangular mesh (see
@@ -62,15 +63,15 @@ same smoothness parameter, \eqn{\kappa}}
 
 \item{maxiter}{Maximum number of EM iterations. Default: 100.}
 
-\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}. Can be the number of cores
-to use or \code{TRUE}, which will use the number on the PC minus two. Not implemented yet for spatial
-template ICA.}
+\item{usePar}{Parallelize the computation over voxels? Default: \code{FALSE}.
+Can be the number of cores to use or \code{TRUE}, which will use the number
+on the PC minus two. Not implemented yet for spatial template ICA.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default: 0.001.}
 
 \item{reduce_dim}{Reduce the temporal dimension of the data using PCA?
-Default: \code{TRUE}. Skipping dimension reduction will slow the model
-estimation, but may result in more accurate results.}
+Default: \code{TRUE} for the spatial EM algorithm, and \code{FALSE} for the
+independent EM algorithm.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }

@@ -1041,15 +1041,6 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 #' Helper function for SQUAREM for extracting the negative of the log likelihood
 #'
 #' @param theta_vec Vector of current parameter values
-#' @param template_mean Not used, but squarem will return error without
-#' @param template_var  Not used, but squarem will return error without
-#' @param meshes  Not used, but squarem will return error without
-#' @param BOLD  Not used, but squarem will return error without
-#' @param C_diag  Not used, but squarem will return error without
-#' @param s0_vec_list  Not used, but squarem will return error without
-#' @param D_list  Not used, but squarem will return error without
-#' @param Dinv_s0_list  Not used, but squarem will return error without
-#' @param verbose  Not used, but squarem will return error without
 #'
 #' @return Negative log-likelihood given current values of parameters
 #'
@@ -1057,23 +1048,12 @@ UpdateThetaSQUAREM_diagnosticICA <- function(theta_vec,
 #'
 #' @export
 #'
-LL_SQUAREM_diagnosticICA <- function(theta_vec,
-                                     template_mean,
-                                     template_var,
-                                     meshes,
-                                     BOLD,
-                                     C_diag,
-                                     s0_vec_list,
-                                     D_list,
-                                     Dinv_s0_list,
-                                     verbose){
-
+LL_SQUAREM_diagnosticICA <- function(theta_vec, ...){
   LL <- names(theta_vec)[1]
   #print(LL)
   LL <- as.numeric(LL)
   print(LL)
   return(-1*LL)
-
 }
 
 
