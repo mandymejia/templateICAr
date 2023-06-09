@@ -130,7 +130,6 @@ EM_FCtemplateICA <- function(template_mean,
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ EM ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     theta_old <- theta_new
     t00 <- Sys.time()
-    ### TO DO: RUN GIBBS SAMPLER TO SAMPLE FROM (A,S) AND UPDATE POSTERIOR_MOMENTS (RETURN SUMS OVER t=1,...,ntime as above)
     # tricolon <- NULL; Gibbs_AS_posterior <- function(x, ...){NULL} # Damon added this to avoid warnings.
     # post_sums <- Gibbs_AS_posterior(tricolon, final=FALSE)
 
