@@ -32,7 +32,8 @@ and \code{"rds"} for data input.}
 If \code{is.null(out_fname)}, the templates in data matrix,
 \code{"xifti"}, or \code{"nifti"} format, to match the format of the
 original BOLD data. Otherwise, the paths to the new files specified by
-\code{out_fname}.
+\code{out_fname}. If template includes functional connectivity components,
+the FC template and its mean and variance will be included.
 }
 \description{
 Export the templates (mean and variance) as separate files for

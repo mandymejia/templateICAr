@@ -1,10 +1,10 @@
 #' Apply data structure to templates
-#' 
+#'
 #' @param template The template
 #' @param FORMAT "CIFTI", "GIFTI", "NIFTI", or "DATA"
 #' @param dat_struct The data structure
 #' @param params The params
-#' 
+#'
 #' @keywords internal
 struct_template <- function(template, FORMAT, dat_struct, params){
   if (FORMAT == "CIFTI") {
@@ -40,29 +40,30 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 }
 
 #' Export template
-#' 
+#'
 #' Export the templates (mean and variance) as separate files for
 #'  visualization or processing outside of \code{templateICAr}.
-#' 
+#'
 #' @param x The result of \code{estimate_template}
 #' @param out_fname Use \code{NULL} (default) to just return the template
-#'  objects directly. Otherwise, use a character vector of length 3 or 4 of file 
+#'  objects directly. Otherwise, use a character vector of length 3 or 4 of file
 #'  path(s) to save the output to:
 #'  the mean template, the variance template, the variance decomposition, and
-#'  the FC template if present, in that order. If one file name is provided, 
+#'  the FC template if present, in that order. If one file name is provided,
 #'  it will be appended with
 #'  \code{"_mean.[file_ext]"} for the template mean map,
-#'  \code{"_var.[file_ext]"} for the template variance map, 
-#'  \code{"_varDecomp.rds"} for the variance decomposition, and 
+#'  \code{"_var.[file_ext]"} for the template variance map,
+#'  \code{"_varDecomp.rds"} for the variance decomposition, and
 #'  \code{"_FC.rds"} where \code{[file_ext]}
 #'  will be \code{"dscalar.nii"} for CIFTI input, \code{"nii"} for NIFTI input,
 #'  and \code{"rds"} for data input.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
-#' 
-#' @return If \code{is.null(out_fname)}, the templates in data matrix, 
+#'
+#' @return If \code{is.null(out_fname)}, the templates in data matrix,
 #'  \code{"xifti"}, or \code{"nifti"} format, to match the format of the
 #'  original BOLD data. Otherwise, the paths to the new files specified by
-#'  \code{out_fname}.
+#'  \code{out_fname}. If template includes functional connectivity components,
+#'  the FC template and its mean and variance will be included.
 #'
 #' @export
 #'
@@ -71,9 +72,9 @@ struct_template <- function(template, FORMAT, dat_struct, params){
 #'  tm <- estimate_template(cii1_fnames, cii2_fnames, gICA_fname)
 #'  export_template(tm, out_fname="my_template", var_method="unbiased")
 #' }
-#' 
+#'
 export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unbiased")){
-  
+
   # Check template format.
   FORMAT <- class(x)[grepl("template", class(x))]
   if (length(FORMAT) != 1) { stop("Not a template.") }
@@ -136,6 +137,20 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     FC = x$template$FC
   )
 
+  #compute mean and variance of FC
+  if(FC){
+    Q <- nrow(x$template$FC$psi)
+    FC_mean <- x$template$FC$psi/(x$template$FC$nu - Q - 1)
+    FC_var <- FC_mean*0
+    for(q1 in 1:Q){
+      for(q2 in 1:Q){
+        FC_mean[q1,q2] <- IW_var(x$template$FC$nu, Q, FC_mean[q1,q2], FC_mean[q1,q1], FC_mean[q2,q2])
+      }
+    }
+    x$template$FC$mean <- FC_mean
+    x$template$FC$var <- FC_var
+  }
+
   # Add params to `"xifti"` metadata; resample it.
   if (FORMAT == "CIFTI") {
     x$template$mean$meta$cifti$misc <- c(list(template="mean"), x$params)
@@ -173,3 +188,6 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     return(invisible(out_fname))
   }
 }
+
+
+
