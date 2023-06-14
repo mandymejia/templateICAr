@@ -144,7 +144,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     FC_var <- FC_mean*0
     for(q1 in 1:Q){
       for(q2 in 1:Q){
-        FC_mean[q1,q2] <- IW_var(x$template$FC$nu, Q, FC_mean[q1,q2], FC_mean[q1,q1], FC_mean[q2,q2])
+        FC_var[q1,q2] <- IW_var(x$template$FC$nu, Q, FC_mean[q1,q2], FC_mean[q1,q1], FC_mean[q2,q2])
       }
     }
     x$template$FC$mean <- FC_mean

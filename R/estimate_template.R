@@ -136,10 +136,12 @@ estimate_template_FC <- function(FC0){
   # var_FC_between[var_FC_between < 0] <- NA
 
   nu_est <- estimate_nu(var_FC_between, mean_FC)
-  nu_est <- max(nL+2, nu_est*.75)
+  nu_est <- max(nL+4, nu_est*.75)
 
   list(nu = nu_est,
-       psi = mean_FC*(nu_est - nL - 1))
+       psi = mean_FC*(nu_est - nL - 1),
+       mean_empirical = mean_FC,
+       var_empirical = var_FC_between)
 
 }
 
@@ -299,7 +301,7 @@ estimate_template <- function(
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   detrend_DCT=0,
-  center_Bcols=FALSE, 
+  center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
   keep_DR=FALSE,
