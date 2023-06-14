@@ -10,7 +10,7 @@
 #'
 #'  If multiple BOLD data are provided, they will be independently centered,
 #'  scaled, detrended (if applicable), and denoised (if applicable). Then they
-#'  will be concatenated together followed by computing the initial dual 
+#'  will be concatenated together followed by computing the initial dual
 #'  regression estimate.
 #' @param template Template estimates in a format compatible with \code{BOLD},
 #'  from \code{\link{estimate_template}}.
@@ -100,12 +100,12 @@
 #' @param method_FC Bayesian estimation method for FC template ICA model:
 #'  variational Bayes, \code{"VB"} (default), or E-M, \code{"EM"}.
 #' @param maxiter Maximum number of EM iterations. Default: \code{100}.
-#' @param epsilon Smallest proportion change between iterations. Default: 
+#' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default: 
+#'  to assess benefit of more stringent convergence rules). Default:
 #'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and 
+#'  (larger to smaller error) and all values should be between zero and
 #'  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
@@ -335,7 +335,7 @@ templateICA <- function(
   # Check that parameters match.
   pmatch <- c(
     scale=scale, #scale_sm_FWHM=scale_sm_FWHM,
-    #detrend_DCT=detrend_DCT, # 
+    #detrend_DCT=detrend_DCT, #
     center_Bcols=center_Bcols, normA=normA,
     # Q2=Q2, Q2_max=Q2_max,
     varTol=varTol
@@ -668,6 +668,7 @@ templateICA <- function(
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
+  if (!is.null(resamp_res)) { xii1 <- resample_cifti(xii1, resamp_res=resamp_res) }
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,
@@ -678,7 +679,7 @@ templateICA <- function(
   # Estimate and deal with nuisance ICs ----------------------------------------
   x <- lapply(
     BOLD, rm_nuisIC,
-    template_mean=template$mean, 
+    template_mean=template$mean,
     Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE
   )
   BOLD <- lapply(x, '[[', "BOLD")
