@@ -118,9 +118,11 @@ estimate_template_from_DR_two <- function(DR1, DR2){
 #' Estimate FC template
 #'
 #' @param FC0 The FC estimates from \code{\link{estimate_template}}.
+#' @param nu_adjust Factor by which to adjust estimate of nu.  Values < 1 will
+#' inflate the template variance to avoid an over-informative prior on FC.
 #' @importFrom matrixStats colVars
-#' @keywords internal
-estimate_template_FC <- function(FC0){
+#' @export
+estimate_template_FC <- function(FC0, nu_adjust=1){
 
   nL <- dim(FC0)[3]
   stopifnot(nL == dim(FC0)[4])
@@ -136,7 +138,7 @@ estimate_template_FC <- function(FC0){
   # var_FC_between[var_FC_between < 0] <- NA
 
   nu_est <- estimate_nu(var_FC_between, mean_FC)
-  nu_est <- max(nL+4, nu_est*.75)
+  nu_est <- max(nL+4, nu_est*nu_adjust)
 
   list(nu = nu_est,
        psi = mean_FC*(nu_est - nL - 1),

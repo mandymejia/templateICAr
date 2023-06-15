@@ -68,7 +68,7 @@ var_sq_err_constrained <- function(nu, p, var, xbar, M=10000){
   }
   penalty <- (var_theo - var)^2
   penalty[var_theo < var] <- M  #constrain so that var_theo >= var
-  return(sum(penalty))
+  return(penalty)
 }
 
 
@@ -115,15 +115,19 @@ estimate_nu <- function(var_FC, mean_FC){
   mean_FC_UT <- mean_FC[upper.tri(mean_FC)]
 
   #first, determine the appropriate interval
-  interval_LB <- nL+1
-  interval_UB <- nL*100
-  nu_vals <- seq(interval_LB, interval_UB)
+  interval_LB <- nL+3.1
+  interval_UB <- nL*10
+  nu_vals <- seq(interval_LB, interval_UB, length.out=1000)
   penalty <- sapply(nu_vals, var_sq_err_constrained, p=nL, var=var_FC_UT, xbar = mean_FC_UT)
-  penalty[penalty >= 10000] <- NA #exclude values of nu for which IW variance would be smaller than empirical variance for at least 1 FC pair
-  interval_UB <- nu_vals[max(which(!is.na(penalty)))] + 1
-  interval_LB <- nu_vals[min(which(!is.na(penalty)))] - 1
+  bad_nu <- (colSums(penalty==10000) > 0)
 
-  nu_opt <- optimize(f=var_sq_err_constrained, interval=c(interval_LB,interval_UB), p=nL, var=var_FC_UT, xbar = mean_FC_UT)
+  #if all possible values of nu over-estimate the empirical variance, then return the min val (max var)
+  if(sum(!bad_nu) == 0) return(interval_LB)
+
+  #update the UB of the interval to avoid values that under-estimate the empirical var
+  interval_UB <- max(nu_vals[!bad_nu]) + (nu_vals[2] - nu_vals[1])
+  nu_opt <- optimize(f = function(x){sum(var_sq_err_constrained(x, p=nL, var=var_FC_UT, xbar=mean_FC_UT))},
+                     interval=c(interval_LB,interval_UB))
   return(nu_opt$minimum)
 
 }

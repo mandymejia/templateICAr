@@ -4,12 +4,14 @@
 \alias{estimate_template_FC}
 \title{Estimate FC template}
 \usage{
-estimate_template_FC(FC0)
+estimate_template_FC(FC0, nu_adjust = 1)
 }
 \arguments{
 \item{FC0}{The FC estimates from \code{\link{estimate_template}}.}
+
+\item{nu_adjust}{Factor by which to adjust estimate of nu.  Values < 1 will
+inflate the template variance to avoid an over-informative prior on FC.}
 }
 \description{
 Estimate FC template
 }
-\keyword{internal}

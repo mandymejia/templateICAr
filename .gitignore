@@ -6,3 +6,7 @@
 *.pper
 EM_templateICA2.R 
 tests/data_notInPackage
+src/RcppExports.o
+*.o
+*.so
+src/templateICAr.so
