@@ -172,14 +172,22 @@ templateICA <- function(
   BOLD, template,
   tvar_method=c("non-negative", "unbiased"),
   scale=c("global", "local", "none"),
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  nuisance=NULL, scrub=NULL, detrend_DCT=0,
+  scale_sm_surfL=NULL,
+  scale_sm_surfR=NULL,
+  scale_sm_FWHM=2,
+  nuisance=NULL,
+  scrub=NULL,
+  detrend_DCT=0,
   center_Bcols=FALSE,
   Q2=NULL,
   Q2_max=NULL,
-  brainstructures=c("left","right"), mask=NULL, time_inds=NULL,
+  brainstructures=c("left","right"),
+  mask=NULL,
+  time_inds=NULL,
   varTol=1e-6,
-  spatial_model=NULL, resamp_res=NULL, rm_mwall=TRUE,
+  spatial_model=NULL,
+  resamp_res=NULL,
+  rm_mwall=TRUE,
   reduce_dim=TRUE,
   method_FC=c("VB", "EM", "EM_VB"),
   maxiter=100,
@@ -213,6 +221,9 @@ templateICA <- function(
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
     stopifnot(is_posNum(resamp_res) && round(resamp_res) == resamp_res)
+      if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+        stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+      }
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
@@ -231,7 +242,7 @@ templateICA <- function(
 
   # `usePar`
   if (!isFALSE(usePar)) {
-    check_parallel_packages()
+    templateICAr:::check_parallel_packages()
 
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
@@ -249,10 +260,10 @@ templateICA <- function(
   cat("\n")
   # Determine the format of `BOLD`.
   format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
-  FORMAT <- get_FORMAT(format)
+  FORMAT <- templateICAr:::get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  check_req_ifti_pkg(FORMAT)
+  templateICAr:::check_req_ifti_pkg(FORMAT)
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
@@ -380,6 +391,7 @@ templateICA <- function(
   if('FC' %in% names(template$template)) {
     do_FC <- TRUE
     template_FC <- template$template$FC
+    template$template$FC <- NULL
   }
 
   # Get `nI`, `nL`, and `nV`.
@@ -388,13 +400,19 @@ templateICA <- function(
   # Check mask if NIFTI.
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
-    xii1 <- template$dat_struct
-    if (!is.null(resamp_res)) { 
-      if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-        stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
-      }
-      xii1 <- ciftiTools::resample_xifti(xii1, resamp_res = resamp_res)
+
+    # Check `resamp_res`.
+    if (!is.null(resamp_res)) {
+      template <- resample_template(template, resamp_res=resamp_res)
     }
+
+    xii1 <- template$dat_struct
+    # if (!is.null(resamp_res)) {
+    #   if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+    #     stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    #   }
+    #   #xii1 <- ciftiTools::resample_xifti(xii1, resamp_res = resamp_res)
+    # }
     # Check brainstructures.
     tbs <- names(xii1$data)[!vapply(xii1$data, is.null, FALSE)]
     bs2 <- c(left="cortex_left", right="cortex_right", subcortical="subcort")[brainstructures]
@@ -414,10 +432,6 @@ templateICA <- function(
         ))
       }
       template <- removebs_template(template, bs_missing)
-    }
-    # Check `resamp_res`.
-    if (!is.null(resamp_res)) {
-      template <- resample_template(template, resamp_res=resamp_res)
     }
     nI <- nrow(template$template$mean)
 
@@ -664,7 +678,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
 
   if (any(!mask3)) {
     if (do_spatial) {
@@ -759,7 +773,7 @@ templateICA <- function(
   # Estimate and subtract nuisance ICs -----------------------------------------
   Q2_est <- vector("numeric", nN)
   for (nn in seq(nN)) {
-    x <- rm_nuisIC(
+    x <- templateICAr:::rm_nuisIC(
       BOLD[[nn]], template_mean=template$mean, Q2=Q2, Q2_max=Q2_max,
       verbose=verbose, return_Q2=TRUE
     )
