@@ -757,13 +757,15 @@ templateICA <- function(
   )
 
   # Estimate and subtract nuisance ICs -----------------------------------------
-  x <- lapply(
-    BOLD, rm_nuisIC,
-    template_mean=template$mean,
-    Q2=Q2, Q2_max=Q2_max, verbose=verbose, return_Q2=TRUE
-  )
-  BOLD <- lapply(x, '[[', "BOLD")
-  Q2_est <- lapply(x, '[[', "Q2")
+  Q2_est <- vector("numeric", nN)
+  for (nn in seq(nN)) {
+    x <- rm_nuisIC(
+      BOLD[[nn]], template_mean=template$mean, Q2=Q2, Q2_max=Q2_max,
+      verbose=verbose, return_Q2=TRUE
+    )
+    BOLD[[nn]] <- x$BOLD
+    Q2_est[nn] <- x$Q2
+  }
   rm(x)
 
   # Center and scale `BOLD` again ----------------------------------------------
