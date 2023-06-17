@@ -432,6 +432,7 @@ templateICA <- function(
         ))
       }
       template <- removebs_template(template, bs_missing)
+      xii1 <- ciftiTools::remove_xifti(xii1, bs_missing)
     }
     nI <- nrow(template$template$mean)
 
