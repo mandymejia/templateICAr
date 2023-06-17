@@ -22,7 +22,7 @@
 #' @export
 #' 
 #' @importFrom ciftiTools is.xifti
-#' @importFrom fMRIscrub nuisance_regression dct_bases
+#' @importFrom fMRItools nuisance_regression dct_bases
 #'
 norm_BOLD <- function(
   BOLD, center_rows=TRUE, center_cols=FALSE,

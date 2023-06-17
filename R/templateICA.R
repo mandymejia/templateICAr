@@ -605,6 +605,9 @@ templateICA <- function(
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
     xii1 <- add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
+  if (!is.null(xii1) && !is.null(resamp_res)) {
+    xii1 <- resample_cifti(xii1, resamp_res=resamp_res)
+  }
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=center_Bcols,
@@ -757,7 +760,6 @@ templateICA <- function(
 
       resultEM$result_tICA <- resultEM_tICA
       class(resultEM) <- 'stICA'
-    }
     if (usePar) { doParallel::stopImplicitCluster() }
   }
 
