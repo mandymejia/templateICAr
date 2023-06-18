@@ -10,3 +10,5 @@ src/RcppExports.o
 *.o
 *.so
 src/templateICAr.so
+src/EM_FCtempICA.o
+src/RcppExports.o

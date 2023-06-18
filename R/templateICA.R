@@ -816,14 +816,14 @@ templateICA <- function(
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
-  if(do_FC) {
-    if(reduce_dim) warning("Setting reduce_dim to FALSE for FC template ICA")
-    reduce_dim <- FALSE
-  }
-
   if(do_spatial) {
     if(!reduce_dim) warning("Setting reduce_dim to TRUE for spatial template ICA")
     reduce_dim <- TRUE
+  }
+
+  if(do_FC) {
+    if(reduce_dim) warning("Setting reduce_dim to FALSE for FC template ICA")
+    reduce_dim <- TRUE #only temporary, for initilizing with template ICA, then will set to FALSE
   }
 
 
@@ -880,6 +880,7 @@ templateICA <- function(
   #2) FC Template ICA ----------------------------------------------------------
   if (do_FC) {
 
+    reduce_dim <- FALSE
     result_tICA <- result
 
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
