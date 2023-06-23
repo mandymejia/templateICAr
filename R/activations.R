@@ -66,7 +66,7 @@ activations <- function(
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
 
-  L <- ncol(tICA$theta_MLE$A)
+  L <- ncol(tICA$A)
   if(is.null(which.ICs)) which.ICs <- 1:L
   if(min((which.ICs) %in% (1:L))==0) stop('Invalid entries in which.ICs')
 
