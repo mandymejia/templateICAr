@@ -3,7 +3,7 @@
 #' Identify areas of activation in each independent component map
 #'
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
-#' @param u Activation threshold. Default: \code{0}.
+#' @param u Activation threshold. Default: \code{0}. May provide a vector of the same length as which.ICs.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
@@ -40,8 +40,7 @@ activations <- function(
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
-  is_tICA <- (class(tICA) == 'tICA')
-  #is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
+  is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
   is_stICA <- inherits(tICA, "stICA.matrix") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
   if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
 
@@ -97,6 +96,11 @@ activations <- function(
   }
 
   # Compute activations. -------------------------------------------------------
+
+  if(length(u)==1) u <- rep(u, length(which.ICs))
+  if(length(u) != length(which.ICs)) stop('Length of u does not match length of which.ICs')
+  u_mat <- matrix(u, nrow=nvox, ncol=nL, byrow = TRUE)
+
   if (is_stICA) {
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
@@ -110,20 +114,20 @@ activations <- function(
       if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
       inds_q <- (1:nvox) + (q-1)*nvox
       if(deviation){
-        Dinv_mu_s <-  (as.vector(tICA$s_mean) - as.vector(tICA$t_mean) - u)/as.vector(sqrt(tICA$t_var))
+        Dinv_mu_s <-  (as.vector(tICA$s_mean) - as.vector(tICA$t_mean) - u_mat)/as.vector(sqrt(tICA$t_var))
       } else {
-        Dinv_mu_s <- (as.vector(tICA$s_mean) - u)/as.vector(sqrt(tICA$t_var))
+        Dinv_mu_s <- (as.vector(tICA$s_mean) - u_mat)/as.vector(sqrt(tICA$t_var))
       }
 
       if(q==which.ICs[1]) {
         #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
         #we subtract u first since rescaling by D^(-1) would affect u too
         #save rho from first time running excursions, pass into excursions for other ICs
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = 0, ind = inds_q))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
         if(verbose) print(tmp)
         rho <- res_q$rho
       } else {
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = 0, ind = inds_q, rho=rho))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q, rho=rho))
         if(verbose) print(tmp)
       }
       active[,q] <- res_q$E[inds_q]
@@ -145,9 +149,9 @@ activations <- function(
     nvox <- nrow(tICA$s_mean)
     nL <- ncol(tICA$s_mean)
     if(deviation){
-      t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u) / as.matrix(tICA$s_se)
+      t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u_mat) / as.matrix(tICA$s_se)
     } else {
-      t_stat <- (as.matrix(tICA$s_mean) - u) / as.matrix(tICA$s_se)
+      t_stat <- (as.matrix(tICA$s_mean) - u_mat) / as.matrix(tICA$s_se)
     }
 
     if(type=='>') pvals <- 1-pnorm(t_stat)
