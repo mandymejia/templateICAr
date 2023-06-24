@@ -200,9 +200,9 @@ VB_FCtemplateICA <- function(
     numiter=iter-1,
     ELBO=ELBO_vals[1:(iter-1)],
     results_inter = results_inter,
-    template_mean,
-    template_var,
-    template_FC
+    template_mean = template_mean,
+    template_var = template_var,
+    template_FC = template_FC
   )
 }
 

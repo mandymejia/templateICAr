@@ -40,7 +40,8 @@ activations <- function(
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
   # Setup ----------------------------------------------------------------------
-  is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
+  is_tICA <- (class(tICA) == 'tICA')
+  #is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
   is_stICA <- inherits(tICA, "stICA.matrix") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
   if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
 
@@ -66,9 +67,9 @@ activations <- function(
   if(!(type %in% c('>','<','!='))) stop("type must be one of: '>', '<', '!='")
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
 
-  L <- ncol(tICA$A)
-  if(is.null(which.ICs)) which.ICs <- 1:L
-  if(min((which.ICs) %in% (1:L))==0) stop('Invalid entries in which.ICs')
+  nL <- ncol(tICA$A)
+  if(is.null(which.ICs)) which.ICs <- 1:nL
+  if(min((which.ICs) %in% (1:nL))==0) stop('Invalid entries in which.ICs')
 
   # Get needed metadata from `tICA`.
   Q <- tICA$omega
@@ -81,9 +82,10 @@ activations <- function(
     tICA$subjICse <- as.matrix(tICA$subjICse)
   } else if (FORMAT == "NIFTI") {
     mask_nii <- tICA$mask_nii
-    tICA$subjICmean <- matrix(tICA$subjICmean[rep(mask_nii, L)], ncol=L)
-    tICA$subjICse <- matrix(tICA$subjICse[rep(mask_nii, L)], ncol=L)
+    tICA$subjICmean <- matrix(tICA$subjICmean[rep(mask_nii, nL)], ncol=nL)
+    tICA$subjICse <- matrix(tICA$subjICse[rep(mask_nii, nL)], ncol=nL)
   }
+
   tICA <- tICA[c("template_mean", "template_var", "subjICmean", "subjICse")]
   names(tICA) <- c("t_mean", "t_var", "s_mean", "s_se")
 
@@ -102,7 +104,7 @@ activations <- function(
     nvox <- nrow(tICA$s_mean)
 
     #identify areas of activation in each IC
-    active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=L)
+    active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=nL)
 
      for(q in which.ICs){
       if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
@@ -141,7 +143,7 @@ activations <- function(
     if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
 
     nvox <- nrow(tICA$s_mean)
-    L <- ncol(tICA$s_mean)
+    nL <- ncol(tICA$s_mean)
     if(deviation){
       t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u) / as.matrix(tICA$s_se)
     } else {
@@ -154,7 +156,7 @@ activations <- function(
 
     if(verbose) cat(paste0('Correcting for multiple comparisons with method ', method_p))
 
-    pvals_adj <- active <- matrix(NA, nrow=nvox, ncol=L)
+    pvals_adj <- active <- matrix(NA, nrow=nvox, ncol=nL)
     if(is.null(method_p)) method_p <- 'none'
     for(q in which.ICs){
       pvals_adj[,q] <- p.adjust(pvals[,q], method=method_p)
