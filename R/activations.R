@@ -99,13 +99,12 @@ activations <- function(
 
   if(length(u)==1) u <- rep(u, length(which.ICs))
   if(length(u) != length(which.ICs)) stop('Length of u does not match length of which.ICs')
+  nvox <- nrow(tICA$s_mean)
   u_mat <- matrix(u, nrow=nvox, ncol=nL, byrow = TRUE)
 
   if (is_stICA) {
 
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
-
-    nvox <- nrow(tICA$s_mean)
 
     #identify areas of activation in each IC
     active <- jointPPM <- marginalPPM <- vars <- matrix(NA, nrow=nvox, ncol=nL)
@@ -146,7 +145,6 @@ activations <- function(
 
     if(verbose) cat('Determining areas of activations based on hypothesis testing at each location\n')
 
-    nvox <- nrow(tICA$s_mean)
     nL <- ncol(tICA$s_mean)
     if(deviation){
       t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u_mat) / as.matrix(tICA$s_se)
