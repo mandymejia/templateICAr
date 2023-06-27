@@ -121,7 +121,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol dim_reduce
+#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #'

@@ -50,6 +50,7 @@ Q2_max_check <- function(Q2_max, nQ, nT){
 #'  subtracted from it. If \code{return_Q2}, a list of length two: the second 
 #'  entry will be \code{Q2}.
 #' 
+#' @importFrom pesel pesel
 #' @importFrom fMRItools colCenter
 #' @keywords internal 
 rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, 
@@ -92,7 +93,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL,
   #   here, we consider n=V (vertices) and p=T (timepoints). (it will use n-asymptotic framework)
   if (is.null(Q2)) {
     if(verbose) cat(paste0('Estimating number of nuisance components... '))
-    Q2 <- suppressWarnings(pesel(BOLD2, npc.max=Q2_max, method='homogenous')$nPCs) #estimated number of nuisance ICs
+    Q2 <- suppressWarnings(pesel::pesel(BOLD2, npc.max=Q2_max, method='homogenous')$nPCs) #estimated number of nuisance ICs
     if(verbose) cat(paste0(Q2,'\n'))
   }
 

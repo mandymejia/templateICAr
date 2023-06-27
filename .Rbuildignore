@@ -17,3 +17,4 @@
 ^tests/testWithData$
 ^codecov\.yml$
 ^R/plot_FC\.R$
+^tests/data_notInPackage$

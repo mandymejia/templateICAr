@@ -43,7 +43,7 @@
 #'  surface and volume arguments to \code{\link[ciftiTools]{smooth_cifti}}.
 #'  These arguments only apply if \code{smooth}.
 #'
-#' @importFrom fMRItools match_input sign_flip
+#' @importFrom fMRItools match_input sign_flip PCA
 #' @importFrom ica icaimax
 #'
 #' @return \code{out_fname} if a file was written, or the GICA as a \code{"xifti"} object
@@ -233,7 +233,7 @@ groupICA.cifti <- function(
     # } #note: still use SVD to standardize variance
     # TIMER -----------------------------------------
     tick = Sys.time()
-    bigY[,cols_ii] <- PCA(BOLD_ii, Q=num_PCs_ii, nV="Q")$v
+    bigY[,cols_ii] <- PCA(BOLD_ii, Q=num_PCs_ii, Vdim="Q")$v
     # TIMER -----------------------------------------
     # [TO DO]: if verbose?
     cat("Single subject dimension reduction timer:\n")
@@ -247,7 +247,7 @@ groupICA.cifti <- function(
 
   # PERFORM GROUP-LEVEL PCA FOR DIMENSION REDUCTION
   if (verbose) { cat("Performing group-level PCA.\n") }
-  bigY <- t(PCA(bigY, Q=num_ICs, nV="Q")$v)
+  bigY <- t(PCA(bigY, Q=num_ICs, Vdim="Q")$v)
 
   # PERFORM GROUP-LEVEL ICA
   if (verbose) { cat("Performing group-level ICA.\n") }
