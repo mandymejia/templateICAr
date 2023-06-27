@@ -242,7 +242,7 @@ templateICA <- function(
 
   # `usePar`
   if (!isFALSE(usePar)) {
-    templateICAr:::check_parallel_packages()
+    check_parallel_packages()
 
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
@@ -260,10 +260,10 @@ templateICA <- function(
   cat("\n")
   # Determine the format of `BOLD`.
   format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
-  FORMAT <- templateICAr:::get_FORMAT(format)
+  FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
-  templateICAr:::check_req_ifti_pkg(FORMAT)
+  check_req_ifti_pkg(FORMAT)
 
   # If BOLD (and BOLD2) is a CIFTI, GIFTI, NIFTI, or RDS file, check that the file paths exist.
   if (format %in% c("CIFTI", "GIFTI", "NIFTI", "RDS")) {
@@ -679,7 +679,7 @@ templateICA <- function(
   if (any(is.nan(template$mean))) { stop("`NaN` values in template mean.") }
 
   # Mask out additional locations due to data mask.
-  mask3 <- apply(do.call(rbind, lapply(BOLD, templateICAr:::make_mask, varTol=varTol)), 2, all)
+  mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
 
   if (any(!mask3)) {
     if (do_spatial) {
@@ -774,7 +774,7 @@ templateICA <- function(
   # Estimate and subtract nuisance ICs -----------------------------------------
   Q2_est <- vector("numeric", nN)
   for (nn in seq(nN)) {
-    x <- templateICAr:::rm_nuisIC(
+    x <- rm_nuisIC(
       BOLD[[nn]], template_mean=template$mean, Q2=Q2, Q2_max=Q2_max,
       verbose=verbose, return_Q2=TRUE
     )

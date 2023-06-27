@@ -18,7 +18,7 @@ activations(
 \arguments{
 \item{tICA}{Fitted (spatial) template ICA object from \code{\link{templateICA}}.}
 
-\item{u}{Activation threshold. Default: \code{0}.}
+\item{u}{Activation threshold. Default: \code{0}. May provide a vector of the same length as which.ICs.}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
