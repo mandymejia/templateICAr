@@ -5,7 +5,7 @@
 #'
 #' @param template_mean (\eqn{V \times Q} matrix) mean maps for each IC in template,
 #'  where \eqn{Q} is the number of ICs, \eqn{V=nvox} is the number of data locations.
-#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps 
+#' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps
 #'  for each IC in template
 #' @param meshes \code{NULL} for spatial independence model, otherwise a list of
 #'  objects of class "templateICA_mesh" containing the triangular mesh (see
@@ -22,8 +22,8 @@
 #'  same smoothness parameter, \eqn{\kappa}
 # @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}. 
-#'  Can be the number of cores to use or \code{TRUE}, which will use the number 
+#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}.
+#'  Can be the number of cores to use or \code{TRUE}, which will use the number
 #'  on the PC minus two. Not implemented yet for spatial template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
@@ -173,7 +173,7 @@ EM_templateICA.spatial <- function(
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     tmean=template_mean, tvar=template_var, meshes=meshes,
     BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv,
-    s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0, 
+    s0_vec=s0_vec, D=D, Dinv_s0=Dinv_s0,
     update_nu0sq=update_nu0sq, verbose=verbose
   ), "tICA_spatial_pre_squarem1")
   result_squarem <- squarem(
@@ -232,8 +232,8 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv, 
-  maxiter=100, epsilon=0.001, reduce_dim=FALSE, usePar=FALSE, 
+  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv,
+  maxiter=100, epsilon=0.001, reduce_dim=FALSE, usePar=FALSE,
   verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -269,7 +269,7 @@ EM_templateICA.independent <- function(
   #   control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
   #   tmean=template_mean, tvar=template_var, meshes=NULL,
   #   BOLD=BOLD, C_diag=C_diag, H=H, Hinv=Hinv,
-  #   s0_vec=NULL, D=NULL, Dinv_s0=NULL, 
+  #   s0_vec=NULL, D=NULL, Dinv_s0=NULL,
   #   update_nu0sq=update_nu0sq, verbose=TRUE
   # ), "tICA_pre_squarem1")
   result_squarem <- squarem(
@@ -277,7 +277,7 @@ EM_templateICA.independent <- function(
     control=list(trace=verbose, intermed=TRUE, tol=epsilon, maxiter=maxiter),
     template_mean, template_var, meshes=NULL,
     BOLD, C_diag, H=H, Hinv=Hinv,
-    s0_vec=NULL, D=NULL, Dinv_s0=NULL, 
+    s0_vec=NULL, D=NULL, Dinv_s0=NULL,
     update_nu0sq=update_nu0sq, verbose=verbose
   )
   if(verbose) print(Sys.time() - t00000)
@@ -545,8 +545,8 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
 #' @param s0_vec Vectorized template means
 #' @param D Sparse diagonal matrix of template standard deviations
 #' @param Dinv_s0 The inverse of D times s0_vec
-# @param common_smoothness If \code{TRUE}. use the common smoothness version 
-# of the spatial template ICA model, which assumes that all IC's have the same 
+# @param common_smoothness If \code{TRUE}. use the common smoothness version
+# of the spatial template ICA model, which assumes that all IC's have the same
 # smoothness parameter, \eqn{\kappa}
 #' @param update_nu0sq For non-spatial model: updating \code{nu0sq} is recommended
 #'  if dimension reduction was not performed, and is not recommended if it was.
@@ -555,7 +555,7 @@ compute_LL_std <- function(theta, template_mean, template_var, C_diag, BOLD, ver
 #'  the latent fields instead of the parameter estimates. Default: \code{FALSE}.
 #' @param update Which parameters to update. Either \code{"all"}, \code{"A"} or \code{"kappa"}.
 #'
-#' @return An updated list of parameter estimates, theta, OR if 
+#' @return An updated list of parameter estimates, theta, OR if
 #'  \code{return_MAP=TRUE}, the posterior mean and precision of the latent fields
 #'
 NULL
@@ -566,8 +566,8 @@ NULL
 # @importFrom INLA inla.qsolve inla.qinv inla.setOption
 #' @importFrom Matrix Matrix sparseMatrix
 UpdateTheta_templateICA.spatial <- function(
-  template_mean, template_var, meshes, 
-  BOLD, theta, C_diag, H, Hinv, s0_vec, D, Dinv_s0, 
+  template_mean, template_var, meshes,
+  BOLD, theta, C_diag, H, Hinv, s0_vec, D, Dinv_s0,
   verbose=FALSE, return_MAP=FALSE, update=c('all','kappa','A')){
 
   INLA_check()
@@ -858,8 +858,8 @@ UpdateTheta_templateICA.spatial <- function(
     #if(common_smoothness){
       kappa_opt <- optimize(
         LL2_kappa, lower=0, upper=5, maximum=TRUE,
-        Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG, 
-        OplusW=OplusW, u=u, v=v, 
+        Amat=Amat, Fmat=Fmat, Gmat=Gmat, GFinvG=GFinvG,
+        OplusW=OplusW, u=u, v=v,
         Q=Q #Q=Q to indicate common smoothness model to the LL2_kappa function
       )
       LL2 <- kappa_opt$objective
@@ -890,8 +890,8 @@ UpdateTheta_templateICA.spatial <- function(
 
 #' @rdname UpdateTheta_templateICA
 UpdateTheta_templateICA.independent <- function(
-  template_mean, template_var, BOLD, 
-  theta, C_diag, H, Hinv, 
+  template_mean, template_var, BOLD,
+  theta, C_diag, H, Hinv,
   update_nu0sq =TRUE, return_MAP=FALSE, verbose=TRUE){
 
   nQ <- ncol(template_mean)
@@ -1229,10 +1229,10 @@ bdiag_m <- function(lmat) {
 #' @keywords internal
 #'
 UpdateThetaSQUAREM_templateICA <- function(
-  theta_vec, 
-  template_mean, template_var, meshes, 
-  BOLD, C_diag, H, Hinv, 
-  s0_vec, D, Dinv_s0, 
+  theta_vec,
+  template_mean, template_var, meshes,
+  BOLD, C_diag, H, Hinv,
+  s0_vec, D, Dinv_s0,
   update_nu0sq, verbose){
 
   ntime <- ncol(BOLD) #length of timeseries
