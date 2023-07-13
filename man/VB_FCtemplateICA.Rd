@@ -43,7 +43,7 @@ variance matrix \code{S0_var}.}
 
 \item{miniter}{Minimum number of VB iterations. Default: \code{3}.}
 
-\item{epsilon}{Smallest proportion change in ELBO between iterations.
+\item{epsilon}{Smallest proportion change in parameter estimates between iterations.
 Default: \code{0.001}.}
 
 \item{eps_inter}{Intermediate values of epsilon at which to save results (used

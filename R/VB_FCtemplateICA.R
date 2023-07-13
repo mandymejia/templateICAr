@@ -16,7 +16,7 @@
 #'  variance matrix \code{S0_var}.
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{3}.
-#' @param epsilon Smallest proportion change in ELBO between iterations.
+#' @param epsilon Smallest proportion change in parameter estimates between iterations.
 #'  Default: \code{0.001}.
 #' @param eps_inter Intermediate values of epsilon at which to save results (used
 #'  to assess benefit of more stringent convergence rules). Default:
@@ -102,7 +102,7 @@ VB_FCtemplateICA <- function(
 
   err <- 1000 #large initial value for difference between iterations
   ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
-  while (abs(err) > epsilon | iter <= miniter) {
+  while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -110,20 +110,24 @@ VB_FCtemplateICA <- function(
     #a. UPDATE A
 
     A_new <- update_A(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nvox)
-    change_A <- mean(abs(A_new[[1]] - mu_A)/(abs(mu_A)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    mu_A_old <- mu_A
     mu_A <- A_new[[1]]
     cov_A <- A_new[[2]]
-
     #constrain each column of A to have var=1
     sd_A <- apply(mu_A, 2, sd)
     mu_A <- scale(mu_A, center=FALSE)
     cov_A <- diag(1/sd_A) %*% cov_A %*% diag(1/sd_A)
+    A_new <- list(mu_A=mu_A, cov_A=cov_A)
+    change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    #change_A <- sqrt(crossprod(c(mu_A - mu_A_old))) #same as in SQUAREM
+
 
     if(iter==1) ELBO_init <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
 
     #b. UPDATE S
     S_new <- update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
     change_S <- mean(abs(S_new[[1]] - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    #change_S <- sqrt(crossprod(c(S_new[[1]] - mu_S))) #same as in SQUAREM
     mu_S <- S_new[[1]]
     cov_S <- S_new[[2]]
 
@@ -137,6 +141,7 @@ VB_FCtemplateICA <- function(
     nu_G <- G_new[[1]]
     mu_G_new <- psi_G / (nu_G - nICs - 1)
     change_G <- mean(abs(mu_G - mu_G_new)/(abs(mu_G)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    #change_G <- sqrt(crossprod(c(mu_G_new - mu_G))) #same as in SQUAREM
     mu_G <- mu_G_new
 
     #d. UPDATE tau^2
@@ -145,6 +150,7 @@ VB_FCtemplateICA <- function(
     alpha1 <- tau2_new[[1]] #scalar
     mu_tau2_new <- beta1/(alpha1 - 1)
     change_tau2 <- mean(abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    #change_tau2 <- sqrt(crossprod(c(mu_tau2_new - mu_tau2))) #same as in SQUAREM
     mu_tau2 <- mu_tau2_new
 
     if (verbose) print(Sys.time() - t00)
@@ -153,25 +159,24 @@ VB_FCtemplateICA <- function(
     change <- c(change_A, change_S, change_G, change_tau2)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ': Proportional Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
+    if(verbose) cat(paste0('Iteration ',iter, ':l0 Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
 
     #ELBO
     ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
-    if(iter == 1) err <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
-    if(iter > 1) err <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
-    if(verbose) cat(paste0('Iteration ',iter, ': Current value of ELBO is ',round(ELBO_vals[iter], 6),' (Proportional Change = ',round(err, 7),')\n'))
+    if(iter == 1) err2 <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
+    if(iter > 1) err2 <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
+    if(verbose) cat(paste0('Iteration ',iter, ': Change in ELBO = ',round(err2, 7),', Change in Params = ', round(err, 7),'\n'))
 
     #Save intermediate result?
-
     if(save_inter){
-      #only consider convergence for positive change
-      if(err > 0){
-        if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
-          which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
-          if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-            results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+      ##only consider convergence for positive change (no longer relevant because err based on parameters, not ELBO)
+      #if(err > 0){
+      if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
+        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
         }
-        }
+        #}
       }
     }
 
