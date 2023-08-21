@@ -4,7 +4,7 @@ templateICAr_citations <- c(
 	bibentry(
 		bibtype      = "Article",
 		title        = "{T}emplate {I}ndependent {C}omponent {A}nalysis: Targeted and Reliable Estimation of Subject-level Brain Networks Using Big Data Population Priors",
-		author       = personList(
+		author       = c(
 			as.person("Amanda F Mejia"),
 			as.person("Mary Beth Nebel"),
 			as.person("Yikai Wang"),
@@ -23,7 +23,7 @@ templateICAr_citations <- c(
 	bibentry(
 		bibtype      = "Article",
 		title        = "{T}emplate {I}ndependent {C}omponent {A}nalysis with spatial priors for accurate subject-level brain network estimation and inference",
-		author       = personList(
+		author       = c(
 			as.person("Amanda F Mejia"),
 			as.person("David Bolin"),
 			as.person("Yu Ryan Yue"),
