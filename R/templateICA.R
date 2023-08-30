@@ -505,15 +505,7 @@ templateICA <- function(
     # INLA
     INLA_check()
     flag <- INLA::inla.pardiso.check()
-    if (any(grepl('FAILURE',flag))) {
-      stop(
-        'PARDISO IS NOT INSTALLED OR NOT WORKING. ',
-        'PARDISO for R-INLA is required for computational efficiency. ',
-        'If you already have a PARDISO / R-INLA License, run inla.setOption(pardiso.license = "/path/to/license") and try again. ',
-        'If not, run inla.pardiso() to obtain a license.'
-      )
-    }
-    INLA::inla.setOption(smtp='pardiso')
+    if (!any(grepl('FAILURE',flag))) { INLA::inla.setOption(smtp='pardiso') }
 
     if (verbose) {
       mesh_name <- ifelse(is.null(meshes), "the default inflated surface", "the provided mesh")
