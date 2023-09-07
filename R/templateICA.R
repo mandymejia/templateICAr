@@ -158,7 +158,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti unmask_mat unvec_vol is_1 is_posNum
+#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
@@ -259,7 +259,11 @@ templateICA <- function(
   # `BOLD` ---------------------------------------------------------------------
   cat("\n")
   # Determine the format of `BOLD`.
-  format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
+  # [TO DO]: more elegant way? b/c list of xifti vs single xifti...
+  format <- suppressWarnings(fMRItools::infer_format_ifti(BOLD))[1]
+  if (is.na(format)) {
+    format <- fMRItools::infer_format_ifti_vec(BOLD)[1]
+  }
   FORMAT <- get_FORMAT(format)
   FORMAT_extn <- switch(FORMAT, CIFTI=".dscalar.nii", GIFTI=".func.gii", NIFTI=".nii", MATRIX=".rds")
 
@@ -519,6 +523,15 @@ templateICA <- function(
       if (is.null(meshes)) {
         if (is.null(resamp_res)) {
           res <- ciftiTools::infer_resolution(BOLD[[1]])
+          if (length(unique(res))==1) {
+            res <- res[1]
+          } else if (any(res==0)) {
+            res <- res[res!=0]
+          } else {
+            # [TO DO]: handle the case of unequal resolutions? this won't work
+            #   but is a placeholder.
+            res <- max(res)
+          }
         } else {
           res <- resamp_res
         }
