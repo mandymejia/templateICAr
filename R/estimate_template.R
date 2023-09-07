@@ -440,6 +440,8 @@ estimate_template <- function(
     scale_sm_FWHM <- 0
   }
 
+  # [TO DO]: "MATRIX" or "data"? See `dual_reg2`
+
   # [TO DO]: Mysteriously, MATRIX FORMAT is not working with parallel.
   if (usePar && format=="RDS") { stop("Parallel computation not working with RDS file input. Working on this!") }
 
