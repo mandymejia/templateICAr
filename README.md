@@ -72,8 +72,9 @@ alternative Linux builds can be added with the command
 template ICA.
 
 Depending on the analysis, PARDISO may reduce computation time. To
-obtain an INLA-PARDISO license, run `inla.pardiso()` in R after running
-`library(INLA)`. Once you obtain a license, point to it using
+obtain a free academic license forINLA-PARDISO, run `inla.pardiso()` in
+R after running `library(INLA)`. Provide an academic email address. Once
+you obtain a license, point to it using
 `INLA::inla.setOption(pardiso.license = "pardiso.lic")` followed by
 `INLA::inla.pardiso.check()` to ensure that PARDISO is successfully
 installed and running.
