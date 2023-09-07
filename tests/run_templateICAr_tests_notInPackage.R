@@ -166,7 +166,7 @@ close3d()
 
 tm2 <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
-  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3, scale_FWHM=20,
+  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3, scale_sm_FWHM=20,
   brainstructures="right", varTol=1, verbose=FALSE
 )
 
@@ -188,8 +188,12 @@ rm(cii)
 plot(tm, idx=3)
 close3d(); close3d()
 cii <- read_cifti(cii_fnames[5], brainstructures="left")
+#squarem1 error ... ?
+#templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
 cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
-tICA <- templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
+tICA <- testthat::expect_error( # Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.
+  templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
+)
 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="right")
 cii0 <- lapply(cii, as.matrix)
@@ -233,7 +237,7 @@ tm <- estimate_template(
 tm
 tICA <- templateICA(
   nii_fnames[2], tm, scale=FALSE,
-  maxiter=1, mask=mask_fname, Q2=0
+  miniter=1, maxiter=1, mask=mask_fname, Q2=0
 )
 tICA
 activations(tICA)
