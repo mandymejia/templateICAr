@@ -1,3 +1,10 @@
+# 7.0
+
+* no PARDISO requirement
+* correct package documentation
+* adjustments to FC, VB
+* add scrubbing
+
 # 6.0
 
 * activations: gray medial wall
