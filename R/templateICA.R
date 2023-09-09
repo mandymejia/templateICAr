@@ -363,31 +363,36 @@ templateICA <- function(
   }
 
   # Check that parameters match.
-  pmatch <- c(
-    scale=scale,
-    #scale_sm_FWHM=scale_sm_FWHM,
-    #detrend_DCT=detrend_DCT,
-    center_Bcols=center_Bcols,
-    # Q2=Q2, Q2_max=Q2_max,
-    varTol=varTol
-  )
-  for (pp in seq(length(pmatch))) {
-    pname <- names(pmatch)[pp]
-    if (pmatch[pname] != template$params[[pname]]) {
-      warning(paste0(
-        "The `", pname, "` parameter was ",
-        template$params[[pname]], " for the template, but is ",
-        pmatch[pname], " here. These should match. (Proceeding anyway.)\n"
-      ))
-    }
-  }
-  if (!all(detrend_DCT == template$params$detrend_DCT)) {
-    warning(
-      "The `detrend_DCT` parameter was ",
-      template$params$detrend_DCT, " for the template, but is ",
-      paste0(detrend_DCT, collapse=", "),
-      " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
+  if (is.null(template$params)) {
+    # warning("Old template does not have `params` metadata, so the parameters can't be checked.")
+    NULL
+  } else {
+    pmatch <- c(
+      scale=scale,
+      #scale_sm_FWHM=scale_sm_FWHM,
+      #detrend_DCT=detrend_DCT,
+      center_Bcols=center_Bcols,
+      # Q2=Q2, Q2_max=Q2_max,
+      varTol=varTol
     )
+    for (pp in seq(length(pmatch))) {
+      pname <- names(pmatch)[pp]
+      if (pmatch[pname] != template$params[[pname]]) {
+        warning(paste0(
+          "The `", pname, "` parameter was ",
+          template$params[[pname]], " for the template, but is ",
+          pmatch[pname], " here. These should match. (Proceeding anyway.)\n"
+        ))
+      }
+    }
+    if (!all(detrend_DCT == template$params$detrend_DCT)) {
+      warning(
+        "The `detrend_DCT` parameter was ",
+        template$params$detrend_DCT, " for the template, but is ",
+        paste0(detrend_DCT, collapse=", "),
+        " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
+      )
+    }
   }
 
   #check for FC template
