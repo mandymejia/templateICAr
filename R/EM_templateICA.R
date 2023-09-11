@@ -628,6 +628,9 @@ UpdateTheta_templateICA.spatial <- function(
     stop()
   }
 
+  # Damon was working on this a while back but did not finish. Kept just FYI.
+  # Cinv <- diag(1/C_diag)
+
   if(update_A){
     #if(verbose) cat('Updating A \n')
     #t00 <- Sys.time()
@@ -684,7 +687,13 @@ UpdateTheta_templateICA.spatial <- function(
 
     theta_new$A <- A_hat
 
+    # Damon was working on this a while back but did not finish. Kept just FYI.
+    # Cinv_A <- Cinv %*% A_hat
+    # #At_Cinv_A <- t(A_hat) %*% Cinv %*% A_hat
+
     #first part of Q1: sum_v 2 y(v)' C^{-1} A t(v) = sum_v Trace{ 2 C^{-1} A t(v) y(v)' } = Trace{ 2 C^{-1} A sum_v [ t(v) y(v)' ] }, where sum_v [ t(v) y(v)' ] = A_part1'
+    # Damon was working on this a while back but did not finish. Kept just FYI.
+    # LL1_part1 <- sum(diag( 2 * Cinv_A %*% t(yPmu) ))
     LL1_part1 <- sum(diag( 2 * diag((1/C_diag)) %*% A_hat %*% t(yPmu) ))
     # LL1_part1 <- 0
     # for(v in 1:nvox){
@@ -700,6 +709,10 @@ UpdateTheta_templateICA.spatial <- function(
 
     #
     #second part of Q1: sum_v Trace{ A' C^{-1} A T(v,v) } = Trace{ A' C^{-1} A sum_v T(v,v) }, where sum_v T(v,v) is A_part2
+    
+    # Damon was working on this a while back but did not finish. Kept just FYI.
+    # LL1_part2 <- sum(diag( t(A_hat) %*% Cinv_A %*% T_mat ))
+    
     LL1_part2 <- sum(diag( t(A_hat) %*% diag((1/C_diag)) %*% A_hat %*% T_mat ))
     #
     theta_new$LL[1] <- LL1_part1 - LL1_part2
@@ -708,6 +721,13 @@ UpdateTheta_templateICA.spatial <- function(
 
   }
 
+  # Damon was working on this a while back but did not finish. Kept just FYI.
+  # # nu0sq_hat <- theta$nu0_sq
+  # nu0sq_part1 <- sum(diag(Cinv %*% t(BOLD) %*% BOLD))
+  # nu0sq_part2 <- sum(diag(Cinv_A %*% t(miu_s) %*% BOLD))
+  # nu0sq_part3 <- sum(diag(At_Cinv_A %*% apply(miu_ssT, 2:3, sum) ))
+  # nu0sq_hat <- 1/(nQ*nV)*(nu0sq_part1 - 2*nu0sq_part2 + nu0sq_part3)
+  # theta_new$nu0_sq <- nu0sq_hat[1]
 
   #keep value of nu0sq_hat from PCA-based dimension reduction
   nu0sq_hat <- theta$nu0_sq

@@ -85,7 +85,7 @@ tm_gii <- estimate_template(
 tm_rds <- estimate_template(
   lapply(rds_fnames[seq(4,6)], readRDS), lapply(rds_fnames[seq(3)], readRDS), GICA = GICA_fname["rds"],
   inds=seq(5), scale="none", detrend_DCT=4, Q2=5,
-  maskTol=.9, ,usePar=TRUE
+  maskTol=.9, usePar=TRUE
 )
 testthat::expect_equal(
   tm_gii$template,
@@ -131,6 +131,12 @@ testthat::expect_equal(tICA_gii$A, tICA_rds$A)
 actICA_rds <- activations(tICA_rds)
 actICA_cii <- activations(tICA_cii)
 plot(activations(tICA_cii)); plot(activations(tICA_gii))
+
+gamma <- 2
+gamma_scaled <- gamma*sqrt(matrixStats::colVars(tICA_cii$template_mean))
+act2 <- activations(tICA_cii, gamma=gamma_scaled, gamma_by_std=FALSE)
+act3 <- activations(tICA_cii, gamma=gamma)
+testthat::expect_equal(act2, act3)
 
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
