@@ -332,7 +332,6 @@ estimate_template <- function(
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
   stopifnot(fMRItools::is_1(FC, "logical"))
-  if (isTRUE(FC)) { warning("FC template is still under development.") }
   stopifnot(fMRItools::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
   stopifnot(fMRItools::is_posNum(maskTol))
