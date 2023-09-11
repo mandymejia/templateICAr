@@ -6,9 +6,10 @@
 \usage{
 activations(
   tICA,
-  u = 0,
+  gamma = 0,
+  gamma_by_std = TRUE,
   alpha = 0.01,
-  type = ">",
+  type = c(">", "<", "!="),
   method_p = "BH",
   verbose = FALSE,
   which.ICs = NULL,
@@ -18,7 +19,14 @@ activations(
 \arguments{
 \item{tICA}{Fitted (spatial) template ICA object from \code{\link{templateICA}}.}
 
-\item{u}{Activation threshold. Default: \code{0}. May provide a vector of the same length as which.ICs.}
+\item{gamma}{Activation threshold. Default: \code{0} (no threshold). May
+provide a vector of the same length as \code{which.ICs}.}
+
+\item{gamma_by_std}{Multiply \code{gamma} by the standard deviation of the
+template mean for each IC? This will make \code{gamma} specify the threshold
+like a \code{z} score; for example, \code{gamma=2} and
+\code{gamma_by_std=TRUE} identifies activations greater than two standard
+deviations. Default: \code{TRUE}.}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
