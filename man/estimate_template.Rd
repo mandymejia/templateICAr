@@ -16,7 +16,8 @@ estimate_template(
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -41,7 +42,8 @@ estimate_template.cifti(
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -65,7 +67,8 @@ estimate_template.gifti(
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -86,7 +89,8 @@ estimate_template.nifti(
   GICA,
   inds = NULL,
   scale = c("global", "local", "none"),
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
@@ -149,8 +153,19 @@ To create a \code{"surf"} object from data, see
 \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 resolution as the \code{BOLD} data.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend.}
+\item{TR}{The temporal resolution of the data, i.e. the time between volumes,
+in seconds. \code{TR} is required for detrending with \code{hpf}.}
+
+\item{hpf}{The frequency at which to apply a highpass filter to the data
+during pre-processing, in Hertz. Default: \code{0.01} Hertz. Set to \code{0}
+to disable the highpass filter.
+
+The highpass filter serves to detrend the data, since low-frequency
+variance is associated with noise. Highpass filtering is accomplished by
+nuisance regression of discrete cosine transform (DCT) bases.
+
+Note the \code{TR} argument is required for highpass filtering. If
+\code{TR} is not provided, \code{hpf} will be ignored.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
@@ -259,7 +274,7 @@ estimate_template(BOLD=BOLD, GICA=mU)
  estimate_template(
    run1_cifti_fnames, run2_cifti_fnames,
    gICA_cifti_fname, brainstructures="all",
-   scale="local", detrend_DCT=7, Q2=NULL, varTol=10
+   scale="local", TR=0.7, Q2=NULL, varTol=10
  )
 }
 }

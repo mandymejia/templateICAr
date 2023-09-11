@@ -11,7 +11,8 @@
 #'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 #'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 #'  not smooth.
-#' @inheritParams detrend_DCT_Param
+#' @inheritParams TR_param
+#' @inheritParams hpf_param
 #'
 #' @importFrom fMRItools colCenter
 #' @importFrom matrixStats colVars
@@ -34,7 +35,8 @@
 dual_reg <- function(
   BOLD, GICA,
   scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0, center_Bcols=FALSE){
+  TR=NULL, hpf=.01,
+  center_Bcols=FALSE){
 
   stopifnot(is.matrix(BOLD))
   stopifnot(is.matrix(GICA))
@@ -65,12 +67,12 @@ dual_reg <- function(
   if(nQ > nT) warning('More ICs than time points. Are you sure?')
 
   # Center each voxel timecourse. Do not center the image at each timepoint.
-  # Standardize scale if `scale`, and detrend if `detrend_DCT`.
+  # Standardize scale if `scale`, and detrend if `hpf>0`.
   # Transpose it: now `BOLD` is TxV.
   BOLD <- t(norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=scale_sm_xifti, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT
+    TR=TR, hpf=hpf
   ))
 
   # Center each group IC across space. (Used to be a function argument.)
@@ -133,7 +135,8 @@ dual_reg <- function(
 #'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
-#' @inheritParams detrend_DCT_Param
+#' @inheritParams TR_param
+#' @inheritParams hpf_param
 #' @inheritParams center_Bcols_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Character vector indicating which brain structure(s)
@@ -185,7 +188,7 @@ dual_reg2 <- function(
   keepA=FALSE,
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0,
+  TR=NULL, hpf=.01,
   center_Bcols=FALSE, 
   Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures=c("left", "right"), mask=NULL,
@@ -335,18 +338,18 @@ dual_reg2 <- function(
   this_norm_BOLD <- function(B){ norm_BOLD(
     B, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT
+    TR=TR, hpf=hpf
   ) }
 
   dual_reg_yesNorm <- function(B){ dual_reg(
     B, GICA,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT, center_Bcols=center_Bcols
+    TR=TR, hpf=hpf, center_Bcols=center_Bcols
   ) }
 
   dual_reg_noNorm <- function(B){ dual_reg(
     B, GICA,
-    scale="none", detrend_DCT=0, center_Bcols=FALSE
+    scale="none", hpf=0, center_Bcols=FALSE
   ) }
 
   # Get the first dual regression results. -------------------------------------
@@ -402,12 +405,12 @@ dual_reg2 <- function(
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=0
+    hpf=0
   )
   BOLD2 <- norm_BOLD(
     BOLD2, center_rows=TRUE, center_cols=center_Bcols,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=0
+    hpf=0
   )
 
   # Do DR again. ---------------------------------------------------------------

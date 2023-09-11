@@ -10,7 +10,8 @@ dual_reg(
   scale = c("global", "local", "none"),
   scale_sm_xifti = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE
 )
 }
@@ -32,8 +33,19 @@ locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 not smooth.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend.}
+\item{TR}{The temporal resolution of the data, i.e. the time between volumes,
+in seconds. \code{TR} is required for detrending with \code{hpf}.}
+
+\item{hpf}{The frequency at which to apply a highpass filter to the data
+during pre-processing, in Hertz. Default: \code{0.01} Hertz. Set to \code{0}
+to disable the highpass filter.
+
+The highpass filter serves to detrend the data, since low-frequency
+variance is associated with noise. Highpass filtering is accomplished by
+nuisance regression of discrete cosine transform (DCT) bases.
+
+Note the \code{TR} argument is required for highpass filtering. If
+\code{TR} is not provided, \code{hpf} will be ignored.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:

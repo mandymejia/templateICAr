@@ -102,22 +102,23 @@ summary.template.matrix <- function(object, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.cifti
 print.summary.template.cifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (is.null(x$TR)) {
+    "not provided"
+  } else {
+    paste("TR= ", x$TR, " s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf==0) {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.    ", x$TR, "\n")
+  cat("Highpass filter :", x$hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -136,22 +137,23 @@ print.summary.template.cifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.gifti
 print.summary.template.gifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (is.null(x$TR)) {
+    "not provided"
+  } else {
+    paste("TR= ", x$TR, " s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf==0) {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.    ", x$TR, "\n")
+  cat("Highpass filter :", x$hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -172,22 +174,23 @@ print.summary.template.gifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.nifti
 print.summary.template.nifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (is.null(x$TR)) {
+    "not provided"
+  } else {
+    paste("TR= ", x$TR, " s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf==0) {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.    ", x$TR, "\n")
+  cat("Highpass filter :", x$hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -209,22 +212,23 @@ print.summary.template.nifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.matrix
 print.summary.template.matrix <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (is.null(x$TR)) {
+    "not provided"
+  } else {
+    paste("TR= ", x$TR, " s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf==0) {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.    ", x$TR, "\n")
+  cat("Highpass filter :", x$hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")

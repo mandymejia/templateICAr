@@ -14,7 +14,8 @@ templateICA(
   scale_sm_FWHM = 2,
   nuisance = NULL,
   scrub = NULL,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   center_Bcols = FALSE,
   Q2 = NULL,
   Q2_max = NULL,
@@ -97,11 +98,11 @@ Scrubbing is performed within nuisance regression by adding a spike
 regressor to the nuisance design matrix for each volume to scrub. If
 \code{NULL}, do not scrub.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend. Detrending
-is performed within nuisance regression by regressing out the DCT bases
-alongside other \code{nuisance} signals or spike regressors to \code{scrub}
-unwanted volumes.}
+\item{TR, hpf}{These arguments control detrending. \code{TR} is the temporal
+resolution of the data, i.e. the time between volumes, in seconds;
+\code{hpf} is the frequency of the high-pass filter, in Hertz. Detrending
+is performed via nuisance regression of DCT bases. Default: \code{"template"}
+to use the values from the template.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:

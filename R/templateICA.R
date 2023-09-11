@@ -56,12 +56,11 @@
 #'  regressor to the nuisance design matrix for each volume to scrub. If
 #'  \code{NULL}, do not scrub.
 #'
-#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
-#'  to use for detrending. If \code{0} (default), do not detrend. Detrending
-#'  is performed within nuisance regression by regressing out the DCT bases
-#'  alongside other \code{nuisance} signals or spike regressors to \code{scrub}
-#'  unwanted volumes.
-#'
+#' @param TR,hpf These arguments control detrending. \code{TR} is the temporal
+#'  resolution of the data, i.e. the time between volumes, in seconds;
+#'  \code{hpf} is the frequency of the high-pass filter, in Hertz. Detrending
+#'  is performed via nuisance regression of DCT bases. Default: \code{"template"}
+#'  to use the values from the template.
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
 #'  removing nuisance ICs. It may result in a cleaner estimate for smaller
 #'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
@@ -177,7 +176,7 @@ templateICA <- function(
   scale_sm_FWHM=2,
   nuisance=NULL,
   scrub=NULL,
-  detrend_DCT=0,
+  TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=NULL,
   Q2_max=NULL,
@@ -385,14 +384,14 @@ templateICA <- function(
         ))
       }
     }
-    if (!all(detrend_DCT == template$params$detrend_DCT)) {
-      warning(
-        "The `detrend_DCT` parameter was ",
-        template$params$detrend_DCT, " for the template, but is ",
-        paste0(detrend_DCT, collapse=", "),
-        " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
-      )
-    }
+    # if (!all(detrend_DCT == template$params$detrend_DCT)) {
+    #   warning(
+    #     "The `detrend_DCT` parameter was ",
+    #     template$params$detrend_DCT, " for the template, but is ",
+    #     paste0(detrend_DCT, collapse=", "),
+    #     " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
+    #   )
+    # }
   }
 
   #check for FC template
@@ -746,11 +745,12 @@ templateICA <- function(
         scrub_nn <- NULL
       }
     }
-    if (!all(detrend_DCT==0)) {
-      detrend_DCT_nn <- if (length(detrend_DCT) > 1) { detrend_DCT[nn] } else { detrend_DCT }
-      detrend_DCT_nn <- cbind(dct_bases(nT[nn], detrend_DCT_nn))
-      nmat[[nn]] <- add_to_nuis(detrend_DCT_nn, nmat[[nn]])
-    }
+    # [TO DO]
+    # if (!all(detrend_DCT==0)) {
+    #   detrend_DCT_nn <- if (length(detrend_DCT) > 1) { detrend_DCT[nn] } else { detrend_DCT }
+    #   detrend_DCT_nn <- cbind(dct_bases(nT[nn], detrend_DCT_nn))
+    #   nmat[[nn]] <- add_to_nuis(detrend_DCT_nn, nmat[[nn]])
+    # }
     # Perform nuisance regression, if applicable.
     if (!is.null(nmat[[nn]])) {
       nmat[[nn]] <- cbind(1, nmat[[nn]])

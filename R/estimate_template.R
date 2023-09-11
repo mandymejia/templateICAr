@@ -198,7 +198,8 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  To create a \code{"surf"} object from data, see
 #'  \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 #'  resolution as the \code{BOLD} data.
-#' @inheritParams detrend_DCT_Param
+#' @inheritParams TR_param
+#' @inheritParams hpf_param
 #' @inheritParams center_Bcols_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
@@ -294,7 +295,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  estimate_template(
 #'    run1_cifti_fnames, run2_cifti_fnames,
 #'    gICA_cifti_fname, brainstructures="all",
-#'    scale="local", detrend_DCT=7, Q2=NULL, varTol=10
+#'    scale="local", TR=0.7, Q2=NULL, varTol=10
 #'  )
 #' }
 estimate_template <- function(
@@ -302,7 +303,7 @@ estimate_template <- function(
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0,
+  TR=NULL, hpf=.01, 
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"), mask=NULL,
@@ -325,8 +326,18 @@ estimate_template <- function(
   }
   scale <- match.arg(scale, c("global", "local", "none"))
   stopifnot(fMRItools::is_1(scale_sm_FWHM, "numeric"))
-  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(fMRItools::is_integer(detrend_DCT, nneg=TRUE))
+  if (is.null(hpf)) { hpf <- 0 }
+  if (is.null(TR)) {
+    if (hpf==.01) {
+      message("Setting `hpf=0` because `TR` was not provided. Either provide `TR` or set `hpf=0` to disable this message.")
+      hpf <- 0
+    } else {
+      stop("Cannot apply `hpf` because `TR` was not provided. Either provide `TR` or set `hpf=0`.")
+    }
+  } else {
+    stopifnot(fMRItools::is_posNum(TR))
+    stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
+  }
   stopifnot(fMRItools::is_1(center_Bcols, "logical"))
   if (!is.null(Q2)) { # Q2_max checked later.
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
@@ -580,7 +591,7 @@ estimate_template <- function(
         scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
-        detrend_DCT=detrend_DCT,
+        TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
         brainstructures=brainstructures, mask=mask,
         varTol=varTol, maskTol=maskTol,
@@ -630,7 +641,7 @@ estimate_template <- function(
         scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
-        detrend_DCT=detrend_DCT,
+        TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
         brainstructures=brainstructures, mask=mask,
         varTol=varTol, maskTol=maskTol,
@@ -722,7 +733,7 @@ estimate_template <- function(
     num_subjects=nN, num_visits=nM,
     inds=indsp, center_Bcols=center_Bcols,
     scale=scale, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT,
+    TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
@@ -777,7 +788,7 @@ estimate_template.cifti <- function(
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0,
+  TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
@@ -792,7 +803,7 @@ estimate_template.cifti <- function(
     GICA=GICA, inds=inds,
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT,
+    TR=TR, hpf=hpf,
     center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
@@ -811,7 +822,7 @@ estimate_template.gifti <- function(
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  detrend_DCT=0,
+  TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures=c("left","right"),
@@ -826,7 +837,7 @@ estimate_template.gifti <- function(
     GICA=GICA, inds=inds,
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=detrend_DCT,
+    TR=TR, hpf=hpf,
     center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
@@ -844,7 +855,7 @@ estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
   scale=c("global", "local", "none"),
-  detrend_DCT=0,
+  TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
@@ -858,7 +869,7 @@ estimate_template.nifti <- function(
     BOLD=BOLD, BOLD2=BOLD2,
     GICA=GICA, inds=inds,
     scale=scale,
-    detrend_DCT=detrend_DCT,
+    TR=TR, hpf=hpf,
     center_Bcols=center_Bcols,
     Q2=Q2, Q2_max=Q2_max,
     mask=mask,
@@ -869,4 +880,3 @@ estimate_template.nifti <- function(
     verbose=verbose
   )
 }
-

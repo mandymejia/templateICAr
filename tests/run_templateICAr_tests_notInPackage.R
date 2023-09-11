@@ -40,15 +40,15 @@ xii1 <- select_xifti(read_cifti(GICA_fname["cii"]), 1) * 0
 ### Test 1: basic
 tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
-  keep_DR=TRUE, FC=TRUE
+  keep_DR=TRUE, FC=TRUE, TR=.72
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
-  keep_DR=TRUE, FC=TRUE
+  keep_DR=TRUE, FC=TRUE, TR=.72
 )
 tm_rds <- estimate_template(
   rds_fnames[seq(5)], GICA = GICA_fname["rds"],
-  keep_DR=TRUE, FC=TRUE
+  keep_DR=TRUE, FC=TRUE, TR=.72
 )
 testthat::expect_equal(
   lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
