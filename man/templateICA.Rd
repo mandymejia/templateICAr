@@ -8,21 +8,21 @@ templateICA(
   BOLD,
   template,
   tvar_method = c("non-negative", "unbiased"),
-  scale = c("global", "local", "none"),
+  scale = c("template", "global", "local", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
-  scale_sm_FWHM = 2,
+  scale_sm_FWHM = "template",
   nuisance = NULL,
   scrub = NULL,
-  TR = NULL,
-  hpf = 0.01,
-  center_Bcols = FALSE,
-  Q2 = NULL,
-  Q2_max = NULL,
-  brainstructures = c("left", "right"),
+  TR = "template",
+  hpf = "template",
+  center_Bcols = "template",
+  Q2 = "template",
+  Q2_max = "template",
+  brainstructures = "template",
   mask = NULL,
   time_inds = NULL,
-  varTol = 1e-06,
+  varTol = "template",
   spatial_model = NULL,
   resamp_res = NULL,
   rm_mwall = TRUE,
@@ -58,16 +58,20 @@ non-negative template variance adds to it to account for greater potential
 between-subjects variation. (The template mean is the same for either choice
 of \code{tvar_method}.)}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+\item{scale}{\code{"global"}, \code{"local"}, or \code{"none"}.
 Global scaling will divide the entire data matrix by the mean image standard
 deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+data location's time series by its estimated standard deviation. Default:
+\code{"template"}, to use the same option used for estimation of the
+\code{template}.}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
 \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 smooth the standard deviation estimates used for local scaling, provide the
 surface geometries along which to smooth as GIFTI geometry files or
-\code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+\code{"surf"} objects, as well as the smoothing FWHM (default:
+\code{"template"} to use the same option used for estimation of the
+\code{template}).
 
 If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 estimates will be performed.
@@ -101,12 +105,15 @@ regressor to the nuisance design matrix for each volume to scrub. If
 \item{TR, hpf}{These arguments control detrending. \code{TR} is the temporal
 resolution of the data, i.e. the time between volumes, in seconds;
 \code{hpf} is the frequency of the high-pass filter, in Hertz. Detrending
-is performed via nuisance regression of DCT bases. Default: \code{"template"}
-to use the values from the template.}
+is performed via nuisance regression of DCT bases. Default:
+\code{"template"} to use the values from the template. Be sure to set the
+correct \code{TR} if it's different for the new data compared to the data
+used in \code{estimate_template}.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
-\code{FALSE}.}
+\code{"template"}, to use the same option used for estimation of the
+\code{template}.}
 
 \item{Q2, Q2_max}{Denoise the BOLD data? Denoising is based on modeling and
 removing nuisance ICs. It may result in a cleaner estimate for smaller
@@ -114,20 +121,24 @@ datasets, but it may be unnecessary (and time-consuming) for larger datasets.
 
 Set \code{Q2} to control denoising: use a positive integer to specify the
 number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
-estimated by PESEL (default), or zero to skip denoising.
+estimated by PESEL, or zero to skip denoising.
 
 If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
 than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
-and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
-\code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+and \eqn{Q} is the number of group ICs. If \code{NULL}, \code{Q2_max} will
+be set to \eqn{T * .50 - Q}, rounded.
+
+The defaults for both arguments is \code{"template"}, to use the same option
+used for estimation of the \code{template}.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
 file paths. This is a character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+Default: \code{"template"} to use the same brainstructures present in the
+\code{template}).}
 
 \item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
 file paths or \code{"nifti"} objects. This is a brain map formatted as a
@@ -143,7 +154,8 @@ integers indicating the timepoints to include for each BOLD.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
-Default: \code{1e-6}. Variance is calculated on the original data, before
+Default: \code{"template"} to use the same brainstructures present in the
+\code{template}). Variance is calculated on the original data, before
 any normalization. Set to \code{0} to avoid removing locations due to
 low variance.}
 
