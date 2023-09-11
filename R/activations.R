@@ -73,7 +73,7 @@ activations <- function(
   }
 
   # Simple argument checks
-  stopifnot(fMRItools::is_posNum(gamma, zero_ok=TRUE))
+  stopifnot(is.numeric(gamma))
   stopifnot(fMRItools::is_1(gamma_by_std, "logical"))
   stopifnot(fMRItools::is_posNum(alpha))
   stopifnot(alpha <= 1)

@@ -132,12 +132,11 @@ actICA_rds <- activations(tICA_rds)
 actICA_cii <- activations(tICA_cii)
 plot(activations(tICA_cii)); plot(activations(tICA_gii))
 
-# TEMPORARY ---
-vars <- 2*sqrt(matrixStats::colVars(tICA_cii$template_mean))
-act2 <- activations(tICA_cii, u = vars, deviation=FALSE)
-# rox
-ac
-# -------------
+gamma <- 2
+gamma_scaled <- gamma*sqrt(matrixStats::colVars(tICA_cii$template_mean))
+act2 <- activations(tICA_cii, gamma=gamma_scaled, gamma_by_std=FALSE)
+act3 <- activations(tICA_cii, gamma=gamma)
+testthat::expect_equal(act2, act3)
 
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
