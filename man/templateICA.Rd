@@ -92,7 +92,7 @@ different sessions. Nuisance regression is performed as a first step, before
 centering, scaling, and denoising. An intercept column will automatically be
 added to \code{nuisance}. If \code{NULL}, no extra nuisance signals will be
 regressed from the data, but a nuisance regression will still be used if
-warranted by \code{scrub} or \code{detrend_DCT}.}
+warranted by \code{scrub} or \code{hpf}.}
 
 \item{scrub}{(Optional) A numeric vector of integers indicating the indices
 of volumes to scrub from the BOLD data. (List the volumes to remove, not the
