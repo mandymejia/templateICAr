@@ -9,10 +9,16 @@
 #' @method summary tICA_act.cifti
 summary.tICA_act.cifti <- function(object, ...) {
   act_counts <- colSums(as.matrix(object$active)==2, na.rm=TRUE)
+  verts_with_data_per_bs <- vapply(
+    object$active$data[!vapply(object$active$data, is.null, 0)], 
+    function(q){sum(q[,1]>0)}, 
+    0
+  )
   x <- c(
     summary(object$active),
+    list(verts_with_data_per_bs=verts_with_data_per_bs),
     list(act_counts=act_counts),
-    object[c("u", "alpha", "type", "method_p", "deviation")]
+    object[c("u", "z", "alpha", "type", "method_p", "deviation")]
   )
 
   class(x) <- "summary.tICA_act.cifti"
@@ -28,8 +34,7 @@ summary.tICA_act.cifti <- function(object, ...) {
 #' @method print summary.tICA_act.cifti
 print.summary.tICA_act.cifti <- function(x, ...) {
 
-  #mapct <- paste0(" (", round(mean(x$act_counts)/sum(x$verts_per_bs)*100), "% of locations)")
-  apct <- round(x$act_counts/sum(x$verts_per_bs)*100)
+  apct <- round(x$act_counts/sum(x$verts_with_data_per_bs)*100)
   pm_nice <- switch(x$method_p,
     bonferroni = "Bonferroni",
     holm = "Holm",
@@ -41,16 +46,31 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     none = "none"
   )
 
-  usign <- ifelse(x$u >=0, "+", "-")
+  usign <- if (all(x$u>=0)) {
+    "+"
+  } else if (all(x$u<=0)) {
+    "-"
+  } else {
+    "+/-" # not the best, but this shouldn't even happen :)
+  }
+  ustr <- if (length(x$z)==1) {
+    ifelse(x$deviation, paste0(abs(x$z), "*z"), paste0(x$z, "*z"))
+  } else if (length(x$z)>1) {
+    "z"
+  } else if (length(x$u)==1) {
+    ifelse(x$deviation, abs(x$u), x$u)
+  } else {
+    "u"
+  }
   adesc <- if (x$deviation) {
-    if (x$u != 0) {
-      paste("x", x$type, "mu", usign, abs(x$u))
+    if (any(x$u!=0)) {
+      paste("x", x$type, "mu", usign, ustr)
     } else {
       paste("x", x$type, "mu")
     }
   } else {
-    if (x$u != 0) {
-      paste("x", x$type, x$u)
+    if (any(x$u!=0)) {
+      paste("x", x$type, ustr)
     } else {
       paste("x", x$type, "0")
     }
@@ -67,7 +87,7 @@ print.summary.tICA_act.cifti <- function(x, ...) {
   # cat("Threshold:       ", x$u, "\n")
   # cat("Deviation:       ", x$deviation, "\n")
   cat(
-    "Active Loc. (%): ", 
+    "Active Loc. (%): ",
     paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC), "\n"
   )
   cat("\n")
@@ -201,16 +221,31 @@ print.summary.tICA_act.matrix <- function(x, ...) {
     none = "none"
   )
 
-  usign <- ifelse(x$u >=0, "+", "-")
+  usign <- if (all(x$u>=0)) {
+    "+"
+  } else if (all(x$u<=0)) {
+    "-"
+  } else {
+    "+/-" # not the best, but this shouldn't even happen :)
+  }
+  ustr <- if (length(x$z)==1) {
+    ifelse(x$deviation, paste0(abs(x$z), "*z"), paste0(x$z, "*z"))
+  } else if (length(x$z)>1) {
+    "z"
+  } else if (length(x$u)==1) {
+    ifelse(x$deviation, abs(x$u), x$u)
+  } else {
+    "u"
+  }
   adesc <- if (x$deviation) {
-    if (x$u != 0) {
-      paste("x", x$type, "mu", usign, abs(x$u))
+    if (any(x$u!=0)) {
+      paste("x", x$type, "mu", usign, ustr)
     } else {
       paste("x", x$type, "mu")
     }
   } else {
-    if (x$u != 0) {
-      paste("x", x$type, x$u)
+    if (any(x$u!=0)) {
+      paste("x", x$type, ustr)
     } else {
       paste("x", x$type, "0")
     }
@@ -227,7 +262,7 @@ print.summary.tICA_act.matrix <- function(x, ...) {
   # cat("Threshold:       ", x$u, "\n")
   # cat("Deviation:       ", x$deviation, "\n")
   cat(
-    "Active Loc. (%): ", 
+    "Active Loc. (%): ",
     paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC), "\n"
   )
   cat("-------------------------------------\n")
