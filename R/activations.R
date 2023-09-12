@@ -3,13 +3,12 @@
 #' Identify areas of activation in each independent component map
 #'
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
-#' @param gamma Activation threshold. Default: \code{0} (no threshold). May 
-#'  provide a vector of the same length as \code{which.ICs}.
-#' @param gamma_by_std Multiply \code{gamma} by the standard deviation of the
-#'  template mean for each IC? This will make \code{gamma} specify the threshold
-#'  like a \code{z} score; for example, \code{gamma=2} and 
-#'  \code{gamma_by_std=TRUE} identifies activations greater than two standard 
-#'  deviations. Default: \code{TRUE}. 
+#' @param u,z Set a threshold value for activation? A threshold value can be
+#'  specified directly with \code{u}, or a z-score-like threshold in terms of
+#'  standard deviations (the SD of values in the mean template) can be specified
+#'  with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
+#'  (do not use a threshold). Either argument can also be a vector of the same
+#'  length as \code{which.ICs}, to use different thresholds for each IC.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region.  Default: \code{">"} (positive excursion region).
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
@@ -24,9 +23,10 @@
 #'  template mean, rather than significant areas of engagement. Default:
 #'  \code{FALSE}.
 #'
-#' @return A list containing activation maps for each IC and the joint and
-#'  marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
-#'  data, then the activations maps will be formatted accordingly.
+#' @return A list containing activation maps for each IC, the joint and
+#'  marginal PPMs for each IC, and the parameters used for computing activation.
+#'  If the input represented CIFTI- or NIFTI-format data, then the activations
+#'  maps will be formatted accordingly.
 #'
 #'  Use \code{summary} to obtain information about the activations results.
 #'  For CIFTI-format activations, use \code{plot} to visualize the activation
@@ -43,8 +43,8 @@
 #'  activations(tICA_result, alpha=.05, deviation=TRUE)
 #' }
 activations <- function(
-  tICA, gamma=0, gamma_by_std=TRUE, alpha=0.01, 
-  type=c(">", "<", "!="), 
+  tICA, u=NULL, z=NULL, alpha=0.01,
+  type=c(">", "<", "!="),
   method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
@@ -73,14 +73,15 @@ activations <- function(
   }
 
   # Simple argument checks
-  stopifnot(is.numeric(gamma))
-  stopifnot(fMRItools::is_1(gamma_by_std, "logical"))
+  if ((!is.null(u)) && (!is.null(z))) { stop("Set only one of `u` or `z`.") }
+  stopifnot(is.null(u) || is.numeric(u))
+  stopifnot(is.null(z) || is.numeric(z))
   stopifnot(fMRItools::is_posNum(alpha))
   stopifnot(alpha <= 1)
   type <- match.arg(type, c(">", "<", "!="))
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
   stopifnot(fMRItools::is_1(verbose, "logical"))
-  
+
   nL <- ncol(tICA$A)
   if(is.null(which.ICs)) which.ICs <- seq(nL)
   stopifnot(is.numeric(which.ICs))
@@ -113,16 +114,20 @@ activations <- function(
   }
 
   # Compute activations. -------------------------------------------------------
-  if(length(gamma)==1) gamma <- rep(gamma, length(which.ICs))
-  if(length(gamma) != length(which.ICs)) stop('Length of gamma does not match length of which.ICs')
-  if (gamma_by_std) {
-    gamma <- gamma * sqrt(colVars(tICA$t_mean))
+  u_og <- u
+  if (!is.null(z)) {
+    stopifnot(length(z) %in% c(1, length(which.ICs)))
+    u <- z * sqrt(colVars(tICA$t_mean[,which.ICs,drop=FALSE]))
+  } else if (!is.null(u)) {
+    stopifnot(length(u) %in% c(1, length(which.ICs)))
+  } else {
+    u <- 0
   }
+  if(length(u)==1) u <- rep(u, length(which.ICs))
   nvox <- nrow(tICA$s_mean)
-  gamma_mat <- matrix(gamma, nrow=nvox, ncol=nL, byrow = TRUE)
+  u_mat <- matrix(u, nrow=nvox, ncol=nL, byrow = TRUE)
 
   if (is_stICA) {
-
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
 
     #identify areas of activation in each IC
@@ -132,20 +137,20 @@ activations <- function(
       if(verbose) cat(paste0('.. IC ',q,' (',which(which.ICs==q),' of ',length(which.ICs),') \n'))
       inds_q <- (1:nvox) + (q-1)*nvox
       if(deviation){
-        Dinv_mu_s <-  (as.vector(tICA$s_mean) - as.vector(tICA$t_mean) - gamma_mat)/as.vector(sqrt(tICA$t_var))
+        Dinv_mu_s <-  (as.vector(tICA$s_mean) - as.vector(tICA$t_mean) - u_mat)/as.vector(sqrt(tICA$t_var))
       } else {
-        Dinv_mu_s <- (as.vector(tICA$s_mean) - gamma_mat)/as.vector(sqrt(tICA$t_var))
+        Dinv_mu_s <- (as.vector(tICA$s_mean) - u_mat)/as.vector(sqrt(tICA$t_var))
       }
 
       if(q==which.ICs[1]) {
         #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
-        #we subtract gamma first since rescaling by D^(-1) would affect gamma too
+        #we subtract u first since rescaling by D^(-1) would affect u too
         #save rho from first time running excursions, pass into excursions for other ICs
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = gamma[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
         if(verbose) print(tmp)
         rho <- res_q$rho
       } else {
-        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = gamma[1], ind = inds_q, rho=rho))
+        tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q, rho=rho))
         if(verbose) print(tmp)
       }
       active[,q] <- res_q$E[inds_q]
@@ -154,9 +159,11 @@ activations <- function(
       vars[,q] <- res_q$vars[inds_q]
     }
 
+    if (length(unique(u))==1) { u <- u[1] }
+    if (length(unique(z))==1) { z <- z[1] }
     result <- list(
       active=active, jointPPM=jointPPM, marginalPPM=marginalPPM,
-      vars=vars, gamma = gamma, alpha = alpha, type = type, deviation=deviation
+      vars=vars, u = u, z = z, alpha = alpha, type = type, deviation=deviation
     )
   }
 
@@ -166,9 +173,9 @@ activations <- function(
 
     nL <- ncol(tICA$s_mean)
     if(deviation){
-      t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - gamma_mat) / as.matrix(tICA$s_se)
+      t_stat <- (as.matrix(tICA$s_mean) - tICA$t_mean - u_mat) / as.matrix(tICA$s_se)
     } else {
-      t_stat <- (as.matrix(tICA$s_mean) - gamma_mat) / as.matrix(tICA$s_se)
+      t_stat <- (as.matrix(tICA$s_mean) - u_mat) / as.matrix(tICA$s_se)
     }
 
     if(type=='>') pvals <- 1-pnorm(t_stat)
@@ -184,12 +191,14 @@ activations <- function(
       active[,q] <- (pvals_adj[,q] < alpha)
     }
 
+    if (length(unique(u))==1) { u <- u[1] }
+    if (length(unique(z))==1) { z <- z[1] }
     result <- list(
       active = active,
       pvals = pvals, pvals_adj = pvals_adj,
       se = tICA$s_se, tstats = t_stat,
       alpha = alpha, method_p = method_p,
-      type=type, gamma = gamma, deviation=deviation
+      type=type, u = u, z = z, deviation=deviation
     )
   }
 

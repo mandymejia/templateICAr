@@ -6,8 +6,8 @@
 \usage{
 activations(
   tICA,
-  gamma = 0,
-  gamma_by_std = TRUE,
+  u = NULL,
+  z = NULL,
   alpha = 0.01,
   type = c(">", "<", "!="),
   method_p = "BH",
@@ -19,14 +19,12 @@ activations(
 \arguments{
 \item{tICA}{Fitted (spatial) template ICA object from \code{\link{templateICA}}.}
 
-\item{gamma}{Activation threshold. Default: \code{0} (no threshold). May
-provide a vector of the same length as \code{which.ICs}.}
-
-\item{gamma_by_std}{Multiply \code{gamma} by the standard deviation of the
-template mean for each IC? This will make \code{gamma} specify the threshold
-like a \code{z} score; for example, \code{gamma=2} and
-\code{gamma_by_std=TRUE} identifies activations greater than two standard
-deviations. Default: \code{TRUE}.}
+\item{u, z}{Set a threshold value for activation? A threshold value can be
+specified directly with \code{u}, or a z-score-like threshold in terms of
+standard deviations (the SD of values in the mean template) can be specified
+with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
+(do not use a threshold). Either argument can also be a vector of the same
+length as \code{which.ICs}, to use different thresholds for each IC.}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
@@ -48,9 +46,10 @@ template mean, rather than significant areas of engagement. Default:
 \code{FALSE}.}
 }
 \value{
-A list containing activation maps for each IC and the joint and
-marginal PPMs for each IC. If the input represented CIFTI- or NIFTI-format
-data, then the activations maps will be formatted accordingly.
+A list containing activation maps for each IC, the joint and
+marginal PPMs for each IC, and the parameters used for computing activation.
+If the input represented CIFTI- or NIFTI-format data, then the activations
+maps will be formatted accordingly.
 
 Use \code{summary} to obtain information about the activations results.
 For CIFTI-format activations, use \code{plot} to visualize the activation

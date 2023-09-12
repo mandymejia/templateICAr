@@ -134,8 +134,8 @@ plot(activations(tICA_cii)); plot(activations(tICA_gii))
 
 gamma <- 2
 gamma_scaled <- gamma*sqrt(matrixStats::colVars(tICA_cii$template_mean))
-act2 <- activations(tICA_cii, gamma=gamma_scaled, gamma_by_std=FALSE)
-act3 <- activations(tICA_cii, gamma=gamma)
+act2 <- activations(tICA_cii, u=gamma_scaled)
+act3 <- activations(tICA_cii, z=gamma)
 testthat::expect_equal(act2, act3)
 
 # CIFTI ------------------------------------------------------------------------
