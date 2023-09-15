@@ -724,26 +724,16 @@ estimate_template <- function(
   }
   if (!keep_DR) { rm(DR0) }
 
-  # Params, formatted as length-one character vectors to be compatible with
-  #   putting in "xifti" metadata
-  indsp <- if (all(seq(nQ) %in% inds)) { paste("all", nQ) } else { inds }
   tparams <- list(
     FC=FC,
     num_subjects=nN, num_visits=nM,
-    inds=indsp, center_Bcols=center_Bcols,
+    inds=inds, center_Bcols=center_Bcols,
     scale=scale, scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     pseudo_retest=!real_retest
-  )
-  tparams <- lapply(
-    tparams,
-    function(x) {
-      if (is.null(x)) { x <- "NULL"};
-      paste0(as.character(x), collapse=" ")
-    }
   )
 
   # If masking was performed, and if verbose, report the NA count in templates.

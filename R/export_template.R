@@ -13,15 +13,7 @@ struct_template <- function(template, FORMAT, dat_struct, params){
     }
 
     template <- ciftiTools::newdata_xifti(dat_struct, template)
-    if (params$inds == paste("all", ncol(template))) {
-      template$meta$cifti$names <- paste(
-        "IC", seq(ncol(template))
-      )
-    } else {
-      template$meta$cifti$names <- paste(
-        "IC", strsplit(params$inds, " ")[[1]]
-      )
-    }
+    template$meta$cifti$names <- paste("IC", params$inds)
   } else if (FORMAT == "GIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with GIFTI data. Please install it.", call. = FALSE)
@@ -153,6 +145,13 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   # Add params to `"xifti"` metadata; resample it.
   if (FORMAT == "CIFTI") {
+    x$params <- lapply(
+      x$params,
+      function(q) {
+        if (is.null(q)) { q <- "NULL"};
+        paste0(as.character(q), collapse=" ")
+      }
+    )
     x$template$mean$meta$cifti$misc <- c(list(template="mean"), x$params)
     x$template$var$meta$cifti$misc <- c(list(template="var"), x$params)
   }

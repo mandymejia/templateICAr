@@ -10,10 +10,17 @@
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
   tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$params)
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
   x <- c(
     summary(tmean),
     list(has_DR="DR" %in% names(object)),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.cifti"
