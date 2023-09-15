@@ -14,7 +14,7 @@ templateICA(
   scale_sm_FWHM = "template",
   nuisance = NULL,
   scrub = NULL,
-  TR = "template",
+  TR = NULL,
   hpf = "template",
   center_Bcols = "template",
   Q2 = "template",
@@ -86,7 +86,7 @@ resolution as the \code{BOLD} data.}
 
 \item{nuisance}{(Optional) Signals to regress from the data, given as a
 numeric matrix with the same number of rows as there are volumes in the
-\code{BOLD} data. If multiple sessions \code{BOLD} sessions are provided,
+\code{BOLD} data. If multiple \code{BOLD} sessions are provided,
 this argument can be a list to use different nuisance regressors for
 different sessions. Nuisance regression is performed as a first step, before
 centering, scaling, and denoising. An intercept column will automatically be
@@ -96,7 +96,7 @@ warranted by \code{scrub} or \code{hpf}.}
 
 \item{scrub}{(Optional) A numeric vector of integers indicating the indices
 of volumes to scrub from the BOLD data. (List the volumes to remove, not the
-ones to keep.) If multiple sessions \code{BOLD} sessions are provided, this
+ones to keep.) If multiple \code{BOLD} sessions are provided, this
 argument can be a list to remove different volumes for different sessions.
 Scrubbing is performed within nuisance regression by adding a spike
 regressor to the nuisance design matrix for each volume to scrub. If
@@ -108,7 +108,11 @@ resolution of the data, i.e. the time between volumes, in seconds;
 is performed via nuisance regression of DCT bases. Default:
 \code{"template"} to use the values from the template. Be sure to set the
 correct \code{TR} if it's different for the new data compared to the data
-used in \code{estimate_template}.}
+used in \code{estimate_template}.
+
+Note that if multiple \code{BOLD} sessions are provided, their
+\code{TR} and \code{hpf} must be the same; both arguments accept only one
+value.}
 
 \item{center_Bcols}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:

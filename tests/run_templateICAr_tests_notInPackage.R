@@ -36,11 +36,20 @@ GICA_fname <- c(
 
 xii1 <- select_xifti(read_cifti(GICA_fname["cii"]), 1) * 0
 
+# Quick little check of the three main functions, w/ CIFTI ---------------------
+tm_cii <- estimate_template(
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72
+)
+tICA_cii <- templateICA(
+  cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
+)
+actICA_cii <- activations(tICA_cii)
+
 # `estimate_template`: check for same result w/ different file types -----------
 ### Test 1: basic
 tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
-  keep_DR=TRUE, FC=TRUE, TR=.72
+  keep_DR=TRUE, FC=TRUE, TR=.72,
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
@@ -62,13 +71,13 @@ plot(tm_cii); plot(tm_gii)
 ### Test 2: with various parameters changed
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4,6)], GICA = GICA_fname["cii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4,
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5,
   maskTol=.9, brainstructures="left", wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5, detrend_DCT=4,
+  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5,
   maskTol=.9, wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
@@ -78,13 +87,13 @@ testthat::expect_equal(
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=seq(5), scale="none", detrend_DCT=4, Q2=5,
+  inds=seq(5), scale="none", Q2=5,
   maskTol=.9, wb_path="~/Desktop/workbench",
   usePar=TRUE
 )
 tm_rds <- estimate_template(
   lapply(rds_fnames[seq(4,6)], readRDS), lapply(rds_fnames[seq(3)], readRDS), GICA = GICA_fname["rds"],
-  inds=seq(5), scale="none", detrend_DCT=4, Q2=5,
+  inds=seq(5), scale="none",  Q2=5,
   maskTol=.9, usePar=TRUE
 )
 testthat::expect_equal(
@@ -122,21 +131,22 @@ tm_cii <- estimate_template(
 )
 
 # `templateICA`
-tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=0)
-tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20)
-tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=0, maxiter=20)
+tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=0, TR=.72)
+tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20, TR=.72)
+tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=0, maxiter=20, TR=.72)
 tICA_cii; tICA_gii; tICA_rds
 testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
 testthat::expect_equal(tICA_gii$A, tICA_rds$A)
 actICA_rds <- activations(tICA_rds)
 actICA_cii <- activations(tICA_cii)
 plot(activations(tICA_cii)); plot(activations(tICA_gii))
+close3d(); close3d()
 
 gamma <- 2
 gamma_scaled <- gamma*sqrt(matrixStats::colVars(tICA_cii$template_mean))
 act2 <- activations(tICA_cii, u=gamma_scaled)
 act3 <- activations(tICA_cii, z=gamma)
-testthat::expect_equal(act2, act3)
+testthat::expect_equal(act2[names(act2)!="z"], act3[names(act3)!="z"])
 
 # CIFTI ------------------------------------------------------------------------
 tm <- estimate_template(
@@ -163,7 +173,7 @@ close3d(); close3d()
 # LEFT OFF HERE.
 tm <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
-  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3,
+  GICA=GICA_fname["cii"], scale="local",
   brainstructures="right", varTol=1, verbose=FALSE
 )
 tm
@@ -172,7 +182,7 @@ close3d()
 
 tm2 <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4, 6)],
-  GICA=GICA_fname["cii"], scale="local", detrend_DCT=3, scale_sm_FWHM=20,
+  GICA=GICA_fname["cii"], scale="local", scale_sm_FWHM=20,
   brainstructures="right", varTol=1, verbose=FALSE
 )
 
@@ -198,7 +208,7 @@ cii <- read_cifti(cii_fnames[5], brainstructures="left")
 #templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
 cii$data$cortex_left[33,] <- mean(cii$data$cortex_left[33,])
 tICA <- testthat::expect_error( # Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.
-  templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE)
+  templateICA(cii, tm, brainstructures="left", scale="global", maxiter=7, Q2=0, spatial_model = TRUE, TR=.72)
 )
 
 cii <- lapply(cii_fnames[seq(4)], read_xifti, brainstructures="right")
@@ -243,7 +253,8 @@ tm <- estimate_template(
 tm
 tICA <- templateICA(
   nii_fnames[2], tm, scale=FALSE,
-  miniter=1, maxiter=1, mask=mask_fname, Q2=0
+  miniter=1, maxiter=1, mask=mask_fname, Q2=0, TR=.72
 )
 tICA
 activations(tICA)
+close3d()

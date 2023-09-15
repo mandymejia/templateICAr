@@ -56,7 +56,7 @@ norm_BOLD <- function(
     if (hpf==.01) {
       message("Setting `hpf=0` because `TR` was not provided. Either provide `TR` or set `hpf=0` to disable this message.")
       hpf <- 0
-    } else {
+    } else if (hpf!=0) {
       stop("Cannot apply `hpf` because `TR` was not provided. Either provide `TR` or set `hpf=0`.")
     }
   } else {

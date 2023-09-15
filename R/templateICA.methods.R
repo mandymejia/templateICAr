@@ -8,9 +8,17 @@
 #' @export
 #' @method summary tICA.cifti
 summary.tICA.cifti <- function(object, ...) {
+  tICA_params <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     summary(object$subjICmean),
-    object$params
+    tICA_params
   )
 
   class(x) <- "summary.tICA.cifti"
@@ -27,13 +35,21 @@ summary.tICA.cifti <- function(object, ...) {
 #' @export
 #' @method summary tICA.nifti
 summary.tICA.nifti <- function(object, ...) {
+  tICA_params <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(
       mask_dims=dim(object$mask_nii),
       nV=nrow(object$template_mean),
       nL=ncol(object$template_mean)
     ),
-    object$params
+    tICA_params
   )
 
   class(x) <- "summary.tICA.nifti"
@@ -50,9 +66,17 @@ summary.tICA.nifti <- function(object, ...) {
 #' @export
 #' @method summary tICA.matrix
 summary.tICA.matrix <- function(object, ...) {
+  tICA_params <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(nV=nrow(object$subjICmean), nL=ncol(object$subjICmean)),
-    object$params
+    tICA_params
   )
 
   class(x) <- "summary.tICA.matrix"
@@ -81,7 +105,8 @@ print.summary.tICA.cifti <- function(x, ...) {
   }
 
   cat("====TEMPLATE ICA INFO================\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", x$TR, "s.\n")
+  cat("Highpass filter: ", x$hpf, "Hz\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Variance method: ", x$tvar_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
@@ -124,7 +149,8 @@ print.summary.tICA.nifti <- function(x, ...) {
   }
 
   cat("====TEMPLATE INFO====================\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", x$TR, "s.\n")
+  cat("Highpass filter: ", x$hpf, "Hz\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Variance method: ", x$tvar_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
@@ -165,7 +191,8 @@ print.summary.tICA.matrix <- function(x, ...) {
   }
 
   cat("====TEMPLATE INFO====================\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", x$TR, "s.\n")
+  cat("Highpass filter: ", x$hpf, "Hz\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Variance method: ", x$tvar_method, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
