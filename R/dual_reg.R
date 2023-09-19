@@ -198,6 +198,7 @@ dual_reg2 <- function(
   if (verbose) { extime <- Sys.time() }
 
   keepA <- as.logical(keepA); stopifnot(length(keepA)==1)
+  scale <- match.arg(scale, c("global", "local", "none"))
   # No other arg checks: check them before calling this function.
 
   # For `"xifti"` data for handling the medial wall and smoothing.
