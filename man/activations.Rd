@@ -28,7 +28,7 @@ length as \code{which.ICs}, to use different thresholds for each IC.}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
-\item{type}{Type of region: \code{">"}, \code{"<"}, \code{"!=}", or
+\item{type}{Type of region: \code{">"}, \code{"<"}, \code{"!="}, or
 \code{"abs >"}. The last case tests for magnitude by taking the absolute
 value and then testing if they are greater than... Default: \code{"abs >"}.}
 

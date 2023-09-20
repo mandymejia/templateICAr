@@ -11,7 +11,7 @@
 #'  (do not use a threshold). Either argument can also be a vector of the same
 #'  length as \code{which.ICs}, to use different thresholds for each IC.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
-#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!=}", or 
+#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!="}, or 
 #'  \code{"abs >"}. The last case tests for magnitude by taking the absolute
 #'  value and then testing if they are greater than... Default: \code{"abs >"}.
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
