@@ -454,7 +454,7 @@ estimate_template <- function(
   if (usePar && format=="RDS") { stop("Parallel computation not working with RDS file input. Working on this!") }
 
   # `GICA` ---------------------------------------------------------------------
-  # Conver `GICA` to a numeric data matrix or array.
+  # Convert `GICA` to a numeric data matrix or array.
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
     if (ciftiTools::is.xifti(GICA, messages=FALSE)) {

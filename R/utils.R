@@ -160,6 +160,8 @@ get_FORMAT <- function(format){
 
 #' Check required packages for the data format
 #'
+# [TO DO] moved to fMRItools
+#
 #' @param FORMAT The data FORMAT
 #' @return \code{NULL}, invisibly
 #' @keywords internal
