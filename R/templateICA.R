@@ -195,6 +195,7 @@
 templateICA <- function(
   BOLD, template,
   tvar_method=c("non-negative", "unbiased"),
+  #tinds=NULL,
   scale=c("template", "global", "local", "none"),
   scale_sm_surfL=NULL,
   scale_sm_surfR=NULL,
