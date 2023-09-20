@@ -2,14 +2,14 @@
 % Please edit documentation in R/activations.R
 \name{activations}
 \alias{activations}
-\title{Activations of (s)tICA}
+\title{Activations of (spatial) template ICA}
 \usage{
 activations(
   tICA,
   u = NULL,
   z = NULL,
   alpha = 0.01,
-  type = c(">", "<", "!="),
+  type = c("abs >", ">", "<", "!="),
   method_p = "BH",
   verbose = FALSE,
   which.ICs = NULL,
@@ -28,7 +28,9 @@ length as \code{which.ICs}, to use different thresholds for each IC.}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 
-\item{type}{Type of region.  Default: \code{">"} (positive excursion region).}
+\item{type}{Type of region: \code{">"}, \code{"<"}, \code{"!=}", or
+\code{"abs >"}. The last case tests for magnitude by taking the absolute
+value and then testing if they are greater than... Default: \code{"abs >"}.}
 
 \item{method_p}{If the input is a \code{"tICA.[format]"} model object, the type of
 multiple comparisons correction to use for p-values, or \code{NULL} for no
@@ -56,7 +58,8 @@ For CIFTI-format activations, use \code{plot} to visualize the activation
 maps.
 }
 \description{
-Identify areas of activation in each independent component map
+Identify areas of activation in each independent component map from the
+result of (spatial) template ICA.
 }
 \examples{
 \dontrun{

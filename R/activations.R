@@ -1,6 +1,7 @@
-#' Activations of (s)tICA
+#' Activations of (spatial) template ICA
 #'
-#' Identify areas of activation in each independent component map
+#' Identify areas of activation in each independent component map from the
+#'  result of (spatial) template ICA.
 #'
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
 #' @param u,z Set a threshold value for activation? A threshold value can be
@@ -10,7 +11,9 @@
 #'  (do not use a threshold). Either argument can also be a vector of the same
 #'  length as \code{which.ICs}, to use different thresholds for each IC.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
-#' @param type Type of region.  Default: \code{">"} (positive excursion region).
+#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!=}", or 
+#'  \code{"abs >"}. The last case tests for magnitude by taking the absolute
+#'  value and then testing if they are greater than... Default: \code{"abs >"}.
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
 #'  multiple comparisons correction to use for p-values, or \code{NULL} for no
 #'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
@@ -44,7 +47,7 @@
 #' }
 activations <- function(
   tICA, u=NULL, z=NULL, alpha=0.01,
-  type=c(">", "<", "!="),
+  type=c("abs >", ">", "<", "!="),
   method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
@@ -78,15 +81,21 @@ activations <- function(
   stopifnot(is.null(z) || is.numeric(z))
   stopifnot(fMRItools::is_posNum(alpha))
   stopifnot(alpha <= 1)
-  type <- match.arg(type, c(">", "<", "!="))
+  type <- match.arg(type, c("abs >", ">", "<", "!="))
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
   stopifnot(fMRItools::is_1(verbose, "logical"))
+  stopifnot(fMRItools::is_1(deviation, "logical"))
 
   nL <- ncol(tICA$A)
   if(is.null(which.ICs)) which.ICs <- seq(nL)
   stopifnot(is.numeric(which.ICs))
   stopifnot(which.ICs == round(which.ICs))
   if(min((which.ICs) %in% (1:nL))==0) stop('Invalid entries in which.ICs')
+
+  if (deviation) {
+    if (!is.null(z)) { stop("`z` not compatible with `deviation=TRUE`.") }
+    if (u != 0) { warning("`u != 0` not advised for `deviation=TRUE`. Proceeding anyway.") }
+  }
 
   # Get needed metadata from `tICA`.
   Q <- tICA$omega
@@ -126,6 +135,11 @@ activations <- function(
   if(length(u)==1) u <- rep(u, length(which.ICs))
   nvox <- nrow(tICA$s_mean)
   u_mat <- matrix(u, nrow=nvox, ncol=nL, byrow = TRUE)
+
+  if (type == "abs >") {
+    tICA$s_mean <- abs(tICA$s_mean)
+    type <- ">"
+  }
 
   if (is_stICA) {
     if(verbose) cat('Determining areas of activations based on joint posterior distribution of latent fields\n')
