@@ -12,7 +12,7 @@ estimate_template(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
@@ -21,10 +21,10 @@ estimate_template(
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
+  brainstructures = "all",
   mask = NULL,
   keep_DR = FALSE,
-  FC = FALSE,
+  FC = TRUE,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -38,7 +38,7 @@ estimate_template.cifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
@@ -47,7 +47,7 @@ estimate_template.cifti(
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
+  brainstructures = "all",
   keep_DR = FALSE,
   FC = FALSE,
   varTol = 1e-06,
@@ -63,7 +63,7 @@ estimate_template.gifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
@@ -72,7 +72,7 @@ estimate_template.gifti(
   center_Bcols = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
+  brainstructures = "all",
   keep_DR = FALSE,
   FC = FALSE,
   varTol = 1e-06,
@@ -88,7 +88,7 @@ estimate_template.nifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   TR = NULL,
   hpf = 0.01,
   center_Bcols = FALSE,
@@ -131,10 +131,10 @@ calculating dual regression, not before. This is because removing the ICs
 prior to dual regression would leave unmodelled signals in the data, which
 could bias the templates.}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
 \code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
@@ -191,7 +191,7 @@ file paths. This is a character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+Default: \code{c("all")}.}
 
 \item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
 file paths or \code{"nifti"} objects. This is a brain map formatted as a
@@ -203,8 +203,7 @@ the DR estimates and only return the templates. If \code{TRUE}, the DR
 estimates are returned too. If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
-\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
-(not fully supported yet.)}
+\item{FC}{Include the functional connectivity template? Default: \code{TRUE}.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -274,7 +273,7 @@ estimate_template(BOLD=BOLD, GICA=mU)
  estimate_template(
    run1_cifti_fnames, run2_cifti_fnames,
    gICA_cifti_fname, brainstructures="all",
-   scale="local", TR=0.7, Q2=NULL, varTol=10
+   scale="global", TR=0.71, Q2=NULL, varTol=10
  )
 }
 }

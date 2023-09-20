@@ -8,7 +8,7 @@ norm_BOLD(
   BOLD,
   center_rows = TRUE,
   center_cols = FALSE,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_xifti = NULL,
   scale_sm_FWHM = 2,
   TR = NULL,
@@ -22,10 +22,10 @@ norm_BOLD(
 location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"} and
 \code{BOLD} represents CIFTI-format data. To smooth the standard deviation

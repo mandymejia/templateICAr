@@ -4,10 +4,10 @@
 \alias{scale_Param}
 \title{scale}
 \arguments{
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 }
 \description{
 scale

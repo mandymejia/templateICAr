@@ -10,7 +10,7 @@ dual_reg2(
   format = c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
   keepA = FALSE,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
@@ -20,7 +20,7 @@ dual_reg2(
   Q2 = 0,
   Q2_max = NULL,
   NA_limit = 0.1,
-  brainstructures = c("left", "right"),
+  brainstructures = "all",
   mask = NULL,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -49,10 +49,10 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 \item{keepA}{Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
 (default)?}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
 \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
@@ -109,7 +109,7 @@ Character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+Default: \code{c("all")}.}
 
 \item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same

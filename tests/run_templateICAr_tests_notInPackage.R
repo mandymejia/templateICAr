@@ -38,7 +38,7 @@ xii1 <- select_xifti(read_cifti(GICA_fname["cii"]), 1) * 0
 
 # Quick little check of the three main functions, w/ CIFTI ---------------------
 tm_cii <- estimate_template(
-  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE
 )
 tICA_cii <- templateICA(
   cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
@@ -49,15 +49,15 @@ actICA_cii <- activations(tICA_cii)
 ### Test 1: basic
 tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
-  keep_DR=TRUE, FC=TRUE, TR=.72,
+  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
-  keep_DR=TRUE, FC=TRUE, TR=.72
+  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 tm_rds <- estimate_template(
   rds_fnames[seq(5)], GICA = GICA_fname["rds"],
-  keep_DR=TRUE, FC=TRUE, TR=.72
+  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 testthat::expect_equal(
   lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
@@ -71,13 +71,13 @@ plot(tm_cii); plot(tm_gii)
 ### Test 2: with various parameters changed
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4,6)], GICA = GICA_fname["cii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5,
+  inds=c(2,7,11,90), scale="global", scale_sm_FWHM=5,
   maskTol=.9, brainstructures="left", wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=c(2,7,11,90), scale="local", scale_sm_FWHM=5,
+  inds=c(2,7,11,90), scale="global", scale_sm_FWHM=5,
   maskTol=.9, wb_path="~/Desktop/workbench",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
@@ -106,15 +106,15 @@ close3d(); close3d(); close3d(); close3d()
 # `export_template` and `templateICA`: check for same result w/ different file types -----------------
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
-  keep_DR=TRUE#, FC=TRUE
+  keep_DR=TRUE, scale="global"
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),
-  keep_DR=TRUE#, FC=TRUE
+  keep_DR=TRUE, scale="global"
 )
 tm_rds <- estimate_template(
   rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
-  keep_DR=TRUE#, FC=TRUE
+  keep_DR=TRUE, scale="global"
 )
 
 # `export_template`
@@ -127,7 +127,7 @@ tm_rds2 <- lapply(out_fname, readRDS)
 
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
-  keep_DR=TRUE#, FC=TRUE
+  keep_DR=TRUE, FC=FALSE
 )
 
 # `templateICA`
@@ -233,7 +233,6 @@ stopifnot(
   max(abs(do.call(c, tm$var_decomp) - do.call(c, tm2$var_decomp)), na.rm=TRUE) < 1e-8
 )
 rm(tm2)
-
 
 # NIFTI ------------------------------------------------------------------------
 rm(xii1)

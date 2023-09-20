@@ -132,7 +132,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  Default: \code{c("all")}.
 #' @param resamp_res The target resolution for resampling (number of cortical
 #'  surface vertices per hemisphere).
 #' @param center_Bcols,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
@@ -146,7 +146,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
 #' 
 #' @keywords internal
 datProcFUN.cifti <- function(
-  dat, brainstructures=c("left", "right"), resamp_res=NULL,
+  dat, brainstructures="all", resamp_res=NULL,
   center_Bcols=FALSE, 
   scale=c("local", "global", "none"), scale_sm_FWHM=2,
   detrend_DCT=0){

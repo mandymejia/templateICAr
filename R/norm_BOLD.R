@@ -26,7 +26,7 @@
 #'
 norm_BOLD <- function(
   BOLD, center_rows=TRUE, center_cols=FALSE,
-  scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
+  scale=c("local", "global", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01){
 
   nT <- ncol(BOLD)
@@ -43,7 +43,7 @@ norm_BOLD <- function(
     )
     scale <- "global"
   }
-  scale <- match.arg(scale, c("global", "local", "none"))
+  scale <- match.arg(scale, c("local", "global", "none"))
   if (!is.null(scale_sm_xifti)) {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)

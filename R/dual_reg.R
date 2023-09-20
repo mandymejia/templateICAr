@@ -34,7 +34,7 @@
 #'
 dual_reg <- function(
   BOLD, GICA,
-  scale=c("global", "local", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
+  scale=c("local", "global", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   center_Bcols=FALSE){
 
@@ -48,7 +48,7 @@ dual_reg <- function(
     )
     scale <- "global"
   }
-  scale <- match.arg(scale, c("global", "local", "none"))
+  scale <- match.arg(scale, c("local", "global", "none"))
   if (!is.null(scale_sm_xifti)) { stopifnot(ciftiTools::is.xifti(scale_sm_xifti)) }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
 
@@ -143,7 +143,7 @@ dual_reg <- function(
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  Default: \code{c("all")}.
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
@@ -186,19 +186,19 @@ dual_reg2 <- function(
   format=c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
   keepA=FALSE,
-  scale=c("global", "local", "none"),
+  scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   center_Bcols=FALSE, 
   Q2=0, Q2_max=NULL, NA_limit=.1,
-  brainstructures=c("left", "right"), mask=NULL,
+  brainstructures="all", mask=NULL,
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
 
   if (verbose) { extime <- Sys.time() }
 
   keepA <- as.logical(keepA); stopifnot(length(keepA)==1)
-  scale <- match.arg(scale, c("global", "local", "none"))
+  scale <- match.arg(scale, c("local", "global", "none"))
   # No other arg checks: check them before calling this function.
 
   # For `"xifti"` data for handling the medial wall and smoothing.

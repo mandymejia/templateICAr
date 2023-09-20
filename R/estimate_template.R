@@ -206,7 +206,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  Default: \code{c("all")}.
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
 #'  binary array of the same spatial dimensions as the fMRI data, with
@@ -232,8 +232,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
-#' @param FC Include the functional connectivity template? Default: \code{FALSE}
-#'  (not fully supported yet.)
+#' @param FC Include the functional connectivity template? Default: \code{TRUE}.
 #' @param varTol Tolerance for variance of each data location. For each scan,
 #'  locations which do not meet this threshold are masked out of the analysis.
 #'  Default: \code{1e-6}. Variance is calculated on the original data, before
@@ -295,20 +294,20 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  estimate_template(
 #'    run1_cifti_fnames, run2_cifti_fnames,
 #'    gICA_cifti_fname, brainstructures="all",
-#'    scale="local", TR=0.7, Q2=NULL, varTol=10
+#'    scale="global", TR=0.71, Q2=NULL, varTol=10
 #'  )
 #' }
 estimate_template <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"),
+  scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01, 
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"), mask=NULL,
+  brainstructures="all", mask=NULL,
   keep_DR=FALSE,
-  FC=FALSE,
+  FC=TRUE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
@@ -324,7 +323,7 @@ estimate_template <- function(
     )
     scale <- "global"
   }
-  scale <- match.arg(scale, c("global", "local", "none"))
+  scale <- match.arg(scale, c("local", "global", "none"))
   stopifnot(fMRItools::is_1(scale_sm_FWHM, "numeric"))
   if (is.null(hpf)) { hpf <- 0 }
   if (is.null(TR)) {
@@ -442,6 +441,7 @@ estimate_template <- function(
       cat("Setting `scale_sm_FWHM == 0`.\n")
     } else {
       if (FORMAT == "NIFTI") {
+        # [TO DO] make this available
         warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for volumetric data.).\n")
       } else {
         warning( "Setting `scale_sm_FWHM == 0` (Scale smoothing not available for data matrices: use CIFTI/GIFTI files.).\n")
@@ -450,9 +450,7 @@ estimate_template <- function(
     scale_sm_FWHM <- 0
   }
 
-  # [TO DO]: "MATRIX" or "data"? See `dual_reg2`
-
-  # [TO DO]: Mysteriously, MATRIX FORMAT is not working with parallel.
+  # [TO DO]: Mysteriously, RDS format is not working with parallel.
   if (usePar && format=="RDS") { stop("Parallel computation not working with RDS file input. Working on this!") }
 
   # `GICA` ---------------------------------------------------------------------
@@ -775,12 +773,12 @@ estimate_template <- function(
 estimate_template.cifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"),
+  scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"),
+  brainstructures="all",
   keep_DR=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -809,12 +807,12 @@ estimate_template.cifti <- function(
 estimate_template.gifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"),
+  scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures=c("left","right"),
+  brainstructures="all",
   keep_DR=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -843,7 +841,7 @@ estimate_template.gifti <- function(
 estimate_template.nifti <- function(
   BOLD, BOLD2=NULL,
   GICA, inds=NULL,
-  scale=c("global", "local", "none"),
+  scale=c("local", "global", "none"),
   TR=NULL, hpf=.01,
   center_Bcols=FALSE,
   Q2=0, Q2_max=NULL,

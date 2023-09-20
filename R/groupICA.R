@@ -15,17 +15,17 @@
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  Default: \code{c("all")}.
 #' @param num_PCs Maximum number of PCs to retain in initial subject-level PCA
 #' @param num_ICs Number of independent components to identify.
 #' @param max_rows_GPCA The maximum number of rows for the matrix on which group
 #'  level PCA will be performed.  This matrix is the result of temporal concatenation
 #'  and contains \code{length(cifti_fnames) * num_PCs} rows.
-#' @param center_Bcols,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
+#' @param center_Bcols,scale,scale_sm_FWHM,TR,hpf Center BOLD columns, scale by the
 #'  standard deviation, and detrend voxel timecourses? See 
 #'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
-#'  Defaults: Center BOLD columns, scale by the global standard deviation, but
-#'  do not detrend.
+#'  Defaults: Center BOLD columns, scale by the global standard deviation, and
+#'  apply a .01 Hz HPF if the \code{TR} is provided.
 #' @param verbose If \code{TRUE}, display progress updates
 #' @param out_fname (Optional) If not specified, a xifti object will be returned but
 #'  the GICA maps will not be written to a CIFTI file.
@@ -53,13 +53,13 @@
 #'
 groupICA.cifti <- function(
   cifti_fnames, subjects=NULL,
-  brainstructures=c("left","right"),
+  brainstructures="all",
   num_PCs=100,
   num_ICs,
   max_rows_GPCA=10000,
   center_Bcols=FALSE, 
-  scale=c("global", "local", "none"), scale_sm_FWHM=2,
-  detrend_DCT=0,
+  scale=c("local", "global", "none"), scale_sm_FWHM=2,
+  TR=NULL, hpf=.01,
   verbose=TRUE,
   out_fname=NULL,
   surfL=NULL,
@@ -195,7 +195,7 @@ groupICA.cifti <- function(
       ciftiTools::newdata_xifti(x, norm_BOLD(
         as.matrix(x), center_cols=center_Bcols, 
         scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
-        detrend_DCT=detrend_DCT
+        TR=TR, hpf=hpf
       ))
     })
 
