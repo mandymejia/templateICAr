@@ -486,8 +486,8 @@ templateICA <- function(
       bs_missing <- tbs[!(tbs %in% bs2)]
       if (verbose) {
         cat(paste0(
-          "Ignoring ", ifelse(length(bs_missing) > 1, "these brain structures", "This brain structure"),
-          " in the template:", paste(bs_missing, collapse=", "), "."
+          "Ignoring ", ifelse(length(bs_missing) > 1, "these brain structures", "this brain structure"),
+          " in the template: ", paste(bs_missing, collapse=", "), "."
         ))
       }
       template <- removebs_template(template, bs_missing)

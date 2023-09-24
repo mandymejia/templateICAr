@@ -54,7 +54,7 @@ Imports:
     SQUAREM,
     stats
 Suggests:
-    ciftiTools,
+    ciftiTools (> 0.13.1),
     RNifti,
     oro.nifti,
     gifti,

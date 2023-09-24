@@ -11,7 +11,7 @@
 #'  (do not use a threshold). Either argument can also be a vector of the same
 #'  length as \code{which.ICs}, to use different thresholds for each IC.
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
-#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!="}, or 
+#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!="}, or
 #'  \code{"abs >"}. The last case tests for magnitude by taking the absolute
 #'  value and then testing if they are greater than... Default: \code{"abs >"}.
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
@@ -226,14 +226,12 @@ activations <- function(
     result$active <- ciftiTools::move_from_mwall(result$active, -1)
     result$active <- ciftiTools::convert_xifti(
       result$active, "dlabel",
-      values=c(-1, 0, 1),
+      levels_new=c(-1, 0, 1),
+      labels_new=c("Medial Wall", "Inactive", "Active"),
       colors=c("grey", "white", "red"),
       add_white=FALSE
     )
 
-    for (ii in seq(ncol(result$active))) {
-      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Medial Wall", "Inactive", "Active") # add "NA" to first
-    }
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
     result$active <- fMRItools::unvec_vol(result$active, mask_nii, fill=NA)
