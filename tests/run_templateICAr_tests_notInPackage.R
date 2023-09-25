@@ -45,6 +45,7 @@ tICA_cii <- templateICA(
   cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
 )
 actICA_cii <- activations(tICA_cii)
+actICA_cii <- activations(tICA_cii, z=c(0, .1, 3, 11))
 
 # `estimate_template`: check for same result w/ different file types -----------
 ### Test 1: basic

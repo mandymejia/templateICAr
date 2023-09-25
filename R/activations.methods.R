@@ -8,17 +8,24 @@
 #' @export
 #' @method summary tICA_act.cifti
 summary.tICA_act.cifti <- function(object, ...) {
-  act_counts <- colSums(as.matrix(object$active)==2, na.rm=TRUE)
+
+  nC <- length(object) - 2 # list items beside "active" and "params"
+  act_counts <- colSums(as.matrix(object$active)>0, na.rm=TRUE) # using the lowest threshold
   verts_with_data_per_bs <- vapply(
-    object$active$data[!vapply(object$active$data, is.null, 0)], 
-    function(q){sum(q[,1]>0)}, 
+    object$active$data[!vapply(object$active$data, is.null, FALSE)],
+    function(q){sum(q[,1]>-1)},
     0
   )
   x <- c(
     summary(object$active),
+    list(nC=nC),
+    list(activation_name=do.call(
+      format_activation_name,
+      c(object$params[c("u", "z", "type", "deviation")], list(collapse=TRUE))
+    )),
     list(verts_with_data_per_bs=verts_with_data_per_bs),
     list(act_counts=act_counts),
-    object[c("u", "z", "alpha", "type", "method_p", "deviation")]
+    object$params
   )
 
   class(x) <- "summary.tICA_act.cifti"
@@ -46,49 +53,18 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     none = "none"
   )
 
-  usign <- if (all(x$u>=0)) {
-    "+"
-  } else if (all(x$u<=0)) {
-    "-"
-  } else {
-    "+/-" # not the best, but this shouldn't even happen :)
-  }
-  ustr <- if (length(x$z)==1) {
-    ifelse(x$deviation, paste0(abs(x$z), "*z"), paste0(x$z, "*z"))
-  } else if (length(x$z)>1) {
-    "z"
-  } else if (length(x$u)==1) {
-    ifelse(x$deviation, abs(x$u), x$u)
-  } else {
-    "u"
-  }
-  adesc <- if (x$deviation) {
-    if (any(x$u!=0)) {
-      paste("x", x$type, "mu", usign, ustr)
-    } else {
-      paste("x", x$type, "mu")
-    }
-  } else {
-    if (any(x$u!=0)) {
-      paste("x", x$type, ustr)
-    } else {
-      paste("x", x$type, "0")
-    }
-  }
-
   nMeasShow <- min(5, x$measurements)
   nMeasTriC <- ifelse(nMeasShow > 5, ", ...", "")
 
   cat("====ACTIVATIONS STATS================\n")
   cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
-  cat("Test:            ", adesc, "\n")
-  # cat("Type:            ", x$type, "\n")
-  # cat("Threshold:       ", x$u, "\n")
-  # cat("Deviation:       ", x$deviation, "\n")
+  cat("Test:            ", x$activation_name, "\n")
   cat(
-    "Active Loc. (%): ",
-    paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC), "\n"
+    "Active Loc. (%):",
+    paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC),
+    ifelse(x$nC > 1, "(for first threshold)", ""),
+    "\n"
   )
   cat("\n")
 
