@@ -23,8 +23,9 @@ activations(
 specified directly with \code{u}, or a z-score-like threshold in terms of
 standard deviations (the SD of values in the mean template) can be specified
 with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
-(do not use a threshold). Either argument can also be a vector of the same
-length as \code{which.ICs}, to use different thresholds for each IC.}
+(do not use a threshold). Either argument can also be a vector to test
+multiple thresholds at once, as long as \code{type} is not \code{"!="}
+(to ensure the activation regions are successive subsets).}
 
 \item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
 

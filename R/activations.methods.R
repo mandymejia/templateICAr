@@ -10,7 +10,8 @@
 summary.tICA_act.cifti <- function(object, ...) {
 
   nC <- length(object) - 2 # list items beside "active" and "params"
-  act_counts <- colSums(as.matrix(object$active)>0, na.rm=TRUE) # using the lowest threshold
+  act_counts_lenient <- colSums(as.matrix(object$active)>0, na.rm=TRUE)
+  act_counts_strict <- colSums(as.matrix(object$active)==nC, na.rm=TRUE)
   verts_with_data_per_bs <- vapply(
     object$active$data[!vapply(object$active$data, is.null, FALSE)],
     function(q){sum(q[,1]>-1)},
@@ -24,7 +25,8 @@ summary.tICA_act.cifti <- function(object, ...) {
       c(object$params[c("u", "z", "type", "deviation")], list(collapse=TRUE))
     )),
     list(verts_with_data_per_bs=verts_with_data_per_bs),
-    list(act_counts=act_counts),
+    list(act_counts_lenient=act_counts_lenient),
+    list(act_counts_strict=act_counts_strict),
     object$params
   )
 
@@ -41,7 +43,8 @@ summary.tICA_act.cifti <- function(object, ...) {
 #' @method print summary.tICA_act.cifti
 print.summary.tICA_act.cifti <- function(x, ...) {
 
-  apct <- round(x$act_counts/sum(x$verts_with_data_per_bs)*100)
+  apct_lenient <- round(x$act_counts_lenient/sum(x$verts_with_data_per_bs)*100)
+  apct_strict <- round(x$act_counts_strict/sum(x$verts_with_data_per_bs)*100)
   pm_nice <- switch(x$method_p,
     bonferroni = "Bonferroni",
     holm = "Holm",
@@ -53,19 +56,29 @@ print.summary.tICA_act.cifti <- function(x, ...) {
     none = "none"
   )
 
+  cname <- ifelse(!is.null(x$z), "`c`", "`u`")
+
   nMeasShow <- min(5, x$measurements)
-  nMeasTriC <- ifelse(nMeasShow > 5, ", ...", "")
+  nMeasTriC <- ifelse(x$measurements > 5, ", ...", "")
 
   cat("====ACTIVATIONS STATS================\n")
   cat("alpha:           ", x$alpha, "\n")
   cat("p-val method:    ", pm_nice, "\n")
   cat("Test:            ", x$activation_name, "\n")
   cat(
-    "Active Loc. (%):",
-    paste0(paste(apct[seq(nMeasShow)], collapse=", "), nMeasTriC),
-    ifelse(x$nC > 1, "(for first threshold)", ""),
+    "Active Loc. (%): ",
+    paste0(paste(apct_lenient[seq(nMeasShow)], collapse=", "), nMeasTriC),
+    ifelse(x$nC > 1, paste0("(most lenient ", cname, ")"), ""),
     "\n"
   )
+  if (!all(x$act_counts_lenient == x$act_counts_strict)) {
+    cat(
+      "Active Loc. (%): ",
+      paste0(paste(apct_strict[seq(nMeasShow)], collapse=", "), nMeasTriC),
+      ifelse(x$nC > 1, paste0("(most strict ", cname, ")"), ""),
+      "\n"
+    )
+  }
   cat("\n")
 
   class(x) <- "summary.xifti"

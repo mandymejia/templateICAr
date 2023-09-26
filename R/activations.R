@@ -8,8 +8,9 @@
 #'  specified directly with \code{u}, or a z-score-like threshold in terms of
 #'  standard deviations (the SD of values in the mean template) can be specified
 #'  with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
-#'  (do not use a threshold). Either argument can also be a vector of the same
-#'  length as \code{which.ICs}, to use different thresholds for each IC.
+#'  (do not use a threshold). Either argument can also be a vector to test
+#'  multiple thresholds at once, as long as \code{type} is not \code{"!="}
+#'  (to ensure the activation regions are successive subsets).
 #' @param alpha Significance level for joint PPM. Default: \code{0.01}.
 #' @param type Type of region: \code{">"}, \code{"<"}, \code{"!="}, or
 #'  \code{"abs >"}. The last case tests for magnitude by taking the absolute
@@ -131,16 +132,20 @@ activations <- function(
   u_og <- u
   if (!is.null(z)) {
     stopifnot(!is.matrix(z))
-    z <- sort(z)
-    u <- outer(z, sqrt(colVars(tICA$t_mean[,which.ICs,drop=FALSE])))
+    z <- sort(z, decreasing=type=="<")
+    u_mat <- outer(z, sqrt(colVars(tICA$t_mean[,which.ICs,drop=FALSE])))
   } else if (!is.null(u)) {
     stopifnot(!is.matrix(u))
-    u <- sort(u)
-    u <- outer(u, rep(1, nL))
+    u <- sort(u, decreasing=type=="<")
+    u_mat <- outer(u, rep(1, nL))
   } else {
-    u <- matrix(0, nrow=1, ncol=nL)
+    u_mat <- matrix(0, nrow=1, ncol=nL)
   }
-  nU <- nrow(u)
+  nU <- nrow(u_mat)
+
+  if (type == "!=" && nU > 1) {
+    stop("Multiple u/z not compatible with '!=' test.")
+  }
 
   if (type == "abs >") {
     tICA$s_mean <- abs(tICA$s_mean)
@@ -148,7 +153,7 @@ activations <- function(
   }
 
   act_name <- format_activation_name(
-    u=u_og, z=z, type=type, deviation=deviation, collapse=FALSE
+    u=u, z=z, type=type, deviation=deviation, collapse=FALSE
   )
 
   # Loop over `u` to compute activations. --------------------------------------
@@ -156,7 +161,7 @@ activations <- function(
   names(out) <- act_name
   for (uu in seq(nU)) {
     if (verbose) { cat(act_name[uu], ".\n") }
-    uu_mat <- matrix(u[uu,], nrow=nV, ncol=nL, byrow=TRUE)
+    uu_mat <- matrix(u_mat[uu,], nrow=nV, ncol=nL, byrow=TRUE)
 
     # Spatial template ICA activations -----------------------------------------
     if (is_stICA) {
@@ -178,11 +183,11 @@ activations <- function(
           #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
           #we subtract u first since rescaling by D^(-1) would affect u too
           #save rho from first time running excursions, pass into excursions for other ICs
-          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
+          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
           if(verbose) print(tmp)
           rho <- res_q$rho
         } else {
-          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u[1], ind = inds_q, rho=rho))
+          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q, rho=rho))
           if(verbose) print(tmp)
         }
         active[,q] <- res_q$E[inds_q]
@@ -222,8 +227,6 @@ activations <- function(
         active[,q] <- (pvals_adj[,q] < alpha)
       }
 
-      if (length(unique(u))==1) { u <- u[1] }
-      if (length(unique(z))==1) { z <- z[1] }
       out[[uu]] <- list(
         active = active,
         pvals = pvals, pvals_adj = pvals_adj,
@@ -267,7 +270,7 @@ activations <- function(
     list(active=active),
     out,
     list(params=list(
-      alpha=alpha, method_p=method_p, type=type, u=u_og, z=z, deviation=deviation
+      alpha=alpha, method_p=method_p, type=type, u=u, z=z, deviation=deviation
     ))
   )
 
