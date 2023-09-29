@@ -200,7 +200,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  resolution as the \code{BOLD} data.
 #' @inheritParams TR_param
 #' @inheritParams hpf_param
-#' @inheritParams center_Bcols_Param
+#' @inheritParams GSR_Param
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -303,7 +303,7 @@ estimate_template <- function(
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01, 
-  center_Bcols=FALSE,
+  GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all", mask=NULL,
   keep_DR=FALSE,
@@ -337,15 +337,15 @@ estimate_template <- function(
     stopifnot(fMRItools::is_posNum(TR))
     stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
   }
-  stopifnot(fMRItools::is_1(center_Bcols, "logical"))
+  stopifnot(fMRItools::is_1(GSR, "logical"))
   if (!is.null(Q2)) { # Q2_max checked later.
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
   stopifnot(fMRItools::is_1(FC, "logical"))
   stopifnot(fMRItools::is_1(varTol, "numeric"))
   if (varTol < 0) { cat("Setting `varTol=0`."); varTol <- 0 }
-  stopifnot(fMRItools::is_posNum(maskTol))
-  stopifnot(fMRItools::is_posNum(missingTol))
+  stopifnot(fMRItools::is_posNum(maskTol, zero_ok=TRUE))
+  stopifnot(fMRItools::is_posNum(missingTol, zero_ok=TRUE))
   stopifnot(fMRItools::is_1(verbose, "logical"))
   real_retest <- !is.null(BOLD2)
 
@@ -584,7 +584,7 @@ estimate_template <- function(
         format=format,
         GICA=GICA,
         keepA=FC,
-        center_Bcols=center_Bcols,
+        GSR=GSR,
         scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
@@ -634,7 +634,7 @@ estimate_template <- function(
         format=format,
         GICA=GICA,
         keepA=FC,
-        center_Bcols=center_Bcols,
+        GSR=GSR,
         scale=scale,
         scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
         scale_sm_FWHM=scale_sm_FWHM,
@@ -725,7 +725,7 @@ estimate_template <- function(
   tparams <- list(
     FC=FC,
     num_subjects=nN, num_visits=nM,
-    inds=inds, center_Bcols=center_Bcols,
+    inds=inds, GSR=GSR,
     scale=scale, scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max,
@@ -776,7 +776,7 @@ estimate_template.cifti <- function(
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
-  center_Bcols=FALSE,
+  GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all",
   keep_DR=FALSE,
@@ -791,7 +791,7 @@ estimate_template.cifti <- function(
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
-    center_Bcols=center_Bcols,
+    GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
@@ -810,7 +810,7 @@ estimate_template.gifti <- function(
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
-  center_Bcols=FALSE,
+  GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all",
   keep_DR=FALSE,
@@ -825,7 +825,7 @@ estimate_template.gifti <- function(
     scale=scale, scale_sm_surfL=scale_sm_surfL, scale_sm_surfR=scale_sm_surfR,
     scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
-    center_Bcols=center_Bcols,
+    GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
     keep_DR=keep_DR,
@@ -843,7 +843,7 @@ estimate_template.nifti <- function(
   GICA, inds=NULL,
   scale=c("local", "global", "none"),
   TR=NULL, hpf=.01,
-  center_Bcols=FALSE,
+  GSR=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
   keep_DR=FALSE,
@@ -857,7 +857,7 @@ estimate_template.nifti <- function(
     GICA=GICA, inds=inds,
     scale=scale,
     TR=TR, hpf=hpf,
-    center_Bcols=center_Bcols,
+    GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     mask=mask,
     keep_DR=keep_DR,
