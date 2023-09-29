@@ -16,7 +16,7 @@ templateICA(
   scrub = NULL,
   TR = NULL,
   hpf = "template",
-  center_Bcols = "template",
+  GSR = "template",
   Q2 = "template",
   Q2_max = "template",
   brainstructures = "template",
@@ -114,7 +114,7 @@ Note that if multiple \code{BOLD} sessions are provided, their
 \code{TR} and \code{hpf} must be the same; both arguments accept only one
 value.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? This
+\item{GSR}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
 \code{"template"}, to use the same option used for estimation of the
 \code{template}.}

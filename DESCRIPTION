@@ -41,7 +41,7 @@ Imports:
     abind,
     excursions,
     expm,
-    fMRItools (>= 0.2.2),
+    fMRItools (>= 0.3.3),
     fMRIscrub,
     foreach,
     ica,

@@ -20,7 +20,7 @@
 #'  non-negative template variance adds to it to account for greater potential
 #'  between-subjects variation. (The template mean is the same for either choice
 #'  of \code{tvar_method}.)
-#' @param center_Bcols Center BOLD across columns (each image)? This
+#' @param GSR Center BOLD across columns (each image)? This
 #'  is equivalent to performing global signal regression. Default:
 #'  \code{"template"}, to use the same option used for estimation of the
 #'  \code{template}.
@@ -182,7 +182,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum
+#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
@@ -203,7 +203,7 @@ templateICA <- function(
   nuisance=NULL,
   scrub=NULL,
   TR=NULL, hpf="template",
-  center_Bcols="template",
+  GSR="template",
   Q2="template",
   Q2_max="template",
   brainstructures="template",
@@ -250,8 +250,8 @@ templateICA <- function(
   if (TR == "template") { TR <- template$params$TR }
   stopifnot(length(hpf)==1) # be explicit, diff TR for multi-BOLD is not allowed
   if (hpf == "template") { hpf <- template$params$hpf }
-  if (center_Bcols == "template") {
-    center_Bcols <- template$params$center_Bcols
+  if (GSR == "template") {
+    GSR <- template$params$GSR
   }
   if (Q2 == "template") { Q2 <- template$params$Q2 }
   if (Q2_max == "template") { Q2_max <- template$params$Q2_max }
@@ -280,7 +280,7 @@ templateICA <- function(
   if (is.null(hpf)) { hpf <- 0 }
   if (TR!= "from_xifti_metadata") { stopifnot(fMRItools::is_posNum(TR)) }
   stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
-  stopifnot(is_1(center_Bcols, "logical"))
+  stopifnot(is_1(GSR, "logical"))
   if (!is.null(Q2)) { stopifnot(is_posNum(Q2, zero_ok=TRUE)) } # Q2_max checked later.
   stopifnot(is_posNum(varTol))
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
@@ -429,7 +429,7 @@ templateICA <- function(
       scale=scale,
       scale_sm_FWHM=scale_sm_FWHM,
       hpf=hpf,
-      center_Bcols=center_Bcols,
+      GSR=GSR,
       # Q2=Q2, Q2_max=Q2_max,
       varTol=varTol
     )
@@ -847,7 +847,7 @@ templateICA <- function(
   }
 
   BOLD <- lapply(BOLD, norm_BOLD,
-    center_rows=TRUE, center_cols=center_Bcols,
+    center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     hpf=0
   )
@@ -866,7 +866,7 @@ templateICA <- function(
 
   # Center and scale `BOLD` again ----------------------------------------------
   BOLD <- lapply(BOLD, norm_BOLD,
-    center_rows=TRUE, center_cols=center_Bcols,
+    center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     hpf=0
   )
@@ -879,7 +879,7 @@ templateICA <- function(
   if (verbose) { cat("Computing DR.\n") }
 
   BOLD_DR <- dual_reg(
-    BOLD, template$mean, center_Bcols=FALSE,
+    BOLD, template$mean, GSR=FALSE,
     scale=FALSE, hpf=0
   )
 
@@ -1063,7 +1063,7 @@ templateICA <- function(
 
   # Params
   tICA_params <- list(
-    time_inds=time_inds, center_Bcols=center_Bcols,
+    time_inds=time_inds, GSR=GSR,
     scale=scale, TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
     brainstructures=brainstructures,

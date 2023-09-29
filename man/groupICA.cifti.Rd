@@ -11,7 +11,7 @@ groupICA.cifti(
   num_PCs = 100,
   num_ICs,
   max_rows_GPCA = 10000,
-  center_Bcols = FALSE,
+  GSR = FALSE,
   scale = c("local", "global", "none"),
   scale_sm_FWHM = 2,
   TR = NULL,
@@ -55,7 +55,7 @@ Default: \code{c("all")}.}
 level PCA will be performed.  This matrix is the result of temporal concatenation
 and contains \code{length(cifti_fnames) * num_PCs} rows.}
 
-\item{center_Bcols, scale, scale_sm_FWHM, TR, hpf}{Center BOLD columns, scale by the
+\item{GSR, scale, scale_sm_FWHM, TR, hpf}{Center BOLD columns, scale by the
 standard deviation, and detrend voxel timecourses? See
 \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
 Defaults: Center BOLD columns, scale by the global standard deviation, and

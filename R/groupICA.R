@@ -21,7 +21,7 @@
 #' @param max_rows_GPCA The maximum number of rows for the matrix on which group
 #'  level PCA will be performed.  This matrix is the result of temporal concatenation
 #'  and contains \code{length(cifti_fnames) * num_PCs} rows.
-#' @param center_Bcols,scale,scale_sm_FWHM,TR,hpf Center BOLD columns, scale by the
+#' @param GSR,scale,scale_sm_FWHM,TR,hpf Center BOLD columns, scale by the
 #'  standard deviation, and detrend voxel timecourses? See 
 #'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
 #'  Defaults: Center BOLD columns, scale by the global standard deviation, and
@@ -57,7 +57,7 @@ groupICA.cifti <- function(
   num_PCs=100,
   num_ICs,
   max_rows_GPCA=10000,
-  center_Bcols=FALSE, 
+  GSR=FALSE, 
   scale=c("local", "global", "none"), scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   verbose=TRUE,
@@ -193,7 +193,7 @@ groupICA.cifti <- function(
     # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
     BOLD_ii <- lapply(BOLD_ii, function(x){
       ciftiTools::newdata_xifti(x, norm_BOLD(
-        as.matrix(x), center_cols=center_Bcols, 
+        as.matrix(x), center_cols=GSR, 
         scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf
       ))

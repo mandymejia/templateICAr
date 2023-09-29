@@ -51,7 +51,7 @@ Q2_max_check <- function(Q2_max, nQ, nT){
 #'  entry will be \code{Q2}.
 #' 
 #' @importFrom pesel pesel
-#' @importFrom fMRItools colCenter
+#' @importFrom fMRItools colCenter dual_reg
 #' @keywords internal 
 rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL, 
   checkRowCenter=TRUE, verbose=FALSE, return_Q2=FALSE){

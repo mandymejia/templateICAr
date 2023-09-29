@@ -135,7 +135,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
 #'  Default: \code{c("all")}.
 #' @param resamp_res The target resolution for resampling (number of cortical
 #'  surface vertices per hemisphere).
-#' @param center_Bcols,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
+#' @param GSR,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
 #'  standard deviation, and detrend voxel timecourses? See 
 #'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
 #'  Defaults: Center BOLD columns, scale by the local standard deviation, but
@@ -147,7 +147,7 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
 #' @keywords internal
 datProcFUN.cifti <- function(
   dat, brainstructures="all", resamp_res=NULL,
-  center_Bcols=FALSE, 
+  GSR=FALSE, 
   scale=c("local", "global", "none"), scale_sm_FWHM=2,
   detrend_DCT=0){
 
@@ -165,7 +165,7 @@ datProcFUN.cifti <- function(
   if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
   stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
   stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
-  stopifnot(is.logical(center_Bcols) && length(center_Bcols)==1)
+  stopifnot(is.logical(GSR) && length(GSR)==1)
 
   brainstructures <- match.arg(
     brainstructures,
@@ -185,7 +185,7 @@ datProcFUN.cifti <- function(
   # Normalize each scan (keep in `"xifti"` format for `merge_xifti` next).
   dat <- lapply(dat, function(x){
     ciftiTools::newdata_xifti(x, norm_BOLD(
-      as.matrix(x), center_cols=center_Bcols, 
+      as.matrix(x), center_cols=GSR, 
       scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM, 
       detrend_DCT=detrend_DCT
     ))
