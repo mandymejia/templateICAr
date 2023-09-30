@@ -19,3 +19,4 @@
 ^cran-comments\.md$
 ^tests/testWithData$
 ^codecov\.yml$
+^tests/data_notInPackage$
