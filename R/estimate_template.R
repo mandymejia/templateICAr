@@ -174,6 +174,11 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
 #'  be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
 #'  \code{BOLD}. Its columns will be centered.
+#' @param mask Required if the entries of \code{BOLD} are NIFTI
+#'  file paths or \code{"nifti"} objects, optional for other formats. For
+#'  NIFTI, this is a brain map formatted as a binary array of the same spatial
+#'  dimensions as the fMRI data, with \code{TRUE} corresponding to in-mask
+#'  voxels. For other formats, a logical vector.
 #' @param inds Numeric indices of the group ICs to include in the template. If
 #'  \code{NULL}, use all group ICs (default).
 #'
@@ -262,7 +267,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #' @param verbose Display progress updates? Default: \code{TRUE}.
 #'
 #' @importFrom stats cov quantile
-#' @importFrom fMRItools is_1 is_integer is_posNum colCenter unmask_mat infer_format_ifti_vec
+#' @importFrom fMRItools is_1 is_integer is_posNum colCenter unmask_mat infer_format_ifti_vec all_binary
 #' @importFrom abind abind
 #'
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
@@ -299,13 +304,15 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #' }
 estimate_template <- function(
   BOLD, BOLD2=NULL,
-  GICA, inds=NULL,
+  GICA,
+  mask=NULL,
+  inds=NULL,
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
-  TR=NULL, hpf=.01, 
+  TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures="all", mask=NULL,
+  brainstructures="all",
   keep_DR=FALSE,
   FC=TRUE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -498,16 +505,18 @@ estimate_template <- function(
   # [TO DO]: NA in GICA?
 
   # `mask` ---------------------------------------------------------------------
-  # Get `mask` as a logical array.
-  # Check `GICA` and `mask` dimensions match.
-  # Append NIFTI header from GICA to `mask`.
-  # Vectorize `GICA`.
+  # Get `mask` as a logical array (NIFTI) or vector (everything else).
+  # For NIFTI, append NIFTI header from GICA to `mask`.
+  # Apply mask to `GICA`, and if NIFTI, vectorize `GICA`.
   if (FORMAT == "NIFTI") {
     if (is.null(mask)) { stop("`mask` is required.") }
     if (is.character(mask)) { mask <- RNifti::readNifti(mask); mask <- array(as.logical(mask), dim=dim(mask)) }
     if (dim(mask)[length(dim(mask))] == 1) { mask <- array(mask, dim=dim(mask)[length(dim(mask))-1]) }
     if (is.numeric(mask)) {
       cat("Coercing `mask` to a logical array.\n")
+      if (!fMRItools::all_binary(mask)) {
+        cat("Warning: values other than 0 or 1 in mask.\n")
+      }
       mask <- array(as.logical(mask), dim=dim(mask))
     }
     nI <- dim(mask); nV <- sum(mask)
@@ -524,13 +533,39 @@ estimate_template <- function(
         stopifnot(nrow(GICA) == nV)
       }
     }
-  } else {
+  } else { #For non-NIFTI data, mask is not required but can be provided
     if (!is.null(mask)) {
-      warning("Ignoring `mask`, which is only applicable to NIFTI data.")
-      mask <- NULL
+      if (FORMAT == "GIFTI") {
+        mask <- as.logical(do.call(cbind, gifti::read_gifti(mask[[ii]])$data))
+      } else if (FORMAT == "GIFTI2") {
+        mask <- as.list(mask)
+        if (length(mask) != 2) {
+          stop("`mask` should be a length-2 list of GIFTI data: left hemisphere first, right hemisphere second.")
+        }
+        for (ii in seq(2)) {
+          mask[[ii]] <-  as.logical(do.call(cbind, gifti::read_gifti(mask[[ii]])$data))
+        }
+        mask <- do.call(c, mask)
+      } else if (FORMAT == "MATRIX") {
+        stopifnot(is.vector(mask))
+        stopifnot(is.numeric(mask) || is.logical(mask))
+      }
+      if (is.numeric(mask)) {
+        cat("Coercing `mask` to a logical vector.\n")
+        if (!all_binary(mask)) {
+          cat("Warning: values other than 0 or 1 in mask.\n")
+        }
+        mask <- as.logical(mask)
+      }
+      nI <- length(mask); nV <- sum(mask)
+      # Check `GICA` and `mask` dimensions match.
+      stopifnot(nrow(GICA) == nI)
+      # Apply mask to GICA.
+      GICA <- GICA[mask,,drop=FALSE]
+    } else { #end if(!is.null(mask))
+      nI <- nV <- nrow(GICA)
     }
-    nI <- nV <- nrow(GICA)
-  }
+  } #end else (not NIFTI format)
 
   # Center `GICA` columns.
   center_Gcols <- TRUE
@@ -540,10 +575,8 @@ estimate_template <- function(
   format2 <- if (format == "data") { "numeric matrix" } else { format }
   if (verbose) {
     cat("Data input format:             ", format2, "\n")
-    cat('Number of data locations:      ', nV, "\n")
-    if (FORMAT == "NIFTI") {
-      cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
-    }
+    cat("Image dimensions:              ", paste(nI, collapse=" x "), "\n")
+    cat("Initial in-mask locations:     ", nV, "\n")
     if (FORMAT == "GIFTI") {
       cat("Cortex Hemisphere:             ", ghemi, "\n")
     }
@@ -583,6 +616,7 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        mask=mask,
         keepA=FC,
         GSR=GSR,
         scale=scale,
@@ -590,7 +624,7 @@ estimate_template <- function(
         scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
-        brainstructures=brainstructures, mask=mask,
+        brainstructures=brainstructures,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
       )
@@ -633,6 +667,7 @@ estimate_template <- function(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA,
+        mask=mask,
         keepA=FC,
         GSR=GSR,
         scale=scale,
@@ -640,7 +675,7 @@ estimate_template <- function(
         scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
-        brainstructures=brainstructures, mask=mask,
+        brainstructures=brainstructures,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
       )
@@ -666,20 +701,21 @@ estimate_template <- function(
   # Aggregate results, and compute templates. ----------------------------------
 
   # Mask out locations for which too many subjects do not have data
-  nVm <- nV # Number of locations after data masking.
+  #   because of missing values or low variance.
+  nVm <- nV # `nVm` will be the number of locations after masking with `mask2`.
   if (missingTol < 1) { missingTol <- missingTol * nN }
   # Assume is.na(DR0[mm,,,]) is the same for all mm
   # Assume is.na(DR0[,,cc,]) is the same for all cc
   NA_counts <- colSums(is.na(DR0[1,,1,]))
-  maskAll <- NA_counts < missingTol
-  use_mask <- !all(maskAll)
-  if (use_mask) {
-    if (all(!maskAll)) { stop(
+  mask2 <- NA_counts < missingTol
+  use_mask2 <- !all(mask2)
+  if (use_mask2) {
+    if (all(!mask2)) { stop(
       "No locations meet the minimum number of subjects with data (",
       round(missingTol, digits=3), "). Check `maskTol` and `missingTol`."
     ) }
-    DR0 <- DR0[,,,maskAll,drop=FALSE]
-    nVm <- sum(maskAll)
+    DR0 <- DR0[,,,mask2,drop=FALSE]
+    nVm <- sum(mask2)
   }
   # Note that `NA` values may still exist in `DR0`.
 
@@ -694,10 +730,10 @@ estimate_template <- function(
   var_decomp <- lapply(x$var_decomp, t)
   rm(x)
 
-  # Unmask the data matrices.
-  if (use_mask) {
-    template <- lapply(template, fMRItools::unmask_mat, mask=maskAll)
-    var_decomp <- lapply(var_decomp, fMRItools::unmask_mat, mask=maskAll)
+  # Unmask the data matrices (relative to `mask2`, not `mask`).
+  if (use_mask2) {
+    template <- lapply(template, fMRItools::unmask_mat, mask=mask2)
+    var_decomp <- lapply(var_decomp, fMRItools::unmask_mat, mask=mask2)
   }
 
   # Estimate FC template
@@ -707,9 +743,9 @@ estimate_template <- function(
   # Keep DR
   if (!isFALSE(keep_DR)) {
     DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
-    if (use_mask) {
-      DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(maskAll)))
-      DR0temp[,,,maskAll] <- DR0
+    if (use_mask2) {
+      DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(mask2)))
+      DR0temp[,,,mask2] <- DR0
       DR0 <- DR0temp
     }
     if (is.character(keep_DR)) {
@@ -736,18 +772,17 @@ estimate_template <- function(
 
   # If masking was performed, and if verbose, report the NA count in templates.
   # If no masking was performed, remove unnecessary metadata.
-  if (use_mask) {
+  if (use_mask2) {
     if (verbose) {
-      cat("Number of template locations with missing values:", sum(!maskAll), "\n")
+      cat("Template locations removed (filled with `NA`) due to varTol & missingTol:", sum(!mask2), "\n")
     }
   } else {
-    maskAll <- NULL
+    mask2 <- NULL
   }
 
   dat_struct <- switch(FORMAT,
     CIFTI = ciftiTools::newdata_xifti(xii1, 0),
     GIFTI = list(hemisphere=ghemi),
-    NIFTI = mask,
     MATRIX = NULL
   )
 
@@ -755,7 +790,8 @@ estimate_template <- function(
   result <- list(
     template=template,
     var_decomp=var_decomp,
-    mask=maskAll,
+    mask_input=mask,
+    mask=mask2,
     params=tparams,
     dat_struct=dat_struct
   )

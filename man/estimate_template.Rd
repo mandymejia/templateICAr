@@ -11,6 +11,7 @@ estimate_template(
   BOLD,
   BOLD2 = NULL,
   GICA,
+  mask = NULL,
   inds = NULL,
   scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
@@ -22,7 +23,6 @@ estimate_template(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = "all",
-  mask = NULL,
   keep_DR = FALSE,
   FC = TRUE,
   varTol = 1e-06,
@@ -123,6 +123,11 @@ half will be the retest data.}
 be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
 \code{BOLD}. Its columns will be centered.}
 
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
+file paths or \code{"nifti"} objects. This is a brain map formatted as a
+binary array of the same spatial dimensions as the fMRI data, with
+\code{TRUE} corresponding to in-mask voxels.}
+
 \item{inds}{Numeric indices of the group ICs to include in the template. If
 \code{NULL}, use all group ICs (default).
 
@@ -192,11 +197,6 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("all")}.}
-
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
-file paths or \code{"nifti"} objects. This is a brain map formatted as a
-binary array of the same spatial dimensions as the fMRI data, with
-\code{TRUE} corresponding to in-mask voxels.}
 
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save
 the DR estimates and only return the templates. If \code{TRUE}, the DR

@@ -41,11 +41,38 @@ tm_cii <- estimate_template(
   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE,
   brainstructures=c("left", "right")
 )
+# w/ mask
+tm2_cii <- estimate_template(
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE,
+  brainstructures=c("left", "right"), mask=c(rep(TRUE, 144), rep(FALSE, 7100), rep(TRUE, 100))
+)
+
+tm_cii <- estimate_template(
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
+  brainstructures=c("left", "right")
+)
+# w/ mask
+tm2_cii <- estimate_template(
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
+  brainstructures=c("left", "right"), mask=c(rep(TRUE, 144), rep(FALSE, 7100), rep(TRUE, 100))
+)
+
 tICA_cii <- templateICA(
   cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
 )
 actICA_cii <- activations(tICA_cii)
 actICA_cii <- activations(tICA_cii, z=c(0, .1, 3, 11))
+
+actICA_cii
+plot(actICA_cii)
+
+tm_cii2 <- estimate_template(
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=TRUE,
+  brainstructures=c("left", "right")
+)
+tICA_cii2 <- templateICA(
+  cii_fnames[4], tm_cii2, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
+)
 
 # `estimate_template`: check for same result w/ different file types -----------
 ### Test 1: basic

@@ -86,13 +86,14 @@ dual_reg2 <- function(
   BOLD, BOLD2=NULL, 
   format=c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
+  mask=NULL,
   keepA=FALSE,
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   GSR=FALSE, 
   Q2=0, Q2_max=NULL, NA_limit=.1,
-  brainstructures="all", mask=NULL,
+  brainstructures="all",
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
 
@@ -112,10 +113,18 @@ dual_reg2 <- function(
   retest <- !is.null(BOLD2)
   format <- match.arg(format, c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"))
   FORMAT <- get_FORMAT(format)
-  nQ <- ncol(GICA)
-  nI <- nV <- nrow(GICA)
-
   check_req_ifti_pkg(FORMAT)
+
+  nQ <- ncol(GICA)
+
+  if (is.null(mask)) {
+    nI <- nV <- nrow(GICA)
+  } else if (FORMAT=="NIFTI") {
+    nI <- dim(drop(mask))
+    nV <- sum(mask)
+  } else {
+    nI <- length(mask); nV <- sum(mask)
+  }
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (verbose) { cat("\tReading and formatting data...") }
@@ -133,7 +142,6 @@ dual_reg2 <- function(
       if (ciftiTools::is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
-    nI <- nV <- nrow(GICA)
   } else if (FORMAT == "GIFTI") {
     if (is.character(BOLD)) { BOLD <- gifti::readgii(BOLD) }
     stopifnot(gifti::is.gifti(BOLD))
@@ -167,7 +175,6 @@ dual_reg2 <- function(
       stopifnot(length(dim(BOLD2)) > 1)
     }
     stopifnot(!is.null(mask))
-    nI <- dim(drop(mask)); nV <- sum(mask)
   } else if (FORMAT == "MATRIX") {
     if (is.character(BOLD)) { BOLD <- readRDS(BOLD) }
     stopifnot(is.matrix(BOLD))
@@ -177,6 +184,7 @@ dual_reg2 <- function(
     }
     nI <- nV <- nrow(GICA)
   } else { stop() }
+
   dBOLD <- dim(BOLD)
   ldB <- length(dim(BOLD))
   nT <- dim(BOLD)[ldB]
@@ -199,26 +207,39 @@ dual_reg2 <- function(
       BOLD2 <- matrix(BOLD2[rep(as.logical(mask), dBOLD[ldB])], ncol=nT)
       stopifnot(nrow(BOLD2) == nV)
     }
+  } else if (!is.null(mask)) {
+    # Mask out the locations.
+    BOLD <- BOLD[mask,,drop=FALSE]
+    if (!is.null(xii1)) {
+      xiitmp <- as.matrix(xii1)
+      xiitmp[!mask,] <- NA
+      xii1 <- ciftiTools::move_to_mwall(ciftiTools::newdata_xifti(xii1, xiitmp))
+    }
+    nV <- nrow(BOLD)
+    if (retest) {
+      BOLD2 <- BOLD2[mask,,drop=FALSE]
+      stopifnot(nrow(BOLD2)==nV)
+    }
   }
 
   # Check for missing values. --------------------------------------------------
   nV0 <- nV # not used
-  mask <- make_mask(BOLD, varTol=varTol)
-  if (retest) { mask <- mask & make_mask(BOLD2, varTol=varTol) }
-  use_mask <- !all(mask)
-  if (use_mask) {
+  mask2 <- make_mask(BOLD, varTol=varTol)
+  if (retest) { mask2 <- mask2 & make_mask(BOLD2, varTol=varTol) }
+  use_mask2 <- !all(mask2)
+  if (use_mask2) {
     # Coerce `maskTol` to number of locations.
     stopifnot(is.numeric(maskTol) && length(maskTol)==1 && maskTol >= 0)
     if (maskTol < 1) { maskTol <- maskTol * nV }
     # Skip this scan if `maskTol` is surpassed.
-    if (sum(!mask) > maskTol) { return(NULL) }
+    if (sum(!mask2) > maskTol) { return(NULL) }
     # Mask out the locations.
-    BOLD <- BOLD[mask,,drop=FALSE]
-    GICA <- GICA[mask,,drop=FALSE]
-    if (retest) { BOLD2 <- BOLD2[mask,,drop=FALSE] }
+    BOLD <- BOLD[mask2,,drop=FALSE]
+    GICA <- GICA[mask2,,drop=FALSE]
+    if (retest) { BOLD2 <- BOLD2[mask2,,drop=FALSE] }
     if (!is.null(xii1)) {
       xiitmp <- as.matrix(xii1)
-      xiitmp[!mask,] <- NA
+      xiitmp[!mask2,] <- NA
       xii1 <- ciftiTools::move_to_mwall(ciftiTools::newdata_xifti(xii1, xiitmp))
     }
     nV <- nrow(BOLD)
@@ -278,9 +299,9 @@ dual_reg2 <- function(
       out$test$A <- NULL
       out$retest$A <- NULL
     }
-    if (use_mask) {
-      out$test$S <- unmask(out$test$S, mask)
-      out$retest$S <- unmask(out$retest$S, mask)
+    if (use_mask2) {
+      out$test$S <- unmask(out$test$S, mask2)
+      out$retest$S <- unmask(out$retest$S, mask2)
     }
     if (verbose) { cat(" Done!\n") }
     if (verbose) { print(Sys.time() - extime) }
@@ -330,11 +351,11 @@ dual_reg2 <- function(
     out$retest$A <- NULL
   }
 
-  if (use_mask) {
-    out$test_preclean$S <- unmask(out$test_preclean$S, mask)
-    out$retest_preclean$S <- unmask(out$retest_preclean$S, mask)
-    out$test$S <- unmask(out$test$S, mask)
-    out$retest$S <- unmask(out$retest$S, mask)
+  if (use_mask2) {
+    out$test_preclean$S <- unmask(out$test_preclean$S, mask2)
+    out$retest_preclean$S <- unmask(out$retest_preclean$S, mask2)
+    out$test$S <- unmask(out$test$S, mask2)
+    out$retest$S <- unmask(out$retest$S, mask2)
   }
 
   if (verbose) { cat(" Done!\n") }

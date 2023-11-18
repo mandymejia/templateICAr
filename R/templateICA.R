@@ -260,7 +260,7 @@ templateICA <- function(
     c("template", "left", "right", "subcortical", "all"),
     several.ok=TRUE
   )
-  if (brainstructures == "template") {
+  if (length(brainstructures)==1 && brainstructures == "template") {
     brainstructures <- template$params$brainstructures
   }
   if (varTol == "template") { varTol <- template$params$varTol }

@@ -9,7 +9,7 @@
 #'  template estimation, etc.
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
-  tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$params)
+  tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$mask_input, object$params)
   tparams <- lapply(
     object$params,
     function(q) {
@@ -304,7 +304,7 @@ print.template.matrix <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
-#'  default the square root of the variance template is shown; another option is 
+#'  default the square root of the variance template is shown; another option is
 #'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
@@ -374,14 +374,14 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
       "varUB"
     }
     if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-    if (ss=="sd") { 
+    if (ss=="sd") {
       x$template[[ssname]] <- sqrt(x$template[[ssname]])
     }
-    tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$params)
-    if (ss=="sd") { 
+    tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$mask_input, x$params)
+    if (ss=="sd") {
       ssname <- paste0("sqrt ", ssname)
     }
-    
+
     args_ss <- args
     # Handle title and idx
     if (!has_title && !has_idx) {
@@ -418,7 +418,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #'
 #' @param x The template from \code{estimate_template.gifti}
 #' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
-#'  default the square root of the variance template is shown; another option is 
+#'  default the square root of the variance template is shown; another option is
 #'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
@@ -451,10 +451,10 @@ plot.template.gifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #'  viewer function (e.g. from \code{oro.nifti}) if desired.
 #'
 #' @param x The template from \code{estimate_template.nifti}
-#' @param stat \code{"mean"} (default), \code{"sd"}, or \code{"var"}. 
+#' @param stat \code{"mean"} (default), \code{"sd"}, or \code{"var"}.
 #'  (\code{"sd"} will show the square root of the variance template.)
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
-#' @param plane,n_slices,slices Anatomical plane and which slice indices to 
+#' @param plane,n_slices,slices Anatomical plane and which slice indices to
 #'  show.
 #'  Default: 9 axial slices.
 #' @param ... Additional arguments to \code{oro.nifti::image}
@@ -550,7 +550,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     "varUB"
   }
   if (stat=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$params)
+  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, object$mask_input, object$params)
   tss <- tss[,,,idx]
 
   if (plane=="axial") {
@@ -561,7 +561,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     tss <- tss[slices,,,drop=FALSE]
   } else { stop() }
 
-  if (stat=="sd") { 
+  if (stat=="sd") {
     tss <- sqrt(tss)
     ssname <- paste0("sqrt ", ssname)
   }

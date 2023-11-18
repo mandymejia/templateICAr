@@ -3,10 +3,15 @@
 #' @param template The template
 #' @param FORMAT "CIFTI", "GIFTI", "NIFTI", or "DATA"
 #' @param dat_struct The data structure
+#' @param mask_input The input mask
 #' @param params The params
 #'
 #' @keywords internal
-struct_template <- function(template, FORMAT, dat_struct, params){
+struct_template <- function(template, FORMAT, dat_struct, mask_input, params){
+  if (!is.null(mask_input)) {
+    template <- fMRItools::unmask_mat(template, mask_input)
+  }
+
   if (FORMAT == "CIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)

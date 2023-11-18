@@ -9,6 +9,7 @@ dual_reg2(
   BOLD2 = NULL,
   format = c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
+  mask = NULL,
   keepA = FALSE,
   scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
@@ -21,7 +22,6 @@ dual_reg2(
   Q2_max = NULL,
   NA_limit = 0.1,
   brainstructures = "all",
-  mask = NULL,
   varTol = 1e-06,
   maskTol = 0.1,
   verbose = TRUE
@@ -45,6 +45,10 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 
 \item{GICA}{Group ICA maps as a (vectorized) numeric matrix
 (\eqn{V \times Q}). Its columns will be centered.}
+
+\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
+\code{"nifti"} objects. This is a brain map formatted as a binary array of the same
+size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{keepA}{Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
 (default)?}
@@ -110,10 +114,6 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("all")}.}
-
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
-\code{"nifti"} objects. This is a brain map formatted as a binary array of the same
-size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
