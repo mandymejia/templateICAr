@@ -41,7 +41,7 @@ Imports:
     abind,
     excursions,
     expm,
-    fMRItools (>= 0.3.3),
+    fMRItools (>= 0.4.0),
     fMRIscrub,
     foreach,
     ica,
@@ -54,7 +54,7 @@ Imports:
     SQUAREM,
     stats
 Suggests:
-    ciftiTools (> 0.13.1),
+    ciftiTools (>= 0.13.2),
     RNifti,
     oro.nifti,
     gifti,

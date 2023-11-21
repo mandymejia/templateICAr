@@ -258,9 +258,9 @@ activations <- function(
     active <- ciftiTools::move_from_mwall(active, -1)
     active <- ciftiTools::convert_xifti(
       active, "dlabel",
+      levels_old=c(-1, 0, seq(nU)),
       levels=c(-1, 0, seq(nU)),
-      levels_new=c(-1, 0, seq(nU)),
-      labels_new=c("Medial Wall", "Inactive", paste("Active:", act_name)),
+      labels=c("Medial Wall", "Inactive", paste("Active:", act_name)),
       colors=c("#888888", "white", active_colors),
       add_white=FALSE
     )
