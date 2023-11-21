@@ -550,7 +550,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     "varUB"
   }
   if (stat=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, object$mask_input, object$params)
+  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$mask_input, x$params)
   tss <- tss[,,,idx]
 
   if (plane=="axial") {
