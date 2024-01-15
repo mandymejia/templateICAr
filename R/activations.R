@@ -30,6 +30,7 @@
 #'
 #' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
+#' @importFrom utils packageVersion
 #'
 #' @examples
 #' \dontrun{
@@ -178,16 +179,28 @@ activations <- function(
   if (FORMAT == "CIFTI") {
     result$active <- ciftiTools::newdata_xifti(xii1, as.numeric(result$active))
     result$active <- ciftiTools::move_from_mwall(result$active, -1)
-    result$active <- ciftiTools::convert_xifti(
-      result$active, "dlabel",
-      values=c(-1, 0, 1),
-      colors=c("grey", "white", "red"),
-      add_white=FALSE
-    )
+    if (packageVersion("ciftiTools") >= '0.13.2') {
+      result$active <- ciftiTools::convert_xifti(
+        result$active, "dlabel",
+        levels_old=c(-1, 0, 1),
+        levels=c(-1, 0, 1),
+        labels=c("Medial Wall", "Inactive", "Active"),
+        colors=c("grey", "white", "red"),
+        add_white=FALSE
+      )
+    } else { # [Remove this next version]
+      result$active <- ciftiTools::convert_xifti(
+        result$active, "dlabel",
+        values=c(-1, 0, 1),
+        colors=c("grey", "white", "red"),
+        add_white=FALSE
+      )
 
-    for (ii in seq(ncol(result$active))) {
-      rownames(result$active$meta$cifti$labels[[ii]]) <- c("Medial Wall", "Inactive", "Active") # add "NA" to first
+      for (ii in seq(ncol(result$active))) {
+        rownames(result$active$meta$cifti$labels[[ii]]) <- c("Medial Wall", "Inactive", "Active") # add "NA" to first
+      }
     }
+
     class(result) <- "tICA_act.cifti"
   } else if (FORMAT == "NIFTI") {
     result$active <- fMRItools::unvec_vol(result$active, mask_nii, fill=NA)

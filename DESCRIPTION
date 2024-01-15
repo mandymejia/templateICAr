@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks and Connectivity with ICA and Empirical Priors
-Version: 0.6.2
+Version: 0.6.3
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -49,7 +49,8 @@ Imports:
     pesel,
     Rcpp,
     SQUAREM,
-    stats
+    stats,
+    utils
 Suggests:
     ciftiTools,
     RNifti,
@@ -64,7 +65,7 @@ Suggests:
     parallel,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.0
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
 LinkingTo:

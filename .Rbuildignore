@@ -14,6 +14,9 @@
 ^R/MIGP\.R$
 ^CRAN-SUBMISSION$
 ^cran-comments\.md$
-^tests/testWithData$
 ^codecov\.yml$
 ^R/plot_FC\.R$
+^tests/testWithData$
+^tests/data_notInPackage$
+^tests/results_notInPackage$
+^tests/run_templateICAr_tests_notInPackage.R$

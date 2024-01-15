@@ -27,8 +27,8 @@
 #' @importFrom viridis scale_fill_viridis
 #' @importFrom ggcorrplot ggcorrplot
 #' @importFrom ggplot2 coord_equal guide_colorbar labs theme element_blank margin annotate geom_rect aes
-#' @method plot template.cifti
-plot.FC_template <- function(
+# @method plot template.cifti
+plot_FC_template <- function(
   mat,
   colFUN=NULL, 
   title="FC template", legTitle="FC", 
