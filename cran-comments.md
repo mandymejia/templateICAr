@@ -16,3 +16,19 @@ None.
 ## Tests
 
 Passes all the tests in `tests/testthat.R`
+
+## Previous submission
+
+  Package CITATION file contains call(s) to old-style personList() or
+  as.personList().  Please use c() on person objects instead.
+
+Fixed!
+
+  checkRd: (-1) estimate_template.Rd:238: Lost braces; missing escapes or markup?
+     238 | the type of scaling and detrending performed; the {dat_struct} which can be
+         |                                                   ^
+  checkRd: (-1) make_mask.Rd:15: Lost braces; missing escapes or markup?
+      15 | {varTol}.}
+         | ^
+
+Fixed!

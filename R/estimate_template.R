@@ -262,10 +262,10 @@ estimate_template_FC <- function(FC0){
 #' @return A list: the \code{template} and \code{var_decomp} with entries in
 #'  matrix format; the \code{mask} of locations without template values due to
 #'  too many low variance or missing values; the function \code{params} such as
-#'  the type of scaling and detrending performed; the {dat_struct} which can be
-#'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
-#'  \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
-#'  and \code{DR} if \code{isTRUE(keep_DR)}.
+#'  the type of scaling and detrending performed; the \code{dat_struct} which 
+#'  can be used to convert \code{template} and \code{var_decomp} to 
+#'  \code{"xifti"} or \code{"nifti"} objects if the \code{BOLD} format was CIFTI
+#'  or NIFTI data; and \code{DR} if \code{isTRUE(keep_DR)}.
 #'
 #'  Use \code{summary} to print a description of the template results, and
 #'  for CIFTI-format data use \code{plot} to plot the template mean and variance

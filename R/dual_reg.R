@@ -90,6 +90,11 @@ dual_reg <- function(
   # Normalize each subject IC timecourse if `normA`.
   if (normA) { A <- scale(A) }
 
+  # Check rank of `A`.
+  if (qr(A)$rank < ncol(A)) {
+    warning("DR has estimated an `A` matrix that is not full rank. This can happen when the number of group ICs approaches the number of volumes in the subject data. An error may occur in further calculations. This problem can be avoided by using a group ICA with fewer components, or by providing more volumes of data per subject.")
+  }
+
   # Estimate S (IC maps).
   # Don't worry about the intercept: `BOLD` and `A` are centered across time.
   S <- solve(a=crossprod(A), b=crossprod(A, BOLD))
