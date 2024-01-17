@@ -44,7 +44,7 @@ tm_cii <- estimate_template(
 # w/ mask
 tm2_cii <- estimate_template(
   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE,
-  brainstructures=c("left", "right"), mask=c(rep(TRUE, 144), rep(FALSE, 7100), rep(TRUE, 100))
+  brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
 )
 
 tm_cii <- estimate_template(
@@ -54,7 +54,7 @@ tm_cii <- estimate_template(
 # w/ mask
 tm2_cii <- estimate_template(
   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
-  brainstructures=c("left", "right"), mask=c(rep(TRUE, 144), rep(FALSE, 7100), rep(TRUE, 100))
+  brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
 )
 
 tICA_cii <- templateICA(

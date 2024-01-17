@@ -12,7 +12,7 @@ make_mask(BOLD, meanTol = -Inf, varTol = 1e-06, verbose = TRUE)
 \item{meanTol, varTol}{Tolerance for mean and variance of each data location.
 Locations which do not meet these thresholds are masked out of the analysis.
 Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for
-{varTol}.}
+\code{varTol}.}
 
 \item{verbose}{Print messages counting how many locations are removed?}
 }
