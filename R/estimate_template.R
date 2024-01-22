@@ -634,7 +634,7 @@ estimate_template <- function(
 
     # Loop over subjects.
     `%dopar%` <- foreach::`%dopar%`
-    q <- foreach::foreach(ii = seq(nN), .packages=c("ciftiTools", "fMRItools", "templateICAr")) %dopar% {
+    q <- foreach::foreach(ii = seq(nN), .packages=c("ciftiTools", "fMRItools", "templateICAr", "sp")) %dopar% {
       if (FORMAT=="CIFTI" || FORMAT=="GIFTI") {
         # Load the workbench.
         if (is.null(wb_path)) {
