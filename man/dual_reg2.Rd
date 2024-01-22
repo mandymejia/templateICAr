@@ -9,6 +9,7 @@ dual_reg2(
   BOLD2 = NULL,
   format = c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
   GICA,
+  GICA_parc_table = NULL,
   mask = NULL,
   keepA = FALSE,
   scale = c("local", "global", "none"),
@@ -45,6 +46,9 @@ of the following: a \code{"CIFTI"} file path, a \code{"xifti"} object, a
 
 \item{GICA}{Group ICA maps as a (vectorized) numeric matrix
 (\eqn{V \times Q}). Its columns will be centered.}
+
+\item{GICA_parc_table}{Is the GICA actually a parcellation? If so, provide
+the parcellation table here. Default: \code{NULL}.}
 
 \item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 \code{"nifti"} objects. This is a brain map formatted as a binary array of the same

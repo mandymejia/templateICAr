@@ -314,7 +314,7 @@ estimate_template <- function(
   Q2=0, Q2_max=NULL,
   brainstructures="all",
   keep_DR=FALSE,
-  FC=TRUE,
+  FC=TRUE, 
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
@@ -462,9 +462,29 @@ estimate_template <- function(
 
   # `GICA` ---------------------------------------------------------------------
   # Convert `GICA` to a numeric data matrix or array.
+  GICA_parc <- FALSE; GICA_parc_table <- NULL
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
     if (ciftiTools::is.xifti(GICA, messages=FALSE)) {
+      if ((ncol(GICA) == 1) && (all(as.matrix(GICA) == round(as.matrix(GICA))))) {
+        GICA_parc <- TRUE
+        GICA_parc_vals <- sort(unique(c(as.matrix(GICA))))
+        GICA_parc_table <- GICA$meta$cifti$labels[[1]]
+        if (is.null(GICA_parc_table)) {
+          GICA_parc_table <- data.frame(
+            Key = GICA_parc_vals,
+            Red = 1,
+            Green = 1,
+            Blue = 1,
+            Alpha = 1,
+            row.names = paste("ParcelKey", GICA_parc_vals)
+          )
+        } else {
+          # Drop empty levels
+          GICA_parc_table <- GICA_parc_table[GICA_parc_table$Key %in% GICA_parc_vals,]
+          stopifnot(nrow(GICA_parc_table) > 1)
+        }
+      }
       xii1 <- ciftiTools::select_xifti(GICA, 1) # for formatting output
       GICA <- as.matrix(GICA)
     } else {
@@ -491,15 +511,27 @@ estimate_template <- function(
     if (is.character(GICA)) { GICA <- readRDS(GICA) }
     stopifnot(is.matrix(GICA))
   }
-  nQ <- dim(GICA)[length(dim(GICA))]
 
   # `inds`.
-  if (!is.null(inds)) {
-    if (!all(inds %in% seq(nQ))) stop('Invalid entries in inds argument.')
-    nL <- length(inds)
+  if (GICA_parc) {
+    nQ <- nrow(GICA_parc_table)
+    if (!is.null(inds)) {
+      if (!all(inds %in% GICA_parc_table$Key)) stop('Invalid entries in inds argument.')
+      nL <- length(inds)
+    } else {
+      inds <- GICA_parc_table$Key
+      nL <- nQ
+    }
+    inds <- match(inds, GICA_parc_table$Key)
   } else {
-    inds <- seq(nQ)
-    nL <- nQ
+    nQ <- dim(GICA)[length(dim(GICA))]
+    if (!is.null(inds)) {
+      if (!all(inds %in% seq(nQ))) stop('Invalid entries in inds argument.')
+      nL <- length(inds)
+    } else {
+      inds <- seq(nQ)
+      nL <- nQ
+    }
   }
 
   # [TO DO]: NA in GICA?
@@ -529,7 +561,11 @@ estimate_template <- function(
       mask <- RNifti::asNifti(array(mask, dim=c(dim(mask), 1)), reference=GICA)
       # Vectorize `GICA`.
       if (all(dim(GICA)[seq(length(dim(GICA))-1)] == nI)) {
-        GICA <- matrix(GICA[rep(as.logical(mask), nQ)], ncol=nQ)
+        GICA <- if (GICA_parc) {
+          matrix(GICA[as.logical(mask)], ncol=1)
+        } else {
+          matrix(GICA[rep(as.logical(mask), nQ)], ncol=nQ)
+        }
         stopifnot(nrow(GICA) == nV)
       }
     }
@@ -569,7 +605,7 @@ estimate_template <- function(
 
   # Center `GICA` columns.
   center_Gcols <- TRUE
-  if (center_Gcols) { GICA <- fMRItools::colCenter(GICA) }
+  if (center_Gcols && (!GICA_parc)) { GICA <- fMRItools::colCenter(GICA) }
 
   # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }
@@ -580,8 +616,13 @@ estimate_template <- function(
     if (FORMAT == "GIFTI") {
       cat("Cortex Hemisphere:             ", ghemi, "\n")
     }
-    cat('Number of original group ICs:  ', nQ, "\n")
-    cat('Number of template ICs:        ', nL, "\n")
+    if (GICA_parc) {
+      cat('Number of original parcels:    ', nQ, "\n")
+      cat('Number of template parcels:    ', nL, "\n")
+    } else {
+      cat('Number of original group ICs:  ', nQ, "\n")
+      cat('Number of template ICs:        ', nL, "\n")
+    }
     cat('Number of training subjects:   ', nN, "\n")
   }
 
@@ -615,7 +656,7 @@ estimate_template <- function(
       DR_ii <- dual_reg2(
         BOLD[[ii]], BOLD2=B2,
         format=format,
-        GICA=GICA,
+        GICA=GICA, GICA_parc_table=GICA_parc_table,
         mask=mask,
         keepA=FC,
         GSR=GSR,
@@ -666,7 +707,7 @@ estimate_template <- function(
       DR_ii <- dual_reg2(
         BOLD[[ii]], BOLD2=B2,
         format=format,
-        GICA=GICA,
+        GICA=GICA, GICA_parc_table=GICA_parc_table,
         mask=mask,
         keepA=FC,
         GSR=GSR,
@@ -786,6 +827,10 @@ estimate_template <- function(
     MATRIX = NULL
   )
 
+  if (GICA_parc && FORMAT=="CIFTI") {
+    dat_struct <- ciftiTools::convert_xifti(dat_struct, "dscalar")
+  }
+
   # Results list.
   result <- list(
     template=template,
@@ -793,7 +838,8 @@ estimate_template <- function(
     mask_input=mask,
     mask=mask2,
     params=tparams,
-    dat_struct=dat_struct
+    dat_struct=dat_struct,
+    GICA_parc_table=GICA_parc_table
   )
 
   # Add DR if applicable.

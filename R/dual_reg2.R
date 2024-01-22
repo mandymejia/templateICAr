@@ -15,6 +15,8 @@
 #'  the first half will be the test data and the second half will be the retest data.
 #' @param GICA Group ICA maps as a (vectorized) numeric matrix
 #'  (\eqn{V \times Q}). Its columns will be centered.
+#' @param GICA_parc_table Is the GICA actually a parcellation? If so, provide
+#'  the parcellation table here. Default: \code{NULL}.
 #' @param keepA Keep the resulting \strong{A} matrices, or only return the \strong{S} matrices
 #'  (default)?
 #' @inheritParams scale_Param
@@ -80,18 +82,18 @@
 #'  regression was skipped due to too many masked data locations.
 #'
 #' @importFrom fMRItools dual_reg
-#' 
+#'
 #' @keywords internal
 dual_reg2 <- function(
-  BOLD, BOLD2=NULL, 
+  BOLD, BOLD2=NULL,
   format=c("CIFTI", "xifti", "GIFTI", "gifti", "NIFTI", "nifti", "RDS", "data"),
-  GICA,
+  GICA, GICA_parc_table=NULL,
   mask=NULL,
   keepA=FALSE,
   scale=c("local", "global", "none"),
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
-  GSR=FALSE, 
+  GSR=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
   brainstructures="all",
   varTol=1e-6, maskTol=.1,
@@ -115,7 +117,8 @@ dual_reg2 <- function(
   FORMAT <- get_FORMAT(format)
   check_req_ifti_pkg(FORMAT)
 
-  nQ <- ncol(GICA)
+  GICA_parc <- !is.null(GICA_parc_table)
+  nQ <- if (GICA_parc) { nrow(GICA_parc_table) } else { ncol(GICA) }
 
   if (is.null(mask)) {
     nI <- nV <- nrow(GICA)
@@ -264,14 +267,20 @@ dual_reg2 <- function(
     TR=TR, hpf=hpf
   ) }
 
-  dual_reg_yesNorm <- function(B){ dual_reg(
-    B, GICA,
+  DR_FUN <- if (GICA_parc) {
+    fMRItools::dual_reg_parc
+  } else {
+    function(parc_vals, ...) { fMRItools::dual_reg(...) }
+  }
+
+  dual_reg_yesNorm <- function(B){ DR_FUN(
+    B, GICA, parc_vals=GICA_parc_table$Key,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf, GSR=GSR
   ) }
 
-  dual_reg_noNorm <- function(B){ dual_reg(
-    B, GICA,
+  dual_reg_noNorm <- function(B){ DR_FUN(
+    B, GICA, parc_vals=GICA_parc_table$Key,
     scale="none", hpf=0, GSR=FALSE
   ) }
 
