@@ -432,11 +432,11 @@ estimate_template <- function(
     }
     if (any(missing_BOLD)) {
       if (real_retest) {
-        warning('There are ', missing_BOLD, ' pairs of `BOLD` and `BOLD2` with at least one non-existent scan. These pairs will be excluded from template estimation.')
+        warning('There are ', sum(missing_BOLD), ' pairs of `BOLD` and `BOLD2` with at least one non-existent scan. These pairs will be excluded from template estimation.')
         BOLD <- BOLD[!missing_BOLD]
         BOLD2 <- BOLD[!missing_BOLD]
       } else {
-        warning('There are ', missing_BOLD, ' scans in `BOLD` that do not exist. These scans will be excluded from template estimation.')
+        warning('There are ', sum(missing_BOLD), ' scans in `BOLD` that do not exist. These scans will be excluded from template estimation.')
         BOLD <- BOLD[!missing_BOLD]
       }
     }
