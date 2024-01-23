@@ -407,7 +407,6 @@ estimate_template <- function(
     NIFTI=".nii",
     MATRIX=".rds"
   )
-  nN <- length(BOLD)
 
   check_req_ifti_pkg(FORMAT)
 
@@ -441,6 +440,7 @@ estimate_template <- function(
       }
     }
   }
+  nN <- length(BOLD)
 
   # Check `scale_sm_FWHM`
   if (scale_sm_FWHM !=0 && FORMAT %in% c("NIFTI", "MATRIX")) {
@@ -653,7 +653,7 @@ estimate_template <- function(
         '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
-      DR_ii <- dual_reg2(
+      DR_ii <- try(dual_reg2(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA, GICA_parc_table=GICA_parc_table,
@@ -668,21 +668,26 @@ estimate_template <- function(
         brainstructures=brainstructures,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
-      )
+      ))
 
       # Add results if this subject was not skipped.
       # (Subjects are skipped if too many locations are masked out.)
-      if (!is.null(DR_ii)) {
+      if (is.null(DR_ii)) {
+        if(verbose) { cat(paste0(
+          '\tSubject ', ii,' was skipped (too many masked locations).\n'
+        )) }
+      } else if (inherits(DR_ii, "try-error")) {
+        cat(paste0(
+          '\tSubject ', ii,' was skipped (error).\n'
+        ))
+        if (ii==1) { message(DR_ii); stop("Error on first subject. Check data?") }
+      } else {
         out$DR[1,,,] <- DR_ii$test$S[inds,]
         out$DR[2,,,] <- DR_ii$retest$S[inds,]
         if(FC) {
           out$FC[1,,,] <- cov(DR_ii$test$A[,inds])
           out$FC[2,,,] <- cov(DR_ii$retest$A[,inds])
         }
-      } else {
-        if(verbose) { cat(paste0(
-          '\nSubject ', ii,' of ', nN, " was skipped (too many masked locations).\n"
-        )) }
       }
       out
     }
@@ -704,7 +709,7 @@ estimate_template <- function(
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
-      DR_ii <- dual_reg2(
+      DR_ii <- try(dual_reg2(
         BOLD[[ii]], BOLD2=B2,
         format=format,
         GICA=GICA, GICA_parc_table=GICA_parc_table,
@@ -719,21 +724,26 @@ estimate_template <- function(
         brainstructures=brainstructures,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
-      )
+      ))
 
       # Add results if this subject was not skipped.
-      # (Subjects are skipped if too many locations are masked out.)
-      if (!is.null(DR_ii)) {
+      # (Subjects are skipped if error or too many locations are masked out.)
+      if (is.null(DR_ii)) {
+        if(verbose) { cat(paste0(
+          '\tSubject ', ii,' was skipped (too many masked locations).\n'
+        )) }
+      } else if (inherits(DR_ii, "try-error")) {
+        cat(paste0(
+          '\tSubject ', ii,' was skipped (error).\n'
+        ))
+        if (ii==1) { message(DR_ii); stop("Error on first subject. Check data?") }
+      } else {
         DR0[1,ii,,] <- DR_ii$test$S[inds,]
         DR0[2,ii,,] <- DR_ii$retest$S[inds,]
         if(FC) {
           FC0[1,ii,,] <- cov(DR_ii$test$A[,inds])
           FC0[2,ii,,] <- cov(DR_ii$retest$A[,inds])
         }
-      } else {
-        if(verbose) { cat(paste0(
-          '\tSubject ', ii,' was skipped (too many masked locations).\n'
-        )) }
       }
     }
     rm(DR_ii)
