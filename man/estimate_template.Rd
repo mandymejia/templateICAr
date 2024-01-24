@@ -23,6 +23,7 @@ estimate_template(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = "all",
+  resamp_res = NULL,
   keep_DR = FALSE,
   FC = TRUE,
   varTol = 1e-06,
@@ -48,6 +49,7 @@ estimate_template.cifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = "all",
+  resamp_res = resamp_res,
   keep_DR = FALSE,
   FC = FALSE,
   varTol = 1e-06,
@@ -197,6 +199,9 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("all")}.}
+
+\item{resamp_res}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
+Resample the data upon reading it in? Default: \code{NULL} (no resampling).}
 
 \item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save
 the DR estimates and only return the templates. If \code{TRUE}, the DR

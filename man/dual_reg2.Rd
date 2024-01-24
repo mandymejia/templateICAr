@@ -23,6 +23,7 @@ dual_reg2(
   Q2_max = NULL,
   NA_limit = 0.1,
   brainstructures = "all",
+  resamp_res = NULL,
   varTol = 1e-06,
   maskTol = 0.1,
   verbose = TRUE
@@ -118,6 +119,9 @@ to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
 Default: \code{c("all")}.}
+
+\item{resamp_res}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
+Resample the data upon reading it in? Default: \code{NULL} (no resampling).}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.

@@ -212,6 +212,8 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("all")}.
+#' @param resamp_res Only applies if the entries of \code{BOLD} are CIFTI file paths.
+#'  Resample the data upon reading it in? Default: \code{NULL} (no resampling).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
 #'  binary array of the same spatial dimensions as the fMRI data, with
@@ -312,7 +314,7 @@ estimate_template <- function(
   TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures="all",
+  brainstructures="all", resamp_res=NULL,
   keep_DR=FALSE,
   FC=TRUE, 
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -464,7 +466,7 @@ estimate_template <- function(
   # Convert `GICA` to a numeric data matrix or array.
   GICA_parc <- FALSE; GICA_parc_table <- NULL
   if (FORMAT == "CIFTI") {
-    if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures) }
+    if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures, resamp_res=resamp_res) }
     if (ciftiTools::is.xifti(GICA, messages=FALSE)) {
       if ((ncol(GICA) == 1) && (all(as.matrix(GICA) == round(as.matrix(GICA))))) {
         GICA_parc <- TRUE
@@ -491,7 +493,7 @@ estimate_template <- function(
       # Get `xii1` from first data entry.
       xii1 <- BOLD[[1]]
       if (is.character(xii1)) {
-        xii1 <- ciftiTools::read_cifti(xii1, brainstructures=brainstructures, idx=1)
+        xii1 <- ciftiTools::read_cifti(xii1, brainstructures=brainstructures, resamp_res=resamp_res, idx=1)
       }
       xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(xii1, 1), "dscalar")
     }
@@ -665,7 +667,7 @@ estimate_template <- function(
         scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
-        brainstructures=brainstructures,
+        brainstructures=brainstructures, resamp_res=resamp_res,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
       ))
@@ -721,7 +723,7 @@ estimate_template <- function(
         scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
-        brainstructures=brainstructures,
+        brainstructures=brainstructures, resamp_res=resamp_res,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
       ))
@@ -816,7 +818,7 @@ estimate_template <- function(
     scale=scale, scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max,
-    brainstructures=brainstructures,
+    brainstructures=brainstructures, resamp_res=resamp_res,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     pseudo_retest=!real_retest
   )
@@ -870,7 +872,7 @@ estimate_template.cifti <- function(
   TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
-  brainstructures="all",
+  brainstructures="all", resamp_res=resamp_res,
   keep_DR=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
@@ -885,7 +887,7 @@ estimate_template.cifti <- function(
     TR=TR, hpf=hpf,
     GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
-    brainstructures=brainstructures,
+    brainstructures=brainstructures, resamp_res=resamp_res,
     keep_DR=keep_DR,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,

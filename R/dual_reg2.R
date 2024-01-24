@@ -45,6 +45,8 @@
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
 #'  Default: \code{c("all")}.
+#' @param resamp_res Only applies if the entries of \code{BOLD} are CIFTI file paths.
+#'  Resample the data upon reading it in? Default: \code{NULL} (no resampling).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI file paths or
 #'  \code{"nifti"} objects. This is a brain map formatted as a binary array of the same
 #'  size as the fMRI data, with \code{TRUE} corresponding to in-mask voxels.
@@ -95,7 +97,7 @@ dual_reg2 <- function(
   TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL, NA_limit=.1,
-  brainstructures="all",
+  brainstructures="all", resamp_res=NULL,
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){
 
@@ -132,7 +134,7 @@ dual_reg2 <- function(
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
   if (verbose) { cat("\tReading and formatting data...") }
   if (FORMAT == "CIFTI") {
-    if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures) }
+    if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures, resamp_res=resamp_res) }
     if (ciftiTools::is.xifti(BOLD)) {
       if (scale == "local") {
         xii1 <- ciftiTools::convert_xifti(ciftiTools::select_xifti(BOLD, 1), "dscalar") * 0
@@ -141,7 +143,7 @@ dual_reg2 <- function(
     }
     stopifnot(is.matrix(BOLD))
     if (retest) {
-      if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures) }
+      if (is.character(BOLD2)) { BOLD2 <- ciftiTools::read_cifti(BOLD2, brainstructures=brainstructures, resamp_res=resamp_res) }
       if (ciftiTools::is.xifti(BOLD2)) { BOLD2 <- as.matrix(BOLD2) }
       stopifnot(is.matrix(BOLD2))
     }
