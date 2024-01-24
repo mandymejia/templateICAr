@@ -833,15 +833,15 @@ estimate_template <- function(
     mask2 <- NULL
   }
 
+  if (GICA_parc && FORMAT=="CIFTI") {
+    xii1 <- ciftiTools::convert_xifti(xii1, "dscalar")
+  }
+
   dat_struct <- switch(FORMAT,
     CIFTI = ciftiTools::newdata_xifti(xii1, 0),
     GIFTI = list(hemisphere=ghemi),
     MATRIX = NULL
   )
-
-  if (GICA_parc && FORMAT=="CIFTI") {
-    dat_struct <- ciftiTools::convert_xifti(dat_struct, "dscalar")
-  }
 
   # Results list.
   result <- list(
