@@ -124,7 +124,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   x$template[names(x$template)!="FC"] <- lapply(
     x$template[names(x$template)!="FC"], struct_template,
-    FORMAT, x$dat_struct, x$params
+    FORMAT, x$dat_struct, x$mask, x$params
   )
 
   # Select the chosen variance decomposition.
