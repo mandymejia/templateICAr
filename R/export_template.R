@@ -7,7 +7,7 @@
 #' @param params The params
 #'
 #' @keywords internal
-struct_template <- function(template, FORMAT, dat_struct, mask_input, params){
+struct_template <- function(template, FORMAT, mask_input, params, dat_struct, GICA_parc_table){
   if (!is.null(mask_input)) {
     template <- fMRItools::unmask_mat(template, mask_input)
   }
@@ -18,7 +18,12 @@ struct_template <- function(template, FORMAT, dat_struct, mask_input, params){
     }
 
     template <- ciftiTools::newdata_xifti(dat_struct, template)
-    template$meta$cifti$names <- paste("IC", params$inds)
+    template$meta$cifti$names <- if (!is.null(GICA_parc_table)) {
+      rownames(GICA_parc_table)
+    } else {
+      paste("IC", params$inds)
+    }
+  
   } else if (FORMAT == "GIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with GIFTI data. Please install it.", call. = FALSE)
@@ -124,7 +129,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   x$template[names(x$template)!="FC"] <- lapply(
     x$template[names(x$template)!="FC"], struct_template,
-    FORMAT, x$dat_struct, x$mask, x$params
+    FORMAT, x$mask, x$params, x$dat_struct, x$GICA_parc_table
   )
 
   # Select the chosen variance decomposition.

@@ -9,7 +9,7 @@
 #'  template estimation, etc.
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
-  tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$mask_input, object$params)
+  tmean <- struct_template(object$template$mean, "CIFTI", object$mask_input, object$params, object$dat_struct, object$GICA_parc_table)
   tparams <- lapply(
     object$params,
     function(q) {
@@ -377,23 +377,29 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
     if (ss=="sd") {
       x$template[[ssname]] <- sqrt(x$template[[ssname]])
     }
-    tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$mask_input, x$params)
+    tss <- struct_template(x$template[[ssname]], "CIFTI", x$mask_input, x$params, x$dat_struct, x$GICA_parc_table)
     if (ss=="sd") {
       ssname <- paste0("sqrt ", ssname)
     }
 
     args_ss <- args
     # Handle title and idx
+    ### No title: use the component names if available, and the indices if not.
     if (!has_title && !has_idx) {
-      c1name <- if (!is.null(tss$meta$cifti$names)) {
+      args_ss$title <- if (!is.null(tss$meta$cifti$names)) {
         tss$meta$cifti$names[1]
       } else {
         "First component"
       }
-      args_ss$title <- paste0(c1name, " (", ssname, ")")
-    } else if (!has_idx) {
-      args_ss$title <- paste0(args_ss$title, "(", ssname, ")")
+    } else if (!has_title) {
+      args_ss$title <- if (!is.null(tss$meta$cifti$names)) {
+        tss$meta$cifti$names[args$idx]
+      } else {
+        paste("Component", args$idx)
+      }
     }
+    ### Append the statistic name.
+    args_ss$title <- paste0(args_ss$title, " (", ssname, ")")
     # Handle fname
     if (has_fname) {
       fext <- if (grepl("html$", args_ss$fname[1])) {
@@ -550,7 +556,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     "varUB"
   }
   if (stat=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$mask_input, x$params)
+  tss <- struct_template(x$template[[ssname]], "NIFTI", x$mask_input, x$params, x$dat_struct, x$GICA_parc_table)
   tss <- tss[,,,idx]
 
   if (plane=="axial") {
