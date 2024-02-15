@@ -849,6 +849,7 @@ templateICA <- function(
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    scale_sm_xifti_mask=mask2,
     hpf=0
   )
 
@@ -868,6 +869,7 @@ templateICA <- function(
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
+    scale_sm_xifti_mask=mask2,
     hpf=0
   )
 
@@ -1087,27 +1089,16 @@ templateICA <- function(
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
     xiiL <- ciftiTools::select_xifti(xii1, rep(1, nL))
     xiiL$meta$cifti$names <- paste("IC", IC_inds)
+    result$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$subjICmean)
+    result$subjICse <- ciftiTools::newdata_xifti(xiiL, result$subjICse)
 
-    # [TO DO]: fMRItools update: simplify this
-    if (any(!mask3)) {
-      result$subjICmean <- ciftiTools::newdata_xifti(
-        xiiL,
-        fMRItools::unmask_mat(result$subjICmean, mask3),
-      )
-      result$subjICse <- ciftiTools::newdata_xifti(
-        xiiL,
-        fMRItools::unmask_mat(result$subjICse, mask3),
-      )
-    } else {
-      result$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$subjICmean)
-      result$subjICse <- ciftiTools::newdata_xifti(xiiL, result$subjICse)
-    }
     if (FORMAT == "GIFTI") {
-      # Apply `mask2`.
+      # Apply `mask2`. # [TO DO] what?
       result$subjICmean <- ciftiTools::move_to_mwall(result$subjICmean)
       result$subjICse <- ciftiTools::move_to_mwall(result$subjICse)
       mask2 <- NULL
     }
+
     if (do_spatial) {
       result$result_tICA$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$result_tICA$subjICmean)
       result$result_tICA$subjICse <- ciftiTools::newdata_xifti(xiiL, result$result_tICA$subjICse)

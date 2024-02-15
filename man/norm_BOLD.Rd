@@ -11,6 +11,7 @@ norm_BOLD(
   scale = c("local", "global", "none"),
   scale_sm_xifti = NULL,
   scale_sm_FWHM = 2,
+  scale_sm_xifti_mask = NULL,
   TR = NULL,
   hpf = 0.01
 )
@@ -33,6 +34,10 @@ estimates used for local scaling, provide a \code{"xifti"} object with data
 locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 not smooth.}
+
+\item{scale_sm_xifti_mask}{For local scaling with smoothing, the data must
+be unmasked to be mapped back to the surface. So if the data are masked,
+provide the mask here.}
 
 \item{TR}{The temporal resolution of the data, i.e. the time between volumes,
 in seconds. \code{TR} is required for detrending with \code{hpf}.}

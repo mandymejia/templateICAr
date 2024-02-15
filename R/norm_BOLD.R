@@ -15,6 +15,9 @@
 #'  locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 #'  (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 #'  not smooth.
+#' @param scale_sm_xifti_mask For local scaling with smoothing, the data must
+#'  be unmasked to be mapped back to the surface. So if the data are masked,
+#'  provide the mask here.
 #' @inheritParams TR_param
 #' @inheritParams hpf_param
 #'
@@ -27,6 +30,7 @@
 norm_BOLD <- function(
   BOLD, center_rows=TRUE, center_cols=FALSE,
   scale=c("local", "global", "none"), scale_sm_xifti=NULL, scale_sm_FWHM=2,
+  scale_sm_xifti_mask=NULL,
   TR=NULL, hpf=.01){
 
   nT <- ncol(BOLD)
@@ -49,6 +53,10 @@ norm_BOLD <- function(
       stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
     }
     stopifnot(ciftiTools::is.xifti(scale_sm_xifti))
+    if (!is.null(scale_sm_xifti_mask)) {
+      stopifnot(is.vector(scale_sm_xifti_mask) && is.logical(scale_sm_xifti_mask))
+      stopifnot(sum(scale_sm_xifti_mask) == nV)
+    }
   }
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
   if (is.null(hpf)) { hpf <- 0 }
@@ -114,6 +122,12 @@ norm_BOLD <- function(
     # Smooth estimates, if applicable.
     if (!is.null(scale_sm_xifti) && (scale_sm_FWHM != 0)) {
       # Check `scale_sm_xifti` is valid.
+      is_masked <- !is.null(scale_sm_xifti_mask)
+      # Un-mask, if applicable.
+      if (is_masked) {
+        sig <- c(unmask_mat(as.matrix(sig), scale_sm_xifti_mask))
+        nV <- length(sig)
+      }
       if (nV != nrow(scale_sm_xifti)) {
         stop("`scale_sm_xifti` not compatible with `BOLD`: different spatial dimensions.")
       }
@@ -122,6 +136,8 @@ norm_BOLD <- function(
       }
       # Compute and smooth the SD.
       sig <- ciftiTools::newdata_xifti(ciftiTools::select_xifti(scale_sm_xifti, 1), sig)
+      sig <- ciftiTools::move_to_mwall(sig, NA)
+      sig_mask <- do.call(c, sig$meta$cortex$medial_wall_mask)
       sig <- ciftiTools::smooth_xifti(sig, surf_FWHM=scale_sm_FWHM, vol_FWHM=scale_sm_FWHM)
       sig <- c(as.matrix(sig))
     }

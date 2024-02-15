@@ -8,22 +8,27 @@
 #'
 #' @keywords internal
 struct_template <- function(template, FORMAT, mask_input, params, dat_struct, GICA_parc_table){
+  # Un-apply the input mask.
   if (!is.null(mask_input)) {
-    template <- fMRItools::unmask_mat(template, mask_input)
+    if (FORMAT=="NIFTI") {
+      template <- fMRItools::unvec_vol(template, drop(mask_input))
+    } else {
+      template <- fMRItools::unmask_mat(template, mask_input)
+    }
   }
 
+  # Add metadata.
   if (FORMAT == "CIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
     }
-
     template <- ciftiTools::newdata_xifti(dat_struct, template)
     template$meta$cifti$names <- if (!is.null(GICA_parc_table)) {
       rownames(GICA_parc_table)
     } else {
       paste("IC", params$inds)
     }
-  
+
   } else if (FORMAT == "GIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with GIFTI data. Please install it.", call. = FALSE)
@@ -32,12 +37,11 @@ struct_template <- function(template, FORMAT, mask_input, params, dat_struct, GI
     template <- ciftiTools:::as.metric_gifti(
       template, hemisphere=dat_struct$hemisphere
     )
+
   } else if (FORMAT == "NIFTI") {
-    template <- RNifti::asNifti(
-      fMRItools::unvec_vol(template, drop(dat_struct), fill=NA),
-      reference=dat_struct
-    )
+    template <- RNifti::asNifti(template, reference=mask_input)
   }
+
   template
 }
 
@@ -102,10 +106,10 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     if (length(out_fname) == 1) {
       if (!endsWith(out_fname, FORMAT_extn)) { out_fname <- paste0(out_fname, FORMAT_extn) }
       out_fname <- c(
-        gsub(FORMAT_extn, paste0("_mean", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_var", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_varDecomp.rds"), out_fname),
-        gsub(FORMAT_extn, paste0("_FC.rds"), out_fname)
+        gsub(paste0(FORMAT_extn, "$"), paste0("_mean", FORMAT_extn), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_var", FORMAT_extn), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_varDecomp.rds"), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_FC.rds"), out_fname)
       )
       if (!FC) { out_fname <- out_fname[seq(3)] }
     } else if (length(out_fname) == 3 + as.numeric(FC)) {
@@ -129,7 +133,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   x$template[names(x$template)!="FC"] <- lapply(
     x$template[names(x$template)!="FC"], struct_template,
-    FORMAT, x$mask, x$params, x$dat_struct, x$GICA_parc_table
+    FORMAT, x$mask_input, x$params, x$dat_struct, x$GICA_parc_table
   )
 
   # Select the chosen variance decomposition.

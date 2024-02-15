@@ -43,7 +43,7 @@ tm_cii <- estimate_template(
 )
 # w/ mask
 tm2_cii <- estimate_template(
-  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE,
+  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=5000,
   brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
 )
 
