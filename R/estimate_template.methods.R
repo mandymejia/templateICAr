@@ -104,13 +104,21 @@ summary.template.nifti <- function(object, ...) {
 #'  template estimation, etc.
 #' @method summary template.matrix
 summary.template.matrix <- function(object, ...) {
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(
       nV=nrow(object$template$mean),
       nL=ncol(object$template$mean),
       hasDR="DR" %in% names(object)
     ),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.matrix"
@@ -126,13 +134,13 @@ summary.template.matrix <- function(object, ...) {
 #' @method print summary.template.cifti
 print.summary.template.cifti <- function(x, ...) {
   # Get TR
-  the_TR <- if (is.null(x$TR)) {
+  the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
     paste("TR= ", x$TR, " s.")
   }
   # Get highpass filter
-  the_hpf <- if (x$hpf==0) {
+  the_hpf <- if (x$hpf == "0") {
     "not used"
   } else {
     paste(as.character(x$hpf), "Hz")
@@ -140,8 +148,8 @@ print.summary.template.cifti <- function(x, ...) {
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Temporal Res.:   ", x$TR, "s.\n")
-  cat("Highpass filter: ", x$hpf, "Hz\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -161,13 +169,13 @@ print.summary.template.cifti <- function(x, ...) {
 #' @method print summary.template.gifti
 print.summary.template.gifti <- function(x, ...) {
   # Get TR
-  the_TR <- if (is.null(x$TR)) {
+  the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
     paste("TR= ", x$TR, " s.")
   }
   # Get highpass filter
-  the_hpf <- if (x$hpf==0) {
+  the_hpf <- if (x$hpf == "0") {
     "not used"
   } else {
     paste(as.character(x$hpf), "Hz")
@@ -175,8 +183,8 @@ print.summary.template.gifti <- function(x, ...) {
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Temporal Res.:   ", x$TR, "s.\n")
-  cat("Highpass filter: ", x$hpf, "Hz\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -198,13 +206,13 @@ print.summary.template.gifti <- function(x, ...) {
 #' @method print summary.template.nifti
 print.summary.template.nifti <- function(x, ...) {
   # Get TR
-  the_TR <- if (is.null(x$TR)) {
+  the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
     paste("TR= ", x$TR, " s.")
   }
   # Get highpass filter
-  the_hpf <- if (x$hpf==0) {
+  the_hpf <- if (x$hpf == "0") {
     "not used"
   } else {
     paste(as.character(x$hpf), "Hz")
@@ -212,8 +220,8 @@ print.summary.template.nifti <- function(x, ...) {
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Temporal Res.:   ", x$TR, "s.\n")
-  cat("Highpass filter: ", x$hpf, "Hz\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -236,13 +244,13 @@ print.summary.template.nifti <- function(x, ...) {
 #' @method print summary.template.matrix
 print.summary.template.matrix <- function(x, ...) {
   # Get TR
-  the_TR <- if (is.null(x$TR)) {
+  the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
     paste("TR= ", x$TR, " s.")
   }
   # Get highpass filter
-  the_hpf <- if (x$hpf==0) {
+  the_hpf <- if (x$hpf == "0") {
     "not used"
   } else {
     paste(as.character(x$hpf), "Hz")
@@ -250,8 +258,8 @@ print.summary.template.matrix <- function(x, ...) {
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Temporal Res.:   ", x$TR, "s.\n")
-  cat("Highpass filter: ", x$hpf, "Hz\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
