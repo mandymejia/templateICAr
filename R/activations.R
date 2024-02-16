@@ -118,14 +118,14 @@ activations <- function(
   tICA <- tICA[c("template_mean", "template_var", "subjICmean", "subjICse")]
   names(tICA) <- c("t_mean", "t_var", "s_mean", "s_se")
 
-  nV <- nrow(tICA$s_mean)
-
   # Apply data mask.
   use_mask <- (!is.null(mask)) && (!all(mask))
   if (use_mask) {
     tICA$s_mean <- tICA$s_mean[mask,]
     tICA$s_se <- tICA$s_se[mask,]
   }
+
+  nV <- nrow(tICA$s_mean)
 
   # Convert `z` to `u`.
   # Make `u` a nU x nL matrix (cutoffs by ICs).
