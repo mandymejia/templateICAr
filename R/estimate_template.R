@@ -174,13 +174,13 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
 #'  be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
 #'  \code{BOLD}. Its columns will be centered.
-#' 
+#'
 #'  New: can also be a parcellation in CIFTI format (other formats to be
 #'  implemented in the future). The parcellation should have the same locations
 #'  and one column, with integer values indicating the parcel to which each
 #'  location belongs to. Each parcel is modeled as a brain map; instead of the
 #'  first step of dual regression, the medial timecourse of each parcel is used.
-#'  
+#'
 #' @param mask Required if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects, optional for other formats. For
 #'  NIFTI, this is a brain map formatted as a binary array of the same spatial
@@ -323,7 +323,7 @@ estimate_template <- function(
   Q2=0, Q2_max=NULL,
   brainstructures="all", resamp_res=NULL,
   keep_DR=FALSE,
-  FC=TRUE, 
+  FC=TRUE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {

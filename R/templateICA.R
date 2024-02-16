@@ -521,7 +521,7 @@ templateICA <- function(
     }
     nI <- dim(mask)
     # Check its compatibility with the template
-    tds_dim <- dim(template$dat_struct) # has an empty last dim
+    tds_dim <- dim(template$mask_input) # has an empty last dim
     if (length(tds_dim) == length(nI) + 1 && tds_dim[length(tds_dim)] == 1) {
       tds_dim <- tds_dim[seq(length(tds_dim)-1)]
     }
@@ -760,8 +760,9 @@ templateICA <- function(
 
   # Mask out additional locations due to data mask.
   mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  use_mask3 <- any(!mask3)
 
-  if (any(!mask3)) {
+  if (use_mask3) {
     if (do_spatial) {
       stop('Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.')
     }
@@ -771,8 +772,8 @@ templateICA <- function(
 
     if(verbose) {
       cat(paste0(
-        'Excluding ', sum(!mask3),
-        ' bad (flat or NA) voxels/vertices from analysis.\n'
+        'In total, excluding ', sum(!mask3),
+        ' locations from analysis due to flat or NA values in BOLD.\n'
       ))
     }
     template_orig <- template
@@ -780,7 +781,7 @@ templateICA <- function(
     dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
     template$mean <- template$mean[mask3,]
     template$var <- template$var[mask3,]
-    mask2[mask2][!mask3] <- FALSE
+    if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
 
   if (verbose) { cat("Pre-processing BOLD data.\n") }
@@ -1084,6 +1085,9 @@ templateICA <- function(
   if (use_mask2) {
     result$subjICmean <- fMRItools::unmask_mat(result$subjICmean, mask2)
     result$subjICse <- fMRItools::unmask_mat(result$subjICse, mask2)
+  } else if (use_mask3) {
+    result$subjICmean <- fMRItools::unmask_mat(result$subjICmean, mask3)
+    result$subjICse <- fMRItools::unmask_mat(result$subjICse, mask3)
   }
 
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
