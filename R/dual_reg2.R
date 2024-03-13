@@ -270,7 +270,7 @@ dual_reg2 <- function(
   ) }
 
   DR_FUN <- if (GICA_parc) {
-    fMRItools::dual_reg_parc
+    function(...) { fMRItools::dual_reg_parc(method="SLR", ...) }
   } else {
     function(parc_vals, ...) { fMRItools::dual_reg(...) }
   }
