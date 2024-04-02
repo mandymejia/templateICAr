@@ -135,11 +135,13 @@ MIGP <- function(dat, datProcFUN, checkColCentered=TRUE, nM=NULL, nP=NULL, initW
 #'  Default: \code{c("all")}.
 #' @param resamp_res The target resolution for resampling (number of cortical
 #'  surface vertices per hemisphere).
-#' @param GSR,scale,scale_sm_FWHM,detrend_DCT Center BOLD columns, scale by the
+#' @param GSR,scale,scale_sm_FWHM Center BOLD columns, scale by the
 #'  standard deviation, and detrend voxel timecourses? See 
 #'  \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
 #'  Defaults: Center BOLD columns, scale by the local standard deviation, but
 #'  do not detrend.
+#' @inheritParams TR_param
+#' @inheritParams hpf_param
 #' 
 #'  Note that elsewhere in \code{templateICAr} global scaling is used, but 
 #'  to match the MELODIC/MIGP default local scaling is used here.
@@ -149,7 +151,7 @@ datProcFUN.cifti <- function(
   dat, brainstructures="all", resamp_res=NULL,
   GSR=FALSE, 
   scale=c("local", "global", "none"), scale_sm_FWHM=2,
-  detrend_DCT=0){
+  TR=NULL, hpf=.01){
 
   # Simple argument checks.
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
@@ -162,9 +164,6 @@ datProcFUN.cifti <- function(
   }
   scale <- match.arg(scale, c("local", "global", "none"))
   stopifnot(is.numeric(scale_sm_FWHM) && length(scale_sm_FWHM)==1)
-  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(is.numeric(detrend_DCT) && length(detrend_DCT)==1)
-  stopifnot(detrend_DCT >=0 && detrend_DCT==round(detrend_DCT))
   stopifnot(is.logical(GSR) && length(GSR)==1)
 
   brainstructures <- match.arg(
@@ -186,8 +185,9 @@ datProcFUN.cifti <- function(
   dat <- lapply(dat, function(x){
     ciftiTools::newdata_xifti(x, norm_BOLD(
       as.matrix(x), center_cols=GSR, 
-      scale=scale, scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM, 
-      detrend_DCT=detrend_DCT
+      scale=scale, 
+      scale_sm_xifti=ciftiTools::select_xifti(x, 1), scale_sm_FWHM=scale_sm_FWHM,
+      TR=TR, hpf=hpf
     ))
   })
 

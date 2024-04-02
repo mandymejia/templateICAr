@@ -91,19 +91,6 @@ summary.tICA.matrix <- function(object, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.tICA.cifti
 print.summary.tICA.cifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
-  }
-
   cat("====TEMPLATE ICA INFO================\n")
   cat("Temporal Res.:   ", x$TR, "s.\n")
   cat("Highpass filter: ", x$hpf, "Hz\n")
