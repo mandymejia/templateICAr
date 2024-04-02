@@ -147,6 +147,26 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 
 }
 
+#' Estimate FC template from Cholesky decomposition
+#'
+#' @param FC0_chol The FC estimate Cholesky factorizations (upper triangular values) from \code{\link{estimate_template}}.
+#' @importFrom matrixStats colVars
+#' @export
+estimate_template_FC_chol <- function(FC0_chol){
+
+  # FC0_chol is 2 x n_subjects x Q*(Q+1)/2
+
+  FC_chol_avg <- (FC0_chol[1,,] + FC0_chol[2,,])/2
+  mean_FC_chol <- apply(FC_chol_avg, 2, mean, na.rm=TRUE)
+  var_FC_chol1 <- apply(FC0_chol[1,,], 2, var, na.rm=TRUE)
+  var_FC_chol2 <- apply(FC0_chol[2,,], 2, var, na.rm=TRUE)
+  var_FC_chol <- (var_FC_chol1 + var_FC_chol2)/2
+
+  list(mean_empirical = mean_FC_chol,
+       var_empirical = var_FC_chol)
+
+}
+
 #' Estimate template
 #'
 #' Estimate template for Template ICA based on fMRI data
@@ -225,9 +245,17 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
 #'  binary array of the same spatial dimensions as the fMRI data, with
 #'  \code{TRUE} corresponding to in-mask voxels.
-#' @param keep_DR Keep the DR estimates? If \code{FALSE} (default), do not save
+#' @param keep_S Keep the DR estimates of S? If \code{FALSE} (default), do not save
 #'  the DR estimates and only return the templates. If \code{TRUE}, the DR
-#'  estimates are returned too. If a single file path, save the DR estimates as
+#'  estimates of S are returned too. If a single file path, save the DR estimates as
+#'  an RDS file at that location rather than returning them.
+#   [TO DO] If a list of two vectors of file paths with the same lengths as
+#   \code{BOLD}, save the DR estimates as individual files at these locations in
+#   the appropriate format (CIFTI, NIFTI, or RDS files, depending on \code{BOLD}).
+#' @param keep_FC Keep the DR estimates of the FC cor(A)? If \code{FALSE} (default), do not save
+#'  the DR estimates and only return the templates. If \code{TRUE}, the DR
+#'  estimates of cor(A) and its Cholesky factor are returned too.
+#'  If a single file path, save the DR estimates as
 #'  an RDS file at that location rather than returning them.
 #   [TO DO] If a list of two vectors of file paths with the same lengths as
 #   \code{BOLD}, save the DR estimates as individual files at these locations in
@@ -285,7 +313,7 @@ estimate_template_FC <- function(FC0, nu_adjust=1){
 #'  the type of scaling and detrending performed; the {dat_struct} which can be
 #'  used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
 #'  \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
-#'  and \code{DR} if \code{isTRUE(keep_DR)}.
+#'  and DR results if \code{isTRUE(keep_S)} and/or \code{isTRUE(keep_FC)}.
 #'
 #'  Use \code{summary} to print a description of the template results, and
 #'  for CIFTI-format data use \code{plot} to plot the template mean and variance
@@ -317,12 +345,13 @@ estimate_template <- function(
   mask=NULL,
   inds=NULL,
   scale=c("local", "global", "none"),
-  scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
+  scale_sm_surfL=NULL,
+  scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all", resamp_res=NULL,
-  keep_DR=FALSE,
+  keep_S=FALSE, keep_FC=FALSE,
   FC=TRUE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
@@ -365,24 +394,45 @@ estimate_template <- function(
   stopifnot(fMRItools::is_1(verbose, "logical"))
   real_retest <- !is.null(BOLD2)
 
-  # `keep_DR`
-  if (is.logical(keep_DR)) {
-    stopifnot(length(keep_DR)==1)
+  # `keep_S`
+  if (is.logical(keep_S)) {
+    stopifnot(length(keep_S)==1)
   } else {
-    if (is.character(keep_DR)) {
-      stopifnot(length(keep_DR)==1)
-      if (!dir.exists(dirname(keep_DR))) { stop('Directory part of `keep_DR` does not exist.') }
-      if (!endsWith(keep_DR, ".rds")) { keep_DR <- paste0(keep_DR, ".rds") }
-    } else if (is.list(keep_DR)) {
-      stop("Not supported: `keep_DR` must be `TRUE`, `FALSE`, or a single file path.")
+    if (is.character(keep_S)) {
+      stopifnot(length(keep_S)==1)
+      if (!dir.exists(dirname(keep_S))) { stop('Directory part of `keep_S` does not exist.') }
+      if (!endsWith(keep_S, ".rds")) { keep_S <- paste0(keep_S, ".rds") }
+    } else if (is.list(keep_S)) {
+      stop("Not supported: `keep_S` must be `TRUE`, `FALSE`, or a single file path.")
       # [TO DO]
-      # if (length(keep_DR) != 2) {
-      #   stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # if (length(keep_S) != 2) {
+      #   stop("If `keep_S` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
       # }
-      # if (length(keep_DR[[1]]) != nN || length(keep_DR[[2]]) != nN) {
-      #   stop("If `keep_DR` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # if (length(keep_S[[1]]) != nN || length(keep_S[[2]]) != nN) {
+      #   stop("If `keep_S` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
       # }
-      # if (!all(dir.exists(dirname(do.call(c, keep_DR))))) { stop('At least one directory part of `keep_DR` does not exist.') }
+      # if (!all(dir.exists(dirname(do.call(c, keep_S))))) { stop('At least one directory part of `keep_S` does not exist.') }
+    }
+  }
+
+  # `keep_FC`
+  if (is.logical(keep_FC)) {
+    stopifnot(length(keep_FC)==1)
+  } else {
+    if (is.character(keep_FC)) {
+      stopifnot(length(keep_FC)==1)
+      if (!dir.exists(dirname(keep_FC))) { stop('Directory part of `keep_FC` does not exist.') }
+      if (!endsWith(keep_FC, ".rds")) { keep_FC <- paste0(keep_FC, ".rds") }
+    } else if (is.list(keep_FC)) {
+      stop("Not supported: `keep_FC` must be `TRUE`, `FALSE`, or a single file path.")
+      # [TO DO]
+      # if (length(keep_FC) != 2) {
+      #   stop("If `keep_FC` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # }
+      # if (length(keep_FC[[1]]) != nN || length(keep_FC[[2]]) != nN) {
+      #   stop("If `keep_FC` is a list it must have two entries, each being a vector of file paths the same length as `BOLD`.")
+      # }
+      # if (!all(dir.exists(dirname(do.call(c, keep_FC))))) { stop('At least one directory part of `keep_FC` does not exist.') }
     }
   }
 
@@ -655,7 +705,10 @@ estimate_template <- function(
 
       # Initialize output.
       out <- list(DR=array(NA, dim=c(nM, 1, nL, nV)))
-      if (FC) { out$FC <- array(NA, dim=c(nM, 1, nL, nL)) }
+      if (FC) {
+        out$FC <- array(NA, dim=c(nM, 1, nL, nL))
+        out$FC_chol <- array(NA, dim = c(nM, 1, nL*(nL+1)/2))
+      }
 
       # Dual regression.
       if(verbose) { cat(paste0(
@@ -696,6 +749,8 @@ estimate_template <- function(
         if(FC) {
           out$FC[1,,,] <- cov(DR_ii$test$A[,inds])
           out$FC[2,,,] <- cov(DR_ii$retest$A[,inds])
+          out$FC_chol[1,,] <- chol(out$FC[1,,,])[upper.tri(out$FC[1,,,], diag=TRUE)]
+          out$FC_chol[2,,] <- chol(out$FC[2,,,])[upper.tri(out$FC[2,,,], diag=TRUE)]
         }
       }
       out
@@ -703,14 +758,20 @@ estimate_template <- function(
 
     # Aggregate.
     DR0 <- abind::abind(lapply(q, `[[`, "DR"), along=2)
-    if (FC) { FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2) }
+    if (FC) {
+      FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2)
+      FC0_chol <- abind::abind(lapply(q, `[[`, "FC_chol"), along=2)
+    }
 
     doParallel::stopImplicitCluster()
 
   } else {
     # Initialize output.
     DR0 <- array(NA, dim=c(nM, nN, nL, nV)) # measurements by subjects by components by locations
-    if(FC) FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
+    if(FC) {
+      FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
+      FC0_chol <- array(NA, dim=c(nM, nN, nL*(nL+1)/2))
+    }
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
@@ -752,6 +813,8 @@ estimate_template <- function(
         if(FC) {
           FC0[1,ii,,] <- cov(DR_ii$test$A[,inds])
           FC0[2,ii,,] <- cov(DR_ii$retest$A[,inds])
+          FC0_chol[1,ii,] <- chol(FC0[1,ii,,])[upper.tri(FC0[1,ii,,], diag=TRUE)]
+          FC0_chol[2,ii,] <- chol(FC0[2,ii,,])[upper.tri(FC0[2,ii,,], diag=TRUE)]
         }
       }
     }
@@ -797,26 +860,43 @@ estimate_template <- function(
   }
 
   # Estimate FC template
-  if(FC){ template$FC <- estimate_template_FC(FC0) }
+  if(FC){
+    template$FC <- estimate_template_FC(FC0)
+    template$FC_chol <- estimate_template_FC_chol(FC0_chol)
+    print(FC0_chol[1,1:3,1:10])
+  }
 
   # Format result ---------------------------------------------------
-  # Keep DR
-  if (!isFALSE(keep_DR)) {
+  # Keep DR estimate of S
+  if (!isFALSE(keep_S)) {
     DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
     if (use_mask2) {
       DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(mask2)))
       DR0temp[,,,mask2] <- DR0
       DR0 <- DR0temp
     }
-    if (is.character(keep_DR)) {
-      saveRDS(DR0, keep_DR)
-      keep_DR <- FALSE # no longer need it.
-    } else if (!isTRUE(keep_DR)) {
-      warning("`keep_DR` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
-      keep_DR <- FALSE
+    if (is.character(keep_S)) {
+      saveRDS(DR0, keep_S)
+      keep_S <- FALSE # no longer need it.
+    } else if (!isTRUE(keep_S)) {
+      warning("`keep_S` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+      keep_S <- FALSE
     }
   }
-  if (!keep_DR) { rm(DR0) }
+  if (!keep_S) { rm(DR0) }
+
+  # Keep DR estimate of A, FC, and Cholesky
+  if (!isFALSE(keep_FC)) {
+    if (is.character(keep_FC)) {
+      saveRDS(FC0, keep_FC) # in this case we don't save the Cholesky factors
+      keep_FC <- FALSE # no longer need it.
+    } else if (!isTRUE(keep_FC)) {
+      warning("`keep_FC` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+      keep_FC <- FALSE
+    }
+  }
+  if (!keep_FC) { rm(FC0); rm(FC0_chol) }
+
 
   tparams <- list(
     FC=FC,
@@ -862,7 +942,11 @@ estimate_template <- function(
   )
 
   # Add DR if applicable.
-  if (keep_DR) { result$DR <- DR0 }
+  if (keep_S) { result$S <- DR0 }
+  if (keep_FC) {
+    result$FC <- FC0
+    result$FC_chol <- FC0_chol
+  }
 
   # Return results.
   class(result) <- paste0("template.", tolower(FORMAT))
@@ -880,7 +964,7 @@ estimate_template.cifti <- function(
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all", resamp_res=resamp_res,
-  keep_DR=FALSE,
+  keep_S=FALSE, keep_FC=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
@@ -895,7 +979,7 @@ estimate_template.cifti <- function(
     GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures, resamp_res=resamp_res,
-    keep_DR=keep_DR,
+    keep_S=keep_S,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,
@@ -914,7 +998,7 @@ estimate_template.gifti <- function(
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
   brainstructures="all",
-  keep_DR=FALSE,
+  keep_S=FALSE,keep_FC=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
@@ -929,7 +1013,7 @@ estimate_template.gifti <- function(
     GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     brainstructures=brainstructures,
-    keep_DR=keep_DR,
+    keep_S=keep_S,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,
@@ -947,7 +1031,7 @@ estimate_template.nifti <- function(
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
   mask=NULL,
-  keep_DR=FALSE,
+  keep_S=FALSE,keep_FC=FALSE,
   FC=FALSE,
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
@@ -961,7 +1045,7 @@ estimate_template.nifti <- function(
     GSR=GSR,
     Q2=Q2, Q2_max=Q2_max,
     mask=mask,
-    keep_DR=keep_DR,
+    keep_S=keep_S,
     FC=FC,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     usePar=usePar, wb_path=wb_path,

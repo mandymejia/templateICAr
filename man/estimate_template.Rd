@@ -24,7 +24,8 @@ estimate_template(
   Q2_max = NULL,
   brainstructures = "all",
   resamp_res = NULL,
-  keep_DR = FALSE,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = TRUE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -50,7 +51,8 @@ estimate_template.cifti(
   Q2_max = NULL,
   brainstructures = "all",
   resamp_res = resamp_res,
-  keep_DR = FALSE,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -75,7 +77,8 @@ estimate_template.gifti(
   Q2 = 0,
   Q2_max = NULL,
   brainstructures = "all",
-  keep_DR = FALSE,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -97,7 +100,8 @@ estimate_template.nifti(
   Q2 = 0,
   Q2_max = NULL,
   mask = NULL,
-  keep_DR = FALSE,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -209,9 +213,15 @@ Default: \code{c("all")}.}
 \item{resamp_res}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
 Resample the data upon reading it in? Default: \code{NULL} (no resampling).}
 
-\item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save
+\item{keep_S}{Keep the DR estimates of S? If \code{FALSE} (default), do not save
 the DR estimates and only return the templates. If \code{TRUE}, the DR
-estimates are returned too. If a single file path, save the DR estimates as
+estimates of S are returned too. If a single file path, save the DR estimates as
+an RDS file at that location rather than returning them.}
+
+\item{keep_FC}{Keep the DR estimates of the FC cor(A)? If \code{FALSE} (default), do not save
+the DR estimates and only return the templates. If \code{TRUE}, the DR
+estimates of cor(A) and its Cholesky factor are returned too.
+If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
 \item{FC}{Include the functional connectivity template? Default: \code{TRUE}.}
@@ -255,7 +265,7 @@ too many low variance or missing values; the function \code{params} such as
 the type of scaling and detrending performed; the {dat_struct} which can be
 used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
 \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
-and \code{DR} if \code{isTRUE(keep_DR)}.
+and DR results if \code{isTRUE(keep_S)} and/or \code{isTRUE(keep_FC)}.
 
 Use \code{summary} to print a description of the template results, and
 for CIFTI-format data use \code{plot} to plot the template mean and variance
