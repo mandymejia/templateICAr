@@ -27,6 +27,8 @@ estimate_template(
   keep_S = FALSE,
   keep_FC = FALSE,
   FC = TRUE,
+  FC_nPivots = 100,
+  FC_nSamp = 50000,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -225,6 +227,12 @@ If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
 \item{FC}{Include the functional connectivity template? Default: \code{TRUE}.}
+
+\item{FC_nPivots}{Number of pivots to use in Cholesky-based FC template
+estimation.  Set to zero to skip Cholesky-based FC template estimation. Default: 100.}
+
+\item{FC_nSamp}{Number of FC matrix samples to generate across all pivots. This
+should be a multiple of FC_nPivots.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
