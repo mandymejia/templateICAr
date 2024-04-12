@@ -205,23 +205,21 @@ Chol_samp_fun <- function(Chol_vals, p, M, chol_diag, chol_offdiag, Chol_mat_bla
   # Chol_samp_mean[lower.tri(Chol_samp_mean)] <- NA
   # Chol_samp_var[lower.tri(Chol_samp_var)] <- NA
 
-  # #now multiply R'R to get the correlation matrices
-  # Chol_samp_list <- apply(Chol_samp, 1, list)
-  # FC_samp_list <- lapply(Chol_samp_list, function(R){
-  #   R <- R[[1]]
-  #   R_reorder <- UT2mat(R)[,order(p)] #reverse-pivot columns of the Cholesky UT matrix
-  #   return(t(R_reorder) %*% R_reorder)
-  # })
-  #
-  # FC_samp_mean <- Reduce("+", FC_samp_list)/M #mean of FC
-  # FC_samp_var <- Reduce("+", lapply(FC_samp_list, function(x){ (x - FC_samp_mean)^2 }))/M #var of FC
-  #
+  #reconstruct corresponding FC matrices, compute mean and variance
+  #these are provided so the user can assess how well the samples emulate the FC edge-wise pop. mean and variance
+  Chol_samp_list <- apply(Chol_samp, 1, list)
+  FC_samp_list <- lapply(Chol_samp_list, function(R){
+    R <- R[[1]]
+    R_reorder <- UT2mat(R)[,order(p)] #reverse-pivot columns of the Cholesky UT matrix
+    crossprod(R_reorder) #t(R_reorder) %*% R_reorder
+  })
+
   result <- list(Chol_samp = Chol_samp,
                  # Chol_samp_mean = Chol_samp_mean,
                  # Chol_samp_var = Chol_samp_var,
-                 # FC_samp_list = FC_samp_list,
-                 # FC_samp_mean = FC_samp_mean,
-                 # FC_samp_var = FC_samp_var,
+                 FC_samp_list = FC_samp_list,
+                 #FC_samp_mean = FC_samp_mean,
+                 #FC_samp_var = FC_samp_var,
                  chol_svd = chol_svd)
   return(result)
 }
@@ -791,7 +789,7 @@ estimate_template <- function(
       cat('Number of template ICs:        ', nL, "\n")
     }
     cat('Number of training subjects:   ', nN, "\n")
-    if(FC) cat(paste0('Including FC template with ',FC_nPivots,'permuted Cholesky factors'))
+    if(FC) cat(paste0('Including Cholesky-based FC template with ',FC_nPivots,' random pivots'))
   }
 
   # Process each scan ----------------------------------------------------------
@@ -967,7 +965,7 @@ estimate_template <- function(
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
 
-  if (verbose) { cat("\nCalculating template.\n") }
+  if (verbose) { cat("\nCalculating spatial IC template.\n") }
   # Estimate the mean and variance templates.
   # Also obtain the variance decomposition.
   x <- estimate_template_from_DR(DR0, c(nL, nVm))
@@ -986,10 +984,15 @@ estimate_template <- function(
   # Estimate FC template
   if(FC){
 
+    if (verbose) { cat("\nCalculating parametric FC template.\n") }
+
     template$FC <- estimate_template_FC(FC0) #estimate IW parameters
 
     #for Cholesky-based FC template
+    FC_samp_list <- NULL #collect FC samples to compute mean/var at end
     if(FC_nPivots > 0){
+
+      if (verbose) { cat("\nGenerating samples for Cholesky-based FC template.\n") }
 
       #do Cholesky-based FC template sampling
       FC_samp_logdet <- NULL
@@ -1026,11 +1029,11 @@ estimate_template <- function(
                                  chol_diag, chol_offdiag, Chol_mat_blank) #returns a nSamp2 x nChol matrix
         Chol_samp[[pp]] <- Chol_samp_pp$Chol_samp
         Chol_svd[[pp]] <- Chol_samp_pp$chol_svd
+        FC_samp_list <- c(FC_samp_list, Chol_samp_pp$FC_samp_list)
 
         # 5(a) compute the log(det(FC)) for each pivoted Cholesky sample
         logdet_p <- 2 * rowSums(log(Chol_samp[[pp]][,chol_diag])) #log(det(X)) = 2*sum(log(diag(R)))
         FC_samp_logdet <- c(FC_samp_logdet, logdet_p)
-        print('HERE I AM')
 
         # 5(b) compute the inverse of each pivoted Cholesky sample
         # If chol_inv is the inverse of the pivoted UT cholesky matrix,
@@ -1043,11 +1046,18 @@ estimate_template <- function(
           x_mat_inv[upper.tri(x_mat_inv, diag=TRUE)] #the inverse of an UT matrix is also upper triangular
         }, simplify=TRUE)) #this is extremely fast
 
-      }
+      } #end loop over pivots
+
+      #compute mean across FC samples
+      M_all <- FC_nPivots*FC_nSamp2 #total number of samples
+      FC_samp_mean <- Reduce("+", FC_samp_list)/M_all #mean of FC
+      FC_samp_var <- Reduce("+", lapply(FC_samp_list, function(x){ (x - FC_samp_mean)^2 }))/M_all #var of FC
 
       template$FC_Chol <- list(Chol_samp = Chol_samp,
                                FC_samp_logdet = FC_samp_logdet, #log determinant values for every sample
                                FC_samp_cholinv = FC_samp_cholinv, #pivoted Cholesky inverses for every sample
+                               FC_samp_mean = FC_samp_mean,
+                               FC_samp_var = FC_samp_var,
                                Chol_svd = Chol_svd,
                                pivots = pivots) #need to use these along with FC_samp_cholinv to determine inv(FC)
     } #end Cholesky-based FC template estimation
