@@ -146,9 +146,10 @@
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results. Ignored for FC template
 #'  ICA
-#' @param method_FC Bayesian estimation method for FC template ICA model:
-#'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
-#'  or EM initialized with VB, \code{"EM_VB"}.
+#' @param method_FC Variational Bayes (VB) method for FC template ICA model:
+#'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+#'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+#'  using a combination of Cholesky, SVD, and random pivoting.
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of EM or VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change between iterations. Default:
@@ -214,7 +215,7 @@ templateICA <- function(
   resamp_res=NULL,
   rm_mwall=TRUE,
   reduce_dim=TRUE,
-  method_FC=c("VB", "EM", "EM_VB"),
+  method_FC=c("VB1", "VB2"),
   maxiter=100,
   miniter=3,
   epsilon=0.001,
@@ -292,7 +293,7 @@ templateICA <- function(
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
-  method_FC <- match.arg(method_FC, c("VB", "EM", "EM_VB"))
+  method_FC <- match.arg(method_FC, c("VB1", "VB2"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(miniter))
   stopifnot(miniter <= maxiter)
@@ -969,14 +970,16 @@ templateICA <- function(
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #save.image(file='test/test_setup_VB.RData')
+    save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
+    stop()
 
-    #run or initialize with VB
-    if(method_FC %in% c('VB','EM_VB')){
+    # [TO DO] determine the TxT temporal covariance matrix for A via AR modeling
+
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
+        method_FC = method_FC,
         prior_params, #for prior on tau^2
         BOLD=BOLD,
         A0 = result_tICA$A,
@@ -988,24 +991,6 @@ templateICA <- function(
         eps_inter=eps_inter,
         verbose=verbose
       )
-    }
-
-    if(method_FC %in% c('EM', 'EM_VB')){
-      if(method_FC == 'EM_VB'){ BOLD_DR$A <- result$A; BOLD_DR$S <- t(result$subjICmean) }
-      result <- EM_FCtemplateICA(
-        template_mean = template$mean,
-        template_var = template$var,
-        template_FC = template_FC,
-        prior_params, #for prior on tau^2
-        BOLD=BOLD,
-        AS_0 = BOLD_DR, #initial values for A and S
-        miniter=miniter,
-        maxiter=maxiter,
-        epsilon=epsilon,
-        eps_inter=eps_inter,
-        verbose=TRUE
-      )
-    }
 
     result$result_tICA <- result_tICA
 

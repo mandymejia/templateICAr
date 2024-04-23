@@ -27,7 +27,7 @@ templateICA(
   resamp_res = NULL,
   rm_mwall = TRUE,
   reduce_dim = TRUE,
-  method_FC = c("VB", "EM", "EM_VB"),
+  method_FC = c("VB1", "VB2"),
   maxiter = 100,
   miniter = 3,
   epsilon = 0.001,
@@ -197,9 +197,10 @@ Default: \code{TRUE}. Skipping dimension reduction will slow the model
 estimation, but may result in more accurate results. Ignored for FC template
 ICA}
 
-\item{method_FC}{Bayesian estimation method for FC template ICA model:
-variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
-or EM initialized with VB, \code{"EM_VB"}.}
+\item{method_FC}{Variational Bayes (VB) method for FC template ICA model:
+\code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+\code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+using a combination of Cholesky, SVD, and random pivoting.}
 
 \item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
 

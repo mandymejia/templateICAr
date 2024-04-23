@@ -4,10 +4,10 @@
 \alias{update_A}
 \title{Update A for VB FC Template ICA}
 \usage{
-update_A(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nvox)
+update_A(mu_tau2, mu_S, cov_S, mu_G, BOLD, ntime, nICs, nvox)
 }
 \arguments{
-\item{mu_tau2, mu_S, cov_S, mu_G, mu_alpha}{Most recent estimates of posterior
+\item{mu_tau2, mu_S, cov_S, mu_G}{Most recent estimates of posterior
 moments for these variables.}
 
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}

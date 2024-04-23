@@ -8,6 +8,10 @@
 #' @param template_var  (\eqn{V \times Q} matrix) between-subject variance maps
 #'  for each IC in the template.
 #' @param template_FC (list) Parameters of functional connectivity template.
+#' @param method_FC Variational Bayes (VB) method for FC template ICA model:
+#'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+#'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+#'  using a combination of Cholesky, SVD, and random pivoting.
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
 #'  (error variance). Default: \code{0.001} for both.
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data.
@@ -35,6 +39,7 @@ VB_FCtemplateICA <- function(
   template_mean, #VxQ
   template_var, #VxQ
   template_FC,
+  method_FC = c('VB1','VB2'),
   prior_params=c(0.001, 0.001),
   BOLD, #VxT
   A0, S0, S0_var,
@@ -54,6 +59,7 @@ VB_FCtemplateICA <- function(
     stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
     stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
   }
+  method_FC <- match.arg(method_FC, c("VB1", "VB2"))
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
   ntime <- ncol(BOLD) #length of timeseries
@@ -76,11 +82,8 @@ VB_FCtemplateICA <- function(
   mu_S <- t(S0) #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
-  #cov_S <- cov_S*10
   mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
-  mu_alpha <- colMeans(A0)
   mu_G <- cov(A0)
-  cov_alpha <- 1/ntime * mu_G
   BOLD <- t(BOLD) #make the BOLD TxV to match the paper
 
   #pre-compute some stuff
@@ -101,7 +104,7 @@ VB_FCtemplateICA <- function(
   #2. Iteratively update approximate posteriors
 
   err <- 1000 #large initial value for difference between iterations
-  ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
+  #ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
   while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
@@ -109,7 +112,8 @@ VB_FCtemplateICA <- function(
 
     #a. UPDATE A
 
-    A_new <- update_A(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nvox)
+    A_new <- update_A(mu_tau2, mu_S, cov_S, mu_G, #mu_alpha,
+                      BOLD, ntime, nICs, nvox)
     mu_A_old <- mu_A
     mu_A <- A_new[[1]]
     cov_A <- A_new[[2]]
@@ -121,9 +125,6 @@ VB_FCtemplateICA <- function(
     change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     #change_A <- sqrt(crossprod(c(mu_A - mu_A_old))) #same as in SQUAREM
 
-
-    if(iter==1) ELBO_init <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
-
     #b. UPDATE S
     S_new <- update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
     change_S <- mean(abs(S_new[[1]] - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
@@ -131,18 +132,21 @@ VB_FCtemplateICA <- function(
     mu_S <- S_new[[1]]
     cov_S <- S_new[[2]]
 
-    #c1. UPDATE alpha
-    mu_alpha <- colMeans(mu_A)
-    cov_alpha <- mu_G/ntime
+    #c. UPDATE G
+    if(method_FC == 'VB1'){
+      G_new <- update_G_IW(mu_A, cov_A, #mu_alpha, cov_alpha,
+                        template_FC, ntime, nICs)
+      psi_G <- G_new[[2]]
+      nu_G <- G_new[[1]]
+      mu_G_new <- psi_G / (nu_G - nICs - 1)
+      change_G <- mean(abs(mu_G - mu_G_new)/(abs(mu_G)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+      #change_G <- sqrt(crossprod(c(mu_G_new - mu_G))) #same as in SQUAREM
+      mu_G <- mu_G_new
+    } else {
 
-    #c2. UPDATE G
-    G_new <- update_G(mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs)
-    psi_G <- G_new[[2]]
-    nu_G <- G_new[[1]]
-    mu_G_new <- psi_G / (nu_G - nICs - 1)
-    change_G <- mean(abs(mu_G - mu_G_new)/(abs(mu_G)+0.1)) #add 0.1 to denominator to avoid dividing by zero
-    #change_G <- sqrt(crossprod(c(mu_G_new - mu_G))) #same as in SQUAREM
-    mu_G <- mu_G_new
+    # [TO DO] implement Cholesky prior-based estimation of G
+
+    }
 
     #d. UPDATE tau^2
     tau2_new <- update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
@@ -161,11 +165,11 @@ VB_FCtemplateICA <- function(
     change <- format(change, digits=3, nsmall=3)
     if(verbose) cat(paste0('Iteration ',iter, ':l0 Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
 
-    #ELBO
-    ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
-    if(iter == 1) err2 <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
-    if(iter > 1) err2 <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
-    if(verbose) cat(paste0('Iteration ',iter, ': Change in ELBO = ',round(err2, 7),', Change in Params = ', round(err, 7),'\n'))
+    # #ELBO
+    # ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
+    # if(iter == 1) err2 <- (ELBO_vals[iter] - ELBO_init)/ELBO_init
+    # if(iter > 1) err2 <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
+    # if(verbose) cat(paste0('Iteration ',iter, ': Change in ELBO = ',round(err2, 7),', Change in Params = ', round(err, 7),'\n'))
 
     #Save intermediate result?
     if(save_inter){
@@ -199,22 +203,23 @@ VB_FCtemplateICA <- function(
     A = mu_A,
     A_cov = cov_A,
     G_mean = mu_G,
-    alpha_mean = mu_alpha,
+    #alpha_mean = mu_alpha,
     tau2_mean = mu_tau2,
     success_flag=success,
     error=err,
     numiter=iter-1,
-    ELBO=ELBO_vals[1:(iter-1)],
+    #ELBO=ELBO_vals[1:(iter-1)],
     results_inter = results_inter,
     template_mean = template_mean,
     template_var = template_var,
-    template_FC = template_FC
+    template_FC = template_FC,
+    method_FC = method_FC
   )
 }
 
 #' Update A for VB FC Template ICA
 #'
-#' @param mu_tau2,mu_S,cov_S,mu_G,mu_alpha Most recent estimates of posterior
+#' @param mu_tau2,mu_S,cov_S,mu_G Most recent estimates of posterior
 #' moments for these variables.
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
 #' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
@@ -224,7 +229,7 @@ VB_FCtemplateICA <- function(
 #'
 #' @keywords internal
 update_A <- function(
-  mu_tau2, mu_S, cov_S, mu_G, mu_alpha,
+  mu_tau2, mu_S, cov_S, mu_G,
   BOLD,
   ntime, nICs, nvox){
 
@@ -284,7 +289,7 @@ update_S <- function(
 
 #' Update G for VB FC Template ICA
 #'
-#' @param mu_A,cov_A,mu_alpha,cov_alpha Most recent estimates of posterior
+#' @param mu_A,cov_A Most recent estimates of posterior
 #' moments for these variables.
 #' @param template_FC (list) Parameters of functional connectivity template.
 #' @param ntime,nICs Number of timepoints in data and number of ICs.
@@ -292,8 +297,8 @@ update_S <- function(
 #' @return List of length two: \code{nu1} and \code{psi1}.
 #'
 #' @keywords internal
-update_G <- function(
-  mu_A, cov_A, mu_alpha, cov_alpha, template_FC, ntime, nICs){
+update_G_IW <- function(
+  mu_A, cov_A, template_FC, ntime, nICs){
 
   nu0 <- template_FC$nu
   psi0 <- template_FC$psi
@@ -301,10 +306,10 @@ update_G <- function(
   nu1 <- nu0 + ntime
   #sums over t=1,...,T in Psi_G
   tmp1 <- t(mu_A) %*% mu_A + ntime*cov_A
-  tmp2 <- colSums(mu_A)
-  psi1 <- psi0 + tmp1 -
-    2*tcrossprod(mu_alpha, tmp2) +
-    ntime * (tcrossprod(mu_alpha) + cov_alpha)
+  #tmp2 <- colSums(mu_A)
+  psi1 <- psi0 + tmp1 #-
+    #2*tcrossprod(mu_alpha, tmp2) +
+    #ntime * (tcrossprod(mu_alpha) + cov_alpha)
 
   list(nu1=nu1, psi1=psi1)
 }
@@ -347,47 +352,4 @@ update_tau2 <- function(
 
   list(alpha1=alpha1, beta1=beta1)
 }
-
-#' Compute ELBO (Evidence Lower Bound)
-#'
-#' Computes the Evidence Lower Bound for the VB Algorithm for FC Template ICA
-#'
-#' @param mu_S (Q x V)
-#' @param cov_S (Q x Q x V)
-#' @param cov_A (Q x Q) (common across all a_t)
-#' @param cov_alpha (Q x Q)
-#' @param template_mean (VxQ) The template mean for S
-#' @param template_var (VxQ) The template variance for S
-#' @param ntime Number of timepoints in data
-#'
-#' @return ELBO
-#'
-#' @keywords internal
-#' @importFrom mvtnorm dmvnorm
-#' @importFrom stats dgamma
-compute_ELBO <- function(
-  mu_S, cov_S,
-  cov_A,
-  cov_alpha,
-  template_mean, template_var,
-  ntime){
-
-  nvox <- ncol(mu_S)
-
-  #first part of ELBO
-  halflogdet_cov_S_v <- apply(cov_S, 3, halflogdetX)/(nvox*ntime)
-  halflogdet_cov_A <- halflogdetX(cov_A)/(nvox*ntime) #scalar
-  halflogdet_cov_alpha <- halflogdetX(cov_alpha)/(nvox*ntime) #scalar
-
-  #second part of ELBO
-  var_S <- apply(cov_S, 3, diag) #grab the diagonal elements of QxQ cov matrices -- QxV
-  part2_v <- 1/2 * colSums((var_S + mu_S^2 - 2*t(template_mean)*mu_S)/t(template_var))/(nvox*ntime)
-
-  ELBO <- sum(-halflogdet_cov_S_v + part2_v) - ntime*halflogdet_cov_A - halflogdet_cov_alpha
-  ELBO
-}
-
-
-
-
 

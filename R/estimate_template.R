@@ -167,6 +167,7 @@ Chol_samp_fun <- function(Chol_vals, p, M, chol_diag, chol_offdiag, Chol_mat_bla
   fishZinv <- function(z){(exp(2*z)-1)/(exp(2*z)+1)}
 
   #grab upper triangle of each Cholesky matrix and logit/Fisher transform values
+  Chol_vals[,1] <- NA #ignore first element since it is always 1
   Chol_vals[,chol_diag] <- logit(Chol_vals[,chol_diag]) #logit-transform diagonal values
   Chol_vals[,chol_offdiag] <- fishZ(Chol_vals[,chol_offdiag]) #z-transform off-diagonal values
   Chol_vals <- Chol_vals[,-1] #sess x (nUT-1) matrix (first element always equals 1)

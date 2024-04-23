@@ -278,7 +278,7 @@ EM_templateICA.independent <- function(
     template_mean, template_var, meshes=NULL,
     BOLD, C_diag, H=H, Hinv=Hinv,
     s0_vec=NULL, D=NULL, Dinv_s0=NULL,
-    update_nu0sq=update_nu0sq, verbose=verbose
+    update_nu0sq=update_nu0sq, verbose=FALSE
   )
   if(verbose) print(Sys.time() - t00000)
   # Because `result_squarem$p.intermed` is not always a matrix?
@@ -709,10 +709,10 @@ UpdateTheta_templateICA.spatial <- function(
 
     #
     #second part of Q1: sum_v Trace{ A' C^{-1} A T(v,v) } = Trace{ A' C^{-1} A sum_v T(v,v) }, where sum_v T(v,v) is A_part2
-    
+
     # Damon was working on this a while back but did not finish. Kept just FYI.
     # LL1_part2 <- sum(diag( t(A_hat) %*% Cinv_A %*% T_mat ))
-    
+
     LL1_part2 <- sum(diag( t(A_hat) %*% diag((1/C_diag)) %*% A_hat %*% T_mat ))
     #
     theta_new$LL[1] <- LL1_part1 - LL1_part2
@@ -1017,7 +1017,7 @@ UpdateTheta_templateICA.independent <- function(
 
   # COMPUTE LL FOR SQUAREM
   theta_new$LL[1] <- compute_LL_std(
-    theta_new, template_mean, template_var, C_diag, BOLD, verbose=verbose
+    theta_new, template_mean, template_var, C_diag, BOLD, verbose=FALSE
   )
 
   return(theta_new)
