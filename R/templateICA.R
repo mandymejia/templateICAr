@@ -187,6 +187,7 @@
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
+#' @importFrom Matrix bandSparse
 #'
 #' @examples
 #' \dontrun{
@@ -896,7 +897,11 @@ templateICA <- function(
   # ----------------------------------------------------------------------------
 
   if (verbose) {
-    if (do_spatial | do_FC) { cat("Initializing with standard Template ICA.\n") }
+    if (do_spatial | do_FC) {
+      cat("Initializing with standard Template ICA.\n")
+      verbose0 <- verbose
+      verbose <- FALSE
+    }
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
@@ -964,16 +969,30 @@ templateICA <- function(
   #2) FC Template ICA ----------------------------------------------------------
   if (do_FC) {
 
+    verbose <- verbose0
+
     reduce_dim <- FALSE
     result_tICA <- result
 
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
-    stop()
+    #save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
+    #stop()
 
-    # [TO DO] determine the TxT temporal covariance matrix for A via AR modeling
+    # Determine the TxT temporal covariance matrix for A via AR modeling
+    A0 <- result_tICA$A
+    ar_order <- 10
+    AR_A <- pw_estimate(A0, ar_order=ar_order)$phi
+    phi <- colMeans(AR_A)
+    ARmat <- Matrix::bandSparse(n = nT, k = 0:(ar_order + 1), symmetric = TRUE)
+
+    # # Exloratory plot -- this shows that the different ICs show similar AR coefficient values
+    # AR_A$phi <- as.data.frame(AR_A$phi)
+    # AR_A$phi$IC <- 1:25
+    # AR_A_long <- reshape2::melt(AR_A$phi, id.vars='IC', value.name = 'phi', variable.name = 'AR_coef')
+    # ggplot(AR_A_long, aes(x=AR_coef, y = phi, color=IC)) +
+    #   geom_point() + theme_few()
 
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
@@ -982,7 +1001,7 @@ templateICA <- function(
         method_FC = method_FC,
         prior_params, #for prior on tau^2
         BOLD=BOLD,
-        A0 = result_tICA$A,
+        A0 = A0,
         S0 = result_tICA$subjICmean,
         S0_var = (result_tICA$subjICse)^2,
         miniter=miniter,

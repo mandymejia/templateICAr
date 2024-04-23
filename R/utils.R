@@ -200,3 +200,34 @@ check_req_ifti_pkg <- function(FORMAT){
 #'
 #' @keywords internal
 halflogdetX <- function(X){ sum(log(diag(chol(X)))) }
+
+#' Estimate residual autocorrelation for prewhitening
+#'
+#' @param A Estimated A matrix (T x Q)
+#' @param ar_order,aic Order of the AR model used to prewhiten the data at each location.
+#'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
+#'  the order will be between zero and \code{ar_order}, as determined by the AIC.
+#' @importFrom stats ar.yw
+#'
+#' @return Estimated AR coefficients and residual variance at every vertex
+pw_estimate <- function(A, ar_order, aic=FALSE){
+
+  nQ <- ncol(A)
+  AR_coefs <- matrix(NA, nQ, ar_order)
+  AR_var <- rep(NA, nQ)
+  AR_AIC <- if (aic) {rep(NA, nQ) } else { NULL }
+  for (q in seq(nQ)) {
+    if (is.na(A[1,q])) { next }
+
+    # # If `AIC`, overwrite the model order with the one selected by `cAIC`.
+    # if (aic) { ar_order <- which.min(cAIC(resids, order.max=ar_order)) - 1 }
+
+    ar_q <- ar.yw(A[,q], aic = aic, order.max = ar_order)
+    aic_order <- ar_q$order # same as length(ar_q$ar)
+    AR_coefs[q,] <- c(ar_q$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
+    AR_var[q] <- ar_q$var.pred # Residual variance
+    if (aic) { AR_AIC[q] <- ar_q$order } # Model order
+  }
+
+  list(phi = AR_coefs, sigma_sq = AR_var, aic = AR_AIC)
+}
