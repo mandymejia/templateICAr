@@ -982,10 +982,18 @@ templateICA <- function(
 
     # Determine the TxT temporal covariance matrix for A via AR modeling
     A0 <- result_tICA$A
-    ar_order <- 10
+    ar_order <- 5
     AR_A <- pw_estimate(A0, ar_order=ar_order)$phi
     phi <- colMeans(AR_A)
-    ARmat <- Matrix::bandSparse(n = nT, k = 0:(ar_order + 1), symmetric = TRUE)
+    ARmat <- getInvCovAR(phi, ntime=nT) #construct a banded diagonal matrix that is proportional to the TxT AR covariance
+    ARmat_nonzero <- 1*(ARmat != 0) #keep track of where the exact zeros are
+    ARmat_cov <- cov2cor(solve(ARmat)) #make the inverse a correlation matrix
+    ARmat_cov_svd <- eigen(ARmat_cov) #mat = vectors %*% diag(values) %*% t(vectors)
+    ARmat_sqrt <- ARmat_cov_svd$vectors %*% diag(1/sqrt(ARmat_cov_svd$values)) %*% t(ARmat_cov_svd$vectors) #square root inverse covariance (PW weights)
+
+    # [TO DO] might need to save a sparse version of ARmat (the inverse covariance) for the update of A
+
+    # [TO DO] incorporate ARmat into update for A and for G
 
     # # Exloratory plot -- this shows that the different ICs show similar AR coefficient values
     # AR_A$phi <- as.data.frame(AR_A$phi)

@@ -829,6 +829,7 @@ estimate_template <- function(
       if (FC) {
         out$FC <- array(NA, dim=c(nM, 1, nL, nL))
        } #end setup for FC template estimation
+      #out$Resid <- array(NA, dim=c(nM, 1, nV))
 
       # Dual regression.
       if(verbose) { cat(paste0(
@@ -872,6 +873,9 @@ estimate_template <- function(
           #out$FC_chol[1,,] <- chol(out$FC[1,,,])[upper.tri(out$FC[1,,,], diag=TRUE)]
           #out$FC_chol[2,,] <- chol(out$FC[2,,,])[upper.tri(out$FC[2,,,], diag=TRUE)]
         }
+        #save residual variance for rescaling
+        #out$Resid[1,,] <- colSums((DR_ii$test$A %*% DR_ii$test$S - BOLD[[ii]])^2)
+        #out$Resid[2,,] <- colSums((DR_ii$retest$A %*% DR_ii$retest$S - BOLD[[ii]])^2)
       }
       out
     }
@@ -882,6 +886,8 @@ estimate_template <- function(
       FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2)
       #FC0_chol <- abind::abind(lapply(q, `[[`, "FC_chol"), along=2)
     }
+    #Resid0 <- abind::abind(lapply(q, `[[`, "Resid"), along=2)
+
 
     doParallel::stopImplicitCluster()
 
@@ -892,6 +898,7 @@ estimate_template <- function(
       FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
       #FC0_chol <- array(NA, dim=c(nM, nN, nL*(nL+1)/2))
     }
+    Resid0 <- array(NA, dim=c(nM, nN, nV))
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
@@ -938,6 +945,9 @@ estimate_template <- function(
           #FC0_chol[1,ii,] <- chol(FC0[1,ii,,])[upper.tri(FC0[1,ii,,], diag=TRUE)]
           #FC0_chol[2,ii,] <- chol(FC0[2,ii,,])[upper.tri(FC0[2,ii,,], diag=TRUE)]
         }
+        #Compute squared residuals for standardization
+        #Resid0[1,ii,] <- colSums((DR_ii$test$A %*% DR_ii$test$S - BOLD[[ii]])^2)
+
       }
     }
     rm(DR_ii)

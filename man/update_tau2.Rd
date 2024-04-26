@@ -4,16 +4,20 @@
 \alias{update_tau2}
 \title{Update tau for VB FC Template ICA}
 \usage{
-update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
+update_tau2(BOLD, BOLD2, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
 }
 \arguments{
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
-\item{BOLD2_v}{A precomputed quantity: \code{colSums(BOLD^2)}, a numeric
-vector of length \eqn{V}.}
+\item{BOLD2}{A precomputed quantity, \code{sum(BOLD^2)}}
 
-\item{mu_A, mu_S, cov_A, cov_S, }{Most recent estimates of posterior
-moments for these variables.}
+\item{mu_A}{(\eqn{T \times Q} matrix) Current estimate of A}
+
+\item{mu_S}{(\eqn{Q \times V} matrix) Current estimate of S}
+
+\item{cov_A}{(\eqn{Q \times Q} matrix) Current estimate of sum_t Cov(a_t)}
+
+\item{cov_S}{(\eqn{Q \times Q} matrix) Current estimate of sum_v Cov(s_v)}
 
 \item{prior_params}{Alpha and beta parameters of IG prior on \eqn{\tau^2}
 (error variance).}
