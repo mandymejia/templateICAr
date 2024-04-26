@@ -122,19 +122,6 @@ print.summary.tICA.cifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.tICA.nifti
 print.summary.tICA.nifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
-  }
-
   cat("====TEMPLATE INFO====================\n")
   cat("Temporal Res.:   ", x$TR, "s.\n")
   cat("Highpass filter: ", x$hpf, "Hz\n")
@@ -164,19 +151,6 @@ print.summary.tICA.nifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.tICA.matrix
 print.summary.tICA.matrix <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
-  }
-
   cat("====TEMPLATE INFO====================\n")
   cat("Temporal Res.:   ", x$TR, "s.\n")
   cat("Highpass filter: ", x$hpf, "Hz\n")

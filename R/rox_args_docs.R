@@ -7,14 +7,6 @@
 #' @keywords internal
 NULL
 
-#' detrend_DCT
-#' 
-#' @param detrend_DCT DEPRECATED
-#' 
-#' @name detrend_DCT_param
-#' @keywords internal
-NULL
-
 #' hpf
 #' 
 #' @param hpf The frequency at which to apply a highpass filter to the data
