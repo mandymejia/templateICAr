@@ -131,8 +131,9 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     }
   }
 
-  x$template[names(x$template)!="FC"] <- lapply(
-    x$template[names(x$template)!="FC"], struct_template,
+  tm_struct_mask <- !(names(x$template) %in% c("FC", "FC_Chol"))
+  x$template[tm_struct_mask] <- lapply(
+    x$template[tm_struct_mask], struct_template,
     FORMAT, x$mask_input, x$params, x$dat_struct, x$GICA_parc_table
   )
 
@@ -141,6 +142,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     mean = x$template$mean,
     var = x$template[[var_name]],
     FC = x$template$FC
+    #, FC_Chol=FC_Chol # [TO DO]: want to export anything in `FC_Chol`?
   )
 
   #compute mean and variance of FC
