@@ -16,9 +16,11 @@ resample_template <- function(x, resamp_res, verbose=FALSE){
     stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
   }
 
+  tm_struct_mask <- !(names(x$template) %in% c("FC", "FC_Chol"))
+
   # Resample the data.
   if (verbose) { cat("Resampling templates.\n") }
-  x$template[names(x$template) != "FC"] <- lapply(x$template[names(x$template) != "FC"], function(y){
+  x$template[tm_struct_mask] <- lapply(x$template[tm_struct_mask], function(y){
     as.matrix(ciftiTools::resample_xifti(ciftiTools::newdata_xifti(x$dat_struct, y), resamp_res=resamp_res, verbose=FALSE))
   })
   if (verbose) { cat("Resampling variance decomposition.\n") }
@@ -28,7 +30,7 @@ resample_template <- function(x, resamp_res, verbose=FALSE){
 
   if (verbose) { cat("Formatting new template object.\n") }
   # Replace `NaN` values with NA values.
-  x$template[names(x$template) != "FC"] <- lapply(x$template[names(x$template) != "FC"], function(y){y[] <- ifelse(is.nan(y), NA, y)})
+  x$template[tm_struct_mask] <- lapply(x$template[tm_struct_mask], function(y){y[] <- ifelse(is.nan(y), NA, y)})
   x$var_decomp <- lapply(x$var_decomp, function(y){y[] <- ifelse(is.nan(y), NA, y)})
 
   # Get new `dat_struct` and mask.
