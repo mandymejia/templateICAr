@@ -137,7 +137,7 @@ print.summary.template.cifti <- function(x, ...) {
   the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
-    paste("TR= ", x$TR, " s.")
+    paste("TR=", x$TR, "s.")
   }
   # Get highpass filter
   the_hpf <- if (x$hpf == "0") {
@@ -172,7 +172,7 @@ print.summary.template.gifti <- function(x, ...) {
   the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
-    paste("TR= ", x$TR, " s.")
+    paste("TR=", x$TR, "s.")
   }
   # Get highpass filter
   the_hpf <- if (x$hpf == "0") {
@@ -209,7 +209,7 @@ print.summary.template.nifti <- function(x, ...) {
   the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
-    paste("TR= ", x$TR, " s.")
+    paste("TR=", x$TR, "s.")
   }
   # Get highpass filter
   the_hpf <- if (x$hpf == "0") {
@@ -247,7 +247,7 @@ print.summary.template.matrix <- function(x, ...) {
   the_TR <- if (x$TR == "NULL") {
     "not provided"
   } else {
-    paste("TR= ", x$TR, " s.")
+    paste("TR=", x$TR, "s.")
   }
   # Get highpass filter
   the_hpf <- if (x$hpf == "0") {

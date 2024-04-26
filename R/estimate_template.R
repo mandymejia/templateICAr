@@ -790,7 +790,8 @@ estimate_template <- function(
       cat('Number of template ICs:        ', nL, "\n")
     }
     cat('Number of training subjects:   ', nN, "\n")
-    if(FC) cat(paste0('Including Cholesky-based FC template with ',FC_nPivots,' random pivots'))
+    if (FC) { cat('\nIncluding Cholesky-based FC template with ',
+      FC_nPivots,' random pivots.\n') }
   }
 
   # Process each scan ----------------------------------------------------------
