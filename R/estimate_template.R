@@ -829,7 +829,7 @@ estimate_template <- function(
       if (FC) {
         out$FC <- array(NA, dim=c(nM, 1, nL, nL))
        } #end setup for FC template estimation
-      out$Resid <- array(NA, dim=c(nM, 1, nV))
+      out$sigma_sq <- array(NA, dim=c(nM, 1, nV))
 
       # Dual regression.
       if(verbose) { cat(paste0(
@@ -874,8 +874,8 @@ estimate_template <- function(
           #out$FC_chol[2,,] <- chol(out$FC[2,,,])[upper.tri(out$FC[2,,,], diag=TRUE)]
         }
         #save residual variance for rescaling
-        out$Resid[1,,] <- DR_ii$test$sigma_sq
-        out$Resid[2,,] <- DR_ii$retest$sigma_sq
+        out$sigma_sq[1,,] <- DR_ii$test$sigma_sq
+        out$sigma_sq[2,,] <- DR_ii$retest$sigma_sq
       }
       out
     }
@@ -886,7 +886,7 @@ estimate_template <- function(
       FC0 <- abind::abind(lapply(q, `[[`, "FC"), along=2)
       #FC0_chol <- abind::abind(lapply(q, `[[`, "FC_chol"), along=2)
     }
-    Resid0 <- abind::abind(lapply(q, `[[`, "Resid"), along=2)
+    sigma_sq0 <- abind::abind(lapply(q, `[[`, "sigma_sq"), along=2)
 
 
     doParallel::stopImplicitCluster()
@@ -898,7 +898,7 @@ estimate_template <- function(
       FC0 <- array(NA, dim=c(nM, nN, nL, nL)) # for functional connectivity template
       #FC0_chol <- array(NA, dim=c(nM, nN, nL*(nL+1)/2))
     }
-    Resid0 <- array(NA, dim=c(nM, nN, nV))
+    sigma_sq0 <- array(NA, dim=c(nM, nN, nV))
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
@@ -945,8 +945,8 @@ estimate_template <- function(
           #FC0_chol[1,ii,] <- chol(FC0[1,ii,,])[upper.tri(FC0[1,ii,,], diag=TRUE)]
           #FC0_chol[2,ii,] <- chol(FC0[2,ii,,])[upper.tri(FC0[2,ii,,], diag=TRUE)]
         }
-        Resid0[1,ii,] <- DR_ii$test$sigma_sq
-        Resid0[2,ii,] <- DR_ii$retest$sigma_sq
+        sigma_sq0[1,ii,] <- DR_ii$test$sigma_sq
+        sigma_sq0[2,ii,] <- DR_ii$retest$sigma_sq
       }
     }
     # Conserve memory.
@@ -974,8 +974,8 @@ estimate_template <- function(
   }
   # Note that `NA` values may still exist in `DR0`.
 
-  #Average `Resid0` across subjects and test/retest.
-  Resid0 <- colMeans(Resid0, dims=2, na.rm=TRUE)
+  #Average `sigma_sq0` across subjects and test/retest.
+  sigma_sq0 <- colMeans(sigma_sq0, dims=2, na.rm=TRUE)
 
   # Vectorize components and locations
   DR0 <- array(DR0, dim=c(nM, nN, nL*nVm))
@@ -987,6 +987,16 @@ estimate_template <- function(
   template <- lapply(x$template, t)
   var_decomp <- lapply(x$var_decomp, t)
   rm(x)
+
+  #rescale mean and variance of S to standardize residual var
+  print(length(sigma_sq0))
+  print(dim(template$mean))
+  if(length(sigma_sq0) != nrow(template$mean)) stop('Check dimensions of new sigma_sq0')
+  rescale <- sqrt(sigma_sq0)/mean(sqrt(sigma_sq0))
+  rescale <- matrix(rescale, nrow=length(sigma_sq0), ncol=nL)
+  template$mean <- template$mean / rescale
+  template$template$varUB <- template$template$varUB / (rescale^2)
+  template$template$varNN <- template$template$varNN / (rescale^2)
 
   # Unmask the data matrices (relative to `mask2`, not `mask`).
   if (use_mask2) {

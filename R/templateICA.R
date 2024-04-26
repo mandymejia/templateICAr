@@ -1143,6 +1143,7 @@ templateICA <- function(
     class(result) <- 'tICA.matrix'
   }
 
+  result$BOLD <- BOLD2
   result$mask <- mask2
   result$nuisance <- nmat
   result$params <- tICA_params

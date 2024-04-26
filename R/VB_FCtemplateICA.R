@@ -83,6 +83,7 @@ VB_FCtemplateICA <- function(
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
   mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
+  mu_tau2 <- mean((BOLD - t(mu_A %*% mu_S))^2) #Vx1
   mu_G <- cov(A0)
   BOLD <- t(BOLD) #make the BOLD TxV to match the paper
 
