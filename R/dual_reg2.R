@@ -304,16 +304,21 @@ dual_reg2 <- function(
     out$retest <- dual_reg_noNorm(BOLD2)
   }
 
+  BOLDss <- list(
+    test = if (!retest) { BOLD[, part1, drop=FALSE] } else { BOLD },
+    retest = if (!retest) { BOLD[, part2, drop=FALSE] } else { BOLD2 }
+  )
+  BOLDss$test_preclean <- BOLDss$test
+  BOLDss$retest_preclean <- BOLDss$retest
+
   # Return these DR results if denoising is not needed. ------------------------
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
-    if (!keepA) {
-      out$test$A <- NULL
-      out$retest$A <- NULL
+    for (sess in c("test", "retest")) {
+      out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
+      if (!keepA) { out[[sess]]$A <- NULL }
+      if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
     }
-    if (use_mask2) {
-      out$test$S <- unmask(out$test$S, mask2)
-      out$retest$S <- unmask(out$retest$S, mask2)
-    }
+
     if (verbose) { cat(" Done!\n") }
     if (verbose) { print(Sys.time() - extime) }
     return(out)
@@ -350,23 +355,19 @@ dual_reg2 <- function(
   # Do DR again. ---------------------------------------------------------------
   if (verbose) { cat(" Computing DR again...") }
 
+  BOLDss <- list(test = BOLD, retest = BOLD2)
+  BOLDss$test_preclean <- BOLDss$test
+  BOLDss$retest_preclean <- BOLDss$retest
+
   out$test_preclean <- out$test
   out$test <- dual_reg_noNorm(BOLD)
   out$retest_preclean <- out$retest
   out$retest <- dual_reg_noNorm(BOLD2)
 
-  if (!keepA) {
-    out$test_preclean$A <- NULL
-    out$test$A <- NULL
-    out$retest_preclean$A <- NULL
-    out$retest$A <- NULL
-  }
-
-  if (use_mask2) {
-    out$test_preclean$S <- unmask(out$test_preclean$S, mask2)
-    out$retest_preclean$S <- unmask(out$retest_preclean$S, mask2)
-    out$test$S <- unmask(out$test$S, mask2)
-    out$retest$S <- unmask(out$retest$S, mask2)
+  for (sess in c("test", "retest", "test_preclean", "retest_preclean")) {
+    out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
+    if (!keepA) { out[[sess]]$A <- NULL }
+    if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
   }
 
   if (verbose) { cat(" Done!\n") }
