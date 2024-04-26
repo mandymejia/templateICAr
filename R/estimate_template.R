@@ -1087,16 +1087,18 @@ estimate_template <- function(
   if (!keep_S) { rm(DR0) }
 
   # Keep DR estimate of FC
-  if (!isFALSE(keep_FC)) {
-    if (is.character(keep_FC)) {
-      saveRDS(FC0, keep_FC) # in this case we don't save the Cholesky factors
-      keep_FC <- FALSE # no longer need it.
-    } else if (!isTRUE(keep_FC)) {
-      warning("`keep_FC` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
-      keep_FC <- FALSE
+  if (FC) {
+    if (!isFALSE(keep_FC)) {
+      if (is.character(keep_FC)) {
+        saveRDS(FC0, keep_FC) # in this case we don't save the Cholesky factors
+        keep_FC <- FALSE # no longer need it.
+      } else if (!isTRUE(keep_FC)) {
+        warning("`keep_FC` should be `TRUE`, `FALSE`, or a file path. Using `FALSE`.")
+        keep_FC <- FALSE
+      }
     }
+    if (!keep_FC) rm(FC0)
   }
-  if (!keep_FC) rm(FC0)
 
   tparams <- list(
     FC=FC, FC_nPivots=FC_nPivots, FC_nSamp=FC_nSamp,
@@ -1144,7 +1146,7 @@ estimate_template <- function(
 
   # Add DR if applicable.
   if (keep_S) { result$S <- DR0 }
-  if (keep_FC) { result$FC <- FC0 }
+  if (FC && keep_FC) { result$FC <- FC0 }
 
   # Return results.
   class(result) <- paste0("template.", tolower(FORMAT))
