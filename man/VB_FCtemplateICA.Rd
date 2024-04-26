@@ -8,6 +8,7 @@ VB_FCtemplateICA(
   template_mean,
   template_var,
   template_FC,
+  method_FC = c("VB1", "VB2"),
   prior_params = c(0.001, 0.001),
   BOLD,
   A0,
@@ -29,6 +30,11 @@ of data locations.}
 for each IC in the template.}
 
 \item{template_FC}{(list) Parameters of functional connectivity template.}
+
+\item{method_FC}{Variational Bayes (VB) method for FC template ICA model:
+\code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+\code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+using a combination of Cholesky, SVD, and random pivoting.}
 
 \item{prior_params}{Alpha and beta parameters of IG prior on \eqn{\tau^2}
 (error variance). Default: \code{0.001} for both.}

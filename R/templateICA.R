@@ -146,9 +146,10 @@
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results. Ignored for FC template
 #'  ICA
-#' @param method_FC Bayesian estimation method for FC template ICA model:
-#'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
-#'  or EM initialized with VB, \code{"EM_VB"}.
+#' @param method_FC Variational Bayes (VB) method for FC template ICA model:
+#'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+#'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+#'  using a combination of Cholesky, SVD, and random pivoting.
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of EM or VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change between iterations. Default:
@@ -186,6 +187,7 @@
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
+#' @importFrom Matrix bandSparse
 #'
 #' @examples
 #' \dontrun{
@@ -214,7 +216,7 @@ templateICA <- function(
   resamp_res=NULL,
   rm_mwall=TRUE,
   reduce_dim=TRUE,
-  method_FC=c("VB", "EM", "EM_VB"),
+  method_FC=c("VB1", "VB2"),
   maxiter=100,
   miniter=3,
   epsilon=0.001,
@@ -292,7 +294,7 @@ templateICA <- function(
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
-  method_FC <- match.arg(method_FC, c("VB", "EM", "EM_VB"))
+  method_FC <- match.arg(method_FC, c("VB1", "VB2"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(miniter))
   stopifnot(miniter <= maxiter)
@@ -895,7 +897,11 @@ templateICA <- function(
   # ----------------------------------------------------------------------------
 
   if (verbose) {
-    if (do_spatial | do_FC) { cat("Initializing with standard Template ICA.\n") }
+    if (do_spatial | do_FC) {
+      cat("Initializing with standard Template ICA.\n")
+      verbose0 <- verbose
+      verbose <- FALSE
+    }
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
@@ -963,23 +969,39 @@ templateICA <- function(
   #2) FC Template ICA ----------------------------------------------------------
   if (do_FC) {
 
+    verbose <- verbose0
+
     reduce_dim <- FALSE
     result_tICA <- result
 
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #save.image(file='test/test_setup_VB.RData')
+    #save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
+    #stop()
 
-    #run or initialize with VB
-    if(method_FC %in% c('VB','EM_VB')){
+    # Determine the TxT temporal covariance matrix for A via AR modeling
+    A0 <- result_tICA$A
+    ar_order <- 10
+    AR_A <- pw_estimate(A0, ar_order=ar_order)$phi
+    phi <- colMeans(AR_A)
+    ARmat <- Matrix::bandSparse(n = nT, k = 0:(ar_order + 1), symmetric = TRUE)
+
+    # # Exloratory plot -- this shows that the different ICs show similar AR coefficient values
+    # AR_A$phi <- as.data.frame(AR_A$phi)
+    # AR_A$phi$IC <- 1:25
+    # AR_A_long <- reshape2::melt(AR_A$phi, id.vars='IC', value.name = 'phi', variable.name = 'AR_coef')
+    # ggplot(AR_A_long, aes(x=AR_coef, y = phi, color=IC)) +
+    #   geom_point() + theme_few()
+
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
+        method_FC = method_FC,
         prior_params, #for prior on tau^2
         BOLD=BOLD,
-        A0 = result_tICA$A,
+        A0 = A0,
         S0 = result_tICA$subjICmean,
         S0_var = (result_tICA$subjICse)^2,
         miniter=miniter,
@@ -988,24 +1010,6 @@ templateICA <- function(
         eps_inter=eps_inter,
         verbose=verbose
       )
-    }
-
-    if(method_FC %in% c('EM', 'EM_VB')){
-      if(method_FC == 'EM_VB'){ BOLD_DR$A <- result$A; BOLD_DR$S <- t(result$subjICmean) }
-      result <- EM_FCtemplateICA(
-        template_mean = template$mean,
-        template_var = template$var,
-        template_FC = template_FC,
-        prior_params, #for prior on tau^2
-        BOLD=BOLD,
-        AS_0 = BOLD_DR, #initial values for A and S
-        miniter=miniter,
-        maxiter=maxiter,
-        epsilon=epsilon,
-        eps_inter=eps_inter,
-        verbose=TRUE
-      )
-    }
 
     result$result_tICA <- result_tICA
 
