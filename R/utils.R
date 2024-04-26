@@ -231,3 +231,25 @@ pw_estimate <- function(A, ar_order, aic=FALSE){
 
   list(phi = AR_coefs, sigma_sq = AR_var, aic = AR_AIC)
 }
+
+#' Compute inverse covariance matrix for AR process (up to a constant scaling factor)
+#'
+#' @param ar vector of p AR parameters
+#' @param ntime number of time points in timeseries
+#'
+#' @return inverse covariance matrix for AR process (up to a constant scaling factor)
+#' @importFrom Matrix diag
+#' @export
+getInvCovAR <- function(ar, ntime){
+  Inv0 <- diag(ntime)
+  incr0 <- matrix(0, nrow=ntime, ncol=ntime)
+  offs <- row(Inv0) - col(Inv0) #identifies each off-diagonal
+  p <- length(ar)
+  for(k in 1:p){
+    incr <- incr0 #matrix of zeros
+    incr[offs==k] <- -1*ar[k]
+    Inv0 <- Inv0 + incr
+  }
+  Inv <- Inv0 %*% t(Inv0)
+  return(Inv)
+}

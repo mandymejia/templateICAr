@@ -89,7 +89,7 @@ VB_FCtemplateICA <- function(
   #pre-compute some stuff
   D_inv <- 1/template_var
   D_inv_S <- D_inv * template_mean
-  BOLD2_v <- colSums(BOLD^2) #sum over t=1,...,T
+  BOLD2 <- sum(BOLD^2) #sum over all v,t
 
   #save intermediate results
   save_inter <- !is.null(eps_inter)
@@ -149,11 +149,14 @@ VB_FCtemplateICA <- function(
     }
 
     #d. UPDATE tau^2
-    tau2_new <- update_tau2(BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox)
-    beta1 <- tau2_new[[2]] #length V
+    tau2_new <- update_tau2(BOLD, BOLD2, mu_A, mu_S,
+                            cov_A = ntime*cov_A, #sum over t
+                            cov_S = apply(cov_S, 1:2, sum), #sum over v
+                            prior_params, ntime, nvox)
+    beta1 <- tau2_new[[2]] #scalar
     alpha1 <- tau2_new[[1]] #scalar
     mu_tau2_new <- beta1/(alpha1 - 1)
-    change_tau2 <- mean(abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    change_tau2 <- abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1) #add 0.1 to denominator to avoid dividing by zero
     #change_tau2 <- sqrt(crossprod(c(mu_tau2_new - mu_tau2))) #same as in SQUAREM
     mu_tau2 <- mu_tau2_new
 
@@ -225,7 +228,7 @@ VB_FCtemplateICA <- function(
 #' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
 #'  the number of data locations.
 #'
-#' @return List of length two: \code{mu_A} and \code{cov_A}.
+#' @return List of length two: \code{mu_A} (TxQ) and \code{cov_A} (QxQ).
 #'
 #' @keywords internal
 update_A <- function(
@@ -235,15 +238,15 @@ update_A <- function(
 
   #cov_A (QxQ) -- common across t=1,...,T
   G_inv <- solve(mu_G)
-  tmp1 <- mu_S/matrix(sqrt(mu_tau2), nrow=nICs, ncol=nvox, byrow = TRUE)
+  tmp1 <- mu_S/sqrt(mu_tau2)
   tmp1 <- tcrossprod(tmp1)
-  tmp2 <- cov_S/array(rep(mu_tau2, each=nICs*nICs), dim=dim(cov_S))
+  tmp2 <- cov_S/mu_tau2
   tmp2 <- apply(tmp2, c(1,2), sum)
   tmp <- tmp1 + tmp2
   cov_A <- solve(tmp + G_inv)
 
   #mu_A
-  tmp1 <- BOLD/matrix(mu_tau2, nrow=ntime, ncol=nvox, byrow = TRUE)
+  tmp1 <- BOLD/mu_tau2
   tmp2 <- tmp1 %*% t(mu_S)
   mu_A <- array(0, dim = c(ntime, nICs)) #TxQ
   for(t in 1:ntime) mu_A[t,] <- cov_A %*% tmp2[t,]
@@ -260,7 +263,7 @@ update_A <- function(
 #' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
 #'  the number of data locations.
 #'
-#' @return List of length two: \code{mu_S} and \code{cov_S}.
+#' @return List of length two: \code{mu_S} (QxV) and \code{cov_S} (QxQxV).
 #'
 #' @keywords internal
 update_S <- function(
@@ -273,7 +276,7 @@ update_S <- function(
   #sum over t=1...T part
   tmp <- t(mu_A) %*% mu_A + ntime * cov_A
   for(v in 1:nvox){
-    cov_S[,,v] <- solve((1/mu_tau2[v]) * tmp + diag(D_inv[v,]))
+    cov_S[,,v] <- solve((1/mu_tau2) * tmp + diag(D_inv[v,]))
   }
 
   mu_S <- array(0, dim = c(nICs, nvox)) #QxV
@@ -281,7 +284,7 @@ update_S <- function(
   for(v in 1:nvox){
     #sum over t=1...T part
     #D_v_inv <- diag(1/template_var[v,])
-    mu_S[,v] <- cov_S[,,v] %*% ( (1/mu_tau2[v]) * tmp[v,] + D_inv_S[v,] )
+    mu_S[,v] <- cov_S[,,v] %*% ( (1/mu_tau2) * tmp[v,] + D_inv_S[v,] )
   }
 
   list(mu_S=mu_S, cov_S=cov_S)
@@ -317,10 +320,11 @@ update_G_IW <- function(
 #' Update tau for VB FC Template ICA
 #'
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param BOLD2_v A precomputed quantity: \code{colSums(BOLD^2)}, a numeric
-#'  vector of length \eqn{V}.
-#' @param mu_A,mu_S,cov_A,cov_S, Most recent estimates of posterior
-#' moments for these variables.
+#' @param BOLD2 A precomputed quantity, \code{sum(BOLD^2)}
+#' @param mu_A (\eqn{T \times Q} matrix) Current estimate of A
+#' @param mu_S (\eqn{Q \times V} matrix) Current estimate of S
+#' @param cov_A (\eqn{Q \times Q} matrix) Current estimate of sum_t Cov(a_t)
+#' @param cov_S (\eqn{Q \times Q} matrix) Current estimate of sum_v Cov(s_v)
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
 #'  (error variance).
 #' @param ntime,nvox Number of timepoints in data and the number of data
@@ -330,25 +334,32 @@ update_G_IW <- function(
 #'
 #' @keywords internal
 update_tau2 <- function(
-  BOLD, BOLD2_v, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox){
+  BOLD, BOLD2, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox){
 
   alpha0 <- prior_params[1]
   beta0 <- prior_params[2]
 
-  alpha1 <- alpha0 + ntime/2
-  beta1 <- rep(0, nvox)
+  E_aat <- cov_A + t(mu_A) %*% mu_A # sum_t E[a_t a_t'] = (sum_t Cov(a_t)) + mu(A)'mu(A)
+  E_sst <- cov_S + mu_S %*% t(mu_S)
 
-  #pre-compute sum over t inside of trace (it doesn't involve v)
-  tmp2a <- t(mu_A) %*% mu_A + ntime*cov_A
+  alpha1 <- alpha0 + ntime*nvox/2
+  beta1 <- beta0 +
+    (1/2)*BOLD2 +
+    sum(BOLD * mu_A %*% mu_S) +
+    sum(diag(E_aat %*% E_sst))
 
-  tmp1 <- t(BOLD) %*% mu_A
-  for(v in 1:nvox){
-    #sums over t=1,...,T in beta_v
-    tmp1v <- crossprod(tmp1[v,], mu_S[,v])
-    tmp2b <- tcrossprod(mu_S[,v]) + cov_S[,,v]
-    Tr_v <- sum(diag(tmp2a %*% tmp2b)) #TO DO: make trace more efficient with element-wise multiplication and colSums ?
-    beta1[v] <- beta0 + (1/2)*BOLD2_v[v] - tmp1v + (1/2)*Tr_v
-  }
+
+  # #pre-compute sum over t inside of trace (it doesn't involve v)
+  # tmp2a <- t(mu_A) %*% mu_A + ntime*cov_A
+  #
+  # tmp1 <- t(BOLD) %*% mu_A
+  # for(v in 1:nvox){
+  #   #sums over t=1,...,T in beta_v
+  #   tmp1v <- crossprod(tmp1[v,], mu_S[,v])
+  #   tmp2b <- tcrossprod(mu_S[,v]) + cov_S[,,v]
+  #   Tr_v <- sum(diag(tmp2a %*% tmp2b)) #TO DO: make trace more efficient with element-wise multiplication and colSums ?
+  #   beta1[v] <- beta0 + (1/2)*BOLD2[v] - tmp1v + (1/2)*Tr_v
+  # }
 
   list(alpha1=alpha1, beta1=beta1)
 }
