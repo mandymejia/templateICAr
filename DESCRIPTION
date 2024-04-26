@@ -48,7 +48,6 @@ Imports:
     Matrix,
     matrixStats,
     methods,
-    mvtnorm,
     pesel,
     Rcpp,
     SQUAREM,
