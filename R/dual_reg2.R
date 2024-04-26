@@ -256,6 +256,11 @@ dual_reg2 <- function(
       S2[,mask] <- S
       S2
     }
+    unmask_vec <- function(vec, mask) {
+      vec2 <- rep(NA, length(mask))
+      vec2[mask] <- vec
+      vec2
+    }
   }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
@@ -315,6 +320,7 @@ dual_reg2 <- function(
   if ((!is.null(Q2) && Q2==0) || (!is.null(Q2_max) && Q2_max==0)) {
     for (sess in c("test", "retest")) {
       out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
+      if (use_mask2) { out[[sess]]$sigma_sq <- unmask_vec(out[[sess]]$sigma_sq, mask2) }
       if (!keepA) { out[[sess]]$A <- NULL }
       if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
     }
@@ -366,6 +372,7 @@ dual_reg2 <- function(
 
   for (sess in c("test", "retest", "test_preclean", "retest_preclean")) {
     out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
+    if (use_mask2) { out[[sess]]$sigma_sq <- unmask_vec(out[[sess]]$sigma_sq, mask2) }
     if (!keepA) { out[[sess]]$A <- NULL }
     if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
   }

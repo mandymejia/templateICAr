@@ -971,6 +971,7 @@ estimate_template <- function(
     ) }
     DR0 <- DR0[,,,mask2,drop=FALSE]
     nVm <- sum(mask2)
+    sigma_sq0 <- sigma_sq0[,,mask2]
   }
   # Note that `NA` values may still exist in `DR0`.
 
@@ -989,14 +990,13 @@ estimate_template <- function(
   rm(x)
 
   #rescale mean and variance of S to standardize residual var
-  print(length(sigma_sq0))
-  print(dim(template$mean))
-  if(length(sigma_sq0) != nrow(template$mean)) stop('Check dimensions of new sigma_sq0')
-  rescale <- sqrt(sigma_sq0)/mean(sqrt(sigma_sq0))
+  #rescaling residuals by \sigma_v implies that s_v rescaled in the same way
+  #this is the same as rescaling mean(s_v) and var(s_v)
+  rescale <- sqrt(sigma_sq0)/mean(sqrt(sigma_sq0), na.rm=TRUE)
   rescale <- matrix(rescale, nrow=length(sigma_sq0), ncol=nL)
-  template$mean <- template$mean / rescale
-  template$template$varUB <- template$template$varUB / (rescale^2)
-  template$template$varNN <- template$template$varNN / (rescale^2)
+  template$mean <- template$mean / rescale #scale mean(S)
+  template[2:3] <- lapply(template[2:3], function(x) return(x / (rescale^2)) ) #scale var(S)
+  var_decomp <- lapply(var_decomp, function(x) return(x / (rescale^2) ) ) #scale var(S)
 
   # Unmask the data matrices (relative to `mask2`, not `mask`).
   if (use_mask2) {
@@ -1098,6 +1098,7 @@ estimate_template <- function(
       DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(mask2)))
       DR0temp[,,,mask2] <- DR0
       DR0 <- DR0temp
+      sigma_sq0 <- unmask_vec(sigma_sq0, mask2)
     }
     if (is.character(keep_S)) {
       saveRDS(DR0, keep_S)
@@ -1160,6 +1161,7 @@ estimate_template <- function(
   result <- list(
     template=template,
     var_decomp=var_decomp,
+    sigma_sq0=sigma_sq0,
     mask_input=mask,
     mask=mask2,
     params=tparams,
