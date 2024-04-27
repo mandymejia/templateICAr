@@ -542,7 +542,8 @@ templateICA <- function(
   # Get the selected variance.
   template <- list(
     mean = template$template$mean,
-    var = template$template[[tvar_name]]
+    var = template$template[[tvar_name]],
+    sigma_sq0 = template$sigma_sq0
   )
   # Make variance values non-negative (for unbiased template.)
   template$var[] <- pmax(0, template$var)
@@ -747,6 +748,7 @@ templateICA <- function(
   if (use_mask2) {
     template$mean <- template$mean[mask2,,drop=FALSE]
     template$var <- template$var[mask2,,drop=FALSE]
+    template$sigma_sq0 <- template$sigma_sq0[mask2]
   }
 
   # Check that numbers of data locations (nV), time points (nT) and ICs (nL) makes sense, relatively
@@ -783,6 +785,7 @@ templateICA <- function(
     dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
     template$mean <- template$mean[mask3,]
     template$var <- template$var[mask3,]
+    template$sigma_sq0 <- template$sigma_sq0[mask3,]
     if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
 
@@ -868,9 +871,9 @@ templateICA <- function(
   }
   rm(x)
 
-  # Center and scale `BOLD` again ----------------------------------------------
+  # Center and scale `BOLD` again to ensure mean zero and correct scaling ------
   BOLD <- lapply(BOLD, norm_BOLD,
-    center_rows=TRUE, center_cols=GSR,
+    center_rows=TRUE, center_cols=FALSE,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     scale_sm_xifti_mask=mask2,
     hpf=0
@@ -879,6 +882,13 @@ templateICA <- function(
   # Concatenate the data. ------------------------------------------------------
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
+
+  # Scale by residual SD from template estimation ------------------------------
+
+  if(length(template$sigma_sq0) != nrow(BOLD)) stop('Check length of sigma_sq')
+  rescale <- sqrt(template$sigma_sq0)/mean(sqrt(template$sigma_sq0), na.rm=TRUE)
+  rescale <- matrix(rescale, nrow=length(template$sigma_sq0), ncol=ncol(BOLD))
+  BOLD <- BOLD / rescale
 
   # Initialize with the dual regression-based estimate -------------------------
   if (verbose) { cat("Computing DR.\n") }

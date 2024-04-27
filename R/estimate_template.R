@@ -1088,7 +1088,12 @@ estimate_template <- function(
     } #end Cholesky-based FC template estimation
   }
 
-
+  # [TO DO]: replace with fMRIscrub::unmask_mat or a vector version
+  unmask_vec <- function(vec, mask) {
+    vec2 <- rep(NA, length(mask))
+    vec2[mask] <- vec
+    vec2
+  }
 
   # Format result ---------------------------------------------------
   # Keep DR estimate of S
