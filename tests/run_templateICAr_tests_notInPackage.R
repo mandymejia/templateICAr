@@ -79,15 +79,15 @@ tICA_cii2 <- templateICA(
 ### Test 1: basic ----
 tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
-  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
+  FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
-  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
+  FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 tm_rds <- estimate_template(
   rds_fnames[seq(5)], GICA = GICA_fname["rds"],
-  keep_DR=TRUE, FC=TRUE, TR=.72, scale_sm_FWHM=0
+  FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
 testthat::expect_equal(
   lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
@@ -136,15 +136,15 @@ close3d(); close3d(); close3d(); close3d()
 # `export_template` and `templateICA`: check for same result w/ different file types -----------------
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
-  keep_DR=TRUE, scale="global"
+  scale="global"
 )
 tm_gii <- estimate_template(
   giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),
-  keep_DR=TRUE, scale="global"
+  scale="global"
 )
 tm_rds <- estimate_template(
   rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
-  keep_DR=TRUE, scale="global"
+  scale="global"
 )
 
 ### `export_template` ----
@@ -191,7 +191,7 @@ testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
 
 ### With subcortex ----
 tm <- estimate_template(
-  cii_fnames[seq(4)], GICA=GICA_fname["cii"], scale=FALSE, keep_DR=TRUE#, FC=TRUE
+  cii_fnames[seq(4)], GICA=GICA_fname["cii"], scale=FALSE#, FC=TRUE
 )
 tm
 plot(tm)
@@ -294,7 +294,7 @@ RNifti::writeNifti(nmask, mask_fname)
 # mask erosion?
 tm <- estimate_template(
   nii_fnames[seq(4)], GICA=ngIC_fname, #scale=FALSE,
-  keep_DR=TRUE, mask=mask_fname, varTol = 500, maskTol=.3, missingTol=.9
+  mask=mask_fname, varTol = 500, maskTol=.3, missingTol=.9
 )
 tm
 tICA <- templateICA(
