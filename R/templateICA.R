@@ -852,10 +852,12 @@ templateICA <- function(
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
+  mask2and3 <- if (use_mask2) { mask2 } else { mask3 } # [TO DO] patch???
+
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    scale_sm_xifti_mask=mask2,
+    scale_sm_xifti_mask=mask2and3,
     hpf=0
   )
 
@@ -875,7 +877,7 @@ templateICA <- function(
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=FALSE,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    scale_sm_xifti_mask=mask2,
+    scale_sm_xifti_mask=mask2and3,
     hpf=0
   )
 
