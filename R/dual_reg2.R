@@ -132,7 +132,7 @@ dual_reg2 <- function(
   }
 
   # Get `BOLD` (and `BOLD2`) as a data matrix or array.  -----------------------
-  if (verbose) { cat("\tReading and formatting data...") }
+  if (verbose) { cat("\tReading in data... ") }
   if (FORMAT == "CIFTI") {
     if (is.character(BOLD)) { BOLD <- ciftiTools::read_cifti(BOLD, brainstructures=brainstructures, resamp_res=resamp_res) }
     if (ciftiTools::is.xifti(BOLD)) {
@@ -292,7 +292,7 @@ dual_reg2 <- function(
   ) }
 
   # Get the first dual regression results. -------------------------------------
-  if (verbose) { cat(" Computing DR...") }
+  if (verbose) { cat("\n\tDual regression... ") }
   # If using pseudo-retest data, compute DR on the halves of `BOLD`.
   # Do this before normalizating `BOLD` so to avoid normalizing twice.
   if (!retest) {
@@ -331,7 +331,7 @@ dual_reg2 <- function(
   }
 
   # Estimate and deal with nuisance ICs. ---------------------------------------
-  if (verbose) { cat(" Denoising...") }
+  if (verbose) { cat(" Denoising... ") }
   # If !retest, we prefer to estimate nuisance ICs across the full scan
   # and then halve it after.
   if (!retest) {
@@ -350,16 +350,16 @@ dual_reg2 <- function(
   BOLD <- norm_BOLD(
     BOLD, center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    hpf=0
+    TR=TR, hpf=0
   )
   BOLD2 <- norm_BOLD(
     BOLD2, center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    hpf=0
+    TR=TR, hpf=0
   )
 
   # Do DR again. ---------------------------------------------------------------
-  if (verbose) { cat(" Computing DR again...") }
+  if (verbose) { cat("\n\tDual regression again... ") }
 
   BOLDss <- list(test = BOLD, retest = BOLD2)
   BOLDss$test_preclean <- BOLDss$test

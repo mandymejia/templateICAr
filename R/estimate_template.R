@@ -833,7 +833,7 @@ estimate_template <- function(
 
       # Dual regression.
       if(verbose) { cat(paste0(
-        '\nReading and analyzing data for subject ', ii,' of ', nN, ".\n"
+        '\nSubject ', ii,' of ', nN, ".\n"
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
       DR_ii <- try(dual_reg2(
@@ -902,7 +902,7 @@ estimate_template <- function(
 
     for (ii in seq(nN)) {
       if(verbose) { cat(paste0(
-        '\nReading and analyzing data for subject ', ii,' of ', nN, '.\n'
+        '\nSubject ', ii,' of ', nN, '.\n'
       )) }
       if (real_retest) { B2 <- BOLD2[[ii]] } else { B2 <- NULL }
 
