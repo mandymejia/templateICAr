@@ -187,7 +187,7 @@
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
-#' @importFrom Matrix bandSparse
+#' @importFrom Matrix bandSparse Matrix
 #'
 #' @examples
 #' \dontrun{
@@ -215,7 +215,7 @@ templateICA <- function(
   spatial_model=NULL,
   resamp_res=NULL,
   rm_mwall=TRUE,
-  reduce_dim=TRUE,
+  reduce_dim=FALSE,
   method_FC=c("VB1", "VB2"),
   maxiter=100,
   miniter=3,
@@ -991,24 +991,30 @@ templateICA <- function(
     #stop()
 
     # Determine the TxT temporal covariance matrix for A via AR modeling
-    A0 <- result_tICA$A
+    A0 <- scale(result_tICA$A)
     ar_order <- 5
-    AR_A <- pw_estimate(A0, ar_order=ar_order)$phi
-    phi <- colMeans(AR_A)
-    ARmat <- getInvCovAR(phi, ntime=nT) #construct a banded diagonal matrix that is proportional to the TxT AR covariance
-    ARmat_nonzero <- 1*(ARmat != 0) #keep track of where the exact zeros are
-    ARmat_cov <- cov2cor(solve(ARmat)) #make the inverse a correlation matrix
-    ARmat_cov_svd <- eigen(ARmat_cov) #mat = vectors %*% diag(values) %*% t(vectors)
-    ARmat_sqrt <- ARmat_cov_svd$vectors %*% diag(1/sqrt(ARmat_cov_svd$values)) %*% t(ARmat_cov_svd$vectors) #square root inverse covariance (PW weights)
-
-    # [TO DO] might need to save a sparse version of ARmat (the inverse covariance) for the update of A
-
-    # [TO DO] incorporate ARmat into update for A and for G
+    time_inds_PW <- 1:(nT-2*ar_order)
+    AR_A <- templateICAr:::pw_estimate(A0, ar_order=ar_order)$phi #built-in function
+    phi <- colMeans(AR_A) #average over ICs
+    Gamma_inv0 <- getInvCovAR(phi, ntime=nT) #SPARSE semi-banded diagonal matrix that is proportional to inv(Gamma), the TxT AR covariance
+    Gamma_inv_svd <- eigen(Gamma_inv0) #easy way to compute square root and inverse
+    #Gamma_inv_sqrt <- Gamma_inv_svd$vectors %*% diag(sqrt(Gamma_inv_svd$values)) %*% t(Gamma_inv_svd$vectors)
+    Gamma <- Gamma_inv_svd$vectors %*% diag(1/(Gamma_inv_svd$values)) %*% t(Gamma_inv_svd$vectors)
+    Gamma <- Gamma[time_inds_PW,time_inds_PW] #drop last few time points when the variance changes rapidly
+    Gamma <- cov2cor(Gamma)
+    #tau <- 1+2*sum(Gamma[round(ntime/2),-round(ntime/2)]) #autocorrelation time (take a middle time point to avoid boundary effects)
+    #ntime_eff <- length(time_inds_PW)/tau
+    Gamma_svd <- eigen(Gamma) #to compute Gamma^(-1)
+    #Gamma_SD <- sqrt(diag(Gamma)) #SD associated with Gamma (should be = 1 ideally, but they are not so we must rescale)
+    Wmat <- Gamma_svd$vectors %*% diag(1/sqrt(Gamma_svd$values)) %*% t(Gamma_svd$vectors) #PW weights. Wmat %*% Wmat is sparse.
+    Gamma_inv <- Wmat %*% Wmat
+    Gamma_inv[Gamma_inv0[time_inds_PW,time_inds_PW]==0] <- 0 #they are all nearly zero, just need to make exact zero for sparsity
+    Gamma_inv <- Matrix::Matrix(Gamma_inv, sparse=TRUE) #a banded diagonal matrix with the first 5 off-diagonal bands non-zero
 
     # # Exloratory plot -- this shows that the different ICs show similar AR coefficient values
-    # AR_A$phi <- as.data.frame(AR_A$phi)
-    # AR_A$phi$IC <- 1:25
-    # AR_A_long <- reshape2::melt(AR_A$phi, id.vars='IC', value.name = 'phi', variable.name = 'AR_coef')
+    # AR_A <- as.data.frame(AR_A) #phi estimates
+    # AR_A$IC <- 1:25
+    # AR_A_long <- reshape2::melt(AR_A, id.vars='IC', value.name = 'phi', variable.name = 'AR_coef')
     # ggplot(AR_A_long, aes(x=AR_coef, y = phi, color=IC)) +
     #   geom_point() + theme_few()
 
@@ -1018,10 +1024,11 @@ templateICA <- function(
         template_FC = template_FC,
         method_FC = method_FC,
         prior_params, #for prior on tau^2
-        BOLD=BOLD,
-        A0 = A0,
+        BOLD=BOLD[,time_inds_PW],
+        A0 = scale(A0[time_inds_PW,]),
         S0 = result_tICA$subjICmean,
         S0_var = (result_tICA$subjICse)^2,
+        Wmat = Wmat, Gamma_inv = Gamma_inv,
         miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
@@ -1153,7 +1160,7 @@ templateICA <- function(
     class(result) <- 'tICA.matrix'
   }
 
-  result$BOLD <- BOLD2
+  result$BOLD <- BOLD
   result$mask <- mask2
   result$nuisance <- nmat
   result$params <- tICA_params
