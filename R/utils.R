@@ -28,17 +28,17 @@ make_mask <- function(BOLD, meanTol=-Inf, varTol=1e-6, verbose=TRUE){
   if (verbose) {
     warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
     if (any(!mask_na)) {
-      cat("\t", sum(!mask_na), paste0("locations removed due to NA/NaN values.  "))
+      cat(sum(!mask_na), paste0("locations removed due to NA/NaN values.  "))
     }
     # Do not include NA locations in count.
     mask_mean2 <- mask_mean | (!mask_na)
     if (any(!mask_mean2)) {
-      cat("\t", sum(!mask_mean2), warn_part1, paste0("removed due to low mean.  "))
+      cat(sum(!mask_mean2), warn_part1, paste0("removed due to low mean.  "))
     }
     # Do not include NA or low-mean locations in count.
     mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
     if (any(!mask_var2)) {
-      cat("\t", sum(!mask_var2), warn_part1, paste0("removed due to low variance.  "))
+      cat(sum(!mask_var2), warn_part1, paste0("removed due to low variance.  "))
     }
   }
 
