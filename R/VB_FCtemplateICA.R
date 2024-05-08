@@ -201,7 +201,8 @@ VB_FCtemplateICA <- function(
   #obtain SE(S)
   S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
   mu_S <- S_new$mu_S
-  cov_S_list <- lapply(seq(dim(S_new$cov_S)[3]), function(x) cov_S[ , , x])
+  cov_S <- S_new$cov_S
+  cov_S_list <- lapply(seq(dim(cov_S)[3]), function(x) cov_S[ , , x])
   subjICse <- sqrt(sapply(cov_S_list, diag))
 
   list(
