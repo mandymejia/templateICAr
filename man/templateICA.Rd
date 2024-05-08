@@ -26,7 +26,7 @@ templateICA(
   spatial_model = NULL,
   resamp_res = NULL,
   rm_mwall = TRUE,
-  reduce_dim = TRUE,
+  reduce_dim = FALSE,
   method_FC = c("VB1", "VB2"),
   maxiter = 100,
   miniter = 3,

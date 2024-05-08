@@ -992,45 +992,16 @@ templateICA <- function(
     #save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
     #stop()
 
-    # Determine the TxT temporal covariance matrix for A via AR modeling
-    A0 <- scale(result_tICA$A)
-    ar_order <- 5
-    time_inds_PW <- 1:(nT-2*ar_order)
-    AR_A <- templateICAr:::pw_estimate(A0, ar_order=ar_order)$phi #built-in function
-    phi <- colMeans(AR_A) #average over ICs
-    Gamma_inv0 <- getInvCovAR(phi, ntime=nT) #SPARSE semi-banded diagonal matrix that is proportional to inv(Gamma), the TxT AR covariance
-    Gamma_inv_svd <- eigen(Gamma_inv0) #easy way to compute square root and inverse
-    #Gamma_inv_sqrt <- Gamma_inv_svd$vectors %*% diag(sqrt(Gamma_inv_svd$values)) %*% t(Gamma_inv_svd$vectors)
-    Gamma <- Gamma_inv_svd$vectors %*% diag(1/(Gamma_inv_svd$values)) %*% t(Gamma_inv_svd$vectors)
-    Gamma <- Gamma[time_inds_PW,time_inds_PW] #drop last few time points when the variance changes rapidly
-    Gamma <- cov2cor(Gamma)
-    #tau <- 1+2*sum(Gamma[round(ntime/2),-round(ntime/2)]) #autocorrelation time (take a middle time point to avoid boundary effects)
-    #ntime_eff <- length(time_inds_PW)/tau
-    Gamma_svd <- eigen(Gamma) #to compute Gamma^(-1)
-    #Gamma_SD <- sqrt(diag(Gamma)) #SD associated with Gamma (should be = 1 ideally, but they are not so we must rescale)
-    Wmat <- Gamma_svd$vectors %*% diag(1/sqrt(Gamma_svd$values)) %*% t(Gamma_svd$vectors) #PW weights. Wmat %*% Wmat is sparse.
-    Gamma_inv <- Wmat %*% Wmat
-    Gamma_inv[Gamma_inv0[time_inds_PW,time_inds_PW]==0] <- 0 #they are all nearly zero, just need to make exact zero for sparsity
-    Gamma_inv <- Matrix::Matrix(Gamma_inv, sparse=TRUE) #a banded diagonal matrix with the first 5 off-diagonal bands non-zero
-
-    # # Exloratory plot -- this shows that the different ICs show similar AR coefficient values
-    # AR_A <- as.data.frame(AR_A) #phi estimates
-    # AR_A$IC <- 1:25
-    # AR_A_long <- reshape2::melt(AR_A, id.vars='IC', value.name = 'phi', variable.name = 'AR_coef')
-    # ggplot(AR_A_long, aes(x=AR_coef, y = phi, color=IC)) +
-    #   geom_point() + theme_few()
-
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
         method_FC = method_FC,
         prior_params, #for prior on tau^2
-        BOLD=BOLD[,time_inds_PW],
-        A0 = scale(A0[time_inds_PW,]),
+        BOLD=BOLD,
+        A0 = result_tICA$A,
         S0 = result_tICA$subjICmean,
         S0_var = (result_tICA$subjICse)^2,
-        Wmat = Wmat, Gamma_inv = Gamma_inv,
         miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,

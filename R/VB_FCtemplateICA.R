@@ -18,7 +18,6 @@
 #' @param A0,S0,S0_var Initial guesses at latent variables: \code{A} (\eqn{TxQ}
 #'  mixing matrix), \code{S} (\eqn{QxV} matrix of spatial ICs), and
 #'  variance matrix \code{S0_var}.
-#' @param Wmat,Gamma_inv Matrices used for modeling temporal correlations in A
 #' @param maxiter Maximum number of VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change in parameter estimates between iterations.
@@ -44,7 +43,6 @@ VB_FCtemplateICA <- function(
   prior_params=c(0.001, 0.001),
   BOLD, #VxT
   A0, S0, S0_var,
-  Wmat, Gamma_inv,
   maxiter=100,
   miniter=3,
   epsilon=0.001,
@@ -80,19 +78,24 @@ VB_FCtemplateICA <- function(
 
   #1. Compute initial estimates of posterior moments for G, A, S, V(S), tau^2
 
-  mu_A <- scale(A0, center=FALSE) #TxQ
+  mu_A <- A0 #TxQ
   mu_S <- t(S0) #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
+  E_SSt <- apply(cov_S, 1:2, sum) + mu_S %*% t(mu_S)
+
   #mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
-  mu_tau2 <- mean((BOLD - t(mu_A %*% mu_S))^2) #Vx1
-  mu_G <- template_FC$psi / (template_FC$nu - nICs - 1)
+  mu_tau2 <- mean((BOLD - t(mu_A %*% mu_S))^2) #scalar
   BOLD <- t(BOLD) #make the BOLD TxV to match the paper
 
   #pre-compute some stuff
   D_inv <- 1/template_var
   D_inv_S <- D_inv * template_mean
   BOLD2 <- sum(BOLD^2) #sum over all v,t
+
+  #sample a bunch of Gamma variates for p(a|u)
+  nu_a <- template_FC$nu + 1 - nICs
+  u_samps <- stats::rgamma(10000, shape = nu_a/2, rate = nu_a/2)
 
   #save intermediate results
   save_inter <- !is.null(eps_inter)
@@ -116,54 +119,37 @@ VB_FCtemplateICA <- function(
     #a. UPDATE A
 
     #this function will return mu_A and E[A'A], which is needed for tau2 and for S
-    #will also return mu_{A-tilde} and E[A-tilde'A-tilde]
 
     #only ~5s for Q=25, V=90k, T=1200!
-    A_new <- update_A(mu_tau2, mu_S, cov_S, mu_G, Gamma_inv, Wmat, #mu_alpha,
-                      BOLD, ntime, nICs, nvox)
-
-    mu_A_old <- mu_A
-    mu_A <- A_new$mu_A
-    mu_A_tilde <- A_new$mu_A_tilde
-    change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
-
-    E_AtA <- A_new$E_AtA
-    E_AtA_tilde <- A_new$E_AtA_tilde
-
-    #b. UPDATE S
-    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
-    change_S <- mean(abs(S_new[[1]] - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
-    #change_S <- sqrt(crossprod(c(S_new[[1]] - mu_S))) #same as in SQUAREM
-    mu_S <- S_new$mu_S
-    cov_S <- S_new$cov_S
-
-    #c. UPDATE G
     if(method_FC == 'VB1'){
-      G_new <- update_G_IW(mu_A_tilde, E_AtA_tilde, #mu_alpha, cov_alpha,
-                        template_FC, ntime, nICs)
-      psi_G <- G_new$psi1
-      nu_G <- G_new$nu1
-      mu_G_new <- psi_G / (nu_G - nICs - 1)
-      change_G <- mean(abs(mu_G - mu_G_new)/(abs(mu_G)+0.1)) #add 0.1 to denominator to avoid dividing by zero
-      #change_G <- sqrt(crossprod(c(mu_G_new - mu_G))) #same as in SQUAREM
-      mu_G <- mu_G_new
-      print(diag(mu_G)[1:5])
+      A_new <- update_A(mu_tau2, mu_S, E_SSt,
+                      BOLD, ntime, nICs,
+                      u_samps, template_FC, final=FALSE)
+
+      mu_A_old <- mu_A
+      mu_A <- A_new$mu_A
+      change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+      E_AtA <- A_new$E_AtA
     } else {
 
-    # [TO DO] implement Cholesky prior-based estimation of G
+      # [TO DO] implement Cholesky prior-based estimation of G
 
     }
 
-    # HERE -- pass E_AtA and E_SSt to the next function instead of cov_A, cov_S
+    #b. UPDATE S
+    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox)
+    change_S <- mean(abs(S_new$mu_S - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    mu_S <- S_new$mu_S
+    E_SSt <- S_new$E_SSt
 
     #d. UPDATE tau^2
-    tau2_new <- update_tau2(BOLD, BOLD2, mu_A, mu_S,
-                            cov_A = ntime*cov_A, #sum over t
-                            cov_S = apply(cov_S, 1:2, sum), #sum over v
+
+    tau2_new <- update_tau2(BOLD, BOLD2,
+                            mu_A, E_AtA, mu_S, E_SSt,
                             prior_params, ntime, nvox)
-    beta1 <- tau2_new[[2]] #scalar
-    alpha1 <- tau2_new[[1]] #scalar
-    mu_tau2_new <- beta1/(alpha1 - 1)
+    beta1_nvox <- tau2_new$beta1 #beta1 / nvox
+    alpha1_nvox <- tau2_new$alpha1 #alpha1 / nvox
+    mu_tau2_new <- beta1_nvox/(alpha1_nvox - 1/nvox)
     change_tau2 <- abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1) #add 0.1 to denominator to avoid dividing by zero
     #change_tau2 <- sqrt(crossprod(c(mu_tau2_new - mu_tau2))) #same as in SQUAREM
     mu_tau2 <- mu_tau2_new
@@ -171,10 +157,10 @@ VB_FCtemplateICA <- function(
     if (verbose) print(Sys.time() - t00)
 
     #change in estimates
-    change <- c(change_A, change_S, change_G, change_tau2)
+    change <- c(change_A, change_S, change_tau2)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ':l0 Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for G, ',change[4],' for tau2 \n'))
+    if(verbose) cat(paste0('Iteration ',iter, ':l0 Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for tau2 \n'))
 
     # #ELBO
     # ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
@@ -189,7 +175,7 @@ VB_FCtemplateICA <- function(
       if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
         which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
         if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, G_mean = mu_G, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, tau2_mean = mu_tau2_new, error=err, numiter=iter)
         }
         #}
       }
@@ -204,7 +190,18 @@ VB_FCtemplateICA <- function(
     }
   } #end iterations
 
-  cov_S_list <- lapply(seq(dim(cov_S)[3]), function(x) cov_S[ , , x])
+  #obtain cov_A
+  A_new <- update_A(mu_tau2, mu_S, E_SSt,
+                    BOLD, ntime, nICs,
+                    u_samps, template_FC, final=TRUE)
+  mu_A <- A_new$mu_A
+  E_AtA <- A_new$E_AtA
+  Cov_A <- A_new$Cov_A #a list
+
+  #obtain SE(S)
+  S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
+  mu_S <- S_new$mu_S
+  cov_S_list <- lapply(seq(dim(S_new$cov_S)[3]), function(x) cov_S[ , , x])
   subjICse <- sqrt(sapply(cov_S_list, diag))
 
   list(
@@ -212,9 +209,7 @@ VB_FCtemplateICA <- function(
     subjICse = t(subjICse),
     S_cov = cov_S,
     A = mu_A,
-    A_cov = cov_A,
-    G_mean = mu_G,
-    #alpha_mean = mu_alpha,
+    A_cov = Cov_A,
     tau2_mean = mu_tau2,
     success_flag=success,
     error=err,
@@ -230,255 +225,112 @@ VB_FCtemplateICA <- function(
 
 #' Update A for VB FC Template ICA
 #'
-#' @param mu_tau2,mu_S,cov_S,mu_G Most recent estimates of posterior
+#' @param mu_tau2,mu_S,E_SSt Most recent estimates of posterior
 #' moments for these variables.
-#' @param Gamma_inv,Wmat matrices used to account for temporal autocorrelation
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
-#'  the number of data locations.
+#' @param ntime,nICs Number of timepoints, number of ICs
+#' @param u_samps Samples from Gamma for multivariate t prior on A
+#' @param template_FC IW parameters for FC template
+#' @param final If TRUE, return cov_A. Default: \code{FALSE}
 #'
-#' @return List of length two: \code{mu_A} (TxQ) and \code{cov_A} (QxQ).
+#' @return List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
 #'
 #' @keywords internal
 update_A <- function(
-  mu_tau2, mu_S, cov_S, mu_G, Gamma_inv, Wmat,
-  BOLD, ntime, nICs, nvox){
+  mu_tau2, mu_S, E_SSt,
+  BOLD, ntime, nICs,
+  u_samps, template_FC,
+  final=FALSE){
 
-  #cov_A (TQxTQ) -- approximation method 1 (ignore Gamma)
-  E_SSt <- apply(cov_S, 1:2, sum) + mu_S %*% t(mu_S) #sum over v to get E[SS']
-  E_SSt_big <- bdiag_m2(mat = E_SSt, N = ntime) #I_T \otimes E[SS']
-  G_inv <- solve(mu_G)
-  Gamma_G_inv <- Matrix::kronecker(Gamma_inv, G_inv) # Gamma^(-1) \otimes G^(-1)
-  cov_A_inv <- (1/mu_tau2)*E_SSt_big + Gamma_G_inv
+  nu_a <- template_FC$nu + 1 - nICs
+  psi0_inv <- solve(template_FC$psi)
+  nu_a_psi0_inv <- nu_a * psi0_inv
 
-  #mu_A (TQx1)
-  tmp <- mu_S %*% t(BOLD) #equivalent to S_otimes %*% y in paper
-  tmp <- c(tmp) #vectorize a QxT matrix into tmp_1,...,tmp_T
-  tmp <- (1/mu_tau2) * tmp #now we just need to pre-multiply by Cov(a)
-  mu_A <- Matrix::solve(a = cov_A_inv, b = tmp) #compute estimate of (a_1,...,a_T)
-  mu_A <- matrix(mu_A, nrow=ntime, ncol=nICs, byrow=TRUE) #reshape to TxQ matrix
+  E_Cov_A_u <- matrix(0, nICs, nICs) # estimate via MC using u_samps
+  E_A_u <- array(0, dim=c(length(u_samps), nICs, ntime)) #for estimating Cov(E(a|u))
+  tmp1 <- (1/mu_tau2) * E_SSt #QxQ
+  tmp2 <- (1/mu_tau2) * mu_S %*% t(BOLD) #QxT
+  for(ii in 1:length(u_samps)){
+    ui <- u_samps[ii]
+    #iteratively compute E[Cov(A|u)]
+    Cov_A_ui <- solve(tmp1 + ui * nu_a_psi0_inv)
+    E_Cov_A_u <- E_Cov_A_u + Cov_A_ui
+    #collect terms to compute Cov(E[A|u])
+    E_A_u[ii,,] <- Cov_A_ui %*% tmp2
+  }
+  E_Cov_A_u <- E_Cov_A_u/length(u_samps)
+  mu_A <- t(E_Cov_A_u %*% tmp2) #TxQ
+  Cov_A_part1 <- E_Cov_A_u #common over all t
+  Cov_A_part2 <- apply(E_A_u, 3, cov, simplify=TRUE)
+  Cov_A_part2_sum <- matrix(apply(Cov_A_part2, 1, sum), nICs, nICs) #sum over t for E[A'A]
+  Cov_A_sum <- Cov_A_part1 * ntime + Cov_A_part2_sum
+
+  if(final){
+    Cov_A <- Cov_A_part2 + matrix(c(Cov_A_part1), nICs*nICs, ntime) #will by recycled over ntime
+    Cov_A <- array(Cov_A, dim=c(nICs, nICs, ntime))
+  }
 
   ### Constrain each column of A to have var=1 and mean=0
   sd_A <- apply(mu_A, 2, sd)
-  D_A <- diag(1/sd_A) #use this below to correct cov(A) for unit-var A
+  D_A <- diag(1/sd_A) #use this below to correct A and cov(A) for unit-var A
   mu_A <- scale(mu_A)
+  Cov_A_sum <- D_A %*% Cov_A_sum %*% D_A
+  E_AtA <- Cov_A_sum + t(mu_A) %*% mu_A
+  if(final) Cov_A <- apply(Cov_A, 3, function(x) {D_A %*% x %*% D_A}, simplify=FALSE) #a list
 
-  ### [TO DO] Appropriately rescale Cov(a_t) and Cov(\tilde{a}_t)
-  #cov_A <- diag(1/sd_A) %*% cov_A %*% diag(1/sd_A)
+  result <- list(mu_A = mu_A,
+                 E_AtA = E_AtA)
+  if(final) result$Cov_A <- Cov_A
 
-  ### Compute E[A-tilde]
-  mu_A_tilde <- Wmat %*% mu_A
-
-  ### APPROXIMATE E[A'A]
-
-  # The idea: invert submatrices at the beginning, middle and end, then extrapolate
-
-  inds_by_t <- matrix(1:(ntime*nICs), nrow=nICs, ncol=ntime) #indices of cov(A) corresponding to all T QxQ blocks
-  ar_order <- 5
-  half_width <- ar_order*2 #enough to capture effects of autocorrelation and avoid boundary effects (see Appendix of paper)
-  #1. middle
-  t0 <- round(ntime/2) #this is the block that will serve as proxy for all the middle blocks
-  T0 <- (t0 - half_width):(t0 + half_width) #make a window of 10 time points around t0 to capture autocorrelation and avoid spurious boundary effects on t0 itself
-  inds_T0 <- inds_by_t[,T0] #which rows/columns of cov(A) to invert
-  cov_A0 <- Matrix::solve(cov_A_inv[c(inds_T0),c(inds_T0)]) #invert the middle submatrix
-  inds_T0_renum <- (inds_T0 - min(inds_T0) + 1)
-  inds_t0 <- inds_T0_renum[,(half_width+1)] #which indices of submatrix correspond to t0
-  cov_t0 <- cov_A0[inds_t0,inds_t0] #INGREDIENT 1
-
-  #2. beginning
-  T1 <- 1:(2*half_width) #first contiguous segment of time points
-  inds_T1 <- inds_by_t[,T1]
-  cov_A1 <- Matrix::solve(cov_A_inv[c(inds_T1),c(inds_T1)]) #invert the beginning submatrix
-  inds_T1_renum <- (inds_T1 - min(inds_T1) + 1)
-  inds_t1 <- inds_T1_renum[,(1:half_width)] #which indices of submatrix to save
-  cov_T1 <- array(NA, dim=c(nICs,nICs,half_width)) #only use the first "half_width" estimates
-  for(kk in 1:half_width){
-    inds_kk <- inds_t1[,kk]
-    cov_T1[,,kk] <- as.matrix(cov_A1[inds_kk,inds_kk]) #kth diagonal block of submatrix cov_T1
-  } #INGREDIENT 2
-
-  #3. end
-  T2 <- tail(1:ntime, half_width*2) #last contiguous segment of time points
-  inds_T2 <- inds_by_t[,T2]
-  cov_A2 <- Matrix::solve(cov_A_inv[c(inds_T2),c(inds_T2)]) #invert the last submatrix
-  inds_T2_renum <- (inds_T2 - min(inds_T2) + 1)
-  inds_t2 <- inds_T2_renum[,tail(1:(2*half_width), half_width)] #which indices of submatrix to save
-  cov_T2 <- array(NA, dim=c(nICs,nICs,half_width)) #only use the last "half_width" estimates
-  for(kk in 1:half_width){
-    inds_kk <- inds_t2[,kk]
-    cov_T2[,,kk] <- as.matrix(cov_A2[inds_kk,inds_kk]) #kth diagonal block of submatrix cov_T2
-  } #INGREDIENT 3
-
-  #sum up to approximate E[A'A]
-  cov_A_sum <- apply(cov_T1, 1:2, sum) + apply(cov_T2, 1:2, sum) + (ntime - half_width*2)*cov_t0
-  cov_A_sum <- D_A %*% cov_A_sum %*% D_A
-  list1 <- list(cov_t0, cov_T1, cov_T2, cov_A_sum) #to return
-  E_AtA <- as.matrix(cov_A_sum) + t(mu_A) %*% mu_A
-
-
-  # APPROXIMATE E[A-tilde'A-tilde]
-
-  Wmat_big <- kronecker(Wmat, Matrix(diag(nICs), sparse=TRUE))
-  nA1 <- nrow(cov_A1)
-  nA2 <- nrow(cov_A2)
-  nWbig <- nrow(Wmat_big)
-  Wmat_A1 <- Wmat_big[c(inds_T1),c(inds_T1)]
-  Wmat_A2 <- Wmat_big[c(inds_T2),c(inds_T2)]
-  Wmat_A0 <- Wmat_big[c(inds_T0),c(inds_T0)]
-  sd_A_big <- kronecker(Matrix(diag(length(T1))), D_A, sparse=TRUE) #for standardizing var(A)
-  sd_A_big0 <- kronecker(Matrix(diag(length(T0))), D_A, sparse=TRUE) #for standardizing var(A)
-  cov_A1_tilde <- Wmat_A1 %*% sd_A_big %*% cov_A1 %*% sd_A_big %*% Wmat_A1
-  cov_A2_tilde <- Wmat_A2 %*% sd_A_big %*% cov_A2 %*% sd_A_big %*% Wmat_A2
-  cov_A0_tilde <- Wmat_A0 %*% sd_A_big0 %*% cov_A0 %*% sd_A_big0 %*% Wmat_A0
-  cov_t0_tilde <- cov_A0_tilde[inds_t0,inds_t0] #INGREDIENT 1
-  cov_T1_tilde <- array(NA, dim=c(nICs,nICs,half_width)) #only use the first "half_width" estimates
-  for(kk in 1:half_width){
-    inds_kk <- inds_t1[,kk]
-    cov_T1_tilde[,,kk] <- as.matrix(cov_A1_tilde[inds_kk,inds_kk]) #kth diagonal block of submatrix cov_T1
-  } #INGREDIENT 2
-  cov_T2_tilde <- array(NA, dim=c(nICs,nICs,half_width)) #only use the last "half_width" estimates
-  for(kk in 1:half_width){
-    inds_kk <- inds_t2[,kk]
-    cov_T2_tilde[,,kk] <- as.matrix(cov_A2_tilde[inds_kk,inds_kk]) #kth diagonal block of submatrix cov_T2
-  } #INGREDIENT 3
-
-  #sum up to approximate E[Atilde'Atilde]
-  cov_A_tilde_sum <- apply(cov_T1_tilde, 1:2, sum) + apply(cov_T2_tilde, 1:2, sum) + (ntime - half_width*2)*cov_t0_tilde
-  E_AtA_tilde <- as.matrix(cov_A_tilde_sum) + t(mu_A_tilde) %*% mu_A_tilde
-
-
-  # TOO SLOW BUT VERY CLOSE TO THE ABOVE APPROACH
-  # # The idea: Approximate V(a) as a block diagonal matrix, then compute V(a-tilde) = W %*% V(a) %*% W
-  #
-  # mid <- function(x, n){
-  #   #grabbing middle n can be achieved by discarding the first 0.5*(length(x)  - n) elements and using head()
-  #   discard <- round(0.5*(length(x)  - n))
-  #   x <- x[-(1:discard)]
-  #   head(x, n)
-  # }
-  # #a) start and end blocks
-  # beginning <- cov_A1[c(inds_t1),c(inds_t1)] #this is for the FIRST "half_width" time points
-  # end <- cov_A2[c(inds_t2),c(inds_t2)] #this is for the LAST "half_width" time points
-  # #b) main middle blocks
-  # t0_plus <- mid(T0, half_width+1) #which time points to save from middle segment
-  # inds_t0_plus <- inds_T0_renum[,mid(1:length(T0), half_width+1)] #corresponding indices of submatrix
-  # middle <- cov_A0[c(inds_t0_plus),c(inds_t0_plus)] #this is not the whole middle, just a segement for "half_width + 1" time points
-  # #c) final "mini" middle block
-  # ntime_middle <- ntime - half_width*2 #number of time points we need to fill in-between "beginning" and "end"
-  # n_middle <- floor(ntime_middle/(half_width+1)) #the number of full-size "middle" blocks that fit
-  # ntime_middle_mini <- ntime_middle - n_middle*(half_width+1) #length of last "mini" middle block
-  # if(ntime_middle_mini > 0){
-  #   t0_plus_mini <- mid(T0, ntime_middle_mini) #which time points to save from middle segment
-  #   inds_t0_plus_mini <- inds_T0_renum[,mid(1:length(T0), ntime_middle_mini)] #corresponding indices of submatrix
-  #   middle_mini <- cov_A0[c(inds_t0_plus_mini),c(inds_t0_plus_mini)] #this is not the whole middle, just a segement for "half_width + 1" time points
-  # }
-  # #d) put them together into a block diagonal matrix
-  # #make a list of blocks for block diagonal matrix
-  # nK <- 2 + n_middle #number of blocks
-  # if(ntime_middle_mini > 0) nK <- nK + 1
-  # cov_A_list <- vector('list', length=nK)
-  # cov_A_list[[1]] <- beginning
-  # cov_A_list[[nK]] <- end
-  # for(kk in (1+(1:n_middle))){ cov_A_list[[kk]] <- middle }
-  # if(ntime_middle_mini > 0) cov_A_list[[1 + n_middle + 1]] <- middle_mini
-  # cov_A <- Matrix::bdiag(cov_A_list)
-  # if(nrow(cov_A) != nrow(cov_A_inv)) warning('Dimensions of cov_A are not correct, check the code!')
-  # cov_A_tilde <- Wmat_big %*% cov_A %*% Wmat_big
-  # cov_A_tilde_sum <- matrix(0, nICs, nICs)
-  # for(tt in 1:ntime){
-  #   inds_tt <- inds_by_t[,tt]
-  #   cov_A_tilde_sum <- cov_A_tilde_sum + as.matrix(cov_A_tilde[c(inds_tt),c(inds_tt)])
-  # }
-  # E_AtA_tilde <- cov_A_tilde_sum + t(mu_A_tilde) %*% mu_A_tilde
-
-  # #check
-  # diff(cov_T1[,,half_width], cov_t0) #SHOULD BE SIMILAR
-  # diff(cov_T2[,,1], cov_t0) #SHOULD BE SIMILAR
-  # diff(cov_T2[,,1], cov_T1[,,half_width]) #SHOULD BE SIMILAR
-
-  # OLD CODE ASSUMING A TEMPORALLY INDEPENDENT
-  # #cov_A (QxQ) -- common across t=1,...,T
-  # tmp1 <- mu_S/sqrt(mu_tau2)
-  # tmp1 <- tcrossprod(tmp1)
-  # tmp2 <- cov_S/mu_tau2
-  # tmp2 <- apply(tmp2, c(1,2), sum)
-  # tmp <- tmp1 + tmp2
-  # cov_A <- solve(tmp + G_inv)
-  #
-  # #mu_A
-  # tmp1 <- BOLD/mu_tau2
-  # tmp2 <- tmp1 %*% t(mu_S)
-  # mu_A <- array(0, dim = c(ntime, nICs)) #TxQ
-  # for(t in 1:ntime) mu_A[t,] <- cov_A %*% tmp2[t,]
-
-  list(mu_A = mu_A,
-       mu_A_tilde = mu_A_tilde,
-       E_AtA = E_AtA,
-       E_AtA_tilde = E_AtA_tilde)
+  return(result)
 }
 
 #' Update S for VB FC Template ICA
 #'
 #' @param mu_tau2,mu_A,E_AtA, Most recent posterior estimates
 #' @param D_inv,D_inv_S Some pre-computed quantities.
-#' #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param ntime,nICs,nvox Number of timepoints in data, number of ICs, and
-#'  the number of data locations.
+#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param nICs,nvox Number of ICs, and the number of data locations.
+#' @param final If TRUE, return cov_S. Default: \code{FALSE}
 #'
-#' @return List of length two: \code{mu_S} (QxV) and \code{cov_S} (QxQxV).
+#' @return List of length three: \code{mu_S} (QxV), \code{E_SSt} (QxQ), and \code{cov_S} (QxQxV).
 #'
 #' @keywords internal
 update_S <- function(
   mu_tau2, mu_A, E_AtA,
   D_inv, D_inv_S,
   BOLD,
-  ntime, nICs, nvox){
+  nICs, nvox,
+  final = FALSE){
 
+  tmp1 <- (1/mu_tau2) * E_AtA
+
+  cov_S <- array(0, dim = c(nICs, nICs, nvox))
   for(v in 1:nvox){
-    cov_S[,,v] <- solve((1/mu_tau2) * E_AtA + diag(D_inv[v,]))
+    cov_S[,,v] <- solve(tmp1 + diag(D_inv[v,]))
   }
 
   mu_S <- array(0, dim = c(nICs, nvox)) #QxV
-  tmp <- t(mu_A) %*% BOLD
+  tmp2 <- (1/mu_tau2) * (t(mu_A) %*% BOLD)
   for(v in 1:nvox){
     #sum over t=1...T part
     #D_v_inv <- diag(1/template_var[v,])
-    mu_S[,v] <- cov_S[,,v] %*% ( (1/mu_tau2) * tmp[,v] + D_inv_S[v,] )
+    mu_S[,v] <- cov_S[,,v] %*% (tmp2[,v] + D_inv_S[v,] )
   }
 
-  list(mu_S=mu_S, cov_S=cov_S)
+  E_SSt <- apply(cov_S, 1:2, sum) + mu_S %*% t(mu_S)
+
+  result <- list(mu_S=mu_S, E_SSt=E_SSt)
+  if(final) result$cov_S <- cov_S
+  return(result)
 }
 
-#' Update G for VB FC Template ICA
-#'
-#' @param mu_A,cov_A Most recent estimates of posterior
-#' moments for these variables.
-#' @param template_FC (list) Parameters of functional connectivity template.
-#' @param ntime,nICs Number of timepoints in data and number of ICs.
-#'
-#' @return List of length two: \code{nu1} and \code{psi1}.
-#'
-#' @keywords internal
-update_G_IW <- function(
-    mu_A_tilde, E_AtA_tilde, template_FC, ntime, nICs){
-
-  nu0 <- template_FC$nu
-  psi0 <- template_FC$psi
-
-  nu1 <- nu0 + ntime
-  psi1 <- psi0 + E_AtA_tilde
-
-  list(nu1=nu1, psi1=psi1)
-}
 
 #' Update tau for VB FC Template ICA
 #'
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
 #' @param BOLD2 A precomputed quantity, \code{sum(BOLD^2)}
-#' @param mu_A (\eqn{T \times Q} matrix) Current estimate of A
-#' @param mu_S (\eqn{Q \times V} matrix) Current estimate of S
-#' @param cov_A (\eqn{Q \times Q} matrix) Current estimate of sum_t Cov(a_t)
-#' @param cov_S (\eqn{Q \times Q} matrix) Current estimate of sum_v Cov(s_v)
+#' @param mu_A,E_AtA,mu_S,E_SSt Current posterior estimates
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
 #'  (error variance).
 #' @param ntime,nvox Number of timepoints in data and the number of data
@@ -488,20 +340,16 @@ update_G_IW <- function(
 #'
 #' @keywords internal
 update_tau2 <- function(
-  BOLD, BOLD2, mu_A, mu_S, cov_A, cov_S, prior_params, ntime, nvox){
+  BOLD, BOLD2, mu_A, E_AtA, mu_S, E_SSt, prior_params, ntime, nvox){
 
   alpha0 <- prior_params[1]
   beta0 <- prior_params[2]
 
-  E_aat <- cov_A + t(mu_A) %*% mu_A # sum_t E[a_t a_t'] = (sum_t Cov(a_t)) + mu(A)'mu(A)
-  E_sst <- cov_S + mu_S %*% t(mu_S)
-
-  alpha1 <- alpha0 + ntime*nvox/2
-  beta1 <- beta0 +
-    (1/2)*BOLD2 -
-    sum(BOLD * mu_A %*% mu_S) +
-    (1/2)*sum(diag(E_aat %*% E_sst))
-
+  alpha1_nvox <- alpha0/nvox + ntime/2 #multiplied by nvox for computational stability
+  beta1_nvox <- beta0/nvox +
+    (1/2)*BOLD2/nvox -
+    sum(BOLD * mu_A %*% mu_S/nvox) +
+    (1/2)*sum(diag(E_AtA %*% E_SSt)/nvox)
 
   # #pre-compute sum over t inside of trace (it doesn't involve v)
   # tmp2a <- t(mu_A) %*% mu_A + ntime*cov_A
@@ -515,7 +363,7 @@ update_tau2 <- function(
   #   beta1[v] <- beta0 + (1/2)*BOLD2[v] - tmp1v + (1/2)*Tr_v
   # }
 
-  list(alpha1=alpha1, beta1=beta1)
+  list(alpha1=alpha1_nvox, beta1=beta1_nvox)
 }
 
 ##' Fast version of Matrix :: .bdiag() -- for the case of *many*  (k x k) matrices:
