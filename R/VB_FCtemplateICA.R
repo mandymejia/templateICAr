@@ -111,7 +111,7 @@ VB_FCtemplateICA <- function(
 
   err <- 1000 #large initial value for difference between iterations
   #ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
-  while (err > epsilon | iter <= miniter) {
+  while (err > epsilon & iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -190,16 +190,20 @@ VB_FCtemplateICA <- function(
     }
   } #end iterations
 
-  #obtain cov_A
+  ### Inference on cov_A
+
   A_new <- update_A(mu_tau2, mu_S, E_SSt,
                     BOLD, ntime, nICs,
                     u_samps, template_FC, final=TRUE)
   mu_A <- A_new$mu_A
-  E_AtA <- A_new$E_AtA
-  Cov_A <- A_new$Cov_A #a list
+  #inference on Cov(A) using samples Cov(A|Y,u), u ~ Gamma
+  Cov_A_samp <- A_new$Cov_A_samp
+  Cov_A_mean <- apply(Cov_A_samp, 1:2, mean)
+  Cov_A_LB <- apply(Cov_A_samp, 1:2, quantile, 0.025) #LB of 95% credible interval
+  Cov_A_UB <- apply(Cov_A_samp, 1:2, quantile, 0.975) #UB of 95% credible interval
 
   #obtain SE(S)
-  S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
+  S_new <- update_S(mu_tau2, mu_A, A_new$E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
   mu_S <- S_new$mu_S
   cov_S <- S_new$cov_S
   cov_S_list <- lapply(seq(dim(cov_S)[3]), function(x) cov_S[ , , x])
@@ -210,7 +214,7 @@ VB_FCtemplateICA <- function(
     subjICse = t(subjICse),
     S_cov = cov_S,
     A = mu_A,
-    A_cov = Cov_A,
+    A_cov_samp = Cov_A_samp,
     tau2_mean = mu_tau2,
     success_flag=success,
     error=err,
@@ -247,17 +251,34 @@ update_A <- function(
   psi0_inv <- solve(template_FC$psi)
   nu_a_psi0_inv <- nu_a * psi0_inv
 
+  nU <- length(u_samps)
   E_Cov_A_u <- matrix(0, nICs, nICs) # estimate via MC using u_samps
   E_A_u <- array(0, dim=c(length(u_samps), nICs, ntime)) #for estimating Cov(E(a|u))
   tmp1 <- (1/mu_tau2) * E_SSt #QxQ
   tmp2 <- (1/mu_tau2) * mu_S %*% t(BOLD) #QxT
-  for(ii in 1:length(u_samps)){
+  if(final) {
+    Cov_A_avg <- cov(t(tmp2))
+    Cov_A_samp <- array(0, dim=c(nICs, nICs, nU))
+  }
+
+  for(ii in 1:nU){
     ui <- u_samps[ii]
-    #iteratively compute E[Cov(A|u)]
-    Cov_A_ui <- solve(tmp1 + ui * nu_a_psi0_inv)
+    #iteratively compute E_u[Cov(A|u)]
+    tmp1i <- tmp1 + ui * nu_a_psi0_inv
+    # tmp1i_chol <- chol(tmp1i) #gives an upper triangular matrix
+    # tmp1i_chol_inv <- backsolve(tmp1i_chol, x = diag(nICs))
+    # Cov_A_ui2 <- (tmp1i_chol_inv %*% t(tmp1i_chol_inv))
+    Cov_A_ui <- solve(tmp1i)
+    #all.equal(Cov_A_ui, Cov_A_ui2) #TRUE
     E_Cov_A_u <- E_Cov_A_u + Cov_A_ui
     #collect terms to compute Cov(E[A|u])
     E_A_u[ii,,] <- Cov_A_ui %*% tmp2
+    if(final) Cov_A_samp[,,ii] <- Cov_A_ui %*% Cov_A_avg %*% Cov_A_ui
+
+    # #draw a sample from A --> Cov(A) (QxQ)
+    # sampAi <- matrix(rnorm(ntime*nICs), nICs, ntime) #QxT matrix
+    # sampAi_covA <- tmp1i_chol_inv %*% sampAi #multiply each Qx1 N(0,1) vec by A, where AAt = Cov(A|u)
+    # #Cov(sampAi_covA[,1]) = A * I * t(A)
   }
   E_Cov_A_u <- E_Cov_A_u/length(u_samps)
   mu_A <- t(E_Cov_A_u %*% tmp2) #TxQ
@@ -266,22 +287,21 @@ update_A <- function(
   Cov_A_part2_sum <- matrix(apply(Cov_A_part2, 1, sum), nICs, nICs) #sum over t for E[A'A]
   Cov_A_sum <- Cov_A_part1 * ntime + Cov_A_part2_sum
 
-  if(final){
-    Cov_A <- Cov_A_part2 + matrix(c(Cov_A_part1), nICs*nICs, ntime) #will by recycled over ntime
-    Cov_A <- array(Cov_A, dim=c(nICs, nICs, ntime))
-  }
-
   ### Constrain each column of A to have var=1 and mean=0
   sd_A <- apply(mu_A, 2, sd)
   D_A <- diag(1/sd_A) #use this below to correct A and cov(A) for unit-var A
   mu_A <- scale(mu_A)
   Cov_A_sum <- D_A %*% Cov_A_sum %*% D_A
   E_AtA <- Cov_A_sum + t(mu_A) %*% mu_A
-  if(final) Cov_A <- apply(Cov_A, 3, function(x) {D_A %*% x %*% D_A}, simplify=FALSE) #a list
 
   result <- list(mu_A = mu_A,
                  E_AtA = E_AtA)
-  if(final) result$Cov_A <- Cov_A
+  if(final) {
+    #result$cov_A <- Cov_A #this contains Cov(a_t) for t=1,...,T
+    Cov_A_samp <- apply(Cov_A_samp, 3, function(x) D_A %*% x %*% D_A)
+    Cov_A_samp <- array(Cov_A_samp, dim=c(nICs, nICs, nU))
+    result$Cov_A_samp <- Cov_A_samp #this contains Cov(a|u) for samples u ~ Gamma
+  }
 
   return(result)
 }

@@ -628,6 +628,7 @@ estimate_template <- function(
   if (FORMAT == "CIFTI") {
     if (is.character(GICA)) { GICA <- ciftiTools::read_cifti(GICA, brainstructures=brainstructures, resamp_res=resamp_res) }
     if (ciftiTools::is.xifti(GICA, messages=FALSE)) {
+      #for parcellation (instead of ICA)
       if ((ncol(GICA) == 1) && (all(as.matrix(GICA) == round(as.matrix(GICA))))) {
         GICA_parc <- TRUE
         GICA_parc_vals <- sort(unique(c(as.matrix(GICA))))
@@ -738,13 +739,13 @@ estimate_template <- function(
   } else { #For non-NIFTI data, mask is not required but can be provided
     if (!is.null(mask)) {
       if (FORMAT == "GIFTI") {
-        mask <- as.logical(do.call(cbind, gifti::read_gifti(mask[[ii]])$data))
+        mask <- as.logical(do.call(cbind, gifti::read_gifti(mask)$data))
       } else if (FORMAT == "GIFTI2") {
         mask <- as.list(mask)
         if (length(mask) != 2) {
           stop("`mask` should be a length-2 list of GIFTI data: left hemisphere first, right hemisphere second.")
         }
-        for (ii in seq(2)) {
+        for (ii in 1:2) {
           mask[[ii]] <-  as.logical(do.call(cbind, gifti::read_gifti(mask[[ii]])$data))
         }
         mask <- do.call(c, mask)
