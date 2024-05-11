@@ -111,7 +111,7 @@ VB_FCtemplateICA <- function(
 
   err <- 1000 #large initial value for difference between iterations
   #ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
-  while (err > epsilon & iter <= miniter) {
+  while (err > epsilon | iter <= miniter) {
 
     if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
     t00 <- Sys.time()
@@ -160,7 +160,7 @@ VB_FCtemplateICA <- function(
     change <- c(change_A, change_S, change_tau2)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ':l0 Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for tau2 \n'))
+    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for tau2 \n'))
 
     # #ELBO
     # ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
