@@ -214,7 +214,7 @@ VB_FCtemplateICA <- function(
     subjICse = t(subjICse),
     S_cov = cov_S,
     A = mu_A,
-    A_cov_samp = Cov_A_samp,
+    A_cov = list(mean = Cov_A_mean, LB95 = Cov_A_LB, UB95 = Cov_A_UB),
     tau2_mean = mu_tau2,
     success_flag=success,
     error=err,
