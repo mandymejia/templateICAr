@@ -150,15 +150,16 @@
 #'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
 #'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
 #'  using a combination of Cholesky, SVD, and random pivoting.
+#'  \code{"none"} Uses standard template ICA without FC prior
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of EM or VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
-#' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default:
-#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and
-#'  \code{epsilon}.
+# @param eps_inter Intermediate values of epsilon at which to save results (used
+#  to assess benefit of more stringent convergence rules). Default:
+#  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#  (larger to smaller error) and all values should be between zero and
+#  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation over data locations? Default:
 #'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
@@ -216,11 +217,11 @@ templateICA <- function(
   resamp_res=NULL,
   rm_mwall=TRUE,
   reduce_dim=FALSE,
-  method_FC=c("VB1", "VB2"),
+  method_FC=c("VB1", "VB2", "none"),
   maxiter=100,
   miniter=3,
   epsilon=0.001,
-  eps_inter=NULL,
+  #eps_inter=NULL,
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=FALSE,
@@ -294,15 +295,15 @@ templateICA <- function(
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
-  method_FC <- match.arg(method_FC, c("VB1", "VB2"))
+  method_FC <- match.arg(method_FC, c("VB1", "VB2", "none"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(miniter))
   stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
-  if (!is.null(eps_inter)) {
-    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
-    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
-  }
+  # if (!is.null(eps_inter)) {
+  #   stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+  #   stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
+  # }
   if (!is.null(kappa_init)) { stopifnot(is_posNum(kappa_init)) }
   stopifnot(is_1(usePar, "logical") || is_1(usePar, "numeric"))
   stopifnot(is_1(verbose, "logical"))
@@ -449,10 +450,24 @@ templateICA <- function(
 
   #check for FC template
   do_FC <- FALSE; template_FC <- NULL
-  if('FC' %in% names(template$template)) {
-    do_FC <- TRUE
-    template_FC <- template$template$FC
-    template$template$FC <- NULL
+  if(method_FC == "VB1"){
+    if('FC' %in% names(template$template)) {
+      do_FC <- TRUE
+      template_FC <- template$template$FC
+      template$template$FC <- template$template$FC_Chol <- NULL
+    } else {
+      warning("FC information not available in `template`.  I will set `method_FC` to 'none' and perform standard template ICA.")
+      method_FC <- "none"
+    }
+  } else if(method_FC == "VB2"){
+    if('FC_Chol' %in% names(template$template)) {
+      do_FC <- TRUE
+      template_FC <- template$template$FC_Chol
+      template$template$FC <- template$template$FC_Chol <- NULL
+    } else {
+      warning("Cholesky FC information not available in `template`.  I will set `method_FC` to 'none' and perform standard template ICA.")
+      method_FC <- "none"
+    }
   }
 
   # Get `nI`, `nL`, and `nV`.
@@ -1005,7 +1020,7 @@ templateICA <- function(
         miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
-        eps_inter=eps_inter,
+        #eps_inter=eps_inter,
         verbose=verbose
       )
 
@@ -1079,7 +1094,7 @@ templateICA <- function(
     miniter=miniter,
     maxiter=maxiter,
     epsilon=epsilon,
-    eps_inter=eps_inter,
+    #eps_inter=eps_inter,
     kappa_init=kappa_init
   )
 

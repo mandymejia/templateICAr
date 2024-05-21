@@ -12,6 +12,14 @@
 #'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
 #'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
 #'  using a combination of Cholesky, SVD, and random pivoting.
+#' @param nsamp_u For VB1, the number of samples to generate from u ~ Gamma, where
+#' A is Gaussian conditional on u. Default: \code{10000}.
+#' @param CI_FC Level of posterior credible interval to construct for each FC element.
+#' Default: \code{0.95}.
+#' @param return_FC_samp Should the FC samples (\eqn{QxQxK}) be returned, where K
+#' is the number of posterior samples generated? May be a large object.  For VB1,
+#' K is equal to nsamp_u. For VB2, K is equal to the number of samples from p(G)
+#' contained in template_FC.
 #' @param prior_params Alpha and beta parameters of IG prior on \eqn{\tau^2}
 #'  (error variance). Default: \code{0.001} for both.
 #' @param BOLD (\eqn{V \times T} matrix) preprocessed fMRI data.
@@ -22,13 +30,11 @@
 #' @param miniter Minimum number of VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change in parameter estimates between iterations.
 #'  Default: \code{0.001}.
-#' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default:
-#'  \code{NULL} (do not save). These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and
-#'  \code{epsilon}.
-#' @param verbose If \code{TRUE}, display progress of algorithm.
-#' Default: \code{FALSE}.
+# @param eps_inter Intermediate values of epsilon at which to save results (used
+#  to assess benefit of more stringent convergence rules). Default:
+#  \code{NULL} (do not save). These values should be in decreasing order
+#  (larger to smaller error) and all values should be between zero and \code{epsilon}.
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
@@ -40,13 +46,16 @@ VB_FCtemplateICA <- function(
   template_var, #VxQ
   template_FC,
   method_FC = c('VB1','VB2'),
+  nsamp_u = 10000,
+  CI_FC = 0.95,
+  return_FC_samp=FALSE,
   prior_params=c(0.001, 0.001),
   BOLD, #VxT
   A0, S0, S0_var,
   maxiter=100,
   miniter=3,
   epsilon=0.001,
-  eps_inter=NULL,
+  #eps_inter=NULL,
   verbose=FALSE){
 
   stopifnot(length(prior_params)==2)
@@ -55,10 +64,10 @@ VB_FCtemplateICA <- function(
   stopifnot(is_posNum(miniter, "numeric") && miniter==round(miniter))
   stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
-  if (!is.null(eps_inter)) {
-    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
-    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
-  }
+  # if (!is.null(eps_inter)) {
+  #   stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+  #   stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
+  # }
   method_FC <- match.arg(method_FC, c("VB1", "VB2"))
 
   if (!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -94,18 +103,20 @@ VB_FCtemplateICA <- function(
   BOLD2 <- sum(BOLD^2) #sum over all v,t
 
   #sample a bunch of Gamma variates for p(a|u)
-  nu_a <- template_FC$nu + 1 - nICs
-  u_samps <- stats::rgamma(10000, shape = nu_a/2, rate = nu_a/2)
-
-  #save intermediate results
-  save_inter <- !is.null(eps_inter)
-  if(save_inter){
-    results_inter <- vector('list', length(eps_inter))
-    names(results_inter) <- paste0('epsilon_',eps_inter)
-    next_eps <- eps_inter[1]
-  } else {
-    results_inter <- NULL
+  if(method_FC == 'VB1'){
+    nu_a <- template_FC$nu + 1 - nICs
+    u_samps <- stats::rgamma(nsamp_u, shape = nu_a/2, rate = nu_a/2)
   }
+
+  # #save intermediate results
+  # save_inter <- !is.null(eps_inter)
+  # if(save_inter){
+  #   results_inter <- vector('list', length(eps_inter))
+  #   names(results_inter) <- paste0('epsilon_',eps_inter)
+  #   next_eps <- eps_inter[1]
+  # } else {
+  #   results_inter <- NULL
+  # }
 
   #2. Iteratively update approximate posteriors
 
@@ -120,21 +131,29 @@ VB_FCtemplateICA <- function(
 
     #this function will return mu_A and E[A'A], which is needed for tau2 and for S
 
-    #only ~5s for Q=25, V=90k, T=1200!
     if(method_FC == 'VB1'){
-      A_new <- update_A(mu_tau2, mu_S, E_SSt,
-                      BOLD, ntime, nICs,
-                      u_samps, template_FC, final=FALSE)
 
-      mu_A_old <- mu_A
-      mu_A <- A_new$mu_A
-      change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
-      E_AtA <- A_new$E_AtA
+      #15 sec Q=25, V=90k, T=1200!
+      system.time(A_new <- update_A(mu_tau2, mu_S, E_SSt,
+                      BOLD, ntime, nICs,
+                      u_samps, template_FC, final=FALSE))
+
     } else {
 
-      # [TO DO] implement Cholesky prior-based estimation of G
-
+      #15 min for 50,000 samples from p(G) (Q=25, V=90k, T=1200)
+      A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
+                             BOLD, ntime, nICs,
+                             template_FC, final=FALSE,
+                             verbose=verbose)
     }
+
+    #1. Look at eigen and err, add to Notes, then comment out those lines
+    #2. Run update_A() with final=TRUE and compare intervals
+
+    mu_A_old <- mu_A
+    mu_A <- A_new$mu_A
+    change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
+    E_AtA <- A_new$E_AtA
 
     #b. UPDATE S
     S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox)
@@ -168,18 +187,18 @@ VB_FCtemplateICA <- function(
     # if(iter > 1) err2 <- (ELBO_vals[iter] - ELBO_vals[iter - 1])/ELBO_vals[iter - 1]
     # if(verbose) cat(paste0('Iteration ',iter, ': Change in ELBO = ',round(err2, 7),', Change in Params = ', round(err, 7),'\n'))
 
-    #Save intermediate result?
-    if(save_inter){
-      ##only consider convergence for positive change (no longer relevant because err based on parameters, not ELBO)
-      #if(err > 0){
-      if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
-        which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
-        if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
-          results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, tau2_mean = mu_tau2_new, error=err, numiter=iter)
-        }
-        #}
-      }
-    }
+    # #Save intermediate result?
+    # if(save_inter){
+    #   ##only consider convergence for positive change (no longer relevant because err based on parameters, not ELBO)
+    #   #if(err > 0){
+    #   if(err < max(eps_inter)){ #if we have reached one of the intermediate convergence thresholds, save results
+    #     which_eps <- max(which(err < eps_inter)) #most stringent convergence level met
+    #     if(is.null(results_inter[[which_eps]])){ #save intermediate result at this convergence level if we haven't already
+    #       results_inter[[which_eps]] <- list(S = t(mu_S), A = mu_A, tau2_mean = mu_tau2_new, error=err, numiter=iter)
+    #     }
+    #     #}
+    #   }
+    # }
 
     ### Move to next iteration
     iter <- iter + 1
@@ -192,15 +211,24 @@ VB_FCtemplateICA <- function(
 
   ### Inference on cov_A
 
-  A_new <- update_A(mu_tau2, mu_S, E_SSt,
-                    BOLD, ntime, nICs,
-                    u_samps, template_FC, final=TRUE)
+  if(method_FC == 'VB1'){
+    A_new <- update_A(mu_tau2, mu_S, E_SSt,
+                      BOLD, ntime, nICs,
+                      u_samps, template_FC, final=TRUE)
+  } else {
+    A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
+                           BOLD, ntime, nICs,
+                           template_FC, final=TRUE,
+                           verbose=verbose)
+  }
+
   mu_A <- A_new$mu_A
-  #inference on Cov(A) using samples Cov(A|Y,u), u ~ Gamma
-  Cov_A_samp <- A_new$Cov_A_samp
-  Cov_A_mean <- apply(Cov_A_samp, 1:2, mean)
-  Cov_A_LB <- apply(Cov_A_samp, 1:2, quantile, 0.025) #LB of 95% credible interval
-  Cov_A_UB <- apply(Cov_A_samp, 1:2, quantile, 0.975) #UB of 95% credible interval
+  #inference on FC(A) using samples from (a_t|Y,u) (VB1) or (a_t|Y,G) (VB2)
+  FC_samp <- A_new$FC_samp
+  FC_mean <- apply(FC_samp, 1:2, mean, na.rm=TRUE)
+  alpha <- 1 - CI_FC
+  FC_LB <- apply(FC_samp, 1:2, quantile, alpha/2, na.rm=TRUE) #LB of 95% credible interval
+  FC_UB <- apply(FC_samp, 1:2, quantile, 1-alpha/2, na.rm=TRUE) #UB of 95% credible interval
 
   #obtain SE(S)
   S_new <- update_S(mu_tau2, mu_A, A_new$E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
@@ -214,13 +242,13 @@ VB_FCtemplateICA <- function(
     subjICse = t(subjICse),
     S_cov = cov_S,
     A = mu_A,
-    A_cov = list(mean = Cov_A_mean, LB95 = Cov_A_LB, UB95 = Cov_A_UB),
+    FC = list(mean = FC_mean, LB = FC_LB, UB = FC_UB, level = CI_FC),
     tau2_mean = mu_tau2,
     success_flag=success,
     error=err,
     numiter=iter-1,
     #ELBO=ELBO_vals[1:(iter-1)],
-    results_inter = results_inter,
+    #results_inter = results_inter,
     template_mean = template_mean,
     template_var = template_var,
     template_FC = template_FC,
@@ -228,7 +256,7 @@ VB_FCtemplateICA <- function(
   )
 }
 
-#' Update A for VB FC Template ICA
+#' Update A for VB FC Template ICA using IW prior on FC
 #'
 #' @param mu_tau2,mu_S,E_SSt Most recent estimates of posterior
 #' moments for these variables.
@@ -255,11 +283,8 @@ update_A <- function(
   E_Cov_A_u <- matrix(0, nICs, nICs) # estimate via MC using u_samps
   E_A_u <- array(0, dim=c(length(u_samps), nICs, ntime)) #for estimating Cov(E(a|u))
   tmp1 <- (1/mu_tau2) * E_SSt #QxQ
-  tmp2 <- (1/mu_tau2) * mu_S %*% t(BOLD) #QxT
-  if(final) {
-    Cov_A_avg <- cov(t(tmp2))
-    Cov_A_samp <- array(0, dim=c(nICs, nICs, nU))
-  }
+  tmp2 <- (1/mu_tau2) * (mu_S %*% t(BOLD)) #QxT
+  if(final) { FC_samp <- array(0, dim=c(nICs, nICs, nU)) }
 
   for(ii in 1:nU){
     ui <- u_samps[ii]
@@ -272,8 +297,15 @@ update_A <- function(
     #all.equal(Cov_A_ui, Cov_A_ui2) #TRUE
     E_Cov_A_u <- E_Cov_A_u + Cov_A_ui
     #collect terms to compute Cov(E[A|u])
-    E_A_u[ii,,] <- Cov_A_ui %*% tmp2
-    if(final) Cov_A_samp[,,ii] <- Cov_A_ui %*% Cov_A_avg %*% Cov_A_ui
+    mu_A_ui <- Cov_A_ui %*% tmp2 #QxT
+    E_A_u[ii,,] <- mu_A_ui
+
+    if(final==TRUE) {
+      Cov_A_ui_chol <- chol(Cov_A_ui) #UT cholesky factor of covariance matrix
+      Z_samp <- matrix(rnorm(nICs*ntime, mean = 0, sd = 1), nrow=nICs, ncol=ntime)
+      A_u_samp <- (t(Cov_A_ui_chol) %*% Z_samp) + mu_A_ui #more efficient than mvrnorm because cov(a_t|G_k)=V_k is same for all a_t, t=1,...,T
+      FC_samp[,,ii] <- cor(t(A_u_samp))
+    }
 
     # #draw a sample from A --> Cov(A) (QxQ)
     # sampAi <- matrix(rnorm(ntime*nICs), nICs, ntime) #QxT matrix
@@ -283,8 +315,8 @@ update_A <- function(
   E_Cov_A_u <- E_Cov_A_u/length(u_samps)
   mu_A <- t(E_Cov_A_u %*% tmp2) #TxQ
   Cov_A_part1 <- E_Cov_A_u #common over all t
-  Cov_A_part2 <- apply(E_A_u, 3, cov, simplify=TRUE)
-  Cov_A_part2_sum <- matrix(apply(Cov_A_part2, 1, sum), nICs, nICs) #sum over t for E[A'A]
+  Cov_A_part2 <- apply(E_A_u, 3, cov, simplify=TRUE) #QxQ cov matrices get vectorized
+  Cov_A_part2_sum <- matrix(apply(Cov_A_part2, 1, sum), nICs, nICs) #sum over t for E[A'A], reform into matrix
   Cov_A_sum <- Cov_A_part1 * ntime + Cov_A_part2_sum
 
   ### Constrain each column of A to have var=1 and mean=0
@@ -294,17 +326,154 @@ update_A <- function(
   Cov_A_sum <- D_A %*% Cov_A_sum %*% D_A
   E_AtA <- Cov_A_sum + t(mu_A) %*% mu_A
 
-  result <- list(mu_A = mu_A,
-                 E_AtA = E_AtA)
-  if(final) {
-    #result$cov_A <- Cov_A #this contains Cov(a_t) for t=1,...,T
-    Cov_A_samp <- apply(Cov_A_samp, 3, function(x) D_A %*% x %*% D_A)
-    Cov_A_samp <- array(Cov_A_samp, dim=c(nICs, nICs, nU))
-    result$Cov_A_samp <- Cov_A_samp #this contains Cov(a|u) for samples u ~ Gamma
-  }
+  result <- list(mu_A = mu_A, E_AtA = E_AtA)
+  if(final) { result$FC_samp <- FC_samp } #this contains Cor(A), where a_t is a sample from a_t|u for each u~Gamma
 
   return(result)
 }
+
+#' Update A for VB FC Template ICA using Cholesky prior for FC
+#'
+#' @param mu_tau2,mu_S,E_SSt Most recent estimates of posterior
+#' moments for these variables.
+#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
+#' @param ntime,nICs Number of timepoints, number of ICs
+#' @param template_FC IW parameters for FC template
+#' @param final If TRUE, return cov_A. Default: \code{FALSE}
+#' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
+#'
+#' @return List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
+#'
+#' @keywords internal
+update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
+                          BOLD, ntime, nICs,
+                          template_FC, final=FALSE, verbose=FALSE){
+
+  #step 1: approximate V_k for each FC sample G_k
+  #step 2: Compute E[a_t|G] for each sample G (this requires V_k)
+  #step 3: Estimate mean and cov of E[a_t|G] over G to get E[a_t] and V(a_t)
+  #step 4: Compute E[A'A]
+  #step 5: If final=TRUE, generate samples of a_t -> A -> Cov(A) for inference
+
+  #preliminaries
+  Emat <- 1/mu_tau2 * E_SSt
+  E_chol <- chol(Emat) #UT Cholesky factor R: E = R'R
+  E_chol_inv <- backsolve(E_chol, x = diag(nICs)) #R^(-1)
+  E_inv <- tcrossprod(E_chol_inv) # E^(-1) = R^(-1) R^(-T)
+
+  #more preliminaries
+  tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G]
+
+  max_eigen <- err <- c()
+
+  #collect samples of FC matrices
+  if(final==TRUE) {
+    nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow))
+    FC_samp <- array(NA, dim = c(nICs, nICs, nG))
+    gg <- 1
+  }
+
+  #loop over pivots
+  nP <- length(template_FC$pivots)
+  mu_A_bypivot <- cov_A_sum_bypivot <- vector('list', length = nP)
+  if(verbose) cat(paste0('Looping over ', nP, ' Cholesky pivots: '))
+  for(pp in 1:nP){
+    o_p <- order(template_FC$pivots[[pp]])
+    if(verbose) cat(paste0(pp,' '))
+
+    #loop over samples
+    nK <- nrow(template_FC$FC_samp_cholinv[[pp]])
+    mu_A_G_pp <- array(NA, dim = c(nICs, ntime, nK)) # collect E[a_t|G] for samples G
+    V_p_mean <- array(0, dim = c(nICs, nICs)) #to sequentially compute the mean of V_k
+    nK_valid <- nK #how many samples have max eigenvalue < 1 (required for approximation of inverse)?
+    for(kk in 1:nK){
+
+      #a) obtain R_k^(-1) where G_k^(-1) = R_k^(-1)R_k^(-T). Note that R_k^(-1) is not actually UT because it has been un-pivoted.
+
+      R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
+      R_pk_inv <- (UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
+      G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
+      #R_k <- UT2mat(template_FC$Chol_samp[[pp]][kk,])
+      #G_k <- crossprod(R_k[,o_p]) #permute columns of UT Cholesky factor
+
+      #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
+      eig_pk <- eigen(E_inv %*% G_pk_inv, only.values = TRUE)$values[1]
+      max_eigen <- c(max_eigen, eig_pk)
+
+      #c) approximate V_kf
+      B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+      V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
+
+      #DELETE ME
+      #V_k_exact <- solve(Emat + G_pk_inv)
+      #err_k <- sum((V_pk - V_k_exact)^2)/sum((V_k_exact)^2)
+      #err <- c(err, err_k)
+
+      if(eig_pk >= 1) {
+        nK_valid <- nK_valid - 1
+        next() #will not use this sample of G for mu_A and cov_A
+      }
+
+      V_p_mean <- V_p_mean + V_pk
+
+      #d) save E[a_t|G] to estimate its mean and covariance over G (do this within pivots for computational efficiency)
+
+      mu_pk <- V_pk %*% tmp # QxT
+      mu_A_G_pp[,,kk] <- mu_pk
+
+      #x) if final=TRUE, take a sample of (a_t|G) ~ N(mu_pk, V_pk) for each G_k --> sample of A|G --> sample of cov(A)|G
+      if(final==TRUE) {
+        V_pk_chol <- chol(V_pk)
+        Z_samp <- matrix(rnorm(nICs*ntime, mean = 0, sd = 1), nrow=nICs, ncol=ntime)
+        A_G_samp <- (t(V_pk_chol) %*% Z_samp) + mu_pk #more efficient than mvrnorm because cov(a_t|G_k)=V_k is same for all a_t, t=1,...,T
+        FC_samp[,,gg] <- cor(t(A_G_samp))
+        gg <- gg + 1
+      }
+
+    }
+    if(verbose & (nK_valid < nK)) cat(paste0('(',nK - nK_valid, ' samples dropped) '))
+    if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
+    if(nK_valid < nK*0.5) warning('Over half of Cholesky samples from current pivot cannot be used, contact developer')
+    V_p_mean <- V_p_mean/nK_valid
+
+    # e) estimate E_G[E[a_t|G]] and Cov_G(E[a_t|G]) for the current pivot
+
+    #E_G[E[a_t|G]]
+    mu_A_pp <- apply(mu_A_G_pp, 1:2, mean, na.rm=TRUE) #set na.rm=TRUE to ignore the NAs due to samples with max eig > 1
+    mu_A_bypivot[[pp]] <- mu_A_pp
+
+    #Cov_G(E[a_t|G])
+    mu_A_G_pp_ctr <- mu_A_G_pp - array(rep(mu_A_pp, nK), dim=dim(mu_A_G_pp)) #center across samples
+    tmp1 <- apply(mu_A_G_pp_ctr, 2:3, tcrossprod, simplify=TRUE) #compute xx' for each time point and sample, where x is Qx1 (each QxQ matrix will be vectorized)
+    tmp2 <- apply(tmp1, 1:2, sum, na.rm=TRUE)/(nK_valid - 1) #sum over samples, divide by K-1 --> Q*Q x T
+    cov_A_G_pp <- array(tmp2, dim=c(nICs, nICs, ntime)) #reshape to unvectorize cov for each time point --> Q x Q x T
+    cov_A_sum_bypivot[[pp]] <- V_p_mean * ntime + apply(cov_A_G_pp, 1:2, sum) #sum over t
+  }
+
+  if(final==TRUE) FC_samp <- FC_samp[,,1:(gg-1)] # remove trailing NAs in FC_samp due to skipped samples
+
+  # f) average over pivots to get mu_A, cov_A
+  mu_A <- t(Reduce('+', mu_A_bypivot)/nP)
+  Cov_A_sum <- Reduce('+', cov_A_sum_bypivot)/nP
+
+  # g) rescale so mu_A has mean 0 and var 1 before computing E[A'A]
+  sd_A <- apply(mu_A, 2, sd)
+  D_A <- diag(1/sd_A) #use this to correct A and cov(A) for unit-var A
+  mu_A <- scale(mu_A)
+  Cov_A_sum <- D_A %*% Cov_A_sum %*% D_A
+  E_AtA <- Cov_A_sum + t(mu_A) %*% mu_A
+
+  result <- list(mu_A = mu_A,
+                 E_AtA = E_AtA,
+                 max_eigen = max_eigen,
+                 #err = err,
+                 cov_A_sum_bypivot = cov_A_sum_bypivot)
+  if(final) { result$FC_samp <- FC_samp } #this contains Cor(A), where a_t is a sample from a_t|G for each G
+  return(result)
+
+}
+
+
 
 #' Update S for VB FC Template ICA
 #'

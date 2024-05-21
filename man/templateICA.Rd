@@ -27,11 +27,10 @@ templateICA(
   resamp_res = NULL,
   rm_mwall = TRUE,
   reduce_dim = FALSE,
-  method_FC = c("VB1", "VB2"),
+  method_FC = c("VB1", "VB2", "none"),
   maxiter = 100,
   miniter = 3,
   epsilon = 0.001,
-  eps_inter = NULL,
   kappa_init = 0.2,
   usePar = FALSE,
   verbose = TRUE
@@ -200,7 +199,8 @@ ICA}
 \item{method_FC}{Variational Bayes (VB) method for FC template ICA model:
 \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
 \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
-using a combination of Cholesky, SVD, and random pivoting.}
+using a combination of Cholesky, SVD, and random pivoting.
+\code{"none"} Uses standard template ICA without FC prior}
 
 \item{maxiter}{Maximum number of EM or VB iterations. Default: \code{100}.}
 
@@ -208,12 +208,6 @@ using a combination of Cholesky, SVD, and random pivoting.}
 
 \item{epsilon}{Smallest proportion change between iterations. Default:
 \code{.001}.}
-
-\item{eps_inter}{Intermediate values of epsilon at which to save results (used
-to assess benefit of more stringent convergence rules). Default:
-\code{10e-2} to \code{10e-5}. These values should be in decreasing order
-(larger to smaller error) and all values should be between zero and
-\code{epsilon}.}
 
 \item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
 
