@@ -134,9 +134,9 @@ VB_FCtemplateICA <- function(
     if(method_FC == 'VB1'){
 
       #15 sec Q=25, V=90k, T=1200!
-      system.time(A_new <- update_A(mu_tau2, mu_S, E_SSt,
+      A_new <- update_A(mu_tau2, mu_S, E_SSt,
                       BOLD, ntime, nICs,
-                      u_samps, template_FC, final=FALSE))
+                      u_samps, template_FC, final=FALSE)
 
     } else {
 
@@ -360,6 +360,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   E_chol <- chol(Emat) #UT Cholesky factor R: E = R'R
   E_chol_inv <- backsolve(E_chol, x = diag(nICs)) #R^(-1)
   E_inv <- tcrossprod(E_chol_inv) # E^(-1) = R^(-1) R^(-T)
+  maxeig_E_inv <- eigen(E_inv, only.values = TRUE)$values[1]
 
   #more preliminaries
   tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G]
@@ -368,12 +369,12 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
   #collect samples of FC matrices
   if(final==TRUE) {
-    nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow))
+    nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow)) #total number of samples
     FC_samp <- array(NA, dim = c(nICs, nICs, nG))
-    gg <- 1
   }
 
   #loop over pivots
+  gg <- 1
   nP <- length(template_FC$pivots)
   mu_A_bypivot <- cov_A_sum_bypivot <- vector('list', length = nP)
   if(verbose) cat(paste0('Looping over ', nP, ' Cholesky pivots: '))
@@ -396,22 +397,31 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
       #R_k <- UT2mat(template_FC$Chol_samp[[pp]][kk,])
       #G_k <- crossprod(R_k[,o_p]) #permute columns of UT Cholesky factor
 
-      #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
-      eig_pk <- eigen(E_inv %*% G_pk_inv, only.values = TRUE)$values[1]
-      max_eigen <- c(max_eigen, eig_pk)
+      #c) approximate or calculate V_k
 
-      #c) approximate V_kf
-      B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
-      V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
+      if(!final){
 
-      #DELETE ME
-      #V_k_exact <- solve(Emat + G_pk_inv)
-      #err_k <- sum((V_pk - V_k_exact)^2)/sum((V_k_exact)^2)
-      #err <- c(err, err_k)
+        ### For intermediate estimation, approximate V_k
+        #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
+        #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+        #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
+        eig_pk <- maxeig_E_inv * template_FC$FC_samp_maxeig[gg] #avoid the need to run eigen() during model estimation
+        max_eigen <- c(max_eigen, eig_pk)
+        if(eig_pk >= 1) {
+          nK_valid <- nK_valid - 1
+          gg <- gg + 1
+          next() #will not use this sample of G for mu_A and cov_A
+        }
+        B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+        V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
 
-      if(eig_pk >= 1) {
-        nK_valid <- nK_valid - 1
-        next() #will not use this sample of G for mu_A and cov_A
+      } else {
+
+        ### For final estimation, compute V_k exactly
+        V_pk <- solve(Emat + G_pk_inv)
+        #V_k_exact <- solve(Emat + G_pk_inv)
+        #err_k <- sum((V_pk - V_k_exact)^2)/sum((V_k_exact)^2)
+        #err <- c(err, err_k)
       }
 
       V_p_mean <- V_p_mean + V_pk
@@ -427,10 +437,12 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
         Z_samp <- matrix(rnorm(nICs*ntime, mean = 0, sd = 1), nrow=nICs, ncol=ntime)
         A_G_samp <- (t(V_pk_chol) %*% Z_samp) + mu_pk #more efficient than mvrnorm because cov(a_t|G_k)=V_k is same for all a_t, t=1,...,T
         FC_samp[,,gg] <- cor(t(A_G_samp))
-        gg <- gg + 1
       }
 
-    }
+      gg <- gg + 1
+
+    } #end loop over samples for current pivot
+
     if(verbose & (nK_valid < nK)) cat(paste0('(',nK - nK_valid, ' samples dropped) '))
     if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
     if(nK_valid < nK*0.5) warning('Over half of Cholesky samples from current pivot cannot be used, contact developer')
@@ -449,8 +461,6 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
     cov_A_G_pp <- array(tmp2, dim=c(nICs, nICs, ntime)) #reshape to unvectorize cov for each time point --> Q x Q x T
     cov_A_sum_bypivot[[pp]] <- V_p_mean * ntime + apply(cov_A_G_pp, 1:2, sum) #sum over t
   }
-
-  if(final==TRUE) FC_samp <- FC_samp[,,1:(gg-1)] # remove trailing NAs in FC_samp due to skipped samples
 
   # f) average over pivots to get mu_A, cov_A
   mu_A <- t(Reduce('+', mu_A_bypivot)/nP)

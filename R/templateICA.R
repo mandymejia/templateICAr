@@ -1007,6 +1007,22 @@ templateICA <- function(
     #save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
     #stop()
 
+    # # TEMPORARY [DELETE ME]
+    # #Compute the maximum eigenvalue of each FC^(-1) (same as 1 / min eigenvalue of each FC sample)
+    # maxeig <- c()
+    # for(pp in 1:100){
+    #   cat(paste0(pp,' '))
+    #   o_p <- order(template_FC$pivots[[pp]])
+    #   for(kk in 1:500){
+    #     R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
+    #     R_pk_inv <- (UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
+    #     G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
+    #     eig_pk <- eigen(G_pk_inv, only.values = TRUE)$values[1]
+    #     maxeig <- c(maxeig, eig_pk)
+    #   }
+    # }
+    # template_FC$FC_samp_maxeig <- maxeig
+
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,

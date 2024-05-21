@@ -1079,9 +1079,16 @@ estimate_template <- function(
       FC_samp_mean <- Reduce("+", FC_samp_list)/M_all #mean of FC
       FC_samp_var <- Reduce("+", lapply(FC_samp_list, function(x){ (x - FC_samp_mean)^2 }))/M_all #var of FC
 
+      # Compute the maximum eigenvalue of each FC^(-1) (same as 1 / min eigenvalue of each FC sample)
+      FC_samp_maxeig <- sapply(FC_samp_list, function(x){
+        vals <- eigen(x, only.values = TRUE)$values
+        return(1/min(vals))
+      })
+
       template$FC_Chol <- list(Chol_samp = Chol_samp, #pivoted Cholesky factors for every sample
                                FC_samp_logdet = FC_samp_logdet, #log determinant values for every sample
                                FC_samp_cholinv = FC_samp_cholinv, #pivoted Cholesky inverses for every sample
+                               FC_samp_maxeig = FC_samp_maxeig, #maximum eigenvalue of inverse FC samples
                                FC_samp_mean = FC_samp_mean, #mean of FC samples
                                FC_samp_var = FC_samp_var, #var of FC samples
                                Chol_svd = Chol_svd,
