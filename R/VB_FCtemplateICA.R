@@ -76,8 +76,9 @@ VB_FCtemplateICA <- function(
   if (ntime > nvox) warning('More time points than brain locations. Are you sure?')
   if (nrow(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
 
-  nICs <- nrow(template_FC$psi)   #number of ICs
-  if (ncol(template_mean) != nICs) stop('template_FC is incompatible with template_mean & template_var. Check number of ICs in each.')
+  if(method_FC == 'VB1') nICs <- nrow(template_FC$psi)   #number of ICs
+  if(method_FC == 'VB2') nICs <- nrow(template_aa$template$FC_Chol$FC_samp_mean) #number of ICs
+  if (ncol(template_mean) != nICs) stop('template_FC is incompatible with template_mean & template_var. The number of ICs in each must match.')
   if (nICs > nvox) stop('Cannot estimate more ICs than brain locations.')
   if (nICs > ntime) stop('Cannot estimate more ICs than time points.')
 
@@ -368,10 +369,9 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   max_eigen <- err <- c()
 
   #collect samples of FC matrices
-  if(final==TRUE) {
-    nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow)) #total number of samples
-    FC_samp <- array(NA, dim = c(nICs, nICs, nG))
-  }
+  nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow)) #total number of samples
+  if(final==TRUE) { FC_samp <- array(NA, dim = c(nICs, nICs, nG))}
+  nK_valid_all <- 0
 
   #loop over pivots
   gg <- 1
@@ -443,7 +443,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
     } #end loop over samples for current pivot
 
-    if(verbose & (nK_valid < nK)) cat(paste0('(',nK - nK_valid, ' samples dropped) '))
+    nK_valid_all <- nK_valid_all + nK_valid
     if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
     if(nK_valid < nK*0.5) warning('Over half of Cholesky samples from current pivot cannot be used, contact developer')
     V_p_mean <- V_p_mean/nK_valid
@@ -461,6 +461,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
     cov_A_G_pp <- array(tmp2, dim=c(nICs, nICs, ntime)) #reshape to unvectorize cov for each time point --> Q x Q x T
     cov_A_sum_bypivot[[pp]] <- V_p_mean * ntime + apply(cov_A_G_pp, 1:2, sum) #sum over t
   }
+  if(verbose & (nK_valid_all < nG)) cat(paste0('(',nG - nK_valid_all, ' samples dropped among ', nG, ') \n'))
 
   # f) average over pivots to get mu_A, cov_A
   mu_A <- t(Reduce('+', mu_A_bypivot)/nP)
