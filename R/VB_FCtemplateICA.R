@@ -77,7 +77,7 @@ VB_FCtemplateICA <- function(
   if (nrow(template_mean) != nvox) stop('Templates and BOLD must have the same number of brain locations (columns).')
 
   if(method_FC == 'VB1') nICs <- nrow(template_FC$psi)   #number of ICs
-  if(method_FC == 'VB2') nICs <- nrow(template_aa$template$FC_Chol$FC_samp_mean) #number of ICs
+  if(method_FC == 'VB2') nICs <- nrow(template_FC$FC_samp_mean) #number of ICs
   if (ncol(template_mean) != nICs) stop('template_FC is incompatible with template_mean & template_var. The number of ICs in each must match.')
   if (nICs > nvox) stop('Cannot estimate more ICs than brain locations.')
   if (nICs > ntime) stop('Cannot estimate more ICs than time points.')
