@@ -161,9 +161,8 @@
 #  (larger to smaller error) and all values should be between zero and
 #  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
-#' @param usePar Parallelize the computation over data locations? Default:
-#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
-#'  use the number on the PC minus two.
+#' @param usePar Parallelize the computation? Default: \code{TRUE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version
 #  of the spatial template ICA model, which assumes that all IC's have the same
@@ -224,7 +223,7 @@ templateICA <- function(
   #eps_inter=NULL,
   kappa_init=0.2,
   #common_smoothness=TRUE,
-  usePar=FALSE,
+  usePar=TRUE,
   verbose=TRUE){
 
   # Check arguments ------------------------------------------------------------
@@ -311,7 +310,6 @@ templateICA <- function(
   # `usePar`
   if (!isFALSE(usePar)) {
     check_parallel_packages()
-
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
     if (nCores < 2) {
@@ -908,7 +906,7 @@ templateICA <- function(
   BOLD <- BOLD / rescale
 
   # Initialize with the dual regression-based estimate -------------------------
-  if (verbose) { cat("Computing DR.\n") }
+  if (verbose) { cat("\nComputing DR.\n") }
 
   BOLD_DR <- dual_reg(
     BOLD, template$mean, GSR=FALSE,
@@ -1015,7 +1013,7 @@ templateICA <- function(
     #   o_p <- order(template_FC$pivots[[pp]])
     #   for(kk in 1:500){
     #     R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
-    #     R_pk_inv <- (UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
+    #     R_pk_inv <- (templateICAr:::UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
     #     G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
     #     eig_pk <- eigen(G_pk_inv, only.values = TRUE)$values[1]
     #     maxeig <- c(maxeig, eig_pk)
@@ -1037,6 +1035,7 @@ templateICA <- function(
         maxiter=maxiter,
         epsilon=epsilon,
         #eps_inter=eps_inter,
+        usePar = usePar,
         verbose=verbose
       )
 

@@ -32,7 +32,7 @@ templateICA(
   miniter = 3,
   epsilon = 0.001,
   kappa_init = 0.2,
-  usePar = FALSE,
+  usePar = TRUE,
   verbose = TRUE
 )
 }
@@ -211,9 +211,8 @@ using a combination of Cholesky, SVD, and random pivoting.
 
 \item{kappa_init}{Starting value for kappa. Default: \code{0.2}.}
 
-\item{usePar}{Parallelize the computation over data locations? Default:
-\code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
-use the number on the PC minus two.}
+\item{usePar}{Parallelize the computation? Default: \code{TRUE}. Can be the
+number of cores to use or \code{TRUE}, which will use the number available minus two.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm}
 }

@@ -20,6 +20,7 @@ VB_FCtemplateICA(
   maxiter = 100,
   miniter = 3,
   epsilon = 0.001,
+  usePar = TRUE,
   verbose = FALSE
 )
 }
@@ -64,6 +65,9 @@ variance matrix \code{S0_var}.}
 
 \item{epsilon}{Smallest proportion change in parameter estimates between iterations.
 Default: \code{0.001}.}
+
+\item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
+number of cores to use or \code{TRUE}, which will use the number available minus two.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }

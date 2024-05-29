@@ -22,9 +22,9 @@
 #'  same smoothness parameter, \eqn{\kappa}
 # @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}.
-#'  Can be the number of cores to use or \code{TRUE}, which will use the number
-#'  on the PC minus two. Not implemented yet for spatial template ICA.
+#' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
+#' Not yet implemented for spatial template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
 #'  Default: \code{TRUE} for the spatial EM algorithm, and \code{FALSE} for the

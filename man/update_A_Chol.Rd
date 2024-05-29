@@ -13,6 +13,7 @@ update_A_Chol(
   nICs,
   template_FC,
   final = FALSE,
+  usePar = TRUE,
   verbose = FALSE
 )
 }
@@ -27,6 +28,9 @@ moments for these variables.}
 \item{template_FC}{IW parameters for FC template}
 
 \item{final}{If TRUE, return cov_A. Default: \code{FALSE}}
+
+\item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
+number of cores to use or \code{TRUE}, which will use the number available minus two.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }

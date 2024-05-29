@@ -34,6 +34,8 @@
 #  to assess benefit of more stringent convergence rules). Default:
 #  \code{NULL} (do not save). These values should be in decreasing order
 #  (larger to smaller error) and all values should be between zero and \code{epsilon}.
+#' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return A list of computed values, including the final parameter estimates.
@@ -56,6 +58,7 @@ VB_FCtemplateICA <- function(
   miniter=3,
   epsilon=0.001,
   #eps_inter=NULL,
+  usePar=TRUE,
   verbose=FALSE){
 
   stopifnot(length(prior_params)==2)
@@ -137,14 +140,17 @@ VB_FCtemplateICA <- function(
       #15 sec Q=25, V=90k, T=1200!
       A_new <- update_A(mu_tau2, mu_S, E_SSt,
                       BOLD, ntime, nICs,
-                      u_samps, template_FC, final=FALSE)
+                      u_samps, template_FC, final=FALSE,
+                      usePar=FALSE) #for this function parallelization doesn't do much, and it runs very quickly anyway
 
     } else {
 
       #15 min for 50,000 samples from p(G) (Q=25, V=90k, T=1200)
+      #13 min without parallelization
       A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
                              BOLD, ntime, nICs,
                              template_FC, final=FALSE,
+                             usePar=usePar,
                              verbose=verbose)
     }
 
@@ -266,6 +272,8 @@ VB_FCtemplateICA <- function(
 #' @param u_samps Samples from Gamma for multivariate t prior on A
 #' @param template_FC IW parameters for FC template
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
+#' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
 #'
 #' @return List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
 #'
@@ -274,6 +282,7 @@ update_A <- function(
   mu_tau2, mu_S, E_SSt,
   BOLD, ntime, nICs,
   u_samps, template_FC,
+  usePar=TRUE,
   final=FALSE){
 
   nu_a <- template_FC$nu + 1 - nICs
@@ -287,33 +296,55 @@ update_A <- function(
   tmp2 <- (1/mu_tau2) * (mu_S %*% t(BOLD)) #QxT
   if(final) { FC_samp <- array(0, dim=c(nICs, nICs, nU)) }
 
-  for(ii in 1:nU){
-    ui <- u_samps[ii]
-    #iteratively compute E_u[Cov(A|u)]
-    tmp1i <- tmp1 + ui * nu_a_psi0_inv
+  #define function to compute E[a_t|u], Cov(a_t|u), and draw a sample if final=TRUE
+  A_u <- function(u_val, final){
+
+    tmp1i <- tmp1 + u_val * nu_a_psi0_inv
     # tmp1i_chol <- chol(tmp1i) #gives an upper triangular matrix
     # tmp1i_chol_inv <- backsolve(tmp1i_chol, x = diag(nICs))
     # Cov_A_ui2 <- (tmp1i_chol_inv %*% t(tmp1i_chol_inv))
     Cov_A_ui <- solve(tmp1i)
     #all.equal(Cov_A_ui, Cov_A_ui2) #TRUE
-    E_Cov_A_u <- E_Cov_A_u + Cov_A_ui
     #collect terms to compute Cov(E[A|u])
     mu_A_ui <- Cov_A_ui %*% tmp2 #QxT
-    E_A_u[ii,,] <- mu_A_ui
 
     if(final==TRUE) {
       Cov_A_ui_chol <- chol(Cov_A_ui) #UT cholesky factor of covariance matrix
       Z_samp <- matrix(rnorm(nICs*ntime, mean = 0, sd = 1), nrow=nICs, ncol=ntime)
       A_u_samp <- (t(Cov_A_ui_chol) %*% Z_samp) + mu_A_ui #more efficient than mvrnorm because cov(a_t|G_k)=V_k is same for all a_t, t=1,...,T
-      FC_samp[,,ii] <- cor(t(A_u_samp))
+      FC_samp <- cor(t(A_u_samp))
+    } else {
+      FC_samp <- NULL
     }
 
-    # #draw a sample from A --> Cov(A) (QxQ)
-    # sampAi <- matrix(rnorm(ntime*nICs), nICs, ntime) #QxT matrix
-    # sampAi_covA <- tmp1i_chol_inv %*% sampAi #multiply each Qx1 N(0,1) vec by A, where AAt = Cov(A|u)
-    # #Cov(sampAi_covA[,1]) = A * I * t(A)
+    return(list(mu = mu_A_ui, cov = Cov_A_ui, FC_samp = FC_samp))
   }
-  E_Cov_A_u <- E_Cov_A_u/length(u_samps)
+
+  if(!usePar){
+
+    for(ii in 1:nU){
+      ui <- u_samps[ii]
+      #iteratively compute E_u[Cov(A|u)]
+      A_ui <- A_u(ui, final) #list(mu = mu_A_ui, cov = Cov_A_ui, FC_samp = FC_samp)
+
+      E_Cov_A_u <- E_Cov_A_u + A_ui$cov
+      E_A_u[ii,,] <- A_ui$mu
+      if(final==TRUE) FC_samp[,,ii] <- A_ui$FC_samp
+    }
+
+  } else {
+
+    #parallel version with foreach
+    `%dopar%` <- foreach::`%dopar%`
+    A_ui_list <- foreach::foreach(ii = 1:nU) %dopar% {
+      A_u(u_samps[ii], final)
+    }
+    E_Cov_A_u <- matrix(rowSums(sapply(A_ui_list, function(x) x$cov)), nrow = nICs, ncol = nICs)
+    E_A_u <- abind::abind(lapply(A_ui_list, function(x) x$mu), along=0)
+    if(final==TRUE) FC_samp <- abind::abind(lapply(A_ui_list, function(x) x$FC_samp), along=3)
+  }
+
+  E_Cov_A_u <- E_Cov_A_u/nU
   mu_A <- t(E_Cov_A_u %*% tmp2) #TxQ
   Cov_A_part1 <- E_Cov_A_u #common over all t
   Cov_A_part2 <- apply(E_A_u, 3, cov, simplify=TRUE) #QxQ cov matrices get vectorized
@@ -341,6 +372,8 @@ update_A <- function(
 #' @param ntime,nICs Number of timepoints, number of ICs
 #' @param template_FC IW parameters for FC template
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
+#' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
@@ -348,7 +381,8 @@ update_A <- function(
 #' @keywords internal
 update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
                           BOLD, ntime, nICs,
-                          template_FC, final=FALSE, verbose=FALSE){
+                          template_FC, final=FALSE,
+                          usePar=TRUE, verbose=FALSE){
 
   #step 1: approximate V_k for each FC sample G_k
   #step 2: Compute E[a_t|G] for each sample G (this requires V_k)
@@ -366,24 +400,23 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   #more preliminaries
   tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G]
 
-  max_eigen <- err <- c()
-
-  #collect samples of FC matrices
-  nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow)) #total number of samples
-  if(final==TRUE) { FC_samp <- array(NA, dim = c(nICs, nICs, nG))}
-  nK_valid_all <- 0
-
-  #loop over pivots
-  gg <- 1
+  #organize max eigenvalues by pivot
   nP <- length(template_FC$pivots)
-  mu_A_bypivot <- cov_A_sum_bypivot <- vector('list', length = nP)
-  if(verbose) cat(paste0('Looping over ', nP, ' Cholesky pivots: '))
-  for(pp in 1:nP){
+  maxeig_mat <- matrix(template_FC$FC_samp_maxeig, ncol=nP)
+
+  # max_eigen <- err <- c()
+  #collect samples of FC matrices
+  # if(final==TRUE) { FC_samp <- array(NA, dim = c(nICs, nICs, nG))}
+
+  fun_pivot <- function(pp, final){
+
+    #setup
+    max_eigen <- c()
     o_p <- order(template_FC$pivots[[pp]])
-    if(verbose) cat(paste0(pp,' '))
+    nK <- nrow(template_FC$FC_samp_cholinv[[pp]])
+    if(final) { FC_samp <- array(NA, dim = c(nICs, nICs, nK)) } else {FC_samp <- NULL}
 
     #loop over samples
-    nK <- nrow(template_FC$FC_samp_cholinv[[pp]])
     mu_A_G_pp <- array(NA, dim = c(nICs, ntime, nK)) # collect E[a_t|G] for samples G
     V_p_mean <- array(0, dim = c(nICs, nICs)) #to sequentially compute the mean of V_k
     nK_valid <- nK #how many samples have max eigenvalue < 1 (required for approximation of inverse)?
@@ -392,7 +425,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
       #a) obtain R_k^(-1) where G_k^(-1) = R_k^(-1)R_k^(-T). Note that R_k^(-1) is not actually UT because it has been un-pivoted.
 
       R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
-      R_pk_inv <- (UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
+      R_pk_inv <- (templateICAr:::UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
       G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
       #R_k <- UT2mat(template_FC$Chol_samp[[pp]][kk,])
       #G_k <- crossprod(R_k[,o_p]) #permute columns of UT Cholesky factor
@@ -405,11 +438,10 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
         #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
         #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
         #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
-        eig_pk <- maxeig_E_inv * template_FC$FC_samp_maxeig[gg] #avoid the need to run eigen() during model estimation
+        eig_pk <- maxeig_E_inv * maxeig_mat[kk,pp] #avoid the need to run eigen() during model estimation
         max_eigen <- c(max_eigen, eig_pk)
         if(eig_pk >= 1) {
           nK_valid <- nK_valid - 1
-          gg <- gg + 1
           next() #will not use this sample of G for mu_A and cov_A
         }
         B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
@@ -424,7 +456,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
         #err <- c(err, err_k)
       }
 
-      V_p_mean <- V_p_mean + V_pk
+      V_p_mean <- V_p_mean + V_pk #sum over samples k
 
       #d) save E[a_t|G] to estimate its mean and covariance over G (do this within pivots for computational efficiency)
 
@@ -436,31 +468,79 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
         V_pk_chol <- chol(V_pk)
         Z_samp <- matrix(rnorm(nICs*ntime, mean = 0, sd = 1), nrow=nICs, ncol=ntime)
         A_G_samp <- (t(V_pk_chol) %*% Z_samp) + mu_pk #more efficient than mvrnorm because cov(a_t|G_k)=V_k is same for all a_t, t=1,...,T
-        FC_samp[,,gg] <- cor(t(A_G_samp))
+        FC_samp[,,kk] <- cor(t(A_G_samp))
       }
-
-      gg <- gg + 1
 
     } #end loop over samples for current pivot
 
-    nK_valid_all <- nK_valid_all + nK_valid
     if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
-    if(nK_valid < nK*0.5) warning('Over half of Cholesky samples from current pivot cannot be used, contact developer')
+    if(nK_valid < nK*0.5) warning(paste0('Over half of Cholesky samples from pivot ', pp, ' cannot be used, contact developer'))
+
     V_p_mean <- V_p_mean/nK_valid
 
     # e) estimate E_G[E[a_t|G]] and Cov_G(E[a_t|G]) for the current pivot
 
     #E_G[E[a_t|G]]
     mu_A_pp <- apply(mu_A_G_pp, 1:2, mean, na.rm=TRUE) #set na.rm=TRUE to ignore the NAs due to samples with max eig > 1
-    mu_A_bypivot[[pp]] <- mu_A_pp
+    #mu_A_bypivot[[pp]] <- mu_A_pp
 
     #Cov_G(E[a_t|G])
     mu_A_G_pp_ctr <- mu_A_G_pp - array(rep(mu_A_pp, nK), dim=dim(mu_A_G_pp)) #center across samples
     tmp1 <- apply(mu_A_G_pp_ctr, 2:3, tcrossprod, simplify=TRUE) #compute xx' for each time point and sample, where x is Qx1 (each QxQ matrix will be vectorized)
     tmp2 <- apply(tmp1, 1:2, sum, na.rm=TRUE)/(nK_valid - 1) #sum over samples, divide by K-1 --> Q*Q x T
     cov_A_G_pp <- array(tmp2, dim=c(nICs, nICs, ntime)) #reshape to unvectorize cov for each time point --> Q x Q x T
-    cov_A_sum_bypivot[[pp]] <- V_p_mean * ntime + apply(cov_A_G_pp, 1:2, sum) #sum over t
+    cov_A_sum_pp <- V_p_mean * ntime + apply(cov_A_G_pp, 1:2, sum) #sum over t
+
+    return(list(mu = mu_A_pp,
+                cov = cov_A_sum_pp,
+                FC_samp = FC_samp, #NULL if !final
+                nK_valid = nK_valid,
+                max_eigen = max_eigen))
   }
+
+  #loop over pivots
+  if(verbose) cat(paste0('Looping over ', nP, ' Cholesky pivots: '))
+
+  if(!usePar){
+
+    mu_A_bypivot <- cov_A_sum_bypivot <- vector('list', length = nP)
+    if(final) FC_samp <- vector('list', length = nP)
+    nK_valid_all <- 0
+    max_eigen <- c()
+    for(pp in 1:nP){
+
+      if(verbose & (pp/10 == round(pp/10))) cat(paste0(pp,' '))
+
+      #do function for current pivot
+      result_pp <- fun_pivot(pp, final = final)
+
+      #aggregate results
+      nK_valid_all <- nK_valid_all + result_pp$nK_valid
+      mu_A_bypivot[[pp]] <- result_pp$mu
+      cov_A_sum_bypivot[[pp]] <- result_pp$cov
+      if(final) FC_samp[[pp]] <- result_pp$FC_samp
+      max_eigen <- c(max_eigen, result_pp$max_eigen)
+
+    } #end loop over pivots
+
+    if(final) FC_samp <- abind::abind(FC_samp, 3)
+
+  } else {
+
+    #parallel version with foreach
+    `%dopar%` <- foreach::`%dopar%`
+    result_list <- foreach::foreach(pp = 1:nP) %dopar% {
+      fun_pivot(pp, final)
+    }
+    nK_valid_all <- sum(sapply(result_list, function(x) x$nK_valid))
+    mu_A_bypivot <- lapply(result_list, function(x) x$mu)
+    cov_A_sum_bypivot <- lapply(result_list, function(x) x$cov)
+    if(final) FC_samp <- lapply(result_list, function(x) x$FC_samp)
+    max_eigen <- unlist(lapply(result_list, function(x) x$max_eigen))
+
+  }
+
+  nG <- sum(sapply(template_FC$FC_samp_cholinv, nrow)) #total number of samples
   if(verbose & (nK_valid_all < nG)) cat(paste0('(',nG - nK_valid_all, ' samples dropped among ', nG, ') \n'))
 
   # f) average over pivots to get mu_A, cov_A
