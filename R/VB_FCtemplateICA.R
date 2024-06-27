@@ -41,6 +41,7 @@
 #' @return A list of computed values, including the final parameter estimates.
 #'
 #' @importFrom fMRItools is_posNum
+#' @importFrom abind abind
 #' @keywords internal
 #'
 VB_FCtemplateICA <- function(
@@ -232,6 +233,7 @@ VB_FCtemplateICA <- function(
   mu_A <- A_new$mu_A
   #inference on FC(A) using samples from (a_t|Y,u) (VB1) or (a_t|Y,G) (VB2)
   FC_samp <- A_new$FC_samp
+  FC_samp <- abind::abind(FC_samp, along=3)
   FC_mean <- apply(FC_samp, 1:2, mean, na.rm=TRUE)
   alpha <- 1 - CI_FC
   FC_LB <- apply(FC_samp, 1:2, quantile, alpha/2, na.rm=TRUE) #LB of 95% credible interval
