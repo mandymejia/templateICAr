@@ -921,10 +921,10 @@ templateICA <- function(
   #3) Spatial Template ICA (initialize with standard Template ICA)
   # ----------------------------------------------------------------------------
 
+  verbose0 <- verbose
   if (verbose) {
     if (do_spatial | do_FC) {
       cat("Initializing with standard Template ICA.\n")
-      verbose0 <- verbose
       verbose <- FALSE
     }
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
