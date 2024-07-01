@@ -427,7 +427,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
       #a) obtain R_k^(-1) where G_k^(-1) = R_k^(-1)R_k^(-T). Note that R_k^(-1) is not actually UT because it has been un-pivoted.
 
       R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
-      R_pk_inv <- (templateICAr:::UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
+      R_pk_inv <- (UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
       G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
       #R_k <- UT2mat(template_FC$Chol_samp[[pp]][kk,])
       #G_k <- crossprod(R_k[,o_p]) #permute columns of UT Cholesky factor
