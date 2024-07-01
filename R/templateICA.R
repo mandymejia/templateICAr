@@ -674,7 +674,7 @@ templateICA <- function(
           if (TR == "from_xifti_metadata") {
             message(
               "Setting TR=", BOLD[[bb]]$meta$cifti$time_step,
-              ifelse(nN==1, ".", paste0(" based on BOLD #", bb, "."))
+              ifelse(nN==1, " based on BOLD.", paste0(" based on BOLD #", bb, "."))
             )
             TR <- BOLD[[bb]]$meta$cifti$time_step
           } else if (TR != BOLD[[bb]]$meta$cifti$time_step) {
@@ -921,10 +921,10 @@ templateICA <- function(
   #3) Spatial Template ICA (initialize with standard Template ICA)
   # ----------------------------------------------------------------------------
 
+  verbose0 <- verbose
   if (verbose) {
     if (do_spatial | do_FC) {
       cat("Initializing with standard Template ICA.\n")
-      verbose0 <- verbose
       verbose <- FALSE
     }
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
