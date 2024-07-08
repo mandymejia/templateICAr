@@ -5,6 +5,8 @@
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/templateICAr)](https://cran.r-project.org/package=templateICAr)
 [![R-CMD-check](https://github.com/mandymejia/templateICAr/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/templateICAr/actions)
 [![Codecov test
 coverage](https://codecov.io/gh/mandymejia/templateICAr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/templateICAr?branch=master)
