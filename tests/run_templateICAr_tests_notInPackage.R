@@ -4,7 +4,7 @@
 # ciftiTools
 library(ciftiTools)
 print(packageVersion("ciftiTools"))
-ciftiTools.setOption("wb_path", "~/Desktop/workbench")
+ciftiTools.setOption("wb_path", "~/Applications")
 
 # templateICAr
 library(templateICAr)

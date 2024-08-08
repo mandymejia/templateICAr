@@ -99,6 +99,20 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   FC <- "FC" %in% names(x$template)
 
+  # Fix for old version
+  if (FORMAT == "CIFTI" && !is.null(x$dat_struct$meta$subcort$labels)) {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to export template. Please install it.", call. = FALSE)
+    }
+    if (length(x$dat_struct$meta$subcort$labels) != length(ciftiTools:::substructure_table()$ciftiTools_Name)) {
+      x$dat_struct$meta$subcort$labels <- factor(
+        x$dat_struct$meta$subcort$labels,
+        levels = ciftiTools:::substructure_table()$ciftiTools_Name
+      )
+      stopifnot(ciftiTools:::is.subcort_labs(x$dat_struct$meta$subcort$labels))
+    }
+  }
+
   # `out_fname` ----------------------------------------------------------------
   if (!is.null(out_fname)) {
     out_fname <- as.character(out_fname)
