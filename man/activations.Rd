@@ -9,7 +9,7 @@ activations(
   u = NULL,
   z = NULL,
   alpha = 0.01,
-  type = c("abs >", ">", "<", "!="),
+  type = c(">", "abs >", "<", "!="),
   method_p = "BH",
   verbose = FALSE,
   which.ICs = NULL,
@@ -27,16 +27,17 @@ with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
 multiple thresholds at once, as long as \code{type} is not \code{"!="}
 (to ensure the activation regions are successive subsets).}
 
-\item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
+\item{alpha}{Significance level for hypothesis testing. Default: \code{0.01}.}
 
-\item{type}{Type of region: \code{">"}, \code{"<"}, \code{"!="}, or
-\code{"abs >"}. The last case tests for magnitude by taking the absolute
-value and then testing if they are greater than... Default: \code{"abs >"}.}
+\item{type}{Type of region: \code{">"} (default), \code{"abs >"}, \code{"<"},
+or \code{"!="}. \code{"abs >"} tests for magnitude by taking the absolute
+value and then testing if they are greater than... .}
 
 \item{method_p}{If the input is a \code{"tICA.[format]"} model object, the type of
 multiple comparisons correction to use for p-values, or \code{NULL} for no
 correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
-Hochberg, i.e. the false discovery rate).}
+Hochberg, i.e. the false discovery rate). Note that multiple comparisons
+will account for data locations, but not ICs.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default:
 \code{FALSE}.}
