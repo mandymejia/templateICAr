@@ -18,8 +18,8 @@
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
 #'  multiple comparisons correction to use for p-values, or \code{NULL} for no
 #'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
-#'  Hochberg, i.e. the false discovery rate). Note that multiple comparisons 
-#'  will account for data locations, but not ICs. 
+#'  Hochberg, i.e. the false discovery rate). Note that multiple comparisons
+#'  will account for data locations, but not ICs.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default:
 #'  \code{FALSE}.
 #' @param which.ICs Indices of ICs for which to identify activations.  If
@@ -238,6 +238,7 @@ activations <- function(
 
   # Format result. -------------------------------------------------------------
   active <- rowSums(abind(lapply(out, "[[", "active"), along=3), dims=2)
+  active[] <- as.numeric(active)
   dimnames(active) <- NULL
 
   # Unmask data.
@@ -255,7 +256,7 @@ activations <- function(
 
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
-    active <- ciftiTools::newdata_xifti(xii1, as.numeric(active))
+    active <- ciftiTools::newdata_xifti(xii1, active)
     active <- ciftiTools::move_from_mwall(active, -1)
     active <- ciftiTools::convert_xifti(
       active, "dlabel",
