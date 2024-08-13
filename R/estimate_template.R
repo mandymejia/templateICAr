@@ -338,10 +338,12 @@ UT2mat <- function(x, diag=TRUE){
 #'  Default: \code{c("all")}.
 #' @param resamp_res Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Resample the data upon reading it in? Default: \code{NULL} (no resampling).
-#' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
-#'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
-#'  binary array of the same spatial dimensions as the fMRI data, with
-#'  \code{TRUE} corresponding to in-mask voxels.
+#' @param mask Required if \code{BOLD} are NIFTI file paths or \code{"nifti"} 
+#'  objects, and optional for other formats. For NIFTI data, this is a brain map
+#'  formatted as a logical array of the same spatial dimensions as the fMRI 
+#'  data, with \code{TRUE} corresponding to in-mask voxels. For other data, this
+#'  is a logical vector with the same length as the number of locations in
+#'  \code{GICA}, with \code{TRUE} corresponding to in-mask locations.
 #' @param keep_S Keep the DR estimates of S? If \code{FALSE} (default), do not save
 #'  the DR estimates and only return the templates. If \code{TRUE}, the DR
 #'  estimates of S are returned too. If a single file path, save the DR estimates as

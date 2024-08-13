@@ -843,6 +843,7 @@ templateICA <- function(
     }
     # Perform nuisance regression, if applicable.
     if (!is.null(nmat[[nn]])) {
+      if (verbose) { cat("Performing nuisance regression.\n") }
       nmat[[nn]] <- cbind(1, nmat[[nn]])
       BOLD[[nn]] <- nuisance_regression(BOLD[[nn]], nmat[[nn]])
     }
@@ -855,7 +856,7 @@ templateICA <- function(
     }
   }
   if (sum(nT) != sum(nT_pre)) {
-    cat('Timepoints after scrubbing:    ', sum(nT), "\n")
+    if (verbose) { cat('Timepoints after scrubbing:    ', sum(nT), "\n") }
   }
 
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
@@ -867,6 +868,7 @@ templateICA <- function(
 
   mask2and3 <- if (use_mask2) { mask2 } else { mask3 } # [TO DO] patch???
 
+  if (verbose) { cat("Centering and scaling `BOLD`.\n") }
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
@@ -875,6 +877,8 @@ templateICA <- function(
   )
 
   # Estimate and subtract nuisance ICs -----------------------------------------
+  if (verbose) { cat("Removing nuisance ICs.\n") }
+
   Q2_est <- vector("numeric", nN)
   for (nn in seq(nN)) {
     x <- rm_nuisIC(
@@ -895,6 +899,8 @@ templateICA <- function(
   )
 
   # Concatenate the data. ------------------------------------------------------
+  if (verbose && length(nT) > 1) { cat("Concatenating sessions.\n") }
+
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
 

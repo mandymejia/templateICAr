@@ -277,17 +277,23 @@ dual_reg2 <- function(
   DR_FUN <- if (GICA_parc) {
     function(...) { fMRItools::dual_reg_parc(...) }
   } else {
-    function(parc_vals, ...) { fMRItools::dual_reg(...) }
+    # Do twice to get timecourse estimate w/ subject maps, rather than w/ GICA (`A2`)
+    function(GICA, parc_vals, ...) {
+      out <- fMRItools::dual_reg(GICA=GICA, ...)
+      GICA <- t(out$S)
+      out$A2 <- fMRItools::dual_reg(GICA=GICA, ...)$A
+      out
+    }
   }
 
   dual_reg_yesNorm <- function(B){ DR_FUN(
-    B, GICA, parc_vals=GICA_parc_table$Key,
+    B, GICA=GICA, parc_vals=GICA_parc_table$Key,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf, GSR=GSR
   ) }
 
   dual_reg_noNorm <- function(B){ DR_FUN(
-    B, GICA, parc_vals=GICA_parc_table$Key,
+    B, GICA=GICA, parc_vals=GICA_parc_table$Key,
     scale="none", hpf=0, GSR=FALSE
   ) }
 
@@ -321,7 +327,7 @@ dual_reg2 <- function(
     for (sess in c("test", "retest")) {
       out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
       if (use_mask2) { out[[sess]]$sigma_sq <- unmask_vec(out[[sess]]$sigma_sq, mask2) }
-      if (!keepA) { out[[sess]]$A <- NULL }
+      if (!keepA) { out[[sess]]$A <- NULL; out[[sess]]$A2 <- NULL }
       if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
     }
 
@@ -373,7 +379,7 @@ dual_reg2 <- function(
   for (sess in c("test", "retest", "test_preclean", "retest_preclean")) {
     out[[sess]]$sigma_sq <- colSums((out[[sess]]$A %*% out[[sess]]$S - t(BOLDss[[sess]]))^2)/nT # part inside colSums() is TxV
     if (use_mask2) { out[[sess]]$sigma_sq <- unmask_vec(out[[sess]]$sigma_sq, mask2) }
-    if (!keepA) { out[[sess]]$A <- NULL }
+    if (!keepA) { out[[sess]]$A <- NULL; out[[sess]]$A2 <- NULL }
     if (use_mask2) { out[[sess]]$S <- unmask(out[[sess]]$S, mask2) }
   }
 

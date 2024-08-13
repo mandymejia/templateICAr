@@ -11,14 +11,15 @@
 #'  (do not use a threshold). Either argument can also be a vector to test
 #'  multiple thresholds at once, as long as \code{type} is not \code{"!="}
 #'  (to ensure the activation regions are successive subsets).
-#' @param alpha Significance level for joint PPM. Default: \code{0.01}.
-#' @param type Type of region: \code{">"}, \code{"<"}, \code{"!="}, or
-#'  \code{"abs >"}. The last case tests for magnitude by taking the absolute
-#'  value and then testing if they are greater than... Default: \code{"abs >"}.
+#' @param alpha Significance level for hypothesis testing. Default: \code{0.01}.
+#' @param type Type of region: \code{">"} (default), \code{"abs >"}, \code{"<"},
+#'  or \code{"!="}. \code{"abs >"} tests for magnitude by taking the absolute
+#'  value and then testing if they are greater than... .
 #' @param method_p If the input is a \code{"tICA.[format]"} model object, the type of
 #'  multiple comparisons correction to use for p-values, or \code{NULL} for no
 #'  correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
-#'  Hochberg, i.e. the false discovery rate).
+#'  Hochberg, i.e. the false discovery rate). Note that multiple comparisons
+#'  will account for data locations, but not ICs.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default:
 #'  \code{FALSE}.
 #' @param which.ICs Indices of ICs for which to identify activations.  If
@@ -49,7 +50,7 @@
 #' }
 activations <- function(
   tICA, u=NULL, z=NULL, alpha=0.01,
-  type=c("abs >", ">", "<", "!="),
+  type=c(">", "abs >", "<", "!="),
   method_p='BH',
   verbose=FALSE, which.ICs=NULL, deviation=FALSE){
 
@@ -83,7 +84,7 @@ activations <- function(
   stopifnot(is.null(z) || is.numeric(z))
   stopifnot(fMRItools::is_posNum(alpha))
   stopifnot(alpha <= 1)
-  type <- match.arg(type, c("abs >", ">", "<", "!="))
+  type <- match.arg(type, c(">", "abs >", "<", "!="))
   if(alpha <= 0 | alpha >= 1) stop('alpha must be between 0 and 1')
   stopifnot(fMRItools::is_1(verbose, "logical"))
   stopifnot(fMRItools::is_1(deviation, "logical"))
@@ -237,6 +238,7 @@ activations <- function(
 
   # Format result. -------------------------------------------------------------
   active <- rowSums(abind(lapply(out, "[[", "active"), along=3), dims=2)
+  active[] <- as.numeric(active)
   dimnames(active) <- NULL
 
   # Unmask data.
@@ -254,7 +256,7 @@ activations <- function(
 
   # Un-vectorize data.
   if (FORMAT == "CIFTI") {
-    active <- ciftiTools::newdata_xifti(xii1, as.numeric(active))
+    active <- ciftiTools::newdata_xifti(xii1, active)
     active <- ciftiTools::move_from_mwall(active, -1)
     active <- ciftiTools::convert_xifti(
       active, "dlabel",

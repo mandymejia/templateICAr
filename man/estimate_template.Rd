@@ -137,10 +137,12 @@ and one column, with integer values indicating the parcel to which each
 location belongs to. Each parcel is modeled as a brain map; instead of the
 first step of dual regression, the medial timecourse of each parcel is used.}
 
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
-file paths or \code{"nifti"} objects. This is a brain map formatted as a
-binary array of the same spatial dimensions as the fMRI data, with
-\code{TRUE} corresponding to in-mask voxels.}
+\item{mask}{Required if \code{BOLD} are NIFTI file paths or \code{"nifti"}
+objects, and optional for other formats. For NIFTI data, this is a brain map
+formatted as a logical array of the same spatial dimensions as the fMRI
+data, with \code{TRUE} corresponding to in-mask voxels. For other data, this
+is a logical vector with the same length as the number of locations in
+\code{GICA}, with \code{TRUE} corresponding to in-mask locations.}
 
 \item{inds}{Numeric indices of the group ICs to include in the template. If
 \code{NULL}, use all group ICs (default).
