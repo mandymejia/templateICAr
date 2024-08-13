@@ -315,8 +315,8 @@ templateICA <- function(
     if (nCores < 2) {
       usePar <- FALSE
     } else {
-      cluster <- parallel::makeCluster(nCores)
-      doParallel::registerDoParallel(cluster)
+      #cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(nCores)
     }
   }
 
