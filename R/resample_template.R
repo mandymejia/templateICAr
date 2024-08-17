@@ -36,7 +36,9 @@ resample_template <- function(x, resamp_res, verbose=FALSE){
   # Replace `NaN` values with NA values.
   x$template[tm_struct_mask] <- lapply(x$template[tm_struct_mask], function(y){y[] <- ifelse(is.nan(y), NA, y)})
   x$var_decomp <- lapply(x$var_decomp, function(y){y[] <- ifelse(is.nan(y), NA, y)})
-  x$sigma_sq0 <- ifelse(is.nan(x$sigma_sq0), NA, x$sigma_sq0)
+  if (!is.null(x$sigma_sq0)) {
+    x$sigma_sq0 <- ifelse(is.nan(x$sigma_sq0), NA, x$sigma_sq0)
+  }
 
   # Get new `dat_struct` and mask.
   x$dat_struct <- ciftiTools::resample_xifti(x$dat_struct, resamp_res=resamp_res)
