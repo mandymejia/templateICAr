@@ -226,6 +226,8 @@ templateICA <- function(
   usePar=TRUE,
   verbose=TRUE){
 
+  t0 <- Sys.time()
+
   # Check arguments ------------------------------------------------------------
 
   # Read in template and set arguments designated to match the template.
@@ -315,8 +317,8 @@ templateICA <- function(
     if (nCores < 2) {
       usePar <- FALSE
     } else {
-      cluster <- parallel::makeCluster(nCores)
-      doParallel::registerDoParallel(cluster)
+      #cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(nCores)
     }
   }
 
@@ -370,13 +372,17 @@ templateICA <- function(
   }
 
   # Read in CIFTI, GIFTI, or NIFTI files.
+
+  if(verbose) cat("Reading and processing BOLD data \n")
+
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
         BOLD[[bb]] <- ciftiTools::read_cifti(
           BOLD[[bb]], resamp_res=resamp_res,
-          brainstructures=brainstructures
+          brainstructures=brainstructures,
+          verbose = FALSE
         )
       }
       stopifnot(ciftiTools::is.xifti(BOLD[[bb]]))
@@ -475,10 +481,16 @@ templateICA <- function(
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
 
-    # Check `resamp_res`.
-    if (!is.null(resamp_res)) {
-      template <- resample_template(template, resamp_res=resamp_res)
-    }
+    # Resample the template and remove extra brainstructures.
+    #if (!is.null(resamp_res)) {
+
+    if(verbose) cat('Processing Template \n')
+
+      template <- resample_template(template,
+                                    resamp_res = resamp_res, #can be NULL
+                                    brainstructures = brainstructures,
+                                    verbose = verbose)
+    #}
 
     xii1 <- template$dat_struct
     # if (!is.null(resamp_res)) {
@@ -913,6 +925,10 @@ templateICA <- function(
     scale=FALSE, hpf=0
   )
 
+
+
+  t1 <- Sys.time() - t0
+
   # Bayesian Computation -------------------------------------------------------
 
   #Three algorithms to choose from:
@@ -991,6 +1007,10 @@ templateICA <- function(
   class(result) <- 'tICA'
   #end of standard template ICA estimation
 
+  t2 <- Sys.time() - t0
+
+  t3 <- t4 <- 0 #these will be overwritten if FC-tICA or stICA is run
+
   #2) FC Template ICA ----------------------------------------------------------
   if (do_FC) {
 
@@ -1002,24 +1022,11 @@ templateICA <- function(
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #save(template, template_FC, method_FC, prior_params, BOLD, result_tICA, file='~/Desktop/test_setup_VB.RData')
-    #stop()
-
-    # # TEMPORARY [DELETE ME]
-    # #Compute the maximum eigenvalue of each FC^(-1) (same as 1 / min eigenvalue of each FC sample)
-    # maxeig <- c()
-    # for(pp in 1:100){
-    #   cat(paste0(pp,' '))
-    #   o_p <- order(template_FC$pivots[[pp]])
-    #   for(kk in 1:500){
-    #     R_pk_inv_UT <- template_FC$FC_samp_cholinv[[pp]][kk,] #vectorized inverse of pivoted Cholesky UT factor
-    #     R_pk_inv <- (templateICAr:::UT2mat(R_pk_inv_UT))[o_p,] #un-pivot by permuting rows (not columns because inverse)
-    #     G_pk_inv <- tcrossprod(R_pk_inv) #this is G_k^(-1)
-    #     eig_pk <- eigen(G_pk_inv, only.values = TRUE)$values[1]
-    #     maxeig <- c(maxeig, eig_pk)
-    #   }
-    # }
-    # template_FC$FC_samp_maxeig <- maxeig
+    #no parallelization implemented for VB1
+    if(method_FC=='VB1') {
+      usePar <- FALSE
+      doParallel::stopImplicitCluster()
+    }
 
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
@@ -1041,7 +1048,10 @@ templateICA <- function(
 
     result$result_tICA <- result_tICA
 
+    t3 <- Sys.time() - t0
+
   } # end of FC template ICA estimation
+
 
   #3) Spatial Template ICA ---------------------------------------------------
   if (do_spatial) {
@@ -1070,7 +1080,12 @@ templateICA <- function(
 
     result$result_tICA <- result_tICA
     class(result) <- 'stICA'
+
+    t4 <- Sys.time() - t0
+
   }
+
+
 
   # Wrapping up ----------------------------------------------------------------
   if (usePar) { doParallel::stopImplicitCluster() }
@@ -1167,5 +1182,14 @@ templateICA <- function(
   result$mask <- mask2
   result$nuisance <- nmat
   result$params <- tICA_params
+
+  #record computation time of each algorithm
+  result$comptime <- c(as.numeric(t1, units = "secs"),
+                       as.numeric(t2, units = "secs"),
+                       as.numeric(t3, units = "secs"),
+                       as.numeric(t4, units = "secs"))
+
+  names(result$comptime) <- c('DR','tICA','FC-tICA','stICA')
+
   result
 }
