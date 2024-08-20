@@ -4,14 +4,12 @@
 \alias{resample_template}
 \title{Resample CIFTI template}
 \usage{
-resample_template(x, resamp_res, brainstructures, verbose = FALSE)
+resample_template(x, resamp_res, verbose = FALSE)
 }
 \arguments{
 \item{x}{The \code{"template.cifti"} object.}
 
-\item{resamp_res}{The new resampling resolution. If NULL, do not perform resampling.}
-
-\item{brainstructures}{The brainstructures to retain.}
+\item{resamp_res}{The new resampling resolution.}
 
 \item{verbose}{Give occasional updates? Default: \code{FALSE}.}
 }
