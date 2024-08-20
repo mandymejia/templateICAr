@@ -372,7 +372,6 @@ templateICA <- function(
   }
 
   # Read in CIFTI, GIFTI, or NIFTI files.
-
   if(verbose) cat("Reading and processing BOLD data \n")
 
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
@@ -382,7 +381,7 @@ templateICA <- function(
         BOLD[[bb]] <- ciftiTools::read_cifti(
           BOLD[[bb]], resamp_res=resamp_res,
           brainstructures=brainstructures,
-          verbose = FALSE
+          verbose=FALSE
         )
       }
       stopifnot(ciftiTools::is.xifti(BOLD[[bb]]))
@@ -481,16 +480,10 @@ templateICA <- function(
   xii1 <- NULL
   if (FORMAT == "CIFTI") {
 
-    # Resample the template and remove extra brainstructures.
-    #if (!is.null(resamp_res)) {
-
-    if(verbose) cat('Processing Template \n')
-
-      template <- resample_template(template,
-                                    resamp_res = resamp_res, #can be NULL
-                                    brainstructures = brainstructures,
-                                    verbose = verbose)
-    #}
+    # Check `resamp_res`.
+    if (!is.null(resamp_res)) {
+      template <- resample_template(template, resamp_res=resamp_res)
+    }
 
     xii1 <- template$dat_struct
     # if (!is.null(resamp_res)) {
@@ -855,6 +848,7 @@ templateICA <- function(
     }
     # Perform nuisance regression, if applicable.
     if (!is.null(nmat[[nn]])) {
+      if (verbose) { cat("Performing nuisance regression.\n") }
       nmat[[nn]] <- cbind(1, nmat[[nn]])
       BOLD[[nn]] <- nuisance_regression(BOLD[[nn]], nmat[[nn]])
     }
@@ -867,7 +861,7 @@ templateICA <- function(
     }
   }
   if (sum(nT) != sum(nT_pre)) {
-    cat('Timepoints after scrubbing:    ', sum(nT), "\n")
+    if (verbose) { cat('Timepoints after scrubbing:    ', sum(nT), "\n") }
   }
 
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
@@ -879,6 +873,7 @@ templateICA <- function(
 
   mask2and3 <- if (use_mask2) { mask2 } else { mask3 } # [TO DO] patch???
 
+  if (verbose) { cat("Centering and scaling `BOLD`.\n") }
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
@@ -887,6 +882,8 @@ templateICA <- function(
   )
 
   # Estimate and subtract nuisance ICs -----------------------------------------
+  if (verbose) { cat("Removing nuisance ICs.\n") }
+
   Q2_est <- vector("numeric", nN)
   for (nn in seq(nN)) {
     x <- rm_nuisIC(
@@ -907,6 +904,8 @@ templateICA <- function(
   )
 
   # Concatenate the data. ------------------------------------------------------
+  if (verbose && length(nT) > 1) { cat("Concatenating sessions.\n") }
+
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
 
@@ -924,8 +923,6 @@ templateICA <- function(
     BOLD, template$mean, GSR=FALSE,
     scale=FALSE, hpf=0
   )
-
-
 
   t1 <- Sys.time() - t0
 
@@ -1052,7 +1049,6 @@ templateICA <- function(
 
   } # end of FC template ICA estimation
 
-
   #3) Spatial Template ICA ---------------------------------------------------
   if (do_spatial) {
     result_tICA <- result #this is the standard template ICA result
@@ -1084,8 +1080,6 @@ templateICA <- function(
     t4 <- Sys.time() - t0
 
   }
-
-
 
   # Wrapping up ----------------------------------------------------------------
   if (usePar) { doParallel::stopImplicitCluster() }
