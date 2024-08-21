@@ -677,10 +677,12 @@ templateICA <- function(
         # Get `TR` if not have yet; or check that it matches the current `TR`
         if (!is.null(BOLD[[bb]]$meta$cifti$time_step)) {
           if (TR == "from_xifti_metadata") {
-            message(
-              "Setting TR=", BOLD[[bb]]$meta$cifti$time_step,
-              ifelse(nN==1, " based on BOLD.", paste0(" based on BOLD #", bb, "."))
-            )
+            if (verbose) {
+              message(
+                "Setting TR=", BOLD[[bb]]$meta$cifti$time_step,
+                ifelse(nN==1, " based on BOLD.", paste0(" based on BOLD #", bb, "."))
+              )
+            }
             TR <- BOLD[[bb]]$meta$cifti$time_step
           } else if (TR != BOLD[[bb]]$meta$cifti$time_step) {
             warning(
