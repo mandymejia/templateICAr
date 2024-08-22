@@ -372,7 +372,7 @@ templateICA <- function(
   }
 
   # Read in CIFTI, GIFTI, or NIFTI files.
-  if(verbose) cat("Reading and processing BOLD data \n")
+  if(verbose) cat("Reading BOLD data.\n")
 
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
@@ -669,6 +669,8 @@ templateICA <- function(
 
 
   # Process the scan -----------------------------------------------------------
+  ## Vectorize and mask data; get dimensions -----------------------------------
+
   # Get each entry of `BOLD` as a data matrix or array.
   # If `FORMAT==CIFTI`, get `TR` if needed.
   if (FORMAT %in% c("CIFTI", "GIFTI")) {
@@ -748,7 +750,7 @@ templateICA <- function(
       cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
     }
     cat('Number of template ICs:        ', nL, "\n")
-    cat('Number of BOLD scans:          ', nN, "\n")
+    cat('Number of BOLD sessions:       ', nN, "\n")
     cat('Total number of timepoints:    ', sum(nT), "\n")
     cat('\n')
   }
@@ -808,9 +810,11 @@ templateICA <- function(
     template$sigma_sq0 <- template$sigma_sq0[mask3,]
     if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
-
+  
+  ## Nuisance regression and scrubbing -----------------------------------------
+  if (verbose) { cat("\n") }
   if (verbose) { cat("Pre-processing BOLD data.\n") }
-  # Nuisance regression and scrubbing ------------------------------------------
+
   if (is.list(nuisance)) { stopifnot(length(nuisance)==nN) }
   if (is.list(scrub)) { stopifnot(length(scrub)==nN) }
 
@@ -822,36 +826,47 @@ templateICA <- function(
   nDCT <- if (hpf==0) { NULL } else { vector("numeric", nN) } # could return this
   nT_pre <- nT
   for (nn in seq(nN)) {
+    if (verbose && nN > 1) { cat(paste0("Session ", nn, ":")) }
     # Collect nuisance matrix columns.
     nmat[nn] <- list(NULL)
-    if (!is.null(nuisance)) {
-      nuisance_nn <- if (is.list(nuisance)) { nuisance[[nn]] } else { nuisance }
+    ## `nuisance`
+    nuisance_nn <- if (is.list(nuisance)) { nuisance[[nn]] } else { nuisance }
+    if (!is.null(nuisance_nn)) {
       stopifnot(is.numeric(nuisance_nn) && is.matrix(nuisance_nn))
       stopifnot(nrow(nuisance_nn) == nT[nn])
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Using", ncol(nuisance_nn), "regressors from `nuisance`.\n") }
       nmat[[nn]] <- add_to_nuis(nuisance_nn, nmat[[nn]])
     }
+    ## `scrub`
     scrub_nn <- NULL
     if (!is.null(scrub)) {
       scrub_nn <- if (is.list(scrub)) { scrub[[nn]] } else { scrub }
       if (is.logical(scrub_nn)) { scrub_nn <- which(scrub_nn) }
       if (length(scrub_nn) > 0) {
         scrub_nn_mat <- fMRIscrub::flags_to_nuis_spikes(scrub_nn, nT[nn])
+        if (verbose && nN > 1) { cat("\t") }
+        if (verbose) { cat("Scrubbing", ncol(scrub_nn_mat), "volumes.\n") }
         nmat[[nn]] <- add_to_nuis(scrub_nn_mat, nmat[[nn]])
       } else {
         scrub_nn <- NULL
       }
     }
+    ## DCT
     if (hpf != 0) {
       if (TR=="from_xifti_metadata") {
         stop("`hpf!=0`, but `TR`` was neither provided nor able to be inferred from the data. Please provide `TR`.")
       }
       nDCT[nn] <- round(dct_convert(nT[nn], TR=TR, f=hpf))
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Using", nDCT[nn], "DCT bases.\n") }
       nmat[[nn]] <- add_to_nuis(dct_bases(nT[nn], nDCT[nn]), nmat[[nn]])
     }
     # Perform nuisance regression, if applicable.
     if (!is.null(nmat[[nn]])) {
-      if (verbose) { cat("Performing nuisance regression.\n") }
       nmat[[nn]] <- cbind(1, nmat[[nn]])
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Doing nuisance regression with", ncol(nmat[[nn]]), "total regressors.\n") }
       BOLD[[nn]] <- nuisance_regression(BOLD[[nn]], nmat[[nn]])
     }
     # Drop scrubbed volumes, if applicable.
@@ -863,19 +878,21 @@ templateICA <- function(
     }
   }
   if (sum(nT) != sum(nT_pre)) {
+    if (verbose && nN > 1) { cat("\t") }
     if (verbose) { cat('Timepoints after scrubbing:    ', sum(nT), "\n") }
   }
 
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
 
-  # Center and scale `BOLD` ----------------------------------------------------
+  ## Center and scale `BOLD` ---------------------------------------------------
+  if (verbose) { cat("Centering and scaling `BOLD`.\n") }
+
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
   mask2and3 <- if (use_mask2) { mask2 } else { mask3 } # [TO DO] patch???
 
-  if (verbose) { cat("Centering and scaling `BOLD`.\n") }
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
@@ -883,7 +900,7 @@ templateICA <- function(
     hpf=0
   )
 
-  # Estimate and subtract nuisance ICs -----------------------------------------
+  ## Estimate and subtract nuisance ICs ----------------------------------------
   if (verbose) { cat("Removing nuisance ICs.\n") }
 
   Q2_est <- vector("numeric", nN)
@@ -897,7 +914,9 @@ templateICA <- function(
   }
   rm(x)
 
-  # Center and scale `BOLD` again to ensure mean zero and correct scaling ------
+  ## Center and scale `BOLD` again to ensure mean zero and correct scaling -----
+  if (verbose) { cat("Centering and scaling `BOLD` again.\n") }
+
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=FALSE,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
@@ -905,21 +924,21 @@ templateICA <- function(
     hpf=0
   )
 
-  # Concatenate the data. ------------------------------------------------------
+  ## Concatenate the data. -----------------------------------------------------
   if (verbose && length(nT) > 1) { cat("Concatenating sessions.\n") }
 
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
 
-  # Scale by residual SD from template estimation ------------------------------
-
+  ## Scale by residual SD from template estimation -----------------------------
+  if (verbose) { cat("Scaling by residual SD from template estimation.\n") }
   if(length(template$sigma_sq0) != nrow(BOLD)) stop('Check length of sigma_sq')
   rescale <- sqrt(template$sigma_sq0)/mean(sqrt(template$sigma_sq0), na.rm=TRUE)
   rescale <- matrix(rescale, nrow=length(template$sigma_sq0), ncol=ncol(BOLD))
   BOLD <- BOLD / rescale
 
   # Initialize with the dual regression-based estimate -------------------------
-  if (verbose) { cat("\nComputing DR.\n") }
+  if (verbose) { cat("Computing DR.\n") }
 
   BOLD_DR <- dual_reg(
     BOLD, template$mean, GSR=FALSE,
@@ -929,12 +948,10 @@ templateICA <- function(
   t1 <- Sys.time() - t0
 
   # Bayesian Computation -------------------------------------------------------
-
   #Three algorithms to choose from:
   #1) Template ICA
   #2) FC Template ICA (EM or VB)
   #3) Spatial Template ICA (initialize with standard Template ICA)
-  # ----------------------------------------------------------------------------
 
   verbose0 <- verbose
   if (verbose) {
@@ -956,8 +973,7 @@ templateICA <- function(
   }
 
 
-  #1) Template ICA -----------------------------------------------------------
-
+  ## 1) Template ICA -----------------------------------------------------------
   if (reduce_dim) {
     if (verbose) { cat("Reducing data dimensions.\n") }
     # Reduce data dimensions
@@ -1010,7 +1026,7 @@ templateICA <- function(
 
   t3 <- t4 <- 0 #these will be overwritten if FC-tICA or stICA is run
 
-  #2) FC Template ICA ----------------------------------------------------------
+  ## 2) FC Template ICA --------------------------------------------------------
   if (do_FC) {
 
     verbose <- verbose0
@@ -1051,7 +1067,7 @@ templateICA <- function(
 
   } # end of FC template ICA estimation
 
-  #3) Spatial Template ICA ---------------------------------------------------
+  ## 3) Spatial Template ICA ---------------------------------------------------
   if (do_spatial) {
     result_tICA <- result #this is the standard template ICA result
     theta0$kappa <- rep(kappa_init, nL)
@@ -1083,7 +1099,7 @@ templateICA <- function(
 
   }
 
-  # Wrapping up ----------------------------------------------------------------
+  ## Wrapping up ---------------------------------------------------------------
   if (usePar) { doParallel::stopImplicitCluster() }
 
   # Return DR estimates.
