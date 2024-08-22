@@ -810,7 +810,7 @@ templateICA <- function(
     template$sigma_sq0 <- template$sigma_sq0[mask3,]
     if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
-  
+
   ## Nuisance regression and scrubbing -----------------------------------------
   if (verbose) { cat("\n") }
   if (verbose) { cat("Pre-processing BOLD data.\n") }
@@ -885,7 +885,12 @@ templateICA <- function(
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
 
   ## Center and scale `BOLD` ---------------------------------------------------
-  if (verbose) { cat("Centering and scaling `BOLD`.\n") }
+  if (verbose) {
+    cat("Normalizing BOLD: centering location timecourses")
+    if (GSR) { cat(", centering volumes (GSR)") }
+    if (scale != "none") { cat(",", scale, "scaling") }
+    cat(".\n")
+  }
 
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
@@ -915,7 +920,12 @@ templateICA <- function(
   rm(x)
 
   ## Center and scale `BOLD` again to ensure mean zero and correct scaling -----
-  if (verbose) { cat("Centering and scaling `BOLD` again.\n") }
+  if (verbose) {
+    cat("Normalizing BOLD again: centering location timecourses")
+    if (scale != "none") { cat(",", scale, "scaling") }
+    cat(".\n")
+  }
+
 
   BOLD <- lapply(BOLD, norm_BOLD,
     center_rows=TRUE, center_cols=FALSE,
