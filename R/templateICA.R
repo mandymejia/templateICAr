@@ -1161,7 +1161,7 @@ templateICA <- function(
 
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
     xiiL <- ciftiTools::select_xifti(xii1, rep(1, nL))
-    xiiL$meta$cifti$names <- paste("IC", IC_inds)
+    xiiL <- ciftiTools::convert_to_dscalar(xiiL, names=paste("IC", IC_inds))
     result$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$subjICmean)
     result$subjICse <- ciftiTools::newdata_xifti(xiiL, result$subjICse)
 
