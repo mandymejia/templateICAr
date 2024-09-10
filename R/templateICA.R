@@ -807,7 +807,7 @@ templateICA <- function(
     dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
     template$mean <- template$mean[mask3,]
     template$var <- template$var[mask3,]
-    template$sigma_sq0 <- template$sigma_sq0[mask3,]
+    template$sigma_sq0 <- template$sigma_sq0[mask3]
     if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
 
