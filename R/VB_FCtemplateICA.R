@@ -149,14 +149,15 @@ VB_FCtemplateICA <- function(
     P <- sESS_correction[[1]]
     FV <- sESS_correction[[2]]
     ind <- sESS_correction[[3]]
-    INLA_check()
-    mesh <- INLA::inla.mesh.create(loc = P, tv = FV)
 
-    #rtime <- round(seq(1, ntime, length.out=12)[-c(1,12)])
-    #sESS <- rep(NA, 10)
-    #for(k in 1:10){
-    #  sESS[k] <- estimate.ESS(mesh, BOLD[,rtime[k]], ind = ind, trace=TRUE)
-    #}
+    if (!requireNamespace("INLA", quietly = TRUE)) {
+      stop(
+        "Package \"INLA\" needed to for spatial ESS correction ",
+        "Please install it at https://www.r-inla.org/download-install.",
+        call. = FALSE
+      )
+    }
+   mesh <- INLA::inla.mesh.create(loc = P, tv = FV)
 
     #censor high-magnitude areas of the spatial map which are inconsistent with the Gaussian field
     thr <- apply(abs(template_mean), 2, sd)
@@ -166,7 +167,7 @@ VB_FCtemplateICA <- function(
     for(q in 1:nICs){
       ind_q <- ind[mask[,q]] #data locations, excluding censored locations for this IC
       Y_q <- S0[mask[,q],q] #spatial IC map q, excluding censored locations
-      sESS[q] <- estimate.ESS(mesh, Y_q, ind = ind_q, trace=TRUE)
+      sESS[q] <- estimate.ESS(mesh, Y = Y_q, ind = ind_q, trace=TRUE)
     }
     sESS <- max(sESS)
     if(verbose) cat(paste0('\t Spatial ESS accounting for spatial correlation: ', round(sESS), '\n'))
@@ -241,7 +242,7 @@ VB_FCtemplateICA <- function(
       #13 min without parallelization
       A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
                              BOLD, ntime, nICs, nvox,
-                             template_FC, sESS=sESS, final=FALSE,
+                             template_FC, sESS=sESS, final=FALSE, exact=FALSE,
                              usePar=usePar,
                              verbose=verbose)
     }
@@ -322,7 +323,7 @@ VB_FCtemplateICA <- function(
   } else {
     A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
                            BOLD, ntime, nICs, nvox,
-                           template_FC, sESS=sESS, final=TRUE,
+                           template_FC, sESS=sESS, final=TRUE, exact=TRUE,
                            usePar=usePar,
                            verbose=verbose)
   }
@@ -479,6 +480,10 @@ update_A <- function(
 #' @param template_FC IW parameters for FC template
 #' @param sESS Spatial effective sample size
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
+#' @param exact If FALSE, at intermediate steps (final = \code{FALSE}) will attempt to
+#' approximate V_k as described in the appendix of Mejia et al. 2024. Setting
+#' \code{exact = TRUE} may be helpful when using spatial ESS correction,
+#' which can lead to a lower rate of usable prior samples for the approximation.
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
@@ -488,7 +493,7 @@ update_A <- function(
 #' @keywords internal
 update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
                           BOLD, ntime, nICs, nvox,
-                          template_FC, sESS=NULL, final=FALSE,
+                          template_FC, sESS=NULL, final=FALSE, exact=FALSE,
                           usePar=TRUE, verbose=FALSE){
 
   #step 1: approximate V_k for each FC sample G_k
@@ -516,7 +521,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   #collect samples of FC matrices
   # if(final==TRUE) { FC_samp <- array(NA, dim = c(nICs, nICs, nG))}
 
-  fun_pivot <- function(pp, final){
+  fun_pivot <- function(pp, final, exact=FALSE){
 
     #setup
     max_eigen <- c()
@@ -527,7 +532,26 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
     #loop over samples
     mu_A_G_pp <- array(NA, dim = c(nICs, ntime, nK)) # collect E[a_t|G] for samples G
     V_p_mean <- array(0, dim = c(nICs, nICs)) #to sequentially compute the mean of V_k
-    nK_valid <- nK #how many samples have max eigenvalue < 1 (required for approximation of inverse)?
+
+    #first, check how many samples have max eigenvalue < 1 (required for approximation of inverse)?
+    which_valid <- rep(TRUE, nK) #keep track of how many valid samples
+    if(!final | !exact){
+      for(kk in 1:nK){
+        eig_pk <- maxeig_E_inv * maxeig_mat[kk,pp] #avoid the need to run eigen() during model estimation
+        max_eigen <- c(max_eigen, eig_pk)
+        if(eig_pk >= 1) {
+          which_valid[kk] <- FALSE
+          #next() #will not use this sample of G for mu_A and cov_A
+        }
+      } #end loop over k
+      if(mean(which_valid) < 0.9) {
+        warning(paste0('< 90% of Cholesky samples from pivot ', pp, ' cannot be used for approximation of V_k. Setting exact = TRUE.'))
+        exact <- TRUE
+        which_valid <- rep(TRUE, nK)
+      }
+    }
+    nK_valid <- sum(which_valid) #this will be nK when exact = TRUE
+
     for(kk in 1:nK){
 
       #a) obtain R_k^(-1) where G_k^(-1) = R_k^(-1)R_k^(-T). Note that R_k^(-1) is not actually UT because it has been un-pivoted.
@@ -540,31 +564,24 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
       #c) approximate or calculate V_k
 
-      # if(!final){
-      #
-      #   ### For intermediate estimation, approximate V_k
-      #   #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
-      #   #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
-      #   #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
-      #   eig_pk <- maxeig_E_inv * maxeig_mat[kk,pp] #avoid the need to run eigen() during model estimation
-      #   max_eigen <- c(max_eigen, eig_pk)
-      #   if(eig_pk >= 1) {
-      #     nK_valid <- nK_valid - 1
-      #     next() #will not use this sample of G for mu_A and cov_A
-      #   }
-      #   B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
-      #   V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
-      #
-      # } else {
+      if(final | exact){
 
-        ### For final estimation, compute V_k exactly
+        ### For final estimation or when exact=TRUE, compute V_k exactly
         V_pk <- solve(Emat + G_pk_inv)
-        #V_k_exact <- solve(Emat + G_pk_inv)
-        #err_k <- sum((V_pk - V_k_exact)^2)/sum((V_k_exact)^2)
-        #err <- c(err, err_k)
-      #}
 
-      V_p_mean <- V_p_mean + V_pk #sum over samples k
+      } else {
+
+        ### For intermediate estimation, approximate V_k unless exact = TRUE
+        #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
+        #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+        #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
+
+        if(!which_valid[kk]) next()
+        B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+        V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
+      }
+
+      V_p_mean <- V_p_mean + V_pk #sum over samples k (later will divide by nK_valid)
 
       #d) save E[a_t|G] to estimate its mean and covariance over G (do this within pivots for computational efficiency)
 
@@ -581,8 +598,8 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
     } #end loop over samples for current pivot
 
-    if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
-    if(nK_valid < nK*0.5) warning(paste0('Over half of Cholesky samples from pivot ', pp, ' cannot be used, contact developer'))
+    #if(nK_valid <= 1) stop('Only one or zero Cholesky samples from current pivot can be used, contact developer')
+    #if(nK_valid < nK*0.5) { warning(paste0('Over half of Cholesky samples from pivot ', pp, ' cannot be used for approximation of V_k. Setting exact = TRUE.'))
 
     V_p_mean <- V_p_mean/nK_valid
 
@@ -603,7 +620,8 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
                 cov = cov_A_sum_pp,
                 FC_samp = FC_samp, #NULL if !final
                 nK_valid = nK_valid,
-                max_eigen = max_eigen))
+                max_eigen = max_eigen,
+                exact = exact))
   }
 
   #loop over pivots
@@ -620,7 +638,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
       if(verbose & (pp/10 == round(pp/10))) cat(paste0(pp,' '))
 
       #do function for current pivot
-      result_pp <- fun_pivot(pp, final = final)
+      result_pp <- fun_pivot(pp, final = final, exact = exact)
 
       #aggregate results
       nK_valid_all <- nK_valid_all + result_pp$nK_valid
@@ -666,7 +684,8 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
                  E_AtA = E_AtA,
                  max_eigen = max_eigen,
                  #err = err,
-                 cov_A_sum_bypivot = cov_A_sum_bypivot)
+                 cov_A_sum_bypivot = cov_A_sum_bypivot,
+                 nK_valid_all = nK_valid_all)
   if(final) { result$FC_samp <- FC_samp } #this contains Cor(A), where a_t is a sample from a_t|G for each G
   return(result)
 
@@ -812,15 +831,17 @@ bdiag_m2 <- function(mat, N) {
 #' @param ind index of the data locations in the mesh
 # @param use_inla should INLA be used to compute standard deviations? If FALSE, the
 # standard deviations is approximated as being constant over the locations
-# @param trace If true, an alternative formula based on the trace is used
+#' @param trace If \code{TRUE}, a formula based on the trace is used, otherwise the inverse correlation is used
 #' @details
-#' The functions computes the effective sample size as 1^T Q.corr 1 where Q.corr is
-#' the inverse of the correlation matrix of a fitted SPDE model with alpha = 1.
-#' If `trace=TRUE`, the alternative formula trace(Q^{-1})/trace(Q*Q) is used.
+#' The functions computes the effective sample size as \eqn{trace(Q^{-1})/trace(Q*Q)}
+#' as in Bretherton et al. (1999), Journal of Climate.
 #'
 #' @return Estimate of the effective sample size
-estimate.ESS <- function(mesh, Y, ind = NULL, trace = FALSE) {
-  fem <- fmesher::fm_fem(mesh)
+estimate.ESS <- function(mesh, Y, ind = NULL, trace=FALSE) {
+
+  fem <- INLA::inla.mesh.fem(mesh)
+  #fem <- fmesher:::fm_fem(mesh)
+
   res <- optim(c(log(1),log(1)), lik, Y = Y, C = fem$c0, G = fem$g1, ind = ind)
   Q <- exp(res$par[2])^2*(exp(res$par[1])^2*fem$c0 + fem$g1)
   if(!is.null(ind)) {
@@ -828,41 +849,13 @@ estimate.ESS <- function(mesh, Y, ind = NULL, trace = FALSE) {
     Q <- Q[ind,ind] - Q[ind,ind2]%*%solve(Q[ind2,ind2],Q[ind2,ind])
   }
 
-  # if(trace == FALSE){
-  #   if(use_inla) {
-  #     std <- sqrt(diag(inla.qinv(Q)))
-  #
-  #   } else {
-  #     if(mesh$manifold == "R1") {
-  #       if(is.null(ind)) {
-  #         loc <- mesh$interval[1] + diff(mesh$interval)/2
-  #         A <- fm_basis(mesh, loc)
-  #       } else {
-  #         A <- rep(0,dim(Q)[1])
-  #         A[1] <- 1
-  #       }
-  #
-  #     } else {
-  #       if(is.null(ind)) {
-  #         loc <- colMeans(mesh$loc)[1:2]
-  #         A <- fm_basis(mesh, matrix(loc,1,2))
-  #       } else {
-  #         A <- matrix(0,1,dim(Q)[1])
-  #         A[1] <- 1
-  #       }
-  #     }
-  #     std <- rep(sqrt(as.double(A%*%solve(Q, t(A)))), dim(Q)[1])
-  #   }
-  #   return(as.double(t(std)%*%Q%*%std))
-  # } else {
-    Sigma <- solve(Q)
-    if(trace){
-      return(sum(diag(Sigma))^2/sum(Sigma^2))
-    } else {
-      Cor <- cov2cor(Sigma)
-      return(sum(Cor))
-    }
-  # }
+  Sigma <- solve(Q)
+  if(trace){
+    return(sum(diag(Sigma))^2/sum(Sigma^2))
+  } else {
+    Cor <- cov2cor(Sigma)
+    return(sum(Cor))
+  }
 }
 
 #' Compute likelihood in SPDE model for ESS estimation

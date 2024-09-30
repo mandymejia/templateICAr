@@ -12,6 +12,8 @@ estimate.ESS(mesh, Y, ind = NULL, trace = FALSE)
 \item{Y}{data}
 
 \item{ind}{index of the data locations in the mesh}
+
+\item{trace}{If \code{TRUE}, a formula based on the trace is used, otherwise the inverse correlation is used}
 }
 \value{
 Estimate of the effective sample size
@@ -20,7 +22,6 @@ Estimate of the effective sample size
 Estimation of effective sample size
 }
 \details{
-The functions computes the effective sample size as 1^T Q.corr 1 where Q.corr is
-the inverse of the correlation matrix of a fitted SPDE model with alpha = 1.
-If \code{trace=TRUE}, the alternative formula trace(Q^{-1})/trace(Q*Q) is used.
+The functions computes the effective sample size as \eqn{trace(Q^{-1})/trace(Q*Q)}
+as in Bretherton et al. (1999), Journal of Climate.
 }

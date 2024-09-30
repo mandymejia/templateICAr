@@ -15,6 +15,7 @@ update_A_Chol(
   template_FC,
   sESS = NULL,
   final = FALSE,
+  exact = FALSE,
   usePar = TRUE,
   verbose = FALSE
 )
@@ -32,6 +33,11 @@ moments for these variables.}
 \item{sESS}{Spatial effective sample size}
 
 \item{final}{If TRUE, return cov_A. Default: \code{FALSE}}
+
+\item{exact}{If FALSE, at intermediate steps (final = \code{FALSE}) will attempt to
+approximate V_k as described in the appendix of Mejia et al. 2024. Setting
+\code{exact = TRUE} may be helpful when using spatial ESS correction,
+which can lead to a lower rate of usable prior samples for the approximation.}
 
 \item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
 number of cores to use or \code{TRUE}, which will use the number available minus two.}
