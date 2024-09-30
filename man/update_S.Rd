@@ -4,7 +4,19 @@
 \alias{update_S}
 \title{Update S for VB FC Template ICA}
 \usage{
-update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final = FALSE)
+update_S(
+  mu_tau2,
+  mu_A,
+  E_AtA,
+  D_inv,
+  D_inv_S,
+  BOLD,
+  nICs,
+  nvox,
+  ntime,
+  tESS = NULL,
+  final = FALSE
+)
 }
 \arguments{
 \item{mu_tau2, mu_A, E_AtA, }{Most recent posterior estimates}
@@ -13,7 +25,9 @@ update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final = FALSE)
 
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
-\item{nICs, nvox}{Number of ICs, and the number of data locations.}
+\item{nICs, nvox, ntime}{Number of ICs, number of data locations, and time series length}
+
+\item{tESS}{Effective sample size}
 
 \item{final}{If TRUE, return cov_S. Default: \code{FALSE}}
 }

@@ -36,12 +36,15 @@
 #  (larger to smaller error) and all values should be between zero and \code{epsilon}.
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
+#' @param tESS_correction Take into account effective sample size due to temporal autocorrelation?
+#' @param sESS_correction Take into account effective sample size due to spatial correlation?
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
 #' @importFrom fMRItools is_posNum
 #' @importFrom abind abind
+# @importFrom INLA inla.mesh.create
 #' @keywords internal
 #'
 VB_FCtemplateICA <- function(
@@ -54,12 +57,15 @@ VB_FCtemplateICA <- function(
   return_FC_samp=FALSE,
   prior_params=c(0.001, 0.001),
   BOLD, #VxT
+  TR=NULL,
   A0, S0, S0_var,
   maxiter=100,
   miniter=3,
   epsilon=0.001,
   #eps_inter=NULL,
   usePar=TRUE,
+  tESS_correction=FALSE,
+  sESS_correction=FALSE,
   verbose=FALSE){
 
   stopifnot(length(prior_params)==2)
@@ -90,6 +96,89 @@ VB_FCtemplateICA <- function(
   success <- 1
   template_var[template_var < 1e-6] <- 1e-6 #to prevent problems when inverting covariance (this should rarely/never happen with NN variance)
 
+
+  #0. (Optional) Compute temporal effective sample size (ESS) to correct sums over t
+
+  #if(!is.numeric(TR)) TR <- 1 #assume 1-second temporal resolution if TR not available
+  #nDCT <- fMRItools:::Hz2dct(ntime, TR, 0.05)
+  #dct <- dct_bases(ntime, nDCT)
+  #A00 <- nuisance_regression(A0, dct)
+
+  if(tESS_correction){
+    #set.seed(1234)
+    #rvox <- sample(1:nvox, 10)
+    tESS <- rep(NA, nICs)
+    for(q in 1:nICs){
+      #vox_k <- rvox[k]
+      ar_order <- 10
+      ar_q <- ar.yw(A0[,q], order.max = ar_order, aic = FALSE)$ar
+      A_q <- toeplitz(c(1,-ar_q,rep(0, ntime - ar_order - 1)))
+      A_q[upper.tri(A_q)] <- 0
+      Cov_q <- solve(tcrossprod(A_q))
+
+      #acf_q <- acf(A00[,q], lag.max = ntime, plot = FALSE)$acf
+      #acf_k <- acf(BOLD[vox_k,], lag.max = ntime, plot = FALSE)$acf
+      #cor_q <- toeplitz(c(acf_q)) #TxT correlation matrix
+      #cor_inv_q <- solve(cor_q)
+      tESS[q] <- sum(diag(Cov_q))^2/sum(Cov_q^2) #Trace definition from Bretherton et al 1999 https://doi.org/10.1175/1520-0442(1999)012%3C1990:TENOSD%3E2.0.CO;2
+    }
+    tESS <- max(tESS)
+    if(verbose) cat(paste0('\t Temporal ESS accounting for autocorrelation: ', round(tESS), '\n'))
+    if(tESS >= ntime){
+      tESS <- NULL
+      tESS_correction <- FALSE
+      if(verbose) cat(paste0('\t Skipping temporal ESS correction since estimated ESS >= ntime \n'))
+    }
+  } else {
+    tESS <- NULL
+  }
+
+  if(is.logical(sESS_correction)){
+    if(!sESS_correction) do_sESS <- FALSE else stop('sESS_correction must be FALSE or a list of length 3.')
+  } else {
+    do_sESS <- TRUE
+    #in this case, sESS_correction must be a list of length 3
+    if(!is.list(sESS_correction)){
+      if(length(sESS_correction) != 3){
+        stop('If sESS_correction is not FALSE, it must be a list of length 3.')
+      }
+    }
+  }
+
+  if(do_sESS){
+    P <- sESS_correction[[1]]
+    FV <- sESS_correction[[2]]
+    ind <- sESS_correction[[3]]
+    INLA_check()
+    mesh <- INLA::inla.mesh.create(loc = P, tv = FV)
+
+    #rtime <- round(seq(1, ntime, length.out=12)[-c(1,12)])
+    #sESS <- rep(NA, 10)
+    #for(k in 1:10){
+    #  sESS[k] <- estimate.ESS(mesh, BOLD[,rtime[k]], ind = ind, trace=TRUE)
+    #}
+
+    #censor high-magnitude areas of the spatial map which are inconsistent with the Gaussian field
+    thr <- apply(abs(template_mean), 2, sd)
+    mask <- (abs(template_mean) < matrix(thr, nrow=nvox, ncol=5, byrow = TRUE))
+
+    sESS <- rep(NA, nICs)
+    for(q in 1:nICs){
+      ind_q <- ind[mask[,q]] #data locations, excluding censored locations for this IC
+      Y_q <- S0[mask[,q],q] #spatial IC map q, excluding censored locations
+      sESS[q] <- estimate.ESS(mesh, Y_q, ind = ind_q, trace=TRUE)
+    }
+    sESS <- max(sESS)
+    if(verbose) cat(paste0('\t Spatial ESS accounting for spatial correlation: ', round(sESS), '\n'))
+    if(sESS >= nvox){
+      sESS <- NULL
+      sESS_correction <- FALSE
+      if(verbose) cat(paste0('\t Skipping spatial ESS correction since estimated ESS >= nvox \n'))
+    }
+  } else {
+    sESS <- NULL
+  }
+
   #1. Compute initial estimates of posterior moments for G, A, S, V(S), tau^2
 
   mu_A <- A0 #TxQ
@@ -97,6 +186,8 @@ VB_FCtemplateICA <- function(
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
   E_SSt <- apply(cov_S, 1:2, sum) + mu_S %*% t(mu_S)
+  E_SSt0 <- E_SSt #without ESS correction
+  if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
 
   #mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
   mu_tau2 <- mean((BOLD - t(mu_A %*% mu_S))^2) #scalar
@@ -129,8 +220,8 @@ VB_FCtemplateICA <- function(
   #ELBO_vals <- rep(NA, maxiter) #keep track of ELBO at each iteration (convergence criterion)
   while (err > epsilon | iter <= miniter) {
 
-    if(verbose) cat(paste0(' ~~~~~~~~~~~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~~~~~~~~~~~ \n'))
-    t00 <- Sys.time()
+    #if(verbose) cat(paste0('\t ~~~~~~~~~~~ VB ITERATION ', iter, ' ~~~~~~~~~~~ \n'))
+    #t00 <- Sys.time()
 
     #a. UPDATE A
 
@@ -140,8 +231,8 @@ VB_FCtemplateICA <- function(
 
       #15 sec Q=25, V=90k, T=1200!
       A_new <- update_A(mu_tau2, mu_S, E_SSt,
-                      BOLD, ntime, nICs,
-                      u_samps, template_FC, final=FALSE,
+                      BOLD, ntime, nICs, nvox,
+                      u_samps, template_FC, sESS=sESS, final=FALSE,
                       usePar=FALSE) #for this function parallelization doesn't do much, and it runs very quickly anyway
 
     } else {
@@ -149,8 +240,8 @@ VB_FCtemplateICA <- function(
       #15 min for 50,000 samples from p(G) (Q=25, V=90k, T=1200)
       #13 min without parallelization
       A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
-                             BOLD, ntime, nICs,
-                             template_FC, final=FALSE,
+                             BOLD, ntime, nICs, nvox,
+                             template_FC, sESS=sESS, final=FALSE,
                              usePar=usePar,
                              verbose=verbose)
     }
@@ -162,32 +253,36 @@ VB_FCtemplateICA <- function(
     mu_A <- A_new$mu_A
     change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     E_AtA <- A_new$E_AtA
+    E_AtA0 <- E_AtA #without ESS correction
+    if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
 
     #b. UPDATE S
-    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox)
+    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime, tESS)
     change_S <- mean(abs(S_new$mu_S - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_S <- S_new$mu_S
     E_SSt <- S_new$E_SSt
+    E_SSt0 <- E_SSt #without ESS correction
+    if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
 
     #d. UPDATE tau^2
 
     tau2_new <- update_tau2(BOLD, BOLD2,
-                            mu_A, E_AtA, mu_S, E_SSt,
+                            mu_A, E_AtA0, mu_S, E_SSt0,
                             prior_params, ntime, nvox)
     beta1_nvox <- tau2_new$beta1 #beta1 / nvox
     alpha1_nvox <- tau2_new$alpha1 #alpha1 / nvox
-    mu_tau2_new <- beta1_nvox/(alpha1_nvox - 1/nvox)
+    mu_tau2_new <- beta1_nvox/(alpha1_nvox - 1/nvox) #numerator and denominator divided by nvox for computational stability
     change_tau2 <- abs(mu_tau2_new - mu_tau2)/(mu_tau2+0.1) #add 0.1 to denominator to avoid dividing by zero
     #change_tau2 <- sqrt(crossprod(c(mu_tau2_new - mu_tau2))) #same as in SQUAREM
     mu_tau2 <- mu_tau2_new
 
-    if (verbose) print(Sys.time() - t00)
+    #if (verbose) print(Sys.time() - t00)
 
     #change in estimates
     change <- c(change_A, change_S, change_tau2)
     err <- max(change)
     change <- format(change, digits=3, nsmall=3)
-    if(verbose) cat(paste0('Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for tau2 \n'))
+    if(verbose) cat(paste0('\t Iteration ',iter, ': Difference is ',change[1],' for A, ',change[2],' for S, ',change[3],' for tau2 \n'))
 
     # #ELBO
     # ELBO_vals[iter] <- compute_ELBO(mu_S, cov_S, cov_A, cov_alpha, template_mean, template_var, ntime)
@@ -221,12 +316,14 @@ VB_FCtemplateICA <- function(
 
   if(method_FC == 'VB1'){
     A_new <- update_A(mu_tau2, mu_S, E_SSt,
-                      BOLD, ntime, nICs,
-                      u_samps, template_FC, final=TRUE)
+                      BOLD, ntime, nICs, nvox,
+                      u_samps, template_FC, sESS=sESS, final=TRUE, usePar=FALSE)
+
   } else {
     A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
-                           BOLD, ntime, nICs,
-                           template_FC, final=TRUE,
+                           BOLD, ntime, nICs, nvox,
+                           template_FC, sESS=sESS, final=TRUE,
+                           usePar=usePar,
                            verbose=verbose)
   }
 
@@ -240,7 +337,10 @@ VB_FCtemplateICA <- function(
   FC_UB <- apply(FC_samp, 1:2, quantile, 1-alpha/2, na.rm=TRUE) #UB of 95% credible interval
 
   #obtain SE(S)
-  S_new <- update_S(mu_tau2, mu_A, A_new$E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, final=TRUE)
+  E_AtA <- A_new$E_AtA
+  E_AtA0 <- E_AtA #without ESS correction
+  if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
+  S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime, tESS, final=TRUE)
   mu_S <- S_new$mu_S
   cov_S <- S_new$cov_S
   cov_S_list <- lapply(seq(dim(cov_S)[3]), function(x) cov_S[ , , x])
@@ -261,7 +361,8 @@ VB_FCtemplateICA <- function(
     template_mean = template_mean,
     template_var = template_var,
     template_FC = template_FC,
-    method_FC = method_FC
+    method_FC = method_FC,
+    tESS = tESS, sESS = sESS
   )
 }
 
@@ -270,9 +371,10 @@ VB_FCtemplateICA <- function(
 #' @param mu_tau2,mu_S,E_SSt Most recent estimates of posterior
 #' moments for these variables.
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param ntime,nICs Number of timepoints, number of ICs
+#' @param ntime,nICs,nvox Number of timepoints, number of ICs, number of locations
 #' @param u_samps Samples from Gamma for multivariate t prior on A
 #' @param template_FC IW parameters for FC template
+#' @param sESS Spatial effective sample size
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
@@ -282,8 +384,9 @@ VB_FCtemplateICA <- function(
 #' @keywords internal
 update_A <- function(
   mu_tau2, mu_S, E_SSt,
-  BOLD, ntime, nICs,
+  BOLD, ntime, nICs, nvox,
   u_samps, template_FC,
+  sESS=NULL,
   usePar=TRUE,
   final=FALSE){
 
@@ -295,7 +398,8 @@ update_A <- function(
   E_Cov_A_u <- matrix(0, nICs, nICs) # estimate via MC using u_samps
   E_A_u <- array(0, dim=c(length(u_samps), nICs, ntime)) #for estimating Cov(E(a|u))
   tmp1 <- (1/mu_tau2) * E_SSt #QxQ
-  tmp2 <- (1/mu_tau2) * (mu_S %*% t(BOLD)) #QxT
+  tmp2 <- (1/mu_tau2) * (mu_S %*% t(BOLD)) #QxT (a sum over v)
+  if(!is.null(sESS)) tmp2 <- tmp2 * sESS/nvox #correct the sum over v for ESS
   if(final) { FC_samp <- array(0, dim=c(nICs, nICs, nU)) }
 
   #define function to compute E[a_t|u], Cov(a_t|u), and draw a sample if final=TRUE
@@ -371,8 +475,9 @@ update_A <- function(
 #' @param mu_tau2,mu_S,E_SSt Most recent estimates of posterior
 #' moments for these variables.
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param ntime,nICs Number of timepoints, number of ICs
+#' @param ntime,nICs,nvox Number of timepoints, number of ICs, number of locations
 #' @param template_FC IW parameters for FC template
+#' @param sESS Spatial effective sample size
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
@@ -382,8 +487,8 @@ update_A <- function(
 #'
 #' @keywords internal
 update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
-                          BOLD, ntime, nICs,
-                          template_FC, final=FALSE,
+                          BOLD, ntime, nICs, nvox,
+                          template_FC, sESS=NULL, final=FALSE,
                           usePar=TRUE, verbose=FALSE){
 
   #step 1: approximate V_k for each FC sample G_k
@@ -400,7 +505,8 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   maxeig_E_inv <- eigen(E_inv, only.values = TRUE)$values[1]
 
   #more preliminaries
-  tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G]
+  tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G] (a sum over v)
+  if(!is.null(sESS)) tmp <- tmp * sESS / nvox
 
   #organize max eigenvalues by pivot
   nP <- length(template_FC$pivots)
@@ -434,29 +540,29 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
       #c) approximate or calculate V_k
 
-      if(!final){
-
-        ### For intermediate estimation, approximate V_k
-        #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
-        #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
-        #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
-        eig_pk <- maxeig_E_inv * maxeig_mat[kk,pp] #avoid the need to run eigen() during model estimation
-        max_eigen <- c(max_eigen, eig_pk)
-        if(eig_pk >= 1) {
-          nK_valid <- nK_valid - 1
-          next() #will not use this sample of G for mu_A and cov_A
-        }
-        B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
-        V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
-
-      } else {
+      # if(!final){
+      #
+      #   ### For intermediate estimation, approximate V_k
+      #   #b) compute the max eigenvalue of E^(-1) %*% R_k^(-1) %*% R_k^(-T) and save
+      #   #B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+      #   #eig_pk <- eigen(B_pk, only.values = TRUE)$values[1]
+      #   eig_pk <- maxeig_E_inv * maxeig_mat[kk,pp] #avoid the need to run eigen() during model estimation
+      #   max_eigen <- c(max_eigen, eig_pk)
+      #   if(eig_pk >= 1) {
+      #     nK_valid <- nK_valid - 1
+      #     next() #will not use this sample of G for mu_A and cov_A
+      #   }
+      #   B_pk <- t(E_chol_inv) %*% G_pk_inv %*% E_chol_inv
+      #   V_pk <- E_chol_inv %*% ( diag(nICs) - B_pk + (B_pk %*% B_pk) ) %*% t(E_chol_inv) #use approximation (I+B)^(-1) = I - A + A^2
+      #
+      # } else {
 
         ### For final estimation, compute V_k exactly
         V_pk <- solve(Emat + G_pk_inv)
         #V_k_exact <- solve(Emat + G_pk_inv)
         #err_k <- sum((V_pk - V_k_exact)^2)/sum((V_k_exact)^2)
         #err <- c(err, err_k)
-      }
+      #}
 
       V_p_mean <- V_p_mean + V_pk #sum over samples k
 
@@ -501,7 +607,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
   }
 
   #loop over pivots
-  if(verbose) cat(paste0('Looping over ', nP, ' Cholesky pivots: '))
+  #if(verbose) cat(paste0('\t Looping over ', nP, ' Cholesky pivots: '))
 
   if(!usePar){
 
@@ -573,7 +679,8 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 #' @param mu_tau2,mu_A,E_AtA, Most recent posterior estimates
 #' @param D_inv,D_inv_S Some pre-computed quantities.
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
-#' @param nICs,nvox Number of ICs, and the number of data locations.
+#' @param nICs,nvox,ntime Number of ICs, number of data locations, and time series length
+#' @param tESS Effective sample size
 #' @param final If TRUE, return cov_S. Default: \code{FALSE}
 #'
 #' @return List of length three: \code{mu_S} (QxV), \code{E_SSt} (QxQ), and \code{cov_S} (QxQxV).
@@ -583,18 +690,18 @@ update_S <- function(
   mu_tau2, mu_A, E_AtA,
   D_inv, D_inv_S,
   BOLD,
-  nICs, nvox,
+  nICs, nvox, ntime,
+  tESS = NULL,
   final = FALSE){
 
   tmp1 <- (1/mu_tau2) * E_AtA
 
   cov_S <- array(0, dim = c(nICs, nICs, nvox))
-  for(v in 1:nvox){
-    cov_S[,,v] <- solve(tmp1 + diag(D_inv[v,]))
-  }
+  for(v in 1:nvox){ cov_S[,,v] <- solve(tmp1 + diag(D_inv[v,])) }
 
   mu_S <- array(0, dim = c(nICs, nvox)) #QxV
-  tmp2 <- (1/mu_tau2) * (t(mu_A) %*% BOLD)
+  tmp2 <- (1/mu_tau2) * (t(mu_A) %*% BOLD) #this is a sum over t=1,...,T
+  if(!is.null(tESS)) tmp2 <- tmp2 * tESS / ntime
   for(v in 1:nvox){
     #sum over t=1...T part
     #D_v_inv <- diag(1/template_var[v,])
@@ -618,21 +725,31 @@ update_S <- function(
 #'  (error variance).
 #' @param ntime,nvox Number of timepoints in data and the number of data
 #'  locations.
+# @param tESS Effective sample size
 #'
 #' @return List of length two: \code{alpha1} and \code{beta1}.
 #'
 #' @keywords internal
 update_tau2 <- function(
-  BOLD, BOLD2, mu_A, E_AtA, mu_S, E_SSt, prior_params, ntime, nvox){
+  BOLD, BOLD2, mu_A, E_AtA, mu_S, E_SSt, prior_params, ntime, nvox){ #}, tESS = NULL){
 
   alpha0 <- prior_params[1]
   beta0 <- prior_params[2]
 
-  alpha1_nvox <- alpha0/nvox + ntime/2 #multiplied by nvox for computational stability
-  beta1_nvox <- beta0/nvox +
-    (1/2)*BOLD2/nvox -
-    sum(BOLD * mu_A %*% mu_S/nvox) +
-    (1/2)*sum(diag(E_AtA %*% E_SSt)/nvox)
+  #these are alpha and beta divided by nvox for computational stability
+  # if(!is.null(tESS)){
+  #   alpha1_nvox <- alpha0/nvox + tESS/2
+  #   beta1_nvox <- beta0/nvox +
+  #     (1/2)*BOLD2/nvox * (tESS / ntime) -
+  #     sum(BOLD * mu_A %*% mu_S/nvox) * (tESS / ntime) +
+  #     (1/2)*sum(diag(E_AtA %*% E_SSt)/nvox)
+  # } else {
+    alpha1_nvox <- alpha0/nvox + ntime/2
+    beta1_nvox <- beta0/nvox +
+      (1/2)*BOLD2/nvox -
+      sum(BOLD * mu_A %*% mu_S/nvox) +
+      (1/2)*sum(diag(E_AtA %*% E_SSt)/nvox)
+  #}
 
   # #pre-compute sum over t inside of trace (it doesn't involve v)
   # tmp2a <- t(mu_A) %*% mu_A + ntime*cov_A
@@ -687,4 +804,91 @@ bdiag_m2 <- function(mat, N) {
       p = k * 0L:M,
       x = as.double(x))
 }
+
+#' Estimation of effective sample size
+#'
+#' @param mesh INLA mesh
+#' @param Y data
+#' @param ind index of the data locations in the mesh
+# @param use_inla should INLA be used to compute standard deviations? If FALSE, the
+# standard deviations is approximated as being constant over the locations
+# @param trace If true, an alternative formula based on the trace is used
+#' @details
+#' The functions computes the effective sample size as 1^T Q.corr 1 where Q.corr is
+#' the inverse of the correlation matrix of a fitted SPDE model with alpha = 1.
+#' If `trace=TRUE`, the alternative formula trace(Q^{-1})/trace(Q*Q) is used.
+#'
+#' @return Estimate of the effective sample size
+estimate.ESS <- function(mesh, Y, ind = NULL, trace = FALSE) {
+  fem <- fmesher::fm_fem(mesh)
+  res <- optim(c(log(1),log(1)), lik, Y = Y, C = fem$c0, G = fem$g1, ind = ind)
+  Q <- exp(res$par[2])^2*(exp(res$par[1])^2*fem$c0 + fem$g1)
+  if(!is.null(ind)) {
+    ind2 <- setdiff(1:dim(Q)[1], ind)
+    Q <- Q[ind,ind] - Q[ind,ind2]%*%solve(Q[ind2,ind2],Q[ind2,ind])
+  }
+
+  # if(trace == FALSE){
+  #   if(use_inla) {
+  #     std <- sqrt(diag(inla.qinv(Q)))
+  #
+  #   } else {
+  #     if(mesh$manifold == "R1") {
+  #       if(is.null(ind)) {
+  #         loc <- mesh$interval[1] + diff(mesh$interval)/2
+  #         A <- fm_basis(mesh, loc)
+  #       } else {
+  #         A <- rep(0,dim(Q)[1])
+  #         A[1] <- 1
+  #       }
+  #
+  #     } else {
+  #       if(is.null(ind)) {
+  #         loc <- colMeans(mesh$loc)[1:2]
+  #         A <- fm_basis(mesh, matrix(loc,1,2))
+  #       } else {
+  #         A <- matrix(0,1,dim(Q)[1])
+  #         A[1] <- 1
+  #       }
+  #     }
+  #     std <- rep(sqrt(as.double(A%*%solve(Q, t(A)))), dim(Q)[1])
+  #   }
+  #   return(as.double(t(std)%*%Q%*%std))
+  # } else {
+    Sigma <- solve(Q)
+    if(trace){
+      return(sum(diag(Sigma))^2/sum(Sigma^2))
+    } else {
+      Cor <- cov2cor(Sigma)
+      return(sum(Cor))
+    }
+  # }
+}
+
+#' Compute likelihood in SPDE model for ESS estimation
+#'
+#' @param theta Value of hyperparameters
+#' @param Y Data vector
+#' @param G SPDE G matrix
+#' @param C SPDE C matrix
+#' @param ind Indices of data locations in the mesh
+#'
+#' @return Log likelihood value
+#'
+lik <- function(theta, Y, G,C,ind = NULL) {
+  kappa <- exp(theta[1])
+  tau <- exp(theta[2])
+  Q <- tau^2*(kappa^2*C + G)
+
+  if(!is.null(ind)) {
+    ind2 <- setdiff(1:dim(Q)[1], ind)
+    Q <- Q[ind,ind] - Q[ind,ind2]%*%solve(Q[ind2,ind2],Q[ind2,ind])
+  }
+  R <- chol(Q)
+  ld <- c(determinant(R, logarithm = TRUE, sqrt = TRUE)$modulus)
+  lik <- as.double(ld - 0.5*t(Y)%*%Q%*%Y)
+
+  return(-lik)
+}
+
 

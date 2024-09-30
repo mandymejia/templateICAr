@@ -11,8 +11,10 @@ update_A(
   BOLD,
   ntime,
   nICs,
+  nvox,
   u_samps,
   template_FC,
+  sESS = NULL,
   usePar = TRUE,
   final = FALSE
 )
@@ -23,11 +25,13 @@ moments for these variables.}
 
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
-\item{ntime, nICs}{Number of timepoints, number of ICs}
+\item{ntime, nICs, nvox}{Number of timepoints, number of ICs, number of locations}
 
 \item{u_samps}{Samples from Gamma for multivariate t prior on A}
 
 \item{template_FC}{IW parameters for FC template}
+
+\item{sESS}{Spatial effective sample size}
 
 \item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
 number of cores to use or \code{TRUE}, which will use the number available minus two.}

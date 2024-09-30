@@ -11,7 +11,9 @@ update_A_Chol(
   BOLD,
   ntime,
   nICs,
+  nvox,
   template_FC,
+  sESS = NULL,
   final = FALSE,
   usePar = TRUE,
   verbose = FALSE
@@ -23,9 +25,11 @@ moments for these variables.}
 
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
-\item{ntime, nICs}{Number of timepoints, number of ICs}
+\item{ntime, nICs, nvox}{Number of timepoints, number of ICs, number of locations}
 
 \item{template_FC}{IW parameters for FC template}
+
+\item{sESS}{Spatial effective sample size}
 
 \item{final}{If TRUE, return cov_A. Default: \code{FALSE}}
 

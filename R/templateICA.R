@@ -163,6 +163,11 @@
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
 #' @param usePar Parallelize the computation? Default: \code{TRUE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
+#' @param tESS_correction Take into account effective sample size due to temporal autocorrelation?
+#' Default: \code{FALSE}. Only affects FC template ICA models.
+#' @param sESS_correction To take into account effective sample size due to spatial correlation,
+#' provide list of mesh vertices, faces, and data indices (in that order). Default: \code{FALSE}.
+#' Only affects FC template ICA models.
 #' @param verbose If \code{TRUE}, display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version
 #  of the spatial template ICA model, which assumes that all IC's have the same
@@ -224,6 +229,8 @@ templateICA <- function(
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=TRUE,
+  tESS_correction=FALSE,
+  sESS_correction=FALSE,
   verbose=TRUE){
 
   t0 <- Sys.time()
@@ -1068,6 +1075,8 @@ templateICA <- function(
         epsilon=epsilon,
         #eps_inter=eps_inter,
         usePar = usePar,
+        tESS_correction = tESS_correction,
+        sESS_correction = sESS_correction,
         verbose=verbose
       )
 

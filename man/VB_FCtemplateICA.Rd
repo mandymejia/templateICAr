@@ -14,6 +14,7 @@ VB_FCtemplateICA(
   return_FC_samp = FALSE,
   prior_params = c(0.001, 0.001),
   BOLD,
+  TR = NULL,
   A0,
   S0,
   S0_var,
@@ -21,6 +22,8 @@ VB_FCtemplateICA(
   miniter = 3,
   epsilon = 0.001,
   usePar = TRUE,
+  tESS_correction = FALSE,
+  sESS_correction = FALSE,
   verbose = FALSE
 )
 }
@@ -68,6 +71,10 @@ Default: \code{0.001}.}
 
 \item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
 number of cores to use or \code{TRUE}, which will use the number available minus two.}
+
+\item{tESS_correction}{Take into account effective sample size due to temporal autocorrelation?}
+
+\item{sESS_correction}{Take into account effective sample size due to spatial correlation?}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
