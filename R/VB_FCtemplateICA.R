@@ -36,14 +36,16 @@
 #  (larger to smaller error) and all values should be between zero and \code{epsilon}.
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
-#' @param tESS_correction Take into account effective sample size due to temporal autocorrelation?
-#' @param sESS_correction Take into account effective sample size due to spatial correlation?
+#' @param PW Prewhiten to account for residual autocorrelation?
+# @param tESS_correction Take into account effective sample size due to temporal autocorrelation?
+# @param sESS_correction Take into account effective sample size due to spatial correlation?
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return A list of computed values, including the final parameter estimates.
 #'
 #' @importFrom fMRItools is_posNum
 #' @importFrom abind abind
+#' @importFrom stats acf
 # @importFrom INLA inla.mesh.create
 #' @keywords internal
 #'
@@ -64,8 +66,9 @@ VB_FCtemplateICA <- function(
   epsilon=0.001,
   #eps_inter=NULL,
   usePar=TRUE,
-  tESS_correction=FALSE,
-  sESS_correction=FALSE,
+  PW=FALSE,
+  #tESS_correction=FALSE,
+  #sESS_correction=FALSE,
   verbose=FALSE){
 
   stopifnot(length(prior_params)==2)
@@ -104,95 +107,100 @@ VB_FCtemplateICA <- function(
   #dct <- dct_bases(ntime, nDCT)
   #A00 <- nuisance_regression(A0, dct)
 
-  if(tESS_correction){
-    #set.seed(1234)
-    #rvox <- sample(1:nvox, 10)
-    tESS <- rep(NA, nICs)
-    for(q in 1:nICs){
-      #vox_k <- rvox[k]
-      ar_order <- 10
-      ar_q <- ar.yw(A0[,q], order.max = ar_order, aic = FALSE)$ar
-      A_q <- toeplitz(c(1,-ar_q,rep(0, ntime - ar_order - 1)))
-      A_q[upper.tri(A_q)] <- 0
-      Cov_q <- solve(tcrossprod(A_q))
+  #consider residual temporal dependence
+  E0 <- BOLD - t(A0 %*% t(S0)) #VxT
 
-      #acf_q <- acf(A00[,q], lag.max = ntime, plot = FALSE)$acf
-      #acf_k <- acf(BOLD[vox_k,], lag.max = ntime, plot = FALSE)$acf
-      #cor_q <- toeplitz(c(acf_q)) #TxT correlation matrix
-      #cor_inv_q <- solve(cor_q)
-      tESS[q] <- sum(diag(Cov_q))^2/sum(Cov_q^2) #Trace definition from Bretherton et al 1999 https://doi.org/10.1175/1520-0442(1999)012%3C1990:TENOSD%3E2.0.CO;2
+  do_PW <- PW; rm(PW)
+  if(do_PW){
+    set.seed(1234)
+    rvox <- sample(1:nvox, 100)
+    #tESS <- rep(NA, 100)
+    Cor_E <- matrix(0, ntime, ntime)
+    for(k in 1:100){
+      vox_k <- rvox[k]
+      ar_order <- 6
+      ar_k <- ar.yw(E0[k,], order.max = ar_order, aic = FALSE)$ar
+      A_k <- toeplitz(c(1,-ar_k,rep(0, ntime - ar_order - 1)))
+      A_k[upper.tri(A_k)] <- 0
+      Cov_k <- solve(tcrossprod(A_k))
+      Cor_k <- cov2cor(Cov_k)
+      #acf_k <- acf(E0[k,], lag.max=ntime, plot=FALSE)$acf
+      #Cor_k <- toeplitz(c(acf_k))
+      #tESS[k] <- sum(diag(Cor_k))^2/sum(Cor_k^2) #Trace definition from Bretherton et al 1999 https://doi.org/10.1175/1520-0442(1999)012%3C1990:TENOSD%3E2.0.CO;2
+
+      Cor_E <- Cor_E + Cor_k
     }
-    tESS <- max(tESS)
-    if(verbose) cat(paste0('\t Temporal ESS accounting for autocorrelation: ', round(tESS), '\n'))
-    if(tESS >= ntime){
-      tESS <- NULL
-      tESS_correction <- FALSE
-      if(verbose) cat(paste0('\t Skipping temporal ESS correction since estimated ESS >= ntime \n'))
-    }
+    Cor_E <- Cor_E/100
+    svd_Cor_E <- svd(Cor_E, nv = FALSE)
+    PW <- svd_Cor_E$u %*% diag(1/sqrt(svd_Cor_E$d)) %*% t(svd_Cor_E$u)
+
+    # tESS <- mean(tESS)
+    # if(verbose) cat(paste0('\t Temporal ESS accounting for autocorrelation: ', round(tESS), '\n'))
+    # if(tESS >= ntime){
+    #   tESS <- NULL
+    #   tESS_correction <- FALSE
+    #   if(verbose) cat(paste0('\t Skipping temporal ESS correction since estimated ESS >= ntime \n'))
+    # }
   } else {
-    tESS <- NULL
+    PW <- diag(nrow=ntime, ncol=ntime)
   }
 
-  if(is.logical(sESS_correction)){
-    if(!sESS_correction) do_sESS <- FALSE else stop('sESS_correction must be FALSE or a list of length 3.')
-  } else {
-    do_sESS <- TRUE
-    #in this case, sESS_correction must be a list of length 3
-    if(!is.list(sESS_correction)){
-      if(length(sESS_correction) != 3){
-        stop('If sESS_correction is not FALSE, it must be a list of length 3.')
-      }
-    }
-  }
+  # if(is.logical(sESS_correction)){
+  #   if(!sESS_correction) do_sESS <- FALSE else stop('sESS_correction must be FALSE or a list of length 3.')
+  # } else {
+  #   do_sESS <- TRUE
+  #   #in this case, sESS_correction must be a list of length 3
+  #   if(!is.list(sESS_correction)){
+  #     if(length(sESS_correction) != 3){
+  #       stop('If sESS_correction is not FALSE, it must be a list of length 3.')
+  #     }
+  #   }
+  # }
+  #
+  # if(do_sESS){
+  #   P <- sESS_correction[[1]]
+  #   FV <- sESS_correction[[2]]
+  #   ind <- sESS_correction[[3]]
+  #
+  #   if (!requireNamespace("INLA", quietly = TRUE)) {
+  #     stop(
+  #       "Package \"INLA\" needed to for spatial ESS correction ",
+  #       "Please install it at https://www.r-inla.org/download-install.",
+  #       call. = FALSE
+  #     )
+  #   }
+  #  mesh <- INLA::inla.mesh.create(loc = P, tv = FV)
+  #
+  #  rtime <- round(seq(1, ntime, length.out=12)); rtime <- rtime[2:11] #evenly spaced time intervals
+  #  sESS <- rep(NA, 10)
+  #   for(k in 1:10){
+  #     time_k <- rtime[k]
+  #     sESS[k] <- estimate.ESS(mesh, Y = E0[,time_k], ind = ind, trace=TRUE)
+  #   }
+  #   sESS <- mean(sESS)
+  #   if(verbose) cat(paste0('\t Spatial ESS accounting for spatial correlation: ', round(sESS), '\n'))
+  #   if(sESS >= nvox){
+  #     sESS <- NULL
+  #     sESS_correction <- FALSE
+  #     if(verbose) cat(paste0('\t Skipping spatial ESS correction since estimated ESS >= nvox \n'))
+  #   }
+  # } else {
+  #   sESS <- NULL
+  # }
 
-  if(do_sESS){
-    P <- sESS_correction[[1]]
-    FV <- sESS_correction[[2]]
-    ind <- sESS_correction[[3]]
+  #1. Compute initial estimates of posterior moments for A, S, V(S), tau^2
 
-    if (!requireNamespace("INLA", quietly = TRUE)) {
-      stop(
-        "Package \"INLA\" needed to for spatial ESS correction ",
-        "Please install it at https://www.r-inla.org/download-install.",
-        call. = FALSE
-      )
-    }
-   mesh <- INLA::inla.mesh.create(loc = P, tv = FV)
-
-    #censor high-magnitude areas of the spatial map which are inconsistent with the Gaussian field
-    thr <- apply(abs(template_mean), 2, sd)
-    mask <- (abs(template_mean) < matrix(thr, nrow=nvox, ncol=5, byrow = TRUE))
-
-    sESS <- rep(NA, nICs)
-    for(q in 1:nICs){
-      ind_q <- ind[mask[,q]] #data locations, excluding censored locations for this IC
-      Y_q <- S0[mask[,q],q] #spatial IC map q, excluding censored locations
-      sESS[q] <- estimate.ESS(mesh, Y = Y_q, ind = ind_q, trace=TRUE)
-    }
-    sESS <- max(sESS)
-    if(verbose) cat(paste0('\t Spatial ESS accounting for spatial correlation: ', round(sESS), '\n'))
-    if(sESS >= nvox){
-      sESS <- NULL
-      sESS_correction <- FALSE
-      if(verbose) cat(paste0('\t Skipping spatial ESS correction since estimated ESS >= nvox \n'))
-    }
-  } else {
-    sESS <- NULL
-  }
-
-  #1. Compute initial estimates of posterior moments for G, A, S, V(S), tau^2
-
-  mu_A <- A0 #TxQ
+  mu_A <- PW %*% A0 #TxQ
   mu_S <- t(S0) #QxV
   cov_S <- array(0, dim = c(nICs, nICs, nvox)) #QxQxV
   for (v in 1:nvox) { cov_S[,,v] <- diag(S0_var[v,]) }
   E_SSt <- apply(cov_S, 1:2, sum) + mu_S %*% t(mu_S)
   E_SSt0 <- E_SSt #without ESS correction
-  if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
+  #if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
 
   #mu_tau2 <- apply(BOLD - t(mu_A %*% mu_S),1,var) #Vx1
-  mu_tau2 <- mean((BOLD - t(mu_A %*% mu_S))^2) #scalar
-  BOLD <- t(BOLD) #make the BOLD TxV to match the paper
+  mu_tau2 <- mean((BOLD %*% PW - t(mu_A %*% mu_S))^2) #scalar
+  BOLD <- PW %*% t(BOLD) #make the BOLD TxV to match the paper
 
   #pre-compute some stuff
   D_inv <- 1/template_var
@@ -233,7 +241,7 @@ VB_FCtemplateICA <- function(
       #15 sec Q=25, V=90k, T=1200!
       A_new <- update_A(mu_tau2, mu_S, E_SSt,
                       BOLD, ntime, nICs, nvox,
-                      u_samps, template_FC, sESS=sESS, final=FALSE,
+                      u_samps, template_FC, final=FALSE,
                       usePar=FALSE) #for this function parallelization doesn't do much, and it runs very quickly anyway
 
     } else {
@@ -242,7 +250,7 @@ VB_FCtemplateICA <- function(
       #13 min without parallelization
       A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
                              BOLD, ntime, nICs, nvox,
-                             template_FC, sESS=sESS, final=FALSE, exact=FALSE,
+                             template_FC, final=FALSE, exact=FALSE,
                              usePar=usePar,
                              verbose=verbose)
     }
@@ -255,15 +263,15 @@ VB_FCtemplateICA <- function(
     change_A <- mean(abs(mu_A - mu_A_old)/(abs(mu_A_old)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     E_AtA <- A_new$E_AtA
     E_AtA0 <- E_AtA #without ESS correction
-    if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
+    #if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
 
     #b. UPDATE S
-    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime, tESS)
+    S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime)
     change_S <- mean(abs(S_new$mu_S - mu_S)/(abs(mu_S)+0.1)) #add 0.1 to denominator to avoid dividing by zero
     mu_S <- S_new$mu_S
     E_SSt <- S_new$E_SSt
     E_SSt0 <- E_SSt #without ESS correction
-    if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
+    #if(do_sESS){ E_SSt <- E_SSt * sESS / nvox }
 
     #d. UPDATE tau^2
 
@@ -318,12 +326,12 @@ VB_FCtemplateICA <- function(
   if(method_FC == 'VB1'){
     A_new <- update_A(mu_tau2, mu_S, E_SSt,
                       BOLD, ntime, nICs, nvox,
-                      u_samps, template_FC, sESS=sESS, final=TRUE, usePar=FALSE)
+                      u_samps, template_FC, final=TRUE, usePar=FALSE)
 
   } else {
     A_new <- update_A_Chol(mu_tau2, mu_S, E_SSt,
                            BOLD, ntime, nICs, nvox,
-                           template_FC, sESS=sESS, final=TRUE, exact=TRUE,
+                           template_FC, final=TRUE, exact=TRUE,
                            usePar=usePar,
                            verbose=verbose)
   }
@@ -340,8 +348,8 @@ VB_FCtemplateICA <- function(
   #obtain SE(S)
   E_AtA <- A_new$E_AtA
   E_AtA0 <- E_AtA #without ESS correction
-  if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
-  S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime, tESS, final=TRUE)
+  #if(tESS_correction){ E_AtA <- E_AtA * tESS / ntime }
+  S_new <- update_S(mu_tau2, mu_A, E_AtA, D_inv, D_inv_S, BOLD, nICs, nvox, ntime, final=TRUE)
   mu_S <- S_new$mu_S
   cov_S <- S_new$cov_S
   cov_S_list <- lapply(seq(dim(cov_S)[3]), function(x) cov_S[ , , x])
@@ -363,7 +371,7 @@ VB_FCtemplateICA <- function(
     template_var = template_var,
     template_FC = template_FC,
     method_FC = method_FC,
-    tESS = tESS, sESS = sESS
+    PW = PW
   )
 }
 
@@ -375,7 +383,7 @@ VB_FCtemplateICA <- function(
 #' @param ntime,nICs,nvox Number of timepoints, number of ICs, number of locations
 #' @param u_samps Samples from Gamma for multivariate t prior on A
 #' @param template_FC IW parameters for FC template
-#' @param sESS Spatial effective sample size
+# @param sESS Spatial effective sample size
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
 #' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
 #' number of cores to use or \code{TRUE}, which will use the number available minus two.
@@ -387,7 +395,7 @@ update_A <- function(
   mu_tau2, mu_S, E_SSt,
   BOLD, ntime, nICs, nvox,
   u_samps, template_FC,
-  sESS=NULL,
+  #sESS=NULL,
   usePar=TRUE,
   final=FALSE){
 
@@ -400,7 +408,7 @@ update_A <- function(
   E_A_u <- array(0, dim=c(length(u_samps), nICs, ntime)) #for estimating Cov(E(a|u))
   tmp1 <- (1/mu_tau2) * E_SSt #QxQ
   tmp2 <- (1/mu_tau2) * (mu_S %*% t(BOLD)) #QxT (a sum over v)
-  if(!is.null(sESS)) tmp2 <- tmp2 * sESS/nvox #correct the sum over v for ESS
+  #if(!is.null(sESS)) tmp2 <- tmp2 * sESS/nvox #correct the sum over v for ESS
   if(final) { FC_samp <- array(0, dim=c(nICs, nICs, nU)) }
 
   #define function to compute E[a_t|u], Cov(a_t|u), and draw a sample if final=TRUE
@@ -478,7 +486,7 @@ update_A <- function(
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
 #' @param ntime,nICs,nvox Number of timepoints, number of ICs, number of locations
 #' @param template_FC IW parameters for FC template
-#' @param sESS Spatial effective sample size
+# @param sESS Spatial effective sample size
 #' @param final If TRUE, return cov_A. Default: \code{FALSE}
 #' @param exact If FALSE, at intermediate steps (final = \code{FALSE}) will attempt to
 #' approximate V_k as described in the appendix of Mejia et al. 2024. Setting
@@ -493,7 +501,8 @@ update_A <- function(
 #' @keywords internal
 update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
                           BOLD, ntime, nICs, nvox,
-                          template_FC, sESS=NULL, final=FALSE, exact=FALSE,
+                          template_FC, #sESS=NULL,
+                          final=FALSE, exact=FALSE,
                           usePar=TRUE, verbose=FALSE){
 
   #step 1: approximate V_k for each FC sample G_k
@@ -511,7 +520,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 
   #more preliminaries
   tmp <- 1/mu_tau2 * (mu_S %*% t(BOLD)) #QxT -- ingredient for E[a_t|G] (a sum over v)
-  if(!is.null(sESS)) tmp <- tmp * sESS / nvox
+  #if(!is.null(sESS)) tmp <- tmp * sESS / nvox
 
   #organize max eigenvalues by pivot
   nP <- length(template_FC$pivots)
@@ -699,7 +708,7 @@ update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
 #' @param D_inv,D_inv_S Some pre-computed quantities.
 #' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.
 #' @param nICs,nvox,ntime Number of ICs, number of data locations, and time series length
-#' @param tESS Effective sample size
+# @param tESS Effective sample size
 #' @param final If TRUE, return cov_S. Default: \code{FALSE}
 #'
 #' @return List of length three: \code{mu_S} (QxV), \code{E_SSt} (QxQ), and \code{cov_S} (QxQxV).
@@ -710,7 +719,7 @@ update_S <- function(
   D_inv, D_inv_S,
   BOLD,
   nICs, nvox, ntime,
-  tESS = NULL,
+  #tESS = NULL,
   final = FALSE){
 
   tmp1 <- (1/mu_tau2) * E_AtA
@@ -720,7 +729,7 @@ update_S <- function(
 
   mu_S <- array(0, dim = c(nICs, nvox)) #QxV
   tmp2 <- (1/mu_tau2) * (t(mu_A) %*% BOLD) #this is a sum over t=1,...,T
-  if(!is.null(tESS)) tmp2 <- tmp2 * tESS / ntime
+  #if(!is.null(tESS)) tmp2 <- tmp2 * tESS / ntime
   for(v in 1:nvox){
     #sum over t=1...T part
     #D_v_inv <- diag(1/template_var[v,])

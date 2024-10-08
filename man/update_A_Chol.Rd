@@ -13,7 +13,6 @@ update_A_Chol(
   nICs,
   nvox,
   template_FC,
-  sESS = NULL,
   final = FALSE,
   exact = FALSE,
   usePar = TRUE,
@@ -29,8 +28,6 @@ moments for these variables.}
 \item{ntime, nICs, nvox}{Number of timepoints, number of ICs, number of locations}
 
 \item{template_FC}{IW parameters for FC template}
-
-\item{sESS}{Spatial effective sample size}
 
 \item{final}{If TRUE, return cov_A. Default: \code{FALSE}}
 

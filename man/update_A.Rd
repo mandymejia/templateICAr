@@ -14,7 +14,6 @@ update_A(
   nvox,
   u_samps,
   template_FC,
-  sESS = NULL,
   usePar = TRUE,
   final = FALSE
 )
@@ -30,8 +29,6 @@ moments for these variables.}
 \item{u_samps}{Samples from Gamma for multivariate t prior on A}
 
 \item{template_FC}{IW parameters for FC template}
-
-\item{sESS}{Spatial effective sample size}
 
 \item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
 number of cores to use or \code{TRUE}, which will use the number available minus two.}

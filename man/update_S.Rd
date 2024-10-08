@@ -14,7 +14,6 @@ update_S(
   nICs,
   nvox,
   ntime,
-  tESS = NULL,
   final = FALSE
 )
 }
@@ -26,8 +25,6 @@ update_S(
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
 \item{nICs, nvox, ntime}{Number of ICs, number of data locations, and time series length}
-
-\item{tESS}{Effective sample size}
 
 \item{final}{If TRUE, return cov_S. Default: \code{FALSE}}
 }
