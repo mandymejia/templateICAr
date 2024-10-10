@@ -1,3 +1,15 @@
+# 8.0
+
+* Updates to template calculations
+    * Use effective sample size 
+* Add prewhitening option to FC template ICA
+* Implement rescaling to templateICA
+* Default activation type is `>` rather than `abs >`
+
+# 7.1
+
+* use `u` and `z` for activtions, rather than `gamma`
+
 # 7.0
 
 * no PARDISO requirement
