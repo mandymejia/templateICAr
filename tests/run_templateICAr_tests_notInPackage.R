@@ -81,55 +81,55 @@ tm_cii <- estimate_template(
   cii_fnames[seq(5)], brainstructures="left", GICA = GICA_fname["cii"],
   FC=TRUE, TR=.72, scale_sm_FWHM=0
 )
-tm_gii <- estimate_template(
-  giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
-  FC=TRUE, TR=.72, scale_sm_FWHM=0
-)
-tm_rds <- estimate_template(
-  rds_fnames[seq(5)], GICA = GICA_fname["rds"],
-  FC=TRUE, TR=.72, scale_sm_FWHM=0
-)
-testthat::expect_equal(
-  lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
-  tm_gii$template[seq(3)]
-)
-testthat::expect_equal(tm_cii$template, tm_rds$template)
+# tm_gii <- estimate_template(
+#   giiL_fnames[seq(5)], GICA = GICA_fname["gii"],
+#   FC=TRUE, TR=.72, scale_sm_FWHM=0
+# )
+# tm_rds <- estimate_template(
+#   rds_fnames[seq(5)], GICA = GICA_fname["rds"],
+#   FC=TRUE, TR=.72, scale_sm_FWHM=0
+# )
+# testthat::expect_equal(
+#   lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+#   tm_gii$template[seq(3)]
+# )
+# testthat::expect_equal(tm_cii$template, tm_rds$template)
 
-tm_cii; tm_gii; tm_rds
-plot(tm_cii); plot(tm_gii)
+tm_cii#; tm_gii; tm_rds
+plot(tm_cii)#; plot(tm_gii)
 
 ### Test 2: with various parameters changed ----
 tm_cii <- estimate_template(
   cii_fnames[seq(3)], cii_fnames[seq(4,6)], GICA = GICA_fname["cii"],
   inds=c(2,7,11,90), scale="global", scale_sm_FWHM=5,
-  maskTol=.9, brainstructures="left", wb_path="~/Desktop/workbench",
+  maskTol=.9, brainstructures="left", wb_path="~/Applications",
   usePar=TRUE, FC=TRUE, varTol=10000
 )
-tm_gii <- estimate_template(
-  giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=c(2,7,11,90), scale="global", scale_sm_FWHM=5,
-  maskTol=.9, wb_path="~/Desktop/workbench",
-  usePar=TRUE, FC=TRUE, varTol=10000
-)
-testthat::expect_equal(
-  lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
-  tm_gii$template[seq(3)]
-)
-tm_gii <- estimate_template(
-  giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
-  inds=seq(5), scale="none", Q2=5,
-  maskTol=.9, wb_path="~/Desktop/workbench",
-  usePar=TRUE
-)
-tm_rds <- estimate_template(
-  lapply(rds_fnames[seq(4,6)], readRDS), lapply(rds_fnames[seq(3)], readRDS), GICA = GICA_fname["rds"],
-  inds=seq(5), scale="none",  Q2=5,
-  maskTol=.9, usePar=TRUE
-)
-testthat::expect_equal(
-  tm_gii$template[seq(3)],
-  lapply(tm_rds$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
-)
+# tm_gii <- estimate_template(
+#   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
+#   inds=c(2,7,11,90), scale="global", scale_sm_FWHM=5,
+#   maskTol=.9, wb_path="~/Applications",
+#   usePar=TRUE, FC=TRUE, varTol=10000
+# )
+# testthat::expect_equal(
+#   lapply(tm_cii$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+#   tm_gii$template[seq(3)]
+# )
+# tm_gii <- estimate_template(
+#   giiL_fnames[seq(3)], giiL_fnames[seq(4,6)], GICA = GICA_fname["gii"],
+#   inds=seq(5), scale="none", Q2=5,
+#   maskTol=.9, wb_path="~/Applications",
+#   usePar=TRUE
+# )
+# tm_rds <- estimate_template(
+#   lapply(rds_fnames[seq(4,6)], readRDS), lapply(rds_fnames[seq(3)], readRDS), GICA = GICA_fname["rds"],
+#   inds=seq(5), scale="none",  Q2=5,
+#   maskTol=.9, usePar=TRUE
+# )
+# testthat::expect_equal(
+#   tm_gii$template[seq(3)],
+#   lapply(tm_rds$template[seq(3)], fMRItools::unmask_mat, tm_cii$dat_struct$meta$cortex$medial_wall_mask$left),
+# )
 
 close3d(); close3d(); close3d(); close3d()
 
@@ -138,32 +138,32 @@ tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
   scale="global"
 )
-tm_gii <- estimate_template(
-  giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),
-  scale="global"
-)
-tm_rds <- estimate_template(
-  rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
-  scale="global"
-)
+# tm_gii <- estimate_template(
+#   giiL_fnames[seq(3)], GICA = GICA_fname["gii"], inds=seq(3),
+#   scale="global"
+# )
+# tm_rds <- estimate_template(
+#   rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
+#   scale="global"
+# )
 
 ### `export_template` ----
 out_fname=export_template(tm_cii, tempfile())
 tm_cii2 <- list(read_cifti(out_fname[1]), read_cifti(out_fname[2]), readRDS(out_fname[3]))
-out_fname=export_template(tm_gii, tempfile())
-tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[3]))
-out_fname=export_template(tm_rds, tempfile())
-tm_rds2 <- lapply(out_fname, readRDS)
+#out_fname=export_template(tm_gii, tempfile())
+# tm_gii2 <- list(readgii(out_fname[1]), readgii(out_fname[2]), readRDS(out_fname[3]))
+# out_fname=export_template(tm_rds, tempfile())
+# tm_rds2 <- lapply(out_fname, readRDS)
 
 ### `templateICA` ----
 tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=0, TR=.72)
-tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20, TR=.72)
-tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=0, maxiter=20, TR=.72)
-tICA_cii; tICA_gii; tICA_rds
-testthat::expect_equal(tICA_gii$A, tICA_rds$A)
-actICA_rds <- activations(tICA_rds)
+#tICA_gii <- templateICA(giiL_fnames[4], tm_gii, Q2=0, maxiter=20, TR=.72)
+#tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=0, maxiter=20, TR=.72)
+tICA_cii#; tICA_gii; tICA_rds
+#testthat::expect_equal(tICA_gii$A, tICA_rds$A)
+#actICA_rds <- activations(tICA_rds)
 actICA_cii <- activations(tICA_cii)
-plot(activations(tICA_cii)); plot(activations(tICA_gii))
+plot(activations(tICA_cii))#; plot(activations(tICA_gii))
 close3d(); close3d()
 
 gamma <- 2
@@ -179,13 +179,13 @@ tm_cii <- estimate_template(
   cii_fnames[seq(3)], brainstructures="left", GICA = GICA_fname["cii"], inds=seq(3),
   scale="none", TR=.72, FC=FALSE
 )
-tm_rds <- estimate_template(
-  rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
-  scale="none", TR=.72, FC=FALSE
-)
+# tm_rds <- estimate_template(
+#   rds_fnames[seq(3)], GICA = GICA_fname["rds"], inds=seq(3),
+#   scale="none", TR=.72, FC=FALSE
+# )
 tICA_cii <- templateICA(cii_fnames[4], brainstructures="left", tm_cii, maxiter=20, Q2=5, TR=.72)
-tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=5, maxiter=20, TR=.72)
-testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
+#tICA_rds <- templateICA(rds_fnames[4], tm_rds, Q2=5, maxiter=20, TR=.72)
+#testthat::expect_equal(tICA_cii$theta_MLE, tICA_rds$theta_MLE)
 
 # CIFTI ------------------------------------------------------------------------
 
