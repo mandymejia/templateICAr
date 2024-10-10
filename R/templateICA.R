@@ -231,7 +231,7 @@ templateICA <- function(
   kappa_init=0.2,
   #common_smoothness=TRUE,
   usePar=TRUE,
-  PW=PW,
+  PW=FALSE,
   verbose=TRUE){
 
   t0 <- Sys.time()
