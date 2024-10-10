@@ -1106,6 +1106,10 @@ estimate_template <- function(
   }
 
   # Format result ---------------------------------------------------
+  if (use_mask2) {
+    sigma_sq0 <- unmask_vec(sigma_sq0, mask2)
+  }
+
   # Keep DR estimate of S
   if (!isFALSE(keep_S)) {
     DR0 <- array(DR0, dim=c(nM, nN, nL, nVm)) # Undo vectorize
@@ -1113,7 +1117,6 @@ estimate_template <- function(
       DR0temp <- array(NA, dim=c(dim(DR0)[seq(3)], length(mask2)))
       DR0temp[,,,mask2] <- DR0
       DR0 <- DR0temp
-      sigma_sq0 <- unmask_vec(sigma_sq0, mask2)
     }
     if (is.character(keep_S)) {
       saveRDS(DR0, keep_S)
