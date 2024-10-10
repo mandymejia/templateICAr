@@ -33,7 +33,7 @@ templateICA(
   epsilon = 0.001,
   kappa_init = 0.2,
   usePar = TRUE,
-  PW = PW,
+  PW = FALSE,
   verbose = TRUE
 )
 }
