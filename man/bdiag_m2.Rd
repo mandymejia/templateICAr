@@ -2,18 +2,18 @@
 % Please edit documentation in R/VB_FCtemplateICA.R
 \name{bdiag_m2}
 \alias{bdiag_m2}
-\title{Fast version of Matrix :: .bdiag() -- for the case of \emph{many identical}  (k x k) matrices:}
+\title{Bdiag m2}
 \usage{
 bdiag_m2(mat, N)
 }
 \arguments{
-\item{mat}{a  k x k 'matrix'}
+\item{mat}{a k x k 'matrix'}
 
 \item{N}{how many times to repeat \code{mat}}
 }
 \value{
-a sparse (N\emph{k x N}k) matrix of class  \code{"\linkS4class{dgCMatrix}"}.
+a sparse (N\emph{k x N}k) matrix of class \code{"dgCMatrix"}.
 }
 \description{
-Fast version of Matrix :: .bdiag() -- for the case of \emph{many identical}  (k x k) matrices:
+Bdiag m2
 }

@@ -1215,6 +1215,7 @@ make_Pmat <- function(Q, nvox){
 #' @keywords internal
 #'
 bdiag_m <- function(lmat) {
+  # Fast version of Matrix :: .bdiag() -- for the case of *many*  (k x k) matrices:
   ## Copyright (C) 2016 Martin Maechler, ETH Zurich
   if(!length(lmat)) return(new("dgCMatrix"))
   stopifnot(is.list(lmat), is.matrix(lmat[[1]]),
