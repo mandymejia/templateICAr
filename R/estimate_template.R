@@ -425,22 +425,21 @@ UT2mat <- function(x, diag=TRUE){
 #' @export
 #'
 #' @examples
-#' nT <- 25
-#' nV <- 170
+#' nT <- 21
+#' nV <- 140
 #' nQ <- 6
 #' mU <- matrix(rnorm(nV*nQ), nrow=nV)
 #' mS <- mU %*% diag(seq(nQ, 1)) %*% matrix(rnorm(nQ*nT), nrow=nQ)
 #' BOLD <- list(B1=mS, B2=mS, B3=mS)
 #' BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
 #' GICA <- mU
-#' estimate_template(BOLD=BOLD, GICA=mU)
+#' estimate_template(BOLD=BOLD, GICA=mU, FC_nSamp=2000)
 #'
 #' \dontrun{
 #'  estimate_template(
 #'    run1_cifti_fnames, run2_cifti_fnames,
 #'    gICA_cifti_fname, brainstructures="all",
-#'    scale="global", TR=0.71, Q2=NULL, varTol=10,
-#'    FC_nSamp = 3000
+#'    scale="global", TR=0.71, Q2=NULL, varTol=10
 #'  )
 #' }
 estimate_template <- function(
