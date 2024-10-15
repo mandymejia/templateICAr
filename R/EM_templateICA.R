@@ -22,9 +22,9 @@
 #'  same smoothness parameter, \eqn{\kappa}
 # @param miniter Minimum number of EM iterations. Default: 5.
 #' @param maxiter Maximum number of EM iterations. Default: 100.
-#' @param usePar Parallelize the computation over voxels? Default: \code{FALSE}.
-#'  Can be the number of cores to use or \code{TRUE}, which will use the number
-#'  on the PC minus two. Not implemented yet for spatial template ICA.
+#' @param usePar Parallelize the computation? Default: \code{FALSE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
+#' Not yet implemented for spatial template ICA.
 #' @param epsilon Smallest proportion change between iterations. Default: 0.001.
 #' @param reduce_dim Reduce the temporal dimension of the data using PCA?
 #'  Default: \code{TRUE} for the spatial EM algorithm, and \code{FALSE} for the
@@ -232,8 +232,15 @@ EM_templateICA.spatial <- function(
 
 #' @rdname EM_templateICA
 EM_templateICA.independent <- function(
-  template_mean, template_var, BOLD, theta0, C_diag, H, Hinv,
-  maxiter=100, epsilon=0.001, reduce_dim=FALSE, usePar=FALSE,
+  template_mean,
+  template_var,
+  BOLD,
+  theta0,
+  C_diag, H, Hinv,
+  maxiter=100,
+  epsilon=0.001,
+  reduce_dim=FALSE,
+  usePar=FALSE,
   verbose){
 
   if(!all.equal(dim(template_var), dim(template_mean))) stop('The dimensions of template_mean and template_var must match.')
@@ -278,7 +285,7 @@ EM_templateICA.independent <- function(
     template_mean, template_var, meshes=NULL,
     BOLD, C_diag, H=H, Hinv=Hinv,
     s0_vec=NULL, D=NULL, Dinv_s0=NULL,
-    update_nu0sq=update_nu0sq, verbose=verbose
+    update_nu0sq=update_nu0sq, verbose=FALSE
   )
   if(verbose) print(Sys.time() - t00000)
   # Because `result_squarem$p.intermed` is not always a matrix?
@@ -709,10 +716,10 @@ UpdateTheta_templateICA.spatial <- function(
 
     #
     #second part of Q1: sum_v Trace{ A' C^{-1} A T(v,v) } = Trace{ A' C^{-1} A sum_v T(v,v) }, where sum_v T(v,v) is A_part2
-    
+
     # Damon was working on this a while back but did not finish. Kept just FYI.
     # LL1_part2 <- sum(diag( t(A_hat) %*% Cinv_A %*% T_mat ))
-    
+
     LL1_part2 <- sum(diag( t(A_hat) %*% diag((1/C_diag)) %*% A_hat %*% T_mat ))
     #
     theta_new$LL[1] <- LL1_part1 - LL1_part2
@@ -1017,7 +1024,7 @@ UpdateTheta_templateICA.independent <- function(
 
   # COMPUTE LL FOR SQUAREM
   theta_new$LL[1] <- compute_LL_std(
-    theta_new, template_mean, template_var, C_diag, BOLD, verbose=verbose
+    theta_new, template_mean, template_var, C_diag, BOLD, verbose=FALSE
   )
 
   return(theta_new)
@@ -1208,6 +1215,7 @@ make_Pmat <- function(Q, nvox){
 #' @keywords internal
 #'
 bdiag_m <- function(lmat) {
+  # Fast version of Matrix :: .bdiag() -- for the case of *many*  (k x k) matrices:
   ## Copyright (C) 2016 Martin Maechler, ETH Zurich
   if(!length(lmat)) return(new("dgCMatrix"))
   stopifnot(is.list(lmat), is.matrix(lmat[[1]]),

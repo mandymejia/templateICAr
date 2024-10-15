@@ -2,23 +2,43 @@
 % Please edit documentation in R/VB_FCtemplateICA.R
 \name{update_A}
 \alias{update_A}
-\title{Update A for VB FC Template ICA}
+\title{Update A for VB FC Template ICA using IW prior on FC}
 \usage{
-update_A(mu_tau2, mu_S, cov_S, mu_G, mu_alpha, BOLD, ntime, nICs, nvox)
+update_A(
+  mu_tau2,
+  mu_S,
+  E_SSt,
+  BOLD,
+  ntime,
+  nICs,
+  nvox,
+  u_samps,
+  template_FC,
+  usePar = TRUE,
+  final = FALSE
+)
 }
 \arguments{
-\item{mu_tau2, mu_S, cov_S, mu_G, mu_alpha}{Most recent estimates of posterior
+\item{mu_tau2, mu_S, E_SSt}{Most recent estimates of posterior
 moments for these variables.}
 
 \item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
 
-\item{ntime, nICs, nvox}{Number of timepoints in data, number of ICs, and
-the number of data locations.}
+\item{ntime, nICs, nvox}{Number of timepoints, number of ICs, number of locations}
+
+\item{u_samps}{Samples from Gamma for multivariate t prior on A}
+
+\item{template_FC}{IW parameters for FC template}
+
+\item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
+number of cores to use or \code{TRUE}, which will use the number available minus two.}
+
+\item{final}{If TRUE, return cov_A. Default: \code{FALSE}}
 }
 \value{
-List of length two: \code{mu_A} and \code{cov_A}.
+List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
 }
 \description{
-Update A for VB FC Template ICA
+Update A for VB FC Template ICA using IW prior on FC
 }
 \keyword{internal}

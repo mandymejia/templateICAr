@@ -4,16 +4,25 @@
 \alias{struct_template}
 \title{Apply data structure to templates}
 \usage{
-struct_template(template, FORMAT, dat_struct, params)
+struct_template(
+  template,
+  FORMAT,
+  mask_input,
+  params,
+  dat_struct,
+  GICA_parc_table
+)
 }
 \arguments{
 \item{template}{The template}
 
 \item{FORMAT}{"CIFTI", "GIFTI", "NIFTI", or "DATA"}
 
-\item{dat_struct}{The data structure}
+\item{mask_input}{The input mask}
 
 \item{params}{The params}
+
+\item{dat_struct}{The data structure}
 }
 \description{
 Apply data structure to templates

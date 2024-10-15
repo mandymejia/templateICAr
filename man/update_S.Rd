@@ -4,20 +4,32 @@
 \alias{update_S}
 \title{Update S for VB FC Template ICA}
 \usage{
-update_S(mu_tau2, mu_A, cov_A, D_inv, D_inv_S, BOLD, ntime, nICs, nvox)
+update_S(
+  mu_tau2,
+  mu_A,
+  E_AtA,
+  D_inv,
+  D_inv_S,
+  BOLD,
+  nICs,
+  nvox,
+  ntime,
+  final = FALSE
+)
 }
 \arguments{
-\item{mu_tau2, mu_A, cov_A, }{Most recent estimates of posterior moments for
-these variables.}
+\item{mu_tau2, mu_A, E_AtA, }{Most recent posterior estimates}
 
-\item{D_inv, D_inv_S}{Some pre-computed quantities.
-#' @param BOLD (\eqn{T \times V} matrix) preprocessed fMRI data.}
+\item{D_inv, D_inv_S}{Some pre-computed quantities.}
 
-\item{ntime, nICs, nvox}{Number of timepoints in data, number of ICs, and
-the number of data locations.}
+\item{BOLD}{(\eqn{T \times V} matrix) preprocessed fMRI data.}
+
+\item{nICs, nvox, ntime}{Number of ICs, number of data locations, and time series length}
+
+\item{final}{If TRUE, return cov_S. Default: \code{FALSE}}
 }
 \value{
-List of length two: \code{mu_S} and \code{cov_S}.
+List of length three: \code{mu_S} (QxV), \code{E_SSt} (QxQ), and \code{cov_S} (QxQxV).
 }
 \description{
 Update S for VB FC Template ICA

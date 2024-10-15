@@ -4,7 +4,7 @@
 #' @param meanTol,varTol Tolerance for mean and variance of each data location.
 #'  Locations which do not meet these thresholds are masked out of the analysis.
 #'  Defaults: \code{-Inf} for \code{meanTol} (ignore), and \code{1e-6} for
-#'  {varTol}.
+#'  \code{varTol}.
 #' @param verbose Print messages counting how many locations are removed?
 #'
 #' @importFrom matrixStats rowVars
@@ -28,17 +28,17 @@ make_mask <- function(BOLD, meanTol=-Inf, varTol=1e-6, verbose=TRUE){
   if (verbose) {
     warn_part1 <- if (any(!mask_na)) { "additional locations" } else { "locations" }
     if (any(!mask_na)) {
-      cat("\t", sum(!mask_na), paste0("locations removed due to NA/NaN values.\n"))
+      cat(sum(!mask_na), paste0("locations removed due to NA/NaN values.  "))
     }
     # Do not include NA locations in count.
     mask_mean2 <- mask_mean | (!mask_na)
     if (any(!mask_mean2)) {
-      cat("\t", sum(!mask_mean2), warn_part1, paste0("removed due to low mean.\n"))
+      cat(sum(!mask_mean2), warn_part1, paste0("removed due to low mean.  "))
     }
     # Do not include NA or low-mean locations in count.
     mask_var2 <- mask_var | (!mask_mean) | (!mask_na)
     if (any(!mask_var2)) {
-      cat("\t", sum(!mask_var2), warn_part1, paste0("removed due to low variance.\n"))
+      cat(sum(!mask_var2), warn_part1, paste0("removed due to low variance.  "))
     }
   }
 
@@ -160,6 +160,8 @@ get_FORMAT <- function(format){
 
 #' Check required packages for the data format
 #'
+# [TO DO] moved to fMRItools
+#
 #' @param FORMAT The data FORMAT
 #' @return \code{NULL}, invisibly
 #' @keywords internal
@@ -198,3 +200,56 @@ check_req_ifti_pkg <- function(FORMAT){
 #'
 #' @keywords internal
 halflogdetX <- function(X){ sum(log(diag(chol(X)))) }
+
+#' Estimate residual autocorrelation for prewhitening
+#'
+#' @param A Estimated A matrix (T x Q)
+#' @param ar_order,aic Order of the AR model used to prewhiten the data at each location.
+#'  If \code{!aic} (default), the order will be exactly \code{ar_order}. If \code{aic},
+#'  the order will be between zero and \code{ar_order}, as determined by the AIC.
+#' @importFrom stats ar.yw
+#'
+#' @return Estimated AR coefficients and residual variance at every vertex
+pw_estimate <- function(A, ar_order, aic=FALSE){
+
+  nQ <- ncol(A)
+  AR_coefs <- matrix(NA, nQ, ar_order)
+  AR_var <- rep(NA, nQ)
+  AR_AIC <- if (aic) {rep(NA, nQ) } else { NULL }
+  for (q in seq(nQ)) {
+    if (is.na(A[1,q])) { next }
+
+    # # If `AIC`, overwrite the model order with the one selected by `cAIC`.
+    # if (aic) { ar_order <- which.min(cAIC(resids, order.max=ar_order)) - 1 }
+
+    ar_q <- ar.yw(A[,q], aic = aic, order.max = ar_order)
+    aic_order <- ar_q$order # same as length(ar_q$ar)
+    AR_coefs[q,] <- c(ar_q$ar, rep(0, ar_order-aic_order)) # The AR parameter estimates
+    AR_var[q] <- ar_q$var.pred # Residual variance
+    if (aic) { AR_AIC[q] <- ar_q$order } # Model order
+  }
+
+  list(phi = AR_coefs, sigma_sq = AR_var, aic = AR_AIC)
+}
+
+#' Compute inverse covariance matrix for AR process (up to a constant scaling factor)
+#'
+#' @param ar vector of p AR parameters
+#' @param ntime number of time points in timeseries
+#'
+#' @return inverse covariance matrix for AR process (up to a constant scaling factor)
+#' @importFrom Matrix diag
+#' @export
+getInvCovAR <- function(ar, ntime){
+  Inv0 <- diag(ntime)
+  incr0 <- matrix(0, nrow=ntime, ncol=ntime)
+  offs <- row(Inv0) - col(Inv0) #identifies each off-diagonal
+  p <- length(ar)
+  for(k in 1:p){
+    incr <- incr0 #matrix of zeros
+    incr[offs==k] <- -1*ar[k]
+    Inv0 <- Inv0 + incr
+  }
+  Inv <- Inv0 %*% t(Inv0)
+  return(Inv)
+}

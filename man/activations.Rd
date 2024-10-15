@@ -2,14 +2,14 @@
 % Please edit documentation in R/activations.R
 \name{activations}
 \alias{activations}
-\title{Activations of (s)tICA}
+\title{Activations of (spatial) template ICA}
 \usage{
 activations(
   tICA,
   u = NULL,
   z = NULL,
   alpha = 0.01,
-  type = c(">", "<", "!="),
+  type = c(">", "abs >", "<", "!="),
   method_p = "BH",
   verbose = FALSE,
   which.ICs = NULL,
@@ -23,17 +23,21 @@ activations(
 specified directly with \code{u}, or a z-score-like threshold in terms of
 standard deviations (the SD of values in the mean template) can be specified
 with \code{z}. Only one type of threshold can be used. Default: \code{NULL}
-(do not use a threshold). Either argument can also be a vector of the same
-length as \code{which.ICs}, to use different thresholds for each IC.}
+(do not use a threshold). Either argument can also be a vector to test
+multiple thresholds at once, as long as \code{type} is not \code{"!="}
+(to ensure the activation regions are successive subsets).}
 
-\item{alpha}{Significance level for joint PPM. Default: \code{0.01}.}
+\item{alpha}{Significance level for hypothesis testing. Default: \code{0.01}.}
 
-\item{type}{Type of region.  Default: \code{">"} (positive excursion region).}
+\item{type}{Type of region: \code{">"} (default), \code{"abs >"}, \code{"<"},
+or \code{"!="}. \code{"abs >"} tests for magnitude by taking the absolute
+value and then testing if they are greater than... .}
 
 \item{method_p}{If the input is a \code{"tICA.[format]"} model object, the type of
 multiple comparisons correction to use for p-values, or \code{NULL} for no
 correction. See \code{help(p.adjust)}. Default: \code{"BH"} (Benjamini &
-Hochberg, i.e. the false discovery rate).}
+Hochberg, i.e. the false discovery rate). Note that multiple comparisons
+will account for data locations, but not ICs.}
 
 \item{verbose}{If \code{TRUE}, display progress of algorithm. Default:
 \code{FALSE}.}
@@ -56,7 +60,8 @@ For CIFTI-format activations, use \code{plot} to visualize the activation
 maps.
 }
 \description{
-Identify areas of activation in each independent component map
+Identify areas of activation in each independent component map from the
+result of (spatial) template ICA.
 }
 \examples{
 \dontrun{

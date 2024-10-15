@@ -8,10 +8,12 @@ norm_BOLD(
   BOLD,
   center_rows = TRUE,
   center_cols = FALSE,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_xifti = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0
+  scale_sm_xifti_mask = NULL,
+  TR = NULL,
+  hpf = 0.01
 )
 }
 \arguments{
@@ -21,10 +23,10 @@ norm_BOLD(
 location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"} and
 \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
@@ -33,8 +35,23 @@ locations in alignment with \code{BOLD}, as well as the smoothing FWHM
 (default: \code{2}). If no \code{"xifti"} object is provided (default), do
 not smooth.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend.}
+\item{scale_sm_xifti_mask}{For local scaling with smoothing, the data must
+be unmasked to be mapped back to the surface. So if the data are masked,
+provide the mask here.}
+
+\item{TR}{The temporal resolution of the data, i.e. the time between volumes,
+in seconds. \code{TR} is required for detrending with \code{hpf}.}
+
+\item{hpf}{The frequency at which to apply a highpass filter to the data
+during pre-processing, in Hertz. Default: \code{0.01} Hertz. Set to \code{0}
+to disable the highpass filter.
+
+The highpass filter serves to detrend the data, since low-frequency
+variance is associated with noise. Highpass filtering is accomplished by
+nuisance regression of discrete cosine transform (DCT) bases.
+
+Note the \code{TR} argument is required for highpass filtering. If
+\code{TR} is not provided, \code{hpf} will be ignored.}
 }
 \value{
 Normalized BOLD data matrix (\eqn{V \times T})

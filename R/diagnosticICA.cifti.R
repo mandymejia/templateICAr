@@ -19,7 +19,7 @@
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).  For spatial
+#'  Default: \code{c("all")}.  For spatial
 #'  modeling (performed if \code{surfL_fname} and/or \code{surfR_fname} provided), 
 #'  subcortical locations will be ignored.
 #' @param surfL_fname (Required for spatial modeling) File path of GIFTI surface geometry
@@ -55,7 +55,7 @@
 #'
 diagnosticICA.cifti <- function(cifti_fname,
                               templates,
-                              brainstructures=c("left","right"),
+                              brainstructures="all",
                               spatial_model=FALSE,
                               surfL_fname=NULL,
                               surfR_fname=NULL,

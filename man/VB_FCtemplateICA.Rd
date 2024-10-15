@@ -8,15 +8,21 @@ VB_FCtemplateICA(
   template_mean,
   template_var,
   template_FC,
+  method_FC = c("VB1", "VB2"),
+  nsamp_u = 10000,
+  CI_FC = 0.95,
+  return_FC_samp = FALSE,
   prior_params = c(0.001, 0.001),
   BOLD,
+  TR = NULL,
   A0,
   S0,
   S0_var,
   maxiter = 100,
   miniter = 3,
   epsilon = 0.001,
-  eps_inter = NULL,
+  usePar = TRUE,
+  PW = FALSE,
   verbose = FALSE
 )
 }
@@ -29,6 +35,22 @@ of data locations.}
 for each IC in the template.}
 
 \item{template_FC}{(list) Parameters of functional connectivity template.}
+
+\item{method_FC}{Variational Bayes (VB) method for FC template ICA model:
+\code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+\code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+using a combination of Cholesky, SVD, and random pivoting.}
+
+\item{nsamp_u}{For VB1, the number of samples to generate from u ~ Gamma, where
+A is Gaussian conditional on u. Default: \code{10000}.}
+
+\item{CI_FC}{Level of posterior credible interval to construct for each FC element.
+Default: \code{0.95}.}
+
+\item{return_FC_samp}{Should the FC samples (\eqn{QxQxK}) be returned, where K
+is the number of posterior samples generated? May be a large object.  For VB1,
+K is equal to nsamp_u. For VB2, K is equal to the number of samples from p(G)
+contained in template_FC.}
 
 \item{prior_params}{Alpha and beta parameters of IG prior on \eqn{\tau^2}
 (error variance). Default: \code{0.001} for both.}
@@ -46,14 +68,12 @@ variance matrix \code{S0_var}.}
 \item{epsilon}{Smallest proportion change in parameter estimates between iterations.
 Default: \code{0.001}.}
 
-\item{eps_inter}{Intermediate values of epsilon at which to save results (used
-to assess benefit of more stringent convergence rules). Default:
-\code{NULL} (do not save). These values should be in decreasing order
-(larger to smaller error) and all values should be between zero and
-\code{epsilon}.}
+\item{usePar}{Parallelize the computation? Default: \code{FALSE}. Can be the
+number of cores to use or \code{TRUE}, which will use the number available minus two.}
 
-\item{verbose}{If \code{TRUE}, display progress of algorithm.
-Default: \code{FALSE}.}
+\item{PW}{Prewhiten to account for residual autocorrelation?}
+
+\item{verbose}{If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.}
 }
 \value{
 A list of computed values, including the final parameter estimates.

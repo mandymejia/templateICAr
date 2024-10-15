@@ -3,25 +3,32 @@
 #' @param template The template
 #' @param FORMAT "CIFTI", "GIFTI", "NIFTI", or "DATA"
 #' @param dat_struct The data structure
+#' @param mask_input The input mask
 #' @param params The params
 #'
 #' @keywords internal
-struct_template <- function(template, FORMAT, dat_struct, params){
+struct_template <- function(template, FORMAT, mask_input, params, dat_struct, GICA_parc_table){
+  # Un-apply the input mask.
+  if (!is.null(mask_input)) {
+    if (FORMAT=="NIFTI") {
+      template <- fMRItools::unvec_vol(template, drop(mask_input))
+    } else {
+      template <- fMRItools::unmask_mat(template, mask_input)
+    }
+  }
+
+  # Add metadata.
   if (FORMAT == "CIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
     }
-
     template <- ciftiTools::newdata_xifti(dat_struct, template)
-    if (params$inds == paste("all", ncol(template))) {
-      template$meta$cifti$names <- paste(
-        "IC", seq(ncol(template))
-      )
+    template$meta$cifti$names <- if (!is.null(GICA_parc_table)) {
+      rownames(GICA_parc_table)
     } else {
-      template$meta$cifti$names <- paste(
-        "IC", strsplit(params$inds, " ")[[1]]
-      )
+      paste("IC", params$inds)
     }
+
   } else if (FORMAT == "GIFTI") {
     if (!requireNamespace("ciftiTools", quietly = TRUE)) {
       stop("Package \"ciftiTools\" needed to work with GIFTI data. Please install it.", call. = FALSE)
@@ -30,12 +37,11 @@ struct_template <- function(template, FORMAT, dat_struct, params){
     template <- ciftiTools:::as.metric_gifti(
       template, hemisphere=dat_struct$hemisphere
     )
+
   } else if (FORMAT == "NIFTI") {
-    template <- RNifti::asNifti(
-      fMRItools::unvec_vol(template, drop(dat_struct), fill=NA),
-      reference=dat_struct
-    )
+    template <- RNifti::asNifti(template, reference=mask_input)
   }
+
   template
 }
 
@@ -93,6 +99,21 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   FC <- "FC" %in% names(x$template)
 
+  # Fix for old version
+  if (FORMAT == "CIFTI" && !is.null(x$dat_struct$meta$subcort$labels)) {
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to export template. Please install it.", call. = FALSE)
+    }
+    sub_levs <- levels(x$dat_struct$meta$subcort$labels)
+    if (length(sub_levs) != length(ciftiTools::substructure_table()$ciftiTools_Name)) {
+      x$dat_struct$meta$subcort$labels <- factor(
+        x$dat_struct$meta$subcort$labels,
+        levels = ciftiTools::substructure_table()$ciftiTools_Name
+      )
+      stopifnot(ciftiTools:::is.subcort_labs(x$dat_struct$meta$subcort$labels))
+    }
+  }
+
   # `out_fname` ----------------------------------------------------------------
   if (!is.null(out_fname)) {
     out_fname <- as.character(out_fname)
@@ -100,10 +121,10 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     if (length(out_fname) == 1) {
       if (!endsWith(out_fname, FORMAT_extn)) { out_fname <- paste0(out_fname, FORMAT_extn) }
       out_fname <- c(
-        gsub(FORMAT_extn, paste0("_mean", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_var", FORMAT_extn), out_fname),
-        gsub(FORMAT_extn, paste0("_varDecomp.rds"), out_fname),
-        gsub(FORMAT_extn, paste0("_FC.rds"), out_fname)
+        gsub(paste0(FORMAT_extn, "$"), paste0("_mean", FORMAT_extn), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_var", FORMAT_extn), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_varDecomp.rds"), out_fname),
+        gsub(paste0(FORMAT_extn, "$"), paste0("_FC.rds"), out_fname)
       )
       if (!FC) { out_fname <- out_fname[seq(3)] }
     } else if (length(out_fname) == 3 + as.numeric(FC)) {
@@ -125,9 +146,10 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     }
   }
 
-  x$template[names(x$template)!="FC"] <- lapply(
-    x$template[names(x$template)!="FC"], struct_template,
-    FORMAT, x$dat_struct, x$params
+  tm_struct_mask <- !(names(x$template) %in% c("FC", "FC_Chol"))
+  x$template[tm_struct_mask] <- lapply(
+    x$template[tm_struct_mask], struct_template,
+    FORMAT, x$mask_input, x$params, x$dat_struct, x$GICA_parc_table
   )
 
   # Select the chosen variance decomposition.
@@ -135,6 +157,7 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
     mean = x$template$mean,
     var = x$template[[var_name]],
     FC = x$template$FC
+    #, FC_Chol=FC_Chol # [TO DO]: want to export anything in `FC_Chol`?
   )
 
   #compute mean and variance of FC
@@ -153,6 +176,13 @@ export_template <- function(x, out_fname=NULL, var_method=c("non-negative", "unb
 
   # Add params to `"xifti"` metadata; resample it.
   if (FORMAT == "CIFTI") {
+    x$params <- lapply(
+      x$params,
+      function(q) {
+        if (is.null(q)) { q <- "NULL"};
+        paste0(as.character(q), collapse=" ")
+      }
+    )
     x$template$mean$meta$cifti$misc <- c(list(template="mean"), x$params)
     x$template$var$meta$cifti$misc <- c(list(template="var"), x$params)
   }

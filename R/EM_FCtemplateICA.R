@@ -64,7 +64,7 @@ EM_FCtemplateICA <- function(template_mean,
   stopifnot(is.numeric(prior_params))
   stopifnot(is_posNum(maxiter, "numeric") && maxiter==round(maxiter))
   stopifnot(is_posNum(miniter, "numeric") && miniter==round(miniter))
-  stopifnot(miniter < maxiter)
+  stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
   if (!is.null(eps_inter)) {
     stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))

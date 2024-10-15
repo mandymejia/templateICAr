@@ -20,13 +20,23 @@
 #'  non-negative template variance adds to it to account for greater potential
 #'  between-subjects variation. (The template mean is the same for either choice
 #'  of \code{tvar_method}.)
-#' @inheritParams center_Bcols_Param
-#' @inheritParams scale_Param
+#' @param GSR Center BOLD across columns (each image)? This
+#'  is equivalent to performing global signal regression. Default:
+#'  \code{"template"}, to use the same option used for estimation of the
+#'  \code{template}.
+#' @param scale \code{"global"}, \code{"local"}, or \code{"none"}.
+#'  Global scaling will divide the entire data matrix by the mean image standard
+#'  deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
+#'  data location's time series by its estimated standard deviation. Default:
+#'  \code{"template"}, to use the same option used for estimation of the
+#'  \code{template}.
 #' @param scale_sm_surfL,scale_sm_surfR,scale_sm_FWHM Only applies if
 #'  \code{scale=="local"} and \code{BOLD} represents CIFTI-format data. To
 #'  smooth the standard deviation estimates used for local scaling, provide the
 #'  surface geometries along which to smooth as GIFTI geometry files or
-#'  \code{"surf"} objects, as well as the smoothing FWHM (default: \code{2}).
+#'  \code{"surf"} objects, as well as the smoothing FWHM (default:
+#'  \code{"template"} to use the same option used for estimation of the
+#'  \code{template}).
 #'
 #'  If \code{scale_sm_FWHM==0}, no smoothing of the local standard deviation
 #'  estimates will be performed.
@@ -40,47 +50,56 @@
 #'  resolution as the \code{BOLD} data.
 #' @param nuisance (Optional) Signals to regress from the data, given as a
 #'  numeric matrix with the same number of rows as there are volumes in the
-#'  \code{BOLD} data. If multiple sessions \code{BOLD} sessions are provided,
+#'  \code{BOLD} data. If multiple \code{BOLD} sessions are provided,
 #'  this argument can be a list to use different nuisance regressors for
 #'  different sessions. Nuisance regression is performed as a first step, before
 #'  centering, scaling, and denoising. An intercept column will automatically be
 #'  added to \code{nuisance}. If \code{NULL}, no extra nuisance signals will be
 #'  regressed from the data, but a nuisance regression will still be used if
-#'  warranted by \code{scrub} or \code{detrend_DCT}.
+#'  warranted by \code{scrub} or \code{hpf}.
 #'
 #' @param scrub (Optional) A numeric vector of integers indicating the indices
 #'  of volumes to scrub from the BOLD data. (List the volumes to remove, not the
-#'  ones to keep.) If multiple sessions \code{BOLD} sessions are provided, this
+#'  ones to keep.) If multiple \code{BOLD} sessions are provided, this
 #'  argument can be a list to remove different volumes for different sessions.
 #'  Scrubbing is performed within nuisance regression by adding a spike
 #'  regressor to the nuisance design matrix for each volume to scrub. If
 #'  \code{NULL}, do not scrub.
 #'
-#' @param detrend_DCT Detrend the data? This is an integer number of DCT bases
-#'  to use for detrending. If \code{0} (default), do not detrend. Detrending
-#'  is performed within nuisance regression by regressing out the DCT bases
-#'  alongside other \code{nuisance} signals or spike regressors to \code{scrub}
-#'  unwanted volumes.
+#' @param TR,hpf These arguments control detrending. \code{TR} is the temporal
+#'  resolution of the data, i.e. the time between volumes, in seconds;
+#'  \code{hpf} is the frequency of the high-pass filter, in Hertz. Detrending
+#'  is performed via nuisance regression of DCT bases. Default:
+#'  \code{"template"} to use the values from the template. Be sure to set the
+#'  correct \code{TR} if it's different for the new data compared to the data
+#'  used in \code{estimate_template}.
 #'
+#'  Note that if multiple \code{BOLD} sessions are provided, their
+#'  \code{TR} and \code{hpf} must be the same; both arguments accept only one
+#'  value.
 #' @param Q2,Q2_max Denoise the BOLD data? Denoising is based on modeling and
 #'  removing nuisance ICs. It may result in a cleaner estimate for smaller
 #'  datasets, but it may be unnecessary (and time-consuming) for larger datasets.
 #'
 #'  Set \code{Q2} to control denoising: use a positive integer to specify the
 #'  number of nuisance ICs, \code{NULL} to have the number of nuisance ICs
-#'  estimated by PESEL (default), or zero to skip denoising.
+#'  estimated by PESEL, or zero to skip denoising.
 #'
 #'  If \code{is.null(Q2)}, use \code{Q2_max} to specify the maximum number of
 #'  nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the number of timepoints in BOLD
-#'  and \eqn{Q} is the number of group ICs. If \code{NULL} (default),
-#'  \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#'  and \eqn{Q} is the number of group ICs. If \code{NULL}, \code{Q2_max} will
+#'  be set to \eqn{T * .50 - Q}, rounded.
+#'
+#'  The defaults for both arguments is \code{"template"}, to use the same option
+#'  used for estimation of the \code{template}.
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 #'  cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 #'  gray matter). Can also be \code{"all"} (obtain all three brain structures).
-#'  Default: \code{c("left","right")} (cortical surface only).
+#'  Default: \code{"template"} to use the same brainstructures present in the
+#'  \code{template}).
 #' @param mask Required if and only if the entries of \code{BOLD} are NIFTI
 #'  file paths or \code{"nifti"} objects. This is a brain map formatted as a
 #'  binary array of the same spatial dimensions as the fMRI data, with
@@ -108,7 +127,12 @@
 #'
 #'  If \code{BOLD} is a numeric matrix, \code{spatial_model} should be a list of meshes
 #'  (see \code{\link{make_mesh}}).
-#' @inheritParams varTol_Param
+#' @param varTol Tolerance for variance of each data location. For each scan,
+#'  locations which do not meet this threshold are masked out of the analysis.
+#'  Default: \code{"template"} to use the same brainstructures present in the
+#'  \code{template}). Variance is calculated on the original data, before
+#'  any normalization. Set to \code{0} to avoid removing locations due to
+#'  low variance.
 #' @param resamp_res Only applies if \code{BOLD} represents CIFTI-format data.
 #'  The target resolution for resampling (number of cortical surface vertices
 #'  per hemisphere). For spatial modelling, a value less than 10000 is
@@ -122,22 +146,30 @@
 #'  Default: \code{TRUE}. Skipping dimension reduction will slow the model
 #'  estimation, but may result in more accurate results. Ignored for FC template
 #'  ICA
-#' @param method_FC Bayesian estimation method for FC template ICA model:
-#'  variational Bayes, \code{"VB"} (default), or Expectation-Maximization, \code{"EM"},
-#'  or EM initialized with VB, \code{"EM_VB"}.
+#' @param method_FC Variational Bayes (VB) method for FC template ICA model:
+#'  \code{"VB1"} (default) uses a conjugate Inverse-Wishart prior for the cor(A);
+#'  \code{"VB2"} draws samples from p(cor(A)) to emulate the population distribution
+#'  using a combination of Cholesky, SVD, and random pivoting.
+#'  \code{"none"} Uses standard template ICA without FC prior
 #' @param maxiter Maximum number of EM or VB iterations. Default: \code{100}.
 #' @param miniter Minimum number of EM or VB iterations. Default: \code{3}.
 #' @param epsilon Smallest proportion change between iterations. Default:
 #'  \code{.001}.
-#' @param eps_inter Intermediate values of epsilon at which to save results (used
-#'  to assess benefit of more stringent convergence rules). Default:
-#'  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
-#'  (larger to smaller error) and all values should be between zero and
-#'  \code{epsilon}.
+# @param eps_inter Intermediate values of epsilon at which to save results (used
+#  to assess benefit of more stringent convergence rules). Default:
+#  \code{10e-2} to \code{10e-5}. These values should be in decreasing order
+#  (larger to smaller error) and all values should be between zero and
+#  \code{epsilon}.
 #' @param kappa_init Starting value for kappa. Default: \code{0.2}.
-#' @param usePar Parallelize the computation over data locations? Default:
-#'  \code{FALSE}. Can be the number of cores to use or \code{TRUE}, which will
-#'  use the number on the PC minus two.
+#' @param usePar Parallelize the computation? Default: \code{TRUE}. Can be the
+#' number of cores to use or \code{TRUE}, which will use the number available minus two.
+#' @param PW Prewhiten to account for residual autocorrelation? Default: \code{FALSE}.
+#' Only affects FC template ICA models.
+# @param tESS_correction Take into account effective sample size due to temporal autocorrelation?
+# Default: \code{FALSE}. Only affects FC template ICA models.
+# @param sESS_correction To take into account effective sample size due to spatial correlation,
+# provide list of mesh vertices, faces, and data indices (in that order). Default: \code{FALSE}.
+# Only affects FC template ICA models.
 #' @param verbose If \code{TRUE}, display progress of algorithm
 # @param common_smoothness If \code{TRUE}. use the common smoothness version
 #  of the spatial template ICA model, which assumes that all IC's have the same
@@ -158,10 +190,11 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum
+#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
+#' @importFrom Matrix bandSparse Matrix
 #'
 #' @examples
 #' \dontrun{
@@ -171,37 +204,80 @@
 templateICA <- function(
   BOLD, template,
   tvar_method=c("non-negative", "unbiased"),
-  scale=c("global", "local", "none"),
+  #tinds=NULL,
+  scale=c("template", "global", "local", "none"),
   scale_sm_surfL=NULL,
   scale_sm_surfR=NULL,
-  scale_sm_FWHM=2,
+  scale_sm_FWHM="template",
   nuisance=NULL,
   scrub=NULL,
-  detrend_DCT=0,
-  center_Bcols=FALSE,
-  Q2=NULL,
-  Q2_max=NULL,
-  brainstructures=c("left","right"),
+  TR=NULL, hpf="template",
+  GSR="template",
+  Q2="template",
+  Q2_max="template",
+  brainstructures="template",
   mask=NULL,
   time_inds=NULL,
-  varTol=1e-6,
+  varTol="template",
   spatial_model=NULL,
   resamp_res=NULL,
   rm_mwall=TRUE,
-  reduce_dim=TRUE,
-  method_FC=c("VB", "EM", "EM_VB"),
+  reduce_dim=FALSE,
+  method_FC=c("VB1", "VB2", "none"),
   maxiter=100,
   miniter=3,
   epsilon=0.001,
-  eps_inter=NULL,
+  #eps_inter=NULL,
   kappa_init=0.2,
   #common_smoothness=TRUE,
-  usePar=FALSE,
+  usePar=TRUE,
+  PW=FALSE,
   verbose=TRUE){
+
+  t0 <- Sys.time()
 
   # Check arguments ------------------------------------------------------------
 
-  # Simple argument checks.
+  # Read in template and set arguments designated to match the template.
+  if (is.character(template)) { template <- readRDS(template) }
+  TFORMAT <- class(template)[grepl("template", class(template))]
+  if (length(TFORMAT) != 1) { stop("`template` is not a template.") }
+  TFORMAT <- toupper(gsub("template.", "", TFORMAT, fixed=TRUE))
+
+  if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
+  if (isTRUE(scale)) {
+    warning(
+      "Setting `scale='global'`. Use `'global'` or `'local'` ",
+      "instead of `TRUE`, which has been deprecated."
+    )
+    scale <- "global"
+  }
+  scale <- match.arg(scale, c("template", "global", "local", "none"))
+  if (scale == "template") { scale <- template$params$scale }
+  if (scale_sm_FWHM == "template") {
+    scale_sm_FWHM <- template$params$scale_sm_FWHM
+  }
+  if (is.null(TR)) { TR <- "from_xifti_metadata" }
+  stopifnot(length(TR)==1) # be explicit, diff TR for multi-BOLD is not allowed
+  if (TR == "template") { TR <- template$params$TR }
+  stopifnot(length(hpf)==1) # be explicit, diff TR for multi-BOLD is not allowed
+  if (hpf == "template") { hpf <- template$params$hpf }
+  if (GSR == "template") {
+    GSR <- template$params$GSR
+  }
+  if (Q2 == "template") { Q2 <- template$params$Q2 }
+  if (Q2_max == "template") { Q2_max <- template$params$Q2_max }
+  brainstructures <- match.arg(
+    brainstructures,
+    c("template", "left", "right", "subcortical", "all"),
+    several.ok=TRUE
+  )
+  if (length(brainstructures)==1 && brainstructures == "template") {
+    brainstructures <- template$params$brainstructures
+  }
+  if (varTol == "template") { varTol <- template$params$varTol }
+
+  # Remaining simple argument checks.
   tvar_method <- match.arg(tvar_method, c("non-negative", "unbiased"))
   tvar_name <- switch(tvar_method, `non-negative`="varNN", unbiased="varUB")
   if (is.null(scale) || isFALSE(scale)) { scale <- "none" }
@@ -212,10 +288,11 @@ templateICA <- function(
     )
     scale <- "global"
   }
-  scale <- match.arg(scale, c("global", "local", "none"))
   stopifnot(is_1(scale_sm_FWHM, "numeric"))
-  if (isFALSE(detrend_DCT)) { detrend_DCT <- 0 }
-  stopifnot(is_1(center_Bcols, "logical"))
+  if (is.null(hpf)) { hpf <- 0 }
+  if (TR!= "from_xifti_metadata") { stopifnot(fMRItools::is_posNum(TR)) }
+  stopifnot(fMRItools::is_posNum(hpf, zero_ok=TRUE))
+  stopifnot(is_1(GSR, "logical"))
   if (!is.null(Q2)) { stopifnot(is_posNum(Q2, zero_ok=TRUE)) } # Q2_max checked later.
   stopifnot(is_posNum(varTol))
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
@@ -227,15 +304,15 @@ templateICA <- function(
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
-  method_FC <- match.arg(method_FC, c("VB", "EM", "EM_VB"))
+  method_FC <- match.arg(method_FC, c("VB1", "VB2", "none"))
   stopifnot(is_posNum(maxiter))
   stopifnot(is_posNum(miniter))
   stopifnot(miniter <= maxiter)
   stopifnot(is_posNum(epsilon))
-  if (!is.null(eps_inter)) {
-    stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
-    stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
-  }
+  # if (!is.null(eps_inter)) {
+  #   stopifnot(is.numeric(eps_inter) && all(diff(eps_inter) < 0))
+  #   stopifnot(eps_inter[length(eps_inter)]>0 && eps_inter[1]>epsilon)
+  # }
   if (!is.null(kappa_init)) { stopifnot(is_posNum(kappa_init)) }
   stopifnot(is_1(usePar, "logical") || is_1(usePar, "numeric"))
   stopifnot(is_1(verbose, "logical"))
@@ -243,18 +320,15 @@ templateICA <- function(
   # `usePar`
   if (!isFALSE(usePar)) {
     check_parallel_packages()
-
     cores <- parallel::detectCores()
     if (isTRUE(usePar)) { nCores <- cores[1] - 2 } else { nCores <- usePar; usePar <- TRUE }
     if (nCores < 2) {
       usePar <- FALSE
     } else {
-      cluster <- parallel::makeCluster(nCores)
-      doParallel::registerDoParallel(cluster)
+      #cluster <- parallel::makeCluster(nCores)
+      doParallel::registerDoParallel(nCores)
     }
   }
-
-  # `out_fname`?
 
   # `BOLD` ---------------------------------------------------------------------
   cat("\n")
@@ -299,7 +373,6 @@ templateICA <- function(
 
   # `brainstructures`
   if (FORMAT == "CIFTI") {
-    brainstructures <- match.arg(brainstructures, c("left", "right", "subcortical", "all"), several.ok=TRUE)
     if ("all" %in% brainstructures) { brainstructures <- c("left", "right", "subcortical") }
     do_left <- "left" %in% brainstructures
     do_right <- "right" %in% brainstructures
@@ -307,13 +380,16 @@ templateICA <- function(
   }
 
   # Read in CIFTI, GIFTI, or NIFTI files.
+  if(verbose) cat("Reading BOLD data.\n")
+
   # (Need to do now rather than later, so that CIFTI resolution info can be used.)
   if (format == "CIFTI") {
     for (bb in seq(nN)) {
       if (is.character(BOLD[[bb]])) {
         BOLD[[bb]] <- ciftiTools::read_cifti(
           BOLD[[bb]], resamp_res=resamp_res,
-          brainstructures=brainstructures
+          brainstructures=brainstructures,
+          verbose=FALSE
         )
       }
       stopifnot(ciftiTools::is.xifti(BOLD[[bb]]))
@@ -352,12 +428,8 @@ templateICA <- function(
   }
 
   # templates ------------------------------------------------------------------
-  if (is.character(template)) { template <- readRDS(template) }
 
   # Check template format matches BOLD format.
-  TFORMAT <- class(template)[grepl("template", class(template))]
-  if (length(TFORMAT) != 1) { stop("`template` is not a template.") }
-  TFORMAT <- toupper(gsub("template.", "", TFORMAT, fixed=TRUE))
   if (TFORMAT != FORMAT) {
     stop("The BOLD format is '", FORMAT, ",' but the template format is '", TFORMAT, ".'")
   }
@@ -369,9 +441,9 @@ templateICA <- function(
   } else {
     pmatch <- c(
       scale=scale,
-      #scale_sm_FWHM=scale_sm_FWHM,
-      #detrend_DCT=detrend_DCT,
-      center_Bcols=center_Bcols,
+      scale_sm_FWHM=scale_sm_FWHM,
+      hpf=hpf,
+      GSR=GSR,
       # Q2=Q2, Q2_max=Q2_max,
       varTol=varTol
     )
@@ -381,26 +453,32 @@ templateICA <- function(
         warning(paste0(
           "The `", pname, "` parameter was ",
           template$params[[pname]], " for the template, but is ",
-          pmatch[pname], " here. These should match. (Proceeding anyway.)\n"
+          pmatch[pname], " here. Generally, these should match. (Proceeding anyway.)\n"
         ))
       }
-    }
-    if (!all(detrend_DCT == template$params$detrend_DCT)) {
-      warning(
-        "The `detrend_DCT` parameter was ",
-        template$params$detrend_DCT, " for the template, but is ",
-        paste0(detrend_DCT, collapse=", "),
-        " here. If the duration and TR of both fMRI data are the same, these should match. (Proceeding anyway.)\n"
-      )
     }
   }
 
   #check for FC template
   do_FC <- FALSE; template_FC <- NULL
-  if('FC' %in% names(template$template)) {
-    do_FC <- TRUE
-    template_FC <- template$template$FC
-    template$template$FC <- NULL
+  if(method_FC == "VB1"){
+    if('FC' %in% names(template$template)) {
+      do_FC <- TRUE
+      template_FC <- template$template$FC
+      template$template$FC <- template$template$FC_Chol <- NULL
+    } else {
+      warning("FC information not available in `template`.  I will set `method_FC` to 'none' and perform standard template ICA.")
+      method_FC <- "none"
+    }
+  } else if(method_FC == "VB2"){
+    if('FC_Chol' %in% names(template$template)) {
+      do_FC <- TRUE
+      template_FC <- template$template$FC_Chol
+      template$template$FC <- template$template$FC_Chol <- NULL
+    } else {
+      warning("Cholesky FC information not available in `template`.  I will set `method_FC` to 'none' and perform standard template ICA.")
+      method_FC <- "none"
+    }
   }
 
   # Get `nI`, `nL`, and `nV`.
@@ -436,8 +514,8 @@ templateICA <- function(
       bs_missing <- tbs[!(tbs %in% bs2)]
       if (verbose) {
         cat(paste0(
-          "Ignoring ", ifelse(length(bs_missing) > 1, "these brain structures", "This brain structure"),
-          " in the template:", paste(bs_missing, collapse=", "), "."
+          "Ignoring ", ifelse(length(bs_missing) > 1, "these brain structures", "this brain structure"),
+          " in the template: ", paste(bs_missing, collapse=", "), ".\n"
         ))
       }
       template <- removebs_template(template, bs_missing)
@@ -471,7 +549,7 @@ templateICA <- function(
     }
     nI <- dim(mask)
     # Check its compatibility with the template
-    tds_dim <- dim(template$dat_struct) # has an empty last dim
+    tds_dim <- dim(template$mask_input) # has an empty last dim
     if (length(tds_dim) == length(nI) + 1 && tds_dim[length(tds_dim)] == 1) {
       tds_dim <- tds_dim[seq(length(tds_dim)-1)]
     }
@@ -490,7 +568,8 @@ templateICA <- function(
   # Get the selected variance.
   template <- list(
     mean = template$template$mean,
-    var = template$template[[tvar_name]]
+    var = template$template[[tvar_name]],
+    sigma_sq0 = template$sigma_sq0
   )
   # Make variance values non-negative (for unbiased template.)
   template$var[] <- pmax(0, template$var)
@@ -598,10 +677,34 @@ templateICA <- function(
 
 
   # Process the scan -----------------------------------------------------------
+  ## Vectorize and mask data; get dimensions -----------------------------------
+
   # Get each entry of `BOLD` as a data matrix or array.
+  # If `FORMAT==CIFTI`, get `TR` if needed.
   if (FORMAT %in% c("CIFTI", "GIFTI")) {
     for (bb in seq(nN)) {
-      if (ciftiTools::is.xifti(BOLD[[bb]])) { BOLD[[bb]] <- as.matrix(BOLD[[bb]]) }
+      if (ciftiTools::is.xifti(BOLD[[bb]])) {
+        # Get `TR` if not have yet; or check that it matches the current `TR`
+        if (!is.null(BOLD[[bb]]$meta$cifti$time_step)) {
+          if (TR == "from_xifti_metadata") {
+            if (verbose) {
+              message(
+                "Setting TR=", BOLD[[bb]]$meta$cifti$time_step,
+                ifelse(nN==1, " based on BOLD.", paste0(" based on BOLD #", bb, "."))
+              )
+            }
+            TR <- BOLD[[bb]]$meta$cifti$time_step
+          } else if (TR != BOLD[[bb]]$meta$cifti$time_step) {
+            warning(
+              "The `time_step` metadata for BOLD #", bb, " is ",
+              BOLD[[bb]]$meta$cifti$time_step,
+              ", but TR=", TR, " based on either the provided `TR` argument",
+              " or an earlier BOLD. Proceeding anyway with TR=", TR, "."
+            )
+          }
+        }
+        BOLD[[bb]] <- as.matrix(BOLD[[bb]])
+      }
       stopifnot(is.matrix(BOLD[[bb]]))
     }
   } else if (FORMAT == "NIFTI") {
@@ -655,7 +758,7 @@ templateICA <- function(
       cat("Unmasked dimensions:           ", paste(nI, collapse=" x "), "\n")
     }
     cat('Number of template ICs:        ', nL, "\n")
-    cat('Number of BOLD scans:          ', nN, "\n")
+    cat('Number of BOLD sessions:       ', nN, "\n")
     cat('Total number of timepoints:    ', sum(nT), "\n")
     cat('\n')
   }
@@ -675,6 +778,7 @@ templateICA <- function(
   if (use_mask2) {
     template$mean <- template$mean[mask2,,drop=FALSE]
     template$var <- template$var[mask2,,drop=FALSE]
+    template$sigma_sq0 <- template$sigma_sq0[mask2]
   }
 
   # Check that numbers of data locations (nV), time points (nT) and ICs (nL) makes sense, relatively
@@ -690,8 +794,9 @@ templateICA <- function(
 
   # Mask out additional locations due to data mask.
   mask3 <- apply(do.call(rbind, lapply(BOLD, make_mask, varTol=varTol)), 2, all)
+  use_mask3 <- any(!mask3)
 
-  if (any(!mask3)) {
+  if (use_mask3) {
     if (do_spatial) {
       stop('Not supported yet: flat or NA voxels in data, after applying template mask, with spatial model.')
     }
@@ -701,8 +806,8 @@ templateICA <- function(
 
     if(verbose) {
       cat(paste0(
-        'Excluding ', sum(!mask3),
-        ' bad (flat or NA) voxels/vertices from analysis.\n'
+        'In total, excluding ', sum(!mask3),
+        ' locations from analysis due to flat or NA values in BOLD.\n'
       ))
     }
     template_orig <- template
@@ -710,50 +815,66 @@ templateICA <- function(
     dBOLDs <- lapply(BOLD, dim); dBOLD <- dBOLDs[[1]]
     template$mean <- template$mean[mask3,]
     template$var <- template$var[mask3,]
-    mask2[mask2][!mask3] <- FALSE
+    template$sigma_sq0 <- template$sigma_sq0[mask3]
+    if (use_mask2) { mask2[mask2][!mask3] <- FALSE }
   }
 
+  ## Nuisance regression and scrubbing -----------------------------------------
+  if (verbose) { cat("\n") }
   if (verbose) { cat("Pre-processing BOLD data.\n") }
-  # Nuisance regression and scrubbing ------------------------------------------
+
   if (is.list(nuisance)) { stopifnot(length(nuisance)==nN) }
   if (is.list(scrub)) { stopifnot(length(scrub)==nN) }
-  if (is.list(detrend_DCT)) { detrend_DCT <- as.numeric(detrend_DCT) }
-  if (is.numeric(detrend_DCT)) { stopifnot(length(detrend_DCT) %in% c(1, nN)) }
 
   add_to_nuis <- function(x, nuis) {
     if (is.null(nuis)) { x } else { cbind(x, nuis) }
   }
 
   nmat <- vector("list", nN)
+  nDCT <- if (hpf==0) { NULL } else { vector("numeric", nN) } # could return this
   nT_pre <- nT
   for (nn in seq(nN)) {
+    if (verbose && nN > 1) { cat(paste0("Session ", nn, ":")) }
     # Collect nuisance matrix columns.
     nmat[nn] <- list(NULL)
-    if (!is.null(nuisance)) {
-      nuisance_nn <- if (is.list(nuisance)) { nuisance[[nn]] } else { nuisance }
+    ## `nuisance`
+    nuisance_nn <- if (is.list(nuisance)) { nuisance[[nn]] } else { nuisance }
+    if (!is.null(nuisance_nn)) {
       stopifnot(is.numeric(nuisance_nn) && is.matrix(nuisance_nn))
       stopifnot(nrow(nuisance_nn) == nT[nn])
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Using", ncol(nuisance_nn), "regressors from `nuisance`.\n") }
       nmat[[nn]] <- add_to_nuis(nuisance_nn, nmat[[nn]])
     }
+    ## `scrub`
     scrub_nn <- NULL
     if (!is.null(scrub)) {
       scrub_nn <- if (is.list(scrub)) { scrub[[nn]] } else { scrub }
       if (is.logical(scrub_nn)) { scrub_nn <- which(scrub_nn) }
       if (length(scrub_nn) > 0) {
         scrub_nn_mat <- fMRIscrub::flags_to_nuis_spikes(scrub_nn, nT[nn])
+        if (verbose && nN > 1) { cat("\t") }
+        if (verbose) { cat("Scrubbing", ncol(scrub_nn_mat), "volumes.\n") }
         nmat[[nn]] <- add_to_nuis(scrub_nn_mat, nmat[[nn]])
       } else {
         scrub_nn <- NULL
       }
     }
-    if (!all(detrend_DCT==0)) {
-      detrend_DCT_nn <- if (length(detrend_DCT) > 1) { detrend_DCT[nn] } else { detrend_DCT }
-      detrend_DCT_nn <- cbind(dct_bases(nT[nn], detrend_DCT_nn))
-      nmat[[nn]] <- add_to_nuis(detrend_DCT_nn, nmat[[nn]])
+    ## DCT
+    if (hpf != 0) {
+      if (TR=="from_xifti_metadata") {
+        stop("`hpf!=0`, but `TR`` was neither provided nor able to be inferred from the data. Please provide `TR`.")
+      }
+      nDCT[nn] <- round(dct_convert(nT[nn], TR=TR, f=hpf))
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Using", nDCT[nn], "DCT bases.\n") }
+      nmat[[nn]] <- add_to_nuis(dct_bases(nT[nn], nDCT[nn]), nmat[[nn]])
     }
     # Perform nuisance regression, if applicable.
     if (!is.null(nmat[[nn]])) {
       nmat[[nn]] <- cbind(1, nmat[[nn]])
+      if (verbose && nN > 1) { cat("\t") }
+      if (verbose) { cat("Doing nuisance regression with", ncol(nmat[[nn]]), "total regressors.\n") }
       BOLD[[nn]] <- nuisance_regression(BOLD[[nn]], nmat[[nn]])
     }
     # Drop scrubbed volumes, if applicable.
@@ -765,23 +886,36 @@ templateICA <- function(
     }
   }
   if (sum(nT) != sum(nT_pre)) {
-    cat('Timepoints after scrubbing:    ', sum(nT), "\n")
+    if (verbose && nN > 1) { cat("\t") }
+    if (verbose) { cat('Timepoints after scrubbing:    ', sum(nT), "\n") }
   }
 
   if (all(vapply(nmat, is.null, FALSE))) { nmat <- NULL }
 
-  # Center and scale `BOLD` ----------------------------------------------------
+  ## Center and scale `BOLD` ---------------------------------------------------
+  if (verbose) {
+    cat("Normalizing BOLD: centering location timecourses")
+    if (GSR) { cat(", centering volumes (GSR)") }
+    if (scale != "none") { cat(",", scale, "scaling") }
+    cat(".\n")
+  }
+
   if (!is.null(xii1) && scale=="local" && scale_sm_FWHM > 0) {
     xii1 <- ciftiTools::add_surf(xii1, surfL=scale_sm_surfL, surfR=scale_sm_surfR)
   }
 
+  mask2and3 <- if (use_mask2) { mask2 } else { mask3 } # [TO DO] patch???
+
   BOLD <- lapply(BOLD, norm_BOLD,
-    center_rows=TRUE, center_cols=center_Bcols,
+    center_rows=TRUE, center_cols=GSR,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=FALSE
+    scale_sm_xifti_mask=mask2and3,
+    hpf=0
   )
 
-  # Estimate and subtract nuisance ICs -----------------------------------------
+  ## Estimate and subtract nuisance ICs ----------------------------------------
+  if (verbose) { cat("Removing nuisance ICs.\n") }
+
   Q2_est <- vector("numeric", nN)
   for (nn in seq(nN)) {
     x <- rm_nuisIC(
@@ -793,36 +927,56 @@ templateICA <- function(
   }
   rm(x)
 
-  # Center and scale `BOLD` again ----------------------------------------------
-  BOLD <- lapply(
-    BOLD, norm_BOLD,
-    center_rows=TRUE, center_cols=center_Bcols,
+  ## Center and scale `BOLD` again to ensure mean zero and correct scaling -----
+  if (verbose) {
+    cat("Normalizing BOLD again: centering location timecourses")
+    if (scale != "none") { cat(",", scale, "scaling") }
+    cat(".\n")
+  }
+
+
+  BOLD <- lapply(BOLD, norm_BOLD,
+    center_rows=TRUE, center_cols=FALSE,
     scale=scale, scale_sm_xifti=xii1, scale_sm_FWHM=scale_sm_FWHM,
-    detrend_DCT=FALSE
+    scale_sm_xifti_mask=mask2and3,
+    hpf=0
   )
 
-  # Concatenate the data. ------------------------------------------------------
+  ## Concatenate the data. -----------------------------------------------------
+  if (verbose && length(nT) > 1) { cat("Concatenating sessions.\n") }
+
   BOLD <- do.call(cbind, BOLD)
   nT <- sum(nT)
+
+  ## Scale by residual SD from template estimation -----------------------------
+  if (verbose) { cat("Scaling by residual SD from template estimation.\n") }
+  if(length(template$sigma_sq0) != nrow(BOLD)) stop('Check length of sigma_sq')
+  rescale <- sqrt(template$sigma_sq0)/mean(sqrt(template$sigma_sq0), na.rm=TRUE)
+  rescale <- matrix(rescale, nrow=length(template$sigma_sq0), ncol=ncol(BOLD))
+  BOLD <- BOLD / rescale
 
   # Initialize with the dual regression-based estimate -------------------------
   if (verbose) { cat("Computing DR.\n") }
 
   BOLD_DR <- dual_reg(
-    BOLD, template$mean, center_Bcols=FALSE,
-    scale=FALSE, detrend_DCT=0
+    BOLD, template$mean, GSR=FALSE,
+    scale=FALSE, hpf=0
   )
 
-  # Bayesian Computation -------------------------------------------------------
+  t1 <- Sys.time() - t0
 
+  # Bayesian Computation -------------------------------------------------------
   #Three algorithms to choose from:
   #1) Template ICA
   #2) FC Template ICA (EM or VB)
   #3) Spatial Template ICA (initialize with standard Template ICA)
-  # ----------------------------------------------------------------------------
 
+  verbose0 <- verbose
   if (verbose) {
-    if (do_spatial | do_FC) { cat("Initializing with standard Template ICA.\n") }
+    if (do_spatial | do_FC) {
+      cat("Initializing with standard Template ICA.\n")
+      verbose <- FALSE
+    }
     if (!do_spatial & !do_FC) { cat("Computing Template ICA.\n") }
   }
 
@@ -837,8 +991,7 @@ templateICA <- function(
   }
 
 
-  #1) Template ICA -----------------------------------------------------------
-
+  ## 1) Template ICA -----------------------------------------------------------
   if (reduce_dim) {
     if (verbose) { cat("Reducing data dimensions.\n") }
     # Reduce data dimensions
@@ -887,8 +1040,14 @@ templateICA <- function(
   class(result) <- 'tICA'
   #end of standard template ICA estimation
 
-  #2) FC Template ICA ----------------------------------------------------------
+  t2 <- Sys.time() - t0
+
+  t3 <- t4 <- 0 #these will be overwritten if FC-tICA or stICA is run
+
+  ## 2) FC Template ICA --------------------------------------------------------
   if (do_FC) {
+
+    verbose <- verbose0
 
     reduce_dim <- FALSE
     result_tICA <- result
@@ -896,14 +1055,17 @@ templateICA <- function(
     if (verbose) { cat("Estimating FC Template ICA Model\n") }
     prior_params = c(0.001, 0.001) #alpha, beta (uninformative) -- note that beta is scale parameter in IG but rate parameter in the Gamma
 
-    #save.image(file='test/test_setup_VB.RData')
+    #no parallelization implemented for VB1
+    if(method_FC=='VB1') {
+      usePar <- FALSE
+      doParallel::stopImplicitCluster()
+    }
 
-    #run or initialize with VB
-    if(method_FC %in% c('VB','EM_VB')){
     result <- VB_FCtemplateICA(
         template_mean = template$mean,
         template_var = template$var,
         template_FC = template_FC,
+        method_FC = method_FC,
         prior_params, #for prior on tau^2
         BOLD=BOLD,
         A0 = result_tICA$A,
@@ -912,33 +1074,19 @@ templateICA <- function(
         miniter=miniter,
         maxiter=maxiter,
         epsilon=epsilon,
-        eps_inter=eps_inter,
+        #eps_inter=eps_inter,
+        usePar = usePar,
+        PW = PW,
         verbose=verbose
       )
-    }
-
-    if(method_FC %in% c('EM', 'EM_VB')){
-      if(method_FC == 'EM_VB'){ BOLD_DR$A <- result$A; BOLD_DR$S <- t(result$subjICmean) }
-      result <- EM_FCtemplateICA(
-        template_mean = template$mean,
-        template_var = template$var,
-        template_FC = template_FC,
-        prior_params, #for prior on tau^2
-        BOLD=BOLD,
-        AS_0 = BOLD_DR, #initial values for A and S
-        miniter=miniter,
-        maxiter=maxiter,
-        epsilon=epsilon,
-        eps_inter=eps_inter,
-        verbose=TRUE
-      )
-    }
 
     result$result_tICA <- result_tICA
 
+    t3 <- Sys.time() - t0
+
   } # end of FC template ICA estimation
 
-  #3) Spatial Template ICA ---------------------------------------------------
+  ## 3) Spatial Template ICA ---------------------------------------------------
   if (do_spatial) {
     result_tICA <- result #this is the standard template ICA result
     theta0$kappa <- rep(kappa_init, nL)
@@ -965,9 +1113,12 @@ templateICA <- function(
 
     result$result_tICA <- result_tICA
     class(result) <- 'stICA'
+
+    t4 <- Sys.time() - t0
+
   }
 
-  # Wrapping up ----------------------------------------------------------------
+  ## Wrapping up ---------------------------------------------------------------
   if (usePar) { doParallel::stopImplicitCluster() }
 
   # Return DR estimates.
@@ -991,10 +1142,10 @@ templateICA <- function(
   #   result$template_var <- template_var_orig
   # }
 
-  # Params, formatted as length-one character vectors to put in "xifti" metadata
+  # Params
   tICA_params <- list(
-    time_inds=time_inds, center_Bcols=center_Bcols,
-    scale=scale, detrend_DCT=detrend_DCT,
+    time_inds=time_inds, GSR=GSR,
+    scale=scale, TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
     brainstructures=brainstructures,
     tvar_method=tvar_method,
@@ -1004,53 +1155,32 @@ templateICA <- function(
     miniter=miniter,
     maxiter=maxiter,
     epsilon=epsilon,
-    eps_inter=eps_inter,
+    #eps_inter=eps_inter,
     kappa_init=kappa_init
-  )
-  tICA_params <- lapply(
-    tICA_params,
-    function(x) {
-      if (is.null(x)) { x <- "NULL"};
-      paste0(as.character(x), collapse=" ")
-    }
   )
 
   # Format output.
   if (use_mask2) {
     result$subjICmean <- fMRItools::unmask_mat(result$subjICmean, mask2)
     result$subjICse <- fMRItools::unmask_mat(result$subjICse, mask2)
+  } else if (use_mask3) {
+    result$subjICmean <- fMRItools::unmask_mat(result$subjICmean, mask3)
+    result$subjICse <- fMRItools::unmask_mat(result$subjICse, mask3)
   }
 
   if (FORMAT %in% c("CIFTI", "GIFTI") && !is.null(xii1)) {
     xiiL <- ciftiTools::select_xifti(xii1, rep(1, nL))
-    if (grepl("all", IC_inds)) {
-      IC_inds <- seq(nL)
-    } else {
-      IC_inds <- strsplit(IC_inds, " ")[[1]]
-      if (length(IC_inds) != nL) { IC_inds <- rep("?", nL) } # TO-DO: improve
-    }
-    xiiL$meta$cifti$names <- paste("IC", IC_inds)
+    xiiL <- ciftiTools::convert_to_dscalar(xiiL, names=paste("IC", IC_inds))
+    result$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$subjICmean)
+    result$subjICse <- ciftiTools::newdata_xifti(xiiL, result$subjICse)
 
-    # [TO DO]: fMRItools update: simplify this
-    if (any(!mask3)) {
-      result$subjICmean <- ciftiTools::newdata_xifti(
-        xiiL,
-        fMRItools::unmask_mat(result$subjICmean, mask3),
-      )
-      result$subjICse <- ciftiTools::newdata_xifti(
-        xiiL,
-        fMRItools::unmask_mat(result$subjICse, mask3),
-      )
-    } else {
-      result$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$subjICmean)
-      result$subjICse <- ciftiTools::newdata_xifti(xiiL, result$subjICse)
-    }
     if (FORMAT == "GIFTI") {
-      # Apply `mask2`.
+      # Apply `mask2`. # [TO DO] what?
       result$subjICmean <- ciftiTools::move_to_mwall(result$subjICmean)
       result$subjICse <- ciftiTools::move_to_mwall(result$subjICse)
       mask2 <- NULL
     }
+
     if (do_spatial) {
       result$result_tICA$subjICmean <- ciftiTools::newdata_xifti(xiiL, result$result_tICA$subjICmean)
       result$result_tICA$subjICse <- ciftiTools::newdata_xifti(xiiL, result$result_tICA$subjICse)
@@ -1079,8 +1209,18 @@ templateICA <- function(
     class(result) <- 'tICA.matrix'
   }
 
+  result$BOLD <- BOLD
   result$mask <- mask2
   result$nuisance <- nmat
   result$params <- tICA_params
+
+  #record computation time of each algorithm
+  result$comptime <- c(as.numeric(t1, units = "secs"),
+                       as.numeric(t2, units = "secs"),
+                       as.numeric(t3, units = "secs"),
+                       as.numeric(t4, units = "secs"))
+
+  names(result$comptime) <- c('DR','tICA','FC-tICA','stICA')
+
   result
 }

@@ -9,11 +9,18 @@
 #'  template estimation, etc.
 #' @method summary template.cifti
 summary.template.cifti <- function(object, ...) {
-  tmean <- struct_template(object$template$mean, "CIFTI", object$dat_struct, object$params)
+  tmean <- struct_template(object$template$mean, "CIFTI", object$mask_input, object$params, object$dat_struct, object$GICA_parc_table)
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
   x <- c(
     summary(tmean),
     list(has_DR="DR" %in% names(object)),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.cifti"
@@ -31,6 +38,14 @@ summary.template.cifti <- function(object, ...) {
 #'  template estimation, etc.
 #' @method summary template.gifti
 summary.template.gifti <- function(object, ...) {
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(
       nV=nrow(object$template$mean),
@@ -38,7 +53,7 @@ summary.template.gifti <- function(object, ...) {
       hemisphere=object$dat_struct$hemisphere,
       hasDR="DR" %in% names(object)
     ),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.gifti"
@@ -56,6 +71,14 @@ summary.template.gifti <- function(object, ...) {
 #'  template estimation, etc.
 #' @method summary template.nifti
 summary.template.nifti <- function(object, ...) {
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(
       mask_dims=dim(object$dat_struct),
@@ -63,7 +86,7 @@ summary.template.nifti <- function(object, ...) {
       nL=ncol(object$template$mean),
       hasDR="DR" %in% names(object)
     ),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.nifti"
@@ -81,13 +104,21 @@ summary.template.nifti <- function(object, ...) {
 #'  template estimation, etc.
 #' @method summary template.matrix
 summary.template.matrix <- function(object, ...) {
+  tparams <- lapply(
+    object$params,
+    function(q) {
+      if (is.null(q)) { q <- "NULL"};
+      paste0(as.character(q), collapse=" ")
+    }
+  )
+
   x <- c(
     list(
       nV=nrow(object$template$mean),
       nL=ncol(object$template$mean),
       hasDR="DR" %in% names(object)
     ),
-    object$params
+    tparams
   )
 
   class(x) <- "summary.template.matrix"
@@ -102,22 +133,23 @@ summary.template.matrix <- function(object, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.cifti
 print.summary.template.cifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (x$TR == "NULL") {
+    "not provided"
+  } else {
+    paste("TR=", x$TR, "s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf == "0") {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -136,22 +168,23 @@ print.summary.template.cifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.gifti
 print.summary.template.gifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (x$TR == "NULL") {
+    "not provided"
+  } else {
+    paste("TR=", x$TR, "s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf == "0") {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -172,22 +205,23 @@ print.summary.template.gifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.nifti
 print.summary.template.nifti <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (x$TR == "NULL") {
+    "not provided"
+  } else {
+    paste("TR=", x$TR, "s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf == "0") {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -209,22 +243,23 @@ print.summary.template.nifti <- function(x, ...) {
 #' @return Nothing, invisibly.
 #' @method print summary.template.matrix
 print.summary.template.matrix <- function(x, ...) {
-  # Get DCT output.
-  dct <- x$detrend_DCT
-  if (!is.null(dct)) {
-    dct <- as.numeric(x$detrend_DCT)
-    dct <- if (dct>1) {
-      paste(dct, "DCT bases")
-    } else if (dct > 0) {
-      paste(dct, "DCT basis")
-    } else {
-      "None"
-    }
+  # Get TR
+  the_TR <- if (x$TR == "NULL") {
+    "not provided"
+  } else {
+    paste("TR=", x$TR, "s.")
+  }
+  # Get highpass filter
+  the_hpf <- if (x$hpf == "0") {
+    "not used"
+  } else {
+    paste(as.character(x$hpf), "Hz")
   }
 
   cat("====TEMPLATE INFO====================\n")
   cat("# Subjects:      ", x$num_subjects, "\n")
-  cat("Detrending:      ", dct, "\n")
+  cat("Temporal Res.:   ", the_TR, "\n")
+  cat("Highpass filter: ", the_hpf, "\n")
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
@@ -277,7 +312,7 @@ print.template.matrix <- function(x, ...) {
 #'
 #' @param x The template from \code{estimate_template.cifti}
 #' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
-#'  default the square root of the variance template is shown; another option is 
+#'  default the square root of the variance template is shown; another option is
 #'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
@@ -347,26 +382,32 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
       "varUB"
     }
     if (ss=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-    if (ss=="sd") { 
+    if (ss=="sd") {
       x$template[[ssname]] <- sqrt(x$template[[ssname]])
     }
-    tss <- struct_template(x$template[[ssname]], "CIFTI", x$dat_struct, x$params)
-    if (ss=="sd") { 
+    tss <- struct_template(x$template[[ssname]], "CIFTI", x$mask_input, x$params, x$dat_struct, x$GICA_parc_table)
+    if (ss=="sd") {
       ssname <- paste0("sqrt ", ssname)
     }
-    
+
     args_ss <- args
     # Handle title and idx
+    ### No title: use the component names if available, and the indices if not.
     if (!has_title && !has_idx) {
-      c1name <- if (!is.null(tss$meta$cifti$names)) {
+      args_ss$title <- if (!is.null(tss$meta$cifti$names)) {
         tss$meta$cifti$names[1]
       } else {
         "First component"
       }
-      args_ss$title <- paste0(c1name, " (", ssname, ")")
-    } else if (!has_idx) {
-      args_ss$title <- paste0(args_ss$title, "(", ssname, ")")
+    } else if (!has_title) {
+      args_ss$title <- if (!is.null(tss$meta$cifti$names)) {
+        tss$meta$cifti$names[args$idx]
+      } else {
+        paste("Component", args$idx)
+      }
     }
+    ### Append the statistic name.
+    args_ss$title <- paste0(args_ss$title, " (", ssname, ")")
     # Handle fname
     if (has_fname) {
       fext <- if (grepl("html$", args_ss$fname[1])) {
@@ -391,7 +432,7 @@ plot.template.cifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #'
 #' @param x The template from \code{estimate_template.gifti}
 #' @param stat \code{"mean"}, \code{"sd"}, or \code{"both"} (default). By
-#'  default the square root of the variance template is shown; another option is 
+#'  default the square root of the variance template is shown; another option is
 #'  \code{stat="var"} to instead display the variance template directly.
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
 #' @param ... Additional arguments to \code{view_xifti}
@@ -424,10 +465,10 @@ plot.template.gifti <- function(x, stat=c("both", "mean", "sd", "var"),
 #'  viewer function (e.g. from \code{oro.nifti}) if desired.
 #'
 #' @param x The template from \code{estimate_template.nifti}
-#' @param stat \code{"mean"} (default), \code{"sd"}, or \code{"var"}. 
+#' @param stat \code{"mean"} (default), \code{"sd"}, or \code{"var"}.
 #'  (\code{"sd"} will show the square root of the variance template.)
 #' @param var_method \code{"non-negative"} (default) or \code{"unbiased"}
-#' @param plane,n_slices,slices Anatomical plane and which slice indices to 
+#' @param plane,n_slices,slices Anatomical plane and which slice indices to
 #'  show.
 #'  Default: 9 axial slices.
 #' @param ... Additional arguments to \code{oro.nifti::image}
@@ -523,7 +564,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     "varUB"
   }
   if (stat=="var" && var_method=="unbiased") { x$template[[ssname]][] <- pmax(0, x$template[[ssname]]) }
-  tss <- struct_template(x$template[[ssname]], "NIFTI", x$dat_struct, x$params)
+  tss <- struct_template(x$template[[ssname]], "NIFTI", x$mask_input, x$params, x$dat_struct, x$GICA_parc_table)
   tss <- tss[,,,idx]
 
   if (plane=="axial") {
@@ -534,7 +575,7 @@ plot.template.nifti <- function(x, stat=c("mean", "sd", "var"),
     tss <- tss[slices,,,drop=FALSE]
   } else { stop() }
 
-  if (stat=="sd") { 
+  if (stat=="sd") {
     tss <- sqrt(tss)
     ssname <- paste0("sqrt ", ssname)
   }

@@ -11,19 +11,24 @@ estimate_template(
   BOLD,
   BOLD2 = NULL,
   GICA,
+  mask = NULL,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
-  center_Bcols = FALSE,
+  TR = NULL,
+  hpf = 0.01,
+  GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
-  mask = NULL,
-  keep_DR = FALSE,
-  FC = FALSE,
+  brainstructures = "all",
+  resamp_res = NULL,
+  keep_S = FALSE,
+  keep_FC = FALSE,
+  FC = TRUE,
+  FC_nPivots = 100,
+  FC_nSamp = 50000,
   varTol = 1e-06,
   maskTol = 0.1,
   missingTol = 0.1,
@@ -37,16 +42,19 @@ estimate_template.cifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
-  center_Bcols = FALSE,
+  TR = NULL,
+  hpf = 0.01,
+  GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
-  keep_DR = FALSE,
+  brainstructures = "all",
+  resamp_res = resamp_res,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -61,16 +69,18 @@ estimate_template.gifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
+  scale = c("local", "global", "none"),
   scale_sm_surfL = NULL,
   scale_sm_surfR = NULL,
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
-  center_Bcols = FALSE,
+  TR = NULL,
+  hpf = 0.01,
+  GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
-  brainstructures = c("left", "right"),
-  keep_DR = FALSE,
+  brainstructures = "all",
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -85,13 +95,15 @@ estimate_template.nifti(
   BOLD2 = NULL,
   GICA,
   inds = NULL,
-  scale = c("global", "local", "none"),
-  detrend_DCT = 0,
-  center_Bcols = FALSE,
+  scale = c("local", "global", "none"),
+  TR = NULL,
+  hpf = 0.01,
+  GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
   mask = NULL,
-  keep_DR = FALSE,
+  keep_S = FALSE,
+  keep_FC = FALSE,
   FC = FALSE,
   varTol = 1e-06,
   maskTol = 0.1,
@@ -117,7 +129,20 @@ half will be the retest data.}
 
 \item{GICA}{Group ICA maps in a format compatible with \code{BOLD}. Can also
 be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
-\code{BOLD}. Its columns will be centered.}
+\code{BOLD}. Its columns will be centered.
+
+New: can also be a parcellation in CIFTI format (other formats to be
+implemented in the future). The parcellation should have the same locations
+and one column, with integer values indicating the parcel to which each
+location belongs to. Each parcel is modeled as a brain map; instead of the
+first step of dual regression, the medial timecourse of each parcel is used.}
+
+\item{mask}{Required if \code{BOLD} are NIFTI file paths or \code{"nifti"}
+objects, and optional for other formats. For NIFTI data, this is a brain map
+formatted as a logical array of the same spatial dimensions as the fMRI
+data, with \code{TRUE} corresponding to in-mask voxels. For other data, this
+is a logical vector with the same length as the number of locations in
+\code{GICA}, with \code{TRUE} corresponding to in-mask locations.}
 
 \item{inds}{Numeric indices of the group ICs to include in the template. If
 \code{NULL}, use all group ICs (default).
@@ -127,10 +152,10 @@ calculating dual regression, not before. This is because removing the ICs
 prior to dual regression would leave unmodelled signals in the data, which
 could bias the templates.}
 
-\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
-Global scaling will divide the entire data matrix by the mean image standard
-deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
-data location's time series by its estimated standard deviation.}
+\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
+Local scaling will divide each data location's time series by its estimated
+standard deviation. Global scaling will divide the entire data matrix by the
+mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
 
 \item{scale_sm_surfL, scale_sm_surfR, scale_sm_FWHM}{Only applies if
 \code{scale=="local"} and \code{BOLD} represents surface data (CIFTI or
@@ -149,10 +174,21 @@ To create a \code{"surf"} object from data, see
 \code{\link[ciftiTools]{make_surf}}. The surfaces must be in the same
 resolution as the \code{BOLD} data.}
 
-\item{detrend_DCT}{Detrend the data? This is an integer number of DCT bases
-to use for detrending. If \code{0} (default), do not detrend.}
+\item{TR}{The temporal resolution of the data, i.e. the time between volumes,
+in seconds. \code{TR} is required for detrending with \code{hpf}.}
 
-\item{center_Bcols}{Center BOLD across columns (each image)? This
+\item{hpf}{The frequency at which to apply a highpass filter to the data
+during pre-processing, in Hertz. Default: \code{0.01} Hertz. Set to \code{0}
+to disable the highpass filter.
+
+The highpass filter serves to detrend the data, since low-frequency
+variance is associated with noise. Highpass filtering is accomplished by
+nuisance regression of discrete cosine transform (DCT) bases.
+
+Note the \code{TR} argument is required for highpass filtering. If
+\code{TR} is not provided, \code{hpf} will be ignored.}
+
+\item{GSR}{Center BOLD across columns (each image)? This
 is equivalent to performing global signal regression. Default:
 \code{FALSE}.}
 
@@ -176,20 +212,29 @@ file paths. This is a character vector indicating which brain structure(s)
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+Default: \code{c("all")}.}
 
-\item{mask}{Required if and only if the entries of \code{BOLD} are NIFTI
-file paths or \code{"nifti"} objects. This is a brain map formatted as a
-binary array of the same spatial dimensions as the fMRI data, with
-\code{TRUE} corresponding to in-mask voxels.}
+\item{resamp_res}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
+Resample the data upon reading it in? Default: \code{NULL} (no resampling).}
 
-\item{keep_DR}{Keep the DR estimates? If \code{FALSE} (default), do not save
+\item{keep_S}{Keep the DR estimates of S? If \code{FALSE} (default), do not save
 the DR estimates and only return the templates. If \code{TRUE}, the DR
-estimates are returned too. If a single file path, save the DR estimates as
+estimates of S are returned too. If a single file path, save the DR estimates as
 an RDS file at that location rather than returning them.}
 
-\item{FC}{Include the functional connectivity template? Default: \code{FALSE}
-(not fully supported yet.)}
+\item{keep_FC}{Keep the DR estimates of the FC cor(A)? If \code{FALSE} (default), do not save
+the DR estimates and only return the templates. If \code{TRUE}, the DR
+estimates of cor(A) and its Cholesky factor are returned too.
+If a single file path, save the DR estimates as
+an RDS file at that location rather than returning them.}
+
+\item{FC}{Include the functional connectivity template? Default: \code{TRUE}.}
+
+\item{FC_nPivots}{Number of pivots to use in Cholesky-based FC template
+estimation.  Set to zero to skip Cholesky-based FC template estimation. Default: 100.}
+
+\item{FC_nSamp}{Number of FC matrix samples to generate across all pivots. This
+should be a multiple of FC_nPivots.}
 
 \item{varTol}{Tolerance for variance of each data location. For each scan,
 locations which do not meet this threshold are masked out of the analysis.
@@ -227,10 +272,10 @@ use the number on the PC minus two. If the input data is in CIFTI format, the
 A list: the \code{template} and \code{var_decomp} with entries in
 matrix format; the \code{mask} of locations without template values due to
 too many low variance or missing values; the function \code{params} such as
-the type of scaling and detrending performed; the {dat_struct} which can be
+the type of scaling and detrending performed; the \code{dat_struct} which can be
 used to convert \code{template} and \code{var_decomp} to \code{"xifti"} or
 \code{"nifti"} objects if the \code{BOLD} format was CIFTI or NIFTI data;
-and \code{DR} if \code{isTRUE(keep_DR)}.
+and DR results if \code{isTRUE(keep_S)} and/or \code{isTRUE(keep_FC)}.
 
 Use \code{summary} to print a description of the template results, and
 for CIFTI-format data use \code{plot} to plot the template mean and variance
@@ -245,21 +290,21 @@ All fMRI data (entries in \code{BOLD} and \code{BOLD2}, and \code{GICA}) must
 be in the same spatial resolution.
 }
 \examples{
-nT <- 30
-nV <- 400
-nQ <- 7
+nT <- 21
+nV <- 140
+nQ <- 6
 mU <- matrix(rnorm(nV*nQ), nrow=nV)
 mS <- mU \%*\% diag(seq(nQ, 1)) \%*\% matrix(rnorm(nQ*nT), nrow=nQ)
 BOLD <- list(B1=mS, B2=mS, B3=mS)
 BOLD <- lapply(BOLD, function(x){x + rnorm(nV*nT, sd=.05)})
 GICA <- mU
-estimate_template(BOLD=BOLD, GICA=mU)
+estimate_template(BOLD=BOLD, GICA=mU, FC_nSamp=2000)
 
 \dontrun{
  estimate_template(
    run1_cifti_fnames, run2_cifti_fnames,
    gICA_cifti_fname, brainstructures="all",
-   scale="local", detrend_DCT=7, Q2=NULL, varTol=10
+   scale="global", TR=0.71, Q2=NULL, varTol=10
  )
 }
 }

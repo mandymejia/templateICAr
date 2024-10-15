@@ -14,9 +14,16 @@ removebs_template <- function(x, remove=NULL){
   x$template[1:3] <- lapply(x$template[1:3], function(y){
     as.matrix(ciftiTools::remove_xifti(ciftiTools::newdata_xifti(x$dat_struct, y), remove=remove))
   })
+
   x$var_decomp <- lapply(x$var_decomp, function(y){
     as.matrix(ciftiTools::remove_xifti(ciftiTools::newdata_xifti(x$dat_struct, y), remove=remove))
   })
+  if (!is.null(x$sigma_sq0)) {
+    x$sigma_sq0 <- as.matrix(ciftiTools::remove_xifti(
+      ciftiTools::newdata_xifti(x$dat_struct, x$sigma_sq0),
+      remove=remove
+    ))
+  }
 
   # Get new `dat_struct` and mask.
   x$dat_struct <- ciftiTools::remove_xifti(x$dat_struct, remove=remove)

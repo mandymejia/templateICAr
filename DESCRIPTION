@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks and Connectivity with ICA and Empirical Priors
-Version: 0.7.2
+Version: 0.8.8
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -41,21 +41,20 @@ Imports:
     abind,
     excursions,
     expm,
-    fMRItools (>= 0.2.2),
+    fMRItools (>= 0.4.4),
     fMRIscrub,
     foreach,
     ica,
     Matrix,
     matrixStats,
     methods,
-    mvtnorm,
     pesel,
     Rcpp,
     SQUAREM,
     stats,
     utils
 Suggests:
-    ciftiTools,
+    ciftiTools (>= 0.13.2),
     RNifti,
     oro.nifti,
     gifti,
@@ -67,7 +66,7 @@ Suggests:
     INLA,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.0
+RoxygenNote: 7.3.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
 LinkingTo:

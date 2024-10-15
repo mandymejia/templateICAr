@@ -7,14 +7,15 @@
 groupICA.cifti(
   cifti_fnames,
   subjects = NULL,
-  brainstructures = c("left", "right"),
+  brainstructures = "all",
   num_PCs = 100,
   num_ICs,
   max_rows_GPCA = 10000,
-  center_Bcols = FALSE,
-  scale = c("global", "local", "none"),
+  GSR = FALSE,
+  scale = c("local", "global", "none"),
   scale_sm_FWHM = 2,
-  detrend_DCT = 0,
+  TR = NULL,
+  hpf = 0.01,
   verbose = TRUE,
   out_fname = NULL,
   surfL = NULL,
@@ -44,7 +45,7 @@ with the last two scans belonging to the same subject, this argument should be
 to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
 cortical surface) and/or \code{"subcortical"} (subcortical and cerebellar
 gray matter). Can also be \code{"all"} (obtain all three brain structures).
-Default: \code{c("left","right")} (cortical surface only).}
+Default: \code{c("all")}.}
 
 \item{num_PCs}{Maximum number of PCs to retain in initial subject-level PCA}
 
@@ -54,11 +55,11 @@ Default: \code{c("left","right")} (cortical surface only).}
 level PCA will be performed.  This matrix is the result of temporal concatenation
 and contains \code{length(cifti_fnames) * num_PCs} rows.}
 
-\item{center_Bcols, scale, scale_sm_FWHM, detrend_DCT}{Center BOLD columns, scale by the
+\item{GSR, scale, scale_sm_FWHM, TR, hpf}{Center BOLD columns, scale by the
 standard deviation, and detrend voxel timecourses? See
 \code{\link{norm_BOLD}}. Normalization is applied separately to each scan.
-Defaults: Center BOLD columns, scale by the global standard deviation, but
-do not detrend.}
+Defaults: Center BOLD columns, scale by the global standard deviation, and
+apply a .01 Hz HPF if the \code{TR} is provided.}
 
 \item{verbose}{If \code{TRUE}, display progress updates}
 
