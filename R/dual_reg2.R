@@ -275,7 +275,7 @@ dual_reg2 <- function(
   ) }
 
   DR_FUN <- if (GICA_parc) {
-    function(...) { fMRItools::dual_reg_parc(parc=GICA, ...) }
+    function(GICA, ...) { fMRItools::dual_reg_parc(parc=GICA, ...) }
   } else {
     # Do twice to get timecourse estimate w/ subject maps, rather than w/ GICA (`A2`)
     function(GICA, parc_vals, ...) {
