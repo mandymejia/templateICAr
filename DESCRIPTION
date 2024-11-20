@@ -40,7 +40,6 @@ LazyData: true
 Imports:
     abind,
     excursions,
-    expm,
     fMRItools (>= 0.4.4),
     fMRIscrub,
     foreach,
@@ -49,7 +48,6 @@ Imports:
     matrixStats,
     methods,
     pesel,
-    Rcpp,
     SQUAREM,
     stats,
     utils
@@ -69,6 +67,3 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 URL: https://github.com/mandymejia/templateICAr
 BugReports: https://github.com/mandymejia/templateICAr/issues
-LinkingTo:
-    RcppEigen,
-    Rcpp

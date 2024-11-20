@@ -497,6 +497,7 @@ update_A <- function(
 #' @param verbose If \code{TRUE}, display progress of algorithm. Default: \code{FALSE}.
 #'
 #' @return List of length two: \code{mu_A} (TxQ) and \code{E_AtA} (QxQ).
+#' @importFrom stats sd cor
 #'
 #' @keywords internal
 update_A_Chol <- function(mu_tau2, mu_S, E_SSt,
@@ -795,7 +796,7 @@ update_tau2 <- function(
 }
 
 #' Bdiag m2
-#' 
+#'
 #' @param mat a k x k 'matrix'
 #' @param N how many times to repeat \code{mat}
 #' @return a sparse (N*k x N*k) matrix of class \code{"dgCMatrix"}.
