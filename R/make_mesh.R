@@ -17,7 +17,6 @@
 #' @export
 #' 
 # @importFrom INLA inla.spde2.matern inla.mesh.create
-#' @importFrom excursions submesh.mesh
 #' @importFrom Matrix Diagonal
 #'
 make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
@@ -26,6 +25,10 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 
   if (!requireNamespace("ciftiTools", quietly = TRUE)) {
     stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+  }
+
+  if (!requireNamespace("excursions", quietly = TRUE)) {
+    stop("Package \"excursions\" needed for `make_mesh`. Please install.", call. = FALSE)
   }
 
   stopifnot(ciftiTools::is.surf(surf))
@@ -51,7 +54,7 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
   # 2. Use submesh.mesh to exclude vertices not in inds_mesh
   nmesh_new <- length(inds_mesh)
   keep <- (seq(nmesh_orig)) %in% inds_mesh
-  mesh <- submesh.mesh(keep, mesh) #check locs, should be 1:nmesh_new
+  mesh <- excursions::submesh.mesh(keep, mesh) #check locs, should be 1:nmesh_new
   mesh$idx$loc <- mesh$idx$loc[!is.na(mesh$idx$loc)]
 
   # 3. Record which mesh locations are data locations & adjust Amat
@@ -83,8 +86,6 @@ make_mesh <- function(surf=NULL, inds_data=NULL, inds_mesh=NULL){
 #' @param mask Brain mask (matrix of 0 and 1 or \code{TRUE} and \code{FALSE}). 
 #'
 # @importFrom INLA inla.nonconvex.hull inla.mesh.2d inla.spde.make.A inla.spde2.matern
-#' @importFrom excursions submesh.mesh
-#' @importFrom Matrix Diagonal
 #' 
 #' @return List containing INLA mesh, observation weight matrix \strong{A} for 
 #'  translating between mesh locations and original data locations, the brain 

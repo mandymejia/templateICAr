@@ -40,7 +40,6 @@
 #' @export
 #'
 #' @importFrom fMRItools is_1 is_integer is_posNum
-#' @importFrom excursions excursions
 #' @importFrom stats pnorm p.adjust
 #' @importFrom utils packageVersion
 #' @importFrom grDevices colorRamp rgb
@@ -59,6 +58,12 @@ activations <- function(
   is_tICA <- inherits(tICA, "tICA.matrix") || inherits(tICA, "tICA.cifti") || inherits(tICA, "tICA.nifti")
   is_stICA <- inherits(tICA, "stICA.matrix") || inherits(tICA, "stICA.cifti") || inherits(tICA, "stICA.nifti")
   if (!(xor(is_tICA, is_stICA))) { stop("tICA must be of class stICA or tICA") }
+
+  if (is_stICA) {
+    if (!requireNamespace("excursions", quietly = TRUE)) {
+      stop("Package \"excursions\" needed for spatial template ICA activations. Please install.", call. = FALSE)
+    }
+  }
 
   FORMAT <- class(tICA)[grepl("tICA", class(tICA))]
   if (length(FORMAT) != 1) { stop("Not a tICA.") }
@@ -185,11 +190,11 @@ activations <- function(
           #we scale mu by D^(-1) to use Omega for precision (actual precision of s|y is D^(-1) * Omega * D^(-1) )
           #we subtract u first since rescaling by D^(-1) would affect u too
           #save rho from first time running excursions, pass into excursions for other ICs
-          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
+          tmp <- system.time(res_q <- excursions::excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q)) #I think u does not matter, should check because may differ across fields
           if(verbose) print(tmp)
           rho <- res_q$rho
         } else {
-          tmp <- system.time(res_q <- excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q, rho=rho))
+          tmp <- system.time(res_q <- excursions::excursions(alpha = alpha, mu = Dinv_mu_s, Q = Q, type = type, u = u_mat[1], ind = inds_q, rho=rho))
           if(verbose) print(tmp)
         }
         active[,q] <- res_q$E[inds_q]
