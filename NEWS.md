@@ -1,3 +1,8 @@
+# 9.0
+
+* Clean up dependencies
+* Patch for `dual_reg_parc`
+
 # 8.0
 
 * Updates to template calculations

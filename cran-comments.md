@@ -12,14 +12,6 @@ R CMD check succeeded
 
 None.
 
-## Previous submission
-
-  Examples with CPU (user + system) or elapsed time > 10s
-                     user system elapsed
-  estimate_template 17.02   0.27   17.28
-
-* This example has been revised to complete faster.
-
 ## Tests
 
 Passes all the tests in `tests/testthat.R`
