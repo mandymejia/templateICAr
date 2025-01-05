@@ -21,6 +21,7 @@ dual_reg2(
   GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
+  covariates = covariates,
   NA_limit = 0.1,
   brainstructures = "all",
   resamp_res = NULL,
@@ -112,6 +113,10 @@ nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
 than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+
+\item{covariates}{Numeric vector of covariates to take into account for model
+estimation. Names should give the name of each variable. Default:
+\code{NULL} (no covariates).}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI file paths.
 Character vector indicating which brain structure(s)

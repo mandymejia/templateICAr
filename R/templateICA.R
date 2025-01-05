@@ -93,6 +93,9 @@
 #'
 #'  The defaults for both arguments is \code{"template"}, to use the same option
 #'  used for estimation of the \code{template}.
+#' @param covariates Numeric vector of covariates to take into account for model
+#'  estimation. Names should give the name of each variable. The covariates must
+#'  match those of the template. Default: \code{NULL} (no covariates).
 #' @param brainstructures Only applies if the entries of \code{BOLD} are CIFTI
 #'  file paths. This is a character vector indicating which brain structure(s)
 #'  to obtain: \code{"left"} (left cortical surface), \code{"right"} (right
@@ -215,6 +218,7 @@ templateICA <- function(
   GSR="template",
   Q2="template",
   Q2_max="template",
+  covariates=NULL,
   brainstructures="template",
   mask=NULL,
   time_inds=NULL,
@@ -267,6 +271,30 @@ templateICA <- function(
   }
   if (Q2 == "template") { Q2 <- template$params$Q2 }
   if (Q2_max == "template") { Q2_max <- template$params$Q2_max }
+  if (!is.null(template$params$covariate_names)) {
+    covariate_names <- template$params$covariate_names
+    nC <- length(covariate_names)
+    if (is.null(covariates)) {
+      stop("These covariates were used during template estimation: ", 
+        paste0(covariate_names, collapse=", "), ". They must also be provided ", 
+        "to `templateICA` with the `covariates` argument.")
+    }
+    stopifnot(is.numeric(covariates) && is.vector(covariates))
+    stopifnot(length(covariates) == length(covariate_names))
+    if(!all(names(covariates) == covariate_names)) {
+      stop("These covariates were used during template estimation: ", 
+        paste0(covariate_names, collapse=", "), ". The same covariates must ", 
+        "also be provided to `templateICA` with the `covariates` argument. ",
+        "However, the names for `covariates` provided here differ.")
+    }
+  } else {
+    if (!is.null(covariates)) { 
+      stop("`covariates` is not `NULL`, yet none were used during template ",
+      "estimation. Any covariates must match those used in the template.")
+    }
+    covariate_names <- NULL
+    nC <- 0
+  }
   brainstructures <- match.arg(
     brainstructures,
     c("template", "left", "right", "subcortical", "all"),
@@ -1147,6 +1175,7 @@ templateICA <- function(
     time_inds=time_inds, GSR=GSR,
     scale=scale, TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max, Q2_est=Q2_est,
+    covariate_names=covariate_names,
     brainstructures=brainstructures,
     tvar_method=tvar_method,
     spatial_model=do_spatial,
