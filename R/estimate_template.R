@@ -871,7 +871,6 @@ estimate_template <- function(
         scale_sm_FWHM=scale_sm_FWHM,
         TR=TR, hpf=hpf,
         Q2=Q2, Q2_max=Q2_max,
-        covariates=covariates[ii,],
         brainstructures=brainstructures, resamp_res=resamp_res,
         varTol=varTol, maskTol=maskTol,
         verbose=verbose
