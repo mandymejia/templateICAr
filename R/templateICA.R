@@ -405,6 +405,20 @@ templateICA <- function(
     do_left <- "left" %in% brainstructures
     do_right <- "right" %in% brainstructures
     do_sub <- "subcortical" %in% brainstructures
+
+    if (format == "xifti") {
+      for (bb in seq(nN)) {
+        if (!do_left && !is.null(BOLD[[bb]]$data$cortex_left)) {
+          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "cortex_left")
+        }
+        if (!do_right && !is.null(BOLD[[bb]]$data$cortex_right)) {
+          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "cortex_right")
+        }
+        if (!do_sub && !is.null(BOLD[[bb]]$data$subcort)) {
+          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "subcortical")
+        }
+      }
+    }
   }
 
   # Read in CIFTI, GIFTI, or NIFTI files.

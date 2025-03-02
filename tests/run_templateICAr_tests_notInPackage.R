@@ -60,6 +60,12 @@ tm_cii <- estimate_template(
 tICA_cii <- templateICA(
   cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
 )
+
+z <- read_cifti(cii_fnames[4], resamp_res=2000)
+tICA_cii2 <- templateICA(
+  z, tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
+)
+
 actICA_cii <- activations(tICA_cii)
 actICA_cii <- activations(tICA_cii, z=c(0, .1, 3, 11))
 
