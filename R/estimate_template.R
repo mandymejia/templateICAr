@@ -717,9 +717,17 @@ estimate_template <- function(
 
   # [TO DO]: NA in GICA?
 
-  # [TO DO]: Check that FC_nPivots is a positive integer or is equal to zero.
-
-  # [TO DO]: Check that FC_nSamp is a multiple of FC_nPivots
+  if (FC) {
+    if (FC_nPivots > 0) {
+      stopifnot(FC_nPivots == round(FC_nPivots))
+      FC_nSamp2 <- FC_nSamp/FC_nPivots #number of samples per pivot
+      if (FC_nSamp2 != round(FC_nSamp2)) {
+        stop("`FC_nSamp` must be a multiple of `FC_nPivots`.")
+      }
+    } else {
+      if (FC_nPivots != 0) { stop("`FC_nPivots` should be a positive integer or zero.") }
+    }
+  }
 
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array (NIFTI) or vector (everything else).
@@ -813,8 +821,16 @@ estimate_template <- function(
     }
     cat('Number of training subjects:   ', nN, "\n")
     cat('Number of covariates:          ', nC, "\n")
-    if (FC) { cat('\nIncluding Cholesky-based FC template with ',
-      FC_nPivots,' random pivots.\n') }
+    if (FC) { 
+      if (FC_nPivots == 0) {
+        cat('\nIncluding Cholesky-based FC template with', 
+          FC_nPivots, 'random pivots.\n')
+      } else {
+        cat(paste0('\nIncluding Cholesky-based FC template with ', 
+          FC_nSamp, " samples (", FC_nPivots, " random pivots x ",
+          FC_nSamp2, " samples per pivot).\n"))
+      }
+    }
   }
 
   # Process each scan ----------------------------------------------------------
