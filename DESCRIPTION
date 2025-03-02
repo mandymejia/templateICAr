@@ -40,7 +40,7 @@ LazyData: true
 Imports:
     abind,
     fMRItools (>= 0.4.4),
-    fMRIscrub,
+    fMRIscrub (>= 0.14.0),
     foreach,
     ica,
     Matrix,
