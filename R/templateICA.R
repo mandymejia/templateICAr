@@ -326,9 +326,9 @@ templateICA <- function(
   if (isFALSE(spatial_model)) { spatial_model <- NULL }
   if (!is.null(resamp_res)) {
     stopifnot(is_posNum(resamp_res) && round(resamp_res) == resamp_res)
-      if (!requireNamespace("ciftiTools", quietly = TRUE)) {
-        stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
-      }
+    if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+      stop("Package \"ciftiTools\" needed to work with CIFTI data. Please install it.", call. = FALSE)
+    }
   }
   stopifnot(is_1(rm_mwall, "logical"))
   stopifnot(is_1(reduce_dim, "logical"))
@@ -407,15 +407,19 @@ templateICA <- function(
     do_sub <- "subcortical" %in% brainstructures
 
     if (format == "xifti") {
+      if (!requireNamespace("ciftiTools", quietly = TRUE)) {
+        stop("Package \"ciftiTools\" needed to work with xifti data. Please install it.", call. = FALSE)
+      }
+
       for (bb in seq(nN)) {
         if (!do_left && !is.null(BOLD[[bb]]$data$cortex_left)) {
-          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "cortex_left")
+          BOLD[[bb]] <- ciftiTools::remove_xifti(BOLD[[bb]], "cortex_left")
         }
         if (!do_right && !is.null(BOLD[[bb]]$data$cortex_right)) {
-          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "cortex_right")
+          BOLD[[bb]] <- ciftiTools::remove_xifti(BOLD[[bb]], "cortex_right")
         }
         if (!do_sub && !is.null(BOLD[[bb]]$data$subcort)) {
-          BOLD[[bb]] <- remove_xifti(BOLD[[bb]], "subcortical")
+          BOLD[[bb]] <- ciftiTools::remove_xifti(BOLD[[bb]], "subcortical")
         }
       }
     }
