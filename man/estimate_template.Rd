@@ -210,7 +210,7 @@ each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 
 \item{covariates}{Subjects by variables numeric matrix of covariates to take
 into account for model estimation. Column names should give the name of each
-variable. Default: \code{NULL} (no covariates).}
+variable. Default: \code{NULL} (no covariates). NOTE: Not implemented yet.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
 file paths. This is a character vector indicating which brain structure(s)
