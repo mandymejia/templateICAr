@@ -22,6 +22,7 @@ estimate_template(
   GSR = FALSE,
   Q2 = 0,
   Q2_max = NULL,
+  covariates = NULL,
   brainstructures = "all",
   resamp_res = NULL,
   keep_S = FALSE,
@@ -206,6 +207,10 @@ nuisance ICs that should be estimated by PESEL. \code{Q2_max} must be less
 than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.}
+
+\item{covariates}{Subjects by variables numeric matrix of covariates to take
+into account for model estimation. Column names should give the name of each
+variable. Default: \code{NULL} (no covariates). NOTE: Not implemented yet.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
 file paths. This is a character vector indicating which brain structure(s)

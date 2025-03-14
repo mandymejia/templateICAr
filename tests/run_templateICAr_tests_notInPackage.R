@@ -41,25 +41,31 @@ tm_cii <- estimate_template(
   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE,
   brainstructures=c("left", "right")
 )
-# w/ mask
-tm2_cii <- estimate_template(
-  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=5000,
-  brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
-)
-
-tm_cii <- estimate_template(
-  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
-  brainstructures=c("left", "right")
-)
-# w/ mask
-tm2_cii <- estimate_template(
-  cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
-  brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
-)
+# # w/ mask
+# tm2_cii <- estimate_template(
+#   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=5000,
+#   brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
+# )
+#
+# tm_cii <- estimate_template(
+#   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
+#   brainstructures=c("left", "right")
+# )
+# # w/ mask
+# tm2_cii <- estimate_template(
+#   cii_fnames[seq(3)], GICA = GICA_fname["cii"], TR=.72, FC=FALSE, varTol=4000,
+#   brainstructures=c("left", "right"), mask=c(rep(FALSE, 144), rep(TRUE, 7100), rep(FALSE, 100))
+# )
 
 tICA_cii <- templateICA(
   cii_fnames[4], tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
 )
+
+z <- read_cifti(cii_fnames[4], resamp_res=2000)
+tICA_cii2 <- templateICA(
+  z, tm_cii, brainstructures="left", maxiter=5, TR="template", resamp_res=2000
+)
+
 actICA_cii <- activations(tICA_cii)
 actICA_cii <- activations(tICA_cii, z=c(0, .1, 3, 11))
 

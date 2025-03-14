@@ -20,3 +20,4 @@
 ^tests/data_notInPackage$
 ^tests/results_notInPackage$
 ^tests/run_templateICAr_tests_notInPackage.R$
+^inst/extdata/HCP_template_25\.rds$

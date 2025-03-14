@@ -96,7 +96,8 @@ dual_reg2 <- function(
   scale_sm_surfL=NULL, scale_sm_surfR=NULL, scale_sm_FWHM=2,
   TR=NULL, hpf=.01,
   GSR=FALSE,
-  Q2=0, Q2_max=NULL, NA_limit=.1,
+  Q2=0, Q2_max=NULL, 
+  NA_limit=.1,
   brainstructures="all", resamp_res=NULL,
   varTol=1e-6, maskTol=.1,
   verbose=TRUE){

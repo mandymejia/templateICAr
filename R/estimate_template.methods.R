@@ -153,6 +153,7 @@ print.summary.template.cifti <- function(x, ...) {
   cat("Spatial scaling: ", x$scale, "\n")
   cat("Q2 and Q2_max:   ", paste0(x$Q2, ", ", x$Q2_max), "\n")
   cat("Pseudo retest:   ", x$pseudo_retest, "\n")
+  cat("FC prior:        ", x$FC, "\n")
   cat("\n")
 
   class(x) <- "summary.xifti"

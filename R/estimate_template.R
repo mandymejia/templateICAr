@@ -338,9 +338,9 @@ UT2mat <- function(x, diag=TRUE){
 #'  Default: \code{c("all")}.
 #' @param resamp_res Only applies if the entries of \code{BOLD} are CIFTI file paths.
 #'  Resample the data upon reading it in? Default: \code{NULL} (no resampling).
-#' @param mask Required if \code{BOLD} are NIFTI file paths or \code{"nifti"} 
+#' @param mask Required if \code{BOLD} are NIFTI file paths or \code{"nifti"}
 #'  objects, and optional for other formats. For NIFTI data, this is a brain map
-#'  formatted as a logical array of the same spatial dimensions as the fMRI 
+#'  formatted as a logical array of the same spatial dimensions as the fMRI
 #'  data, with \code{TRUE} corresponding to in-mask voxels. For other data, this
 #'  is a logical vector with the same length as the number of locations in
 #'  \code{GICA}, with \code{TRUE} corresponding to in-mask locations.
@@ -373,6 +373,9 @@ UT2mat <- function(x, diag=TRUE){
 #'  than \eqn{T * .75 - Q} where \eqn{T} is the minimum number of timepoints in
 #'  each fMRI scan and \eqn{Q} is the number of group ICs. If \code{NULL}
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
+#' @param covariates Subjects by variables numeric matrix of covariates to take
+#'  into account for model estimation. Column names should give the name of each
+#'  variable. Default: \code{NULL} (no covariates). NOTE: Not implemented yet.
 #' @param FC Include the functional connectivity template? Default: \code{TRUE}.
 #' @param FC_nPivots Number of pivots to use in Cholesky-based FC template
 #' estimation.  Set to zero to skip Cholesky-based FC template estimation. Default: 100.
@@ -453,6 +456,7 @@ estimate_template <- function(
   TR=NULL, hpf=.01,
   GSR=FALSE,
   Q2=0, Q2_max=NULL,
+  covariates=NULL,
   brainstructures="all", resamp_res=NULL,
   keep_S=FALSE, keep_FC=FALSE,
   FC=TRUE,
@@ -490,6 +494,19 @@ estimate_template <- function(
   stopifnot(fMRItools::is_1(GSR, "logical"))
   if (!is.null(Q2)) { # Q2_max checked later.
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
+  }
+  if (!is.null(covariates)) {
+    warning("`covariates` is not implemented yet.")
+    if (is.data.frame(covariates)) { covariates <- as.matrix(covariates) }
+    stopifnot(is.numeric(covariates) && is.matrix(covariates))
+    covariate_names <- colnames(covariates)
+    if (is.null(covariate_names)) {
+      stop("Please provide the names of the covariates as the column names.")
+    }
+    nC <- ncol(covariates)
+  } else {
+    covariate_names <- NULL
+    nC <- 0
   }
   stopifnot(fMRItools::is_1(FC, "logical"))
   stopifnot(fMRItools::is_1(varTol, "numeric"))
@@ -701,9 +718,17 @@ estimate_template <- function(
 
   # [TO DO]: NA in GICA?
 
-  # [TO DO]: Check that FC_nPivots is a positive integer or is equal to zero.
-
-  # [TO DO]: Check that FC_nSamp is a multiple of FC_nPivots
+  if (FC) {
+    if (FC_nPivots > 0) {
+      stopifnot(FC_nPivots == round(FC_nPivots))
+      FC_nSamp2 <- FC_nSamp/FC_nPivots #number of samples per pivot
+      if (FC_nSamp2 != round(FC_nSamp2)) {
+        stop("`FC_nSamp` must be a multiple of `FC_nPivots`.")
+      }
+    } else {
+      if (FC_nPivots != 0) { stop("`FC_nPivots` should be a positive integer or zero.") }
+    }
+  }
 
   # `mask` ---------------------------------------------------------------------
   # Get `mask` as a logical array (NIFTI) or vector (everything else).
@@ -776,6 +801,9 @@ estimate_template <- function(
   center_Gcols <- TRUE
   if (center_Gcols && (!GICA_parc)) { GICA <- fMRItools::colCenter(GICA) }
 
+  # Checks now that the data dimensions have been determined. ------------------
+  if (!is.null(covariates)) { stopifnot(nrow(covariates) == nN) }
+
   # Print summary of data ------------------------------------------------------
   format2 <- if (format == "data") { "numeric matrix" } else { format }
   if (verbose) {
@@ -793,8 +821,17 @@ estimate_template <- function(
       cat('Number of template ICs:        ', nL, "\n")
     }
     cat('Number of training subjects:   ', nN, "\n")
-    if (FC) { cat('\nIncluding Cholesky-based FC template with ',
-      FC_nPivots,' random pivots.\n') }
+    cat('Number of covariates:          ', nC, "\n")
+    if (FC) { 
+      if (FC_nPivots == 0) {
+        cat('\nIncluding Cholesky-based FC template with', 
+          FC_nPivots, 'random pivots.\n')
+      } else {
+        cat(paste0('\nIncluding Cholesky-based FC template with ', 
+          FC_nSamp, " samples (", FC_nPivots, " random pivots x ",
+          FC_nSamp2, " samples per pivot).\n"))
+      }
+    }
   }
 
   # Process each scan ----------------------------------------------------------
@@ -1150,6 +1187,7 @@ estimate_template <- function(
     scale_sm_FWHM=scale_sm_FWHM,
     TR=TR, hpf=hpf,
     Q2=Q2, Q2_max=Q2_max,
+    covariate_names=covariate_names,
     brainstructures=brainstructures, resamp_res=resamp_res,
     varTol=varTol, maskTol=maskTol, missingTol=missingTol,
     pseudo_retest=!real_retest

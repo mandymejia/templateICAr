@@ -19,6 +19,7 @@ templateICA(
   GSR = "template",
   Q2 = "template",
   Q2_max = "template",
+  covariates = NULL,
   brainstructures = "template",
   mask = NULL,
   time_inds = NULL,
@@ -135,6 +136,11 @@ be set to \eqn{T * .50 - Q}, rounded.
 
 The defaults for both arguments is \code{"template"}, to use the same option
 used for estimation of the \code{template}.}
+
+\item{covariates}{Numeric vector of covariates to take into account for model
+estimation. Names should give the name of each variable. The covariates must
+match those of the template. Default: \code{NULL} (no covariates).
+NOTE: Not implemented yet.}
 
 \item{brainstructures}{Only applies if the entries of \code{BOLD} are CIFTI
 file paths. This is a character vector indicating which brain structure(s)
