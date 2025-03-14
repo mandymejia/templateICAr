@@ -195,7 +195,7 @@
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
 #' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg
-#' @importFrom fMRIscrub flags2spikes
+#' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars
 #' @importFrom Matrix bandSparse Matrix
@@ -901,7 +901,7 @@ templateICA <- function(
       scrub_nn <- if (is.list(scrub)) { scrub[[nn]] } else { scrub }
       if (is.logical(scrub_nn)) { scrub_nn <- which(scrub_nn) }
       if (length(scrub_nn) > 0) {
-        scrub_nn_mat <- fMRIscrub::flags2spikes(scrub_nn, nT[nn])
+        scrub_nn_mat <- fMRIscrub::flags_to_nuis_spikes(scrub_nn, nT[nn])
         if (verbose && nN > 1) { cat("\t") }
         if (verbose) { cat("Scrubbing", ncol(scrub_nn_mat), "volumes.\n") }
         nmat[[nn]] <- add_to_nuis(scrub_nn_mat, nmat[[nn]])
