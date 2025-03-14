@@ -375,7 +375,7 @@ UT2mat <- function(x, diag=TRUE){
 #'  (default), \code{Q2_max} will be set to \eqn{T * .50 - Q}, rounded.
 #' @param covariates Subjects by variables numeric matrix of covariates to take
 #'  into account for model estimation. Column names should give the name of each
-#'  variable. Default: \code{NULL} (no covariates).
+#'  variable. Default: \code{NULL} (no covariates). NOTE: Not implemented yet.
 #' @param FC Include the functional connectivity template? Default: \code{TRUE}.
 #' @param FC_nPivots Number of pivots to use in Cholesky-based FC template
 #' estimation.  Set to zero to skip Cholesky-based FC template estimation. Default: 100.
@@ -496,6 +496,7 @@ estimate_template <- function(
     stopifnot(fMRItools::is_integer(Q2) && (Q2 >= 0))
   }
   if (!is.null(covariates)) {
+    warning("`covariates` is not implemented yet.")
     if (is.data.frame(covariates)) { covariates <- as.matrix(covariates) }
     stopifnot(is.numeric(covariates) && is.matrix(covariates))
     covariate_names <- colnames(covariates)
