@@ -1,3 +1,9 @@
+# 10.0
+
+* Delete `plot_FC`: it will be moved to `fMRItools`
+* Delete `src` (locally) to have NeedsCompilation set to No.
+* Delete diagnostic ICA scripts.
+
 # 9.0
 
 * Clean up dependencies

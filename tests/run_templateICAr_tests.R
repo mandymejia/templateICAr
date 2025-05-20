@@ -2,7 +2,7 @@
 
 # [Edit these]
 ## path to your Connectome Workbench
-my_wb <- "~/Desktop/workbench"
+my_wb <- "~/Applications"
 ## path to test data
 dir_data <- "tests/data"
 ## path to results from tests

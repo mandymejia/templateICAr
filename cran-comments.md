@@ -1,6 +1,6 @@
 ## Test environments
 
-* Mac x86_64-apple-darwin17.0, R 4.4.0
+* Mac x86_64-apple-darwin17.0, R 4.5.0
 
 ## R CMD check results
 
