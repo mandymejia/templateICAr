@@ -1,7 +1,7 @@
 Package: templateICAr
 Type: Package
 Title: Estimate Brain Networks and Connectivity with ICA and Empirical Priors
-Version: 0.10.0
+Version: 0.11.0
 Authors@R: c(
     person(given = "Amanda",
            family = "Mejia",
@@ -40,6 +40,7 @@ LazyData: true
 Imports:
     abind,
     fMRItools (>= 0.5.3),
+    fMRItools (<= 0.7.2),
     fMRIscrub (>= 0.14.5),
     foreach,
     ica,
