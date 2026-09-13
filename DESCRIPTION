@@ -32,7 +32,7 @@ Description: Implements the template ICA (independent components analysis) model
     expectation-maximization algorithm for estimation of the latent brain 
     networks and unknown model parameters. Includes direct support for 'CIFTI',
     'GIFTI', and 'NIFTI' neuroimaging file formats. Note, this package has been 
-    deprecated and replaced by 'BayesBrainMap', which includes model 
+    deprecated and superseded by 'BayesBrainMap', which includes model 
     improvements and new names for the core functions.
 Depends: R (>= 3.6.0)
 License: GPL-3
