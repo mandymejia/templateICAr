@@ -3,6 +3,7 @@
 #' Perform template independent component analysis (ICA) using variational Bayes
 #'  (VB) or expectation-maximization (EM).
 #'
+#' @template superseded-by-BayesBrainMap
 #' @param BOLD Vector of subject-level fMRI data in one of the following
 #'  formats: CIFTI file paths, \code{"xifti"} objects, NIFTI file paths,
 #'  \code{"nifti"} objects, or \eqn{V \times T} numeric matrices, where \eqn{V}
@@ -194,7 +195,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg
+#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg dct_convert dct_bases
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars

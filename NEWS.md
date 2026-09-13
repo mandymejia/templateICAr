@@ -1,3 +1,8 @@
+# 11.0
+
+* Move `dual_reg` and `dual_reg_parc` from `fMRItools` 0.7.2 into the package, to avoid using the 0.8 version which has revamped scaling.
+* Deprecate this package: sueprseded by `BayesBrainMap`. 
+
 # 10.0
 
 * Delete `plot_FC`: it will be moved to `fMRItools`

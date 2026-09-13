@@ -13,7 +13,8 @@ norm_BOLD(
   scale_sm_FWHM = 2,
   scale_sm_xifti_mask = NULL,
   TR = NULL,
-  hpf = 0.01
+  hpf = 0.01,
+  lpf = NULL
 )
 }
 \arguments{
@@ -23,10 +24,10 @@ norm_BOLD(
 location's time series) or columns (each time point's image)? Default:
 \code{TRUE} for row centering, and \code{FALSE} for column centering.}
 
-\item{scale}{\code{"local"} (default), \code{"global"}, or \code{"none"}.
-Local scaling will divide each data location's time series by its estimated
-standard deviation. Global scaling will divide the entire data matrix by the
-mean image standard deviation (\code{mean(sqrt(rowVars(BOLD)))}).}
+\item{scale}{\code{"global"} (default), \code{"local"}, or \code{"none"}.
+Global scaling will divide the entire data matrix by the mean image standard
+deviation (\code{mean(sqrt(rowVars(BOLD)))}). Local scaling will divide each
+data location's time series by its estimated standard deviation.}
 
 \item{scale_sm_xifti, scale_sm_FWHM}{Only applies if \code{scale=="local"} and
 \code{BOLD} represents CIFTI-format data. To smooth the standard deviation
@@ -42,16 +43,18 @@ provide the mask here.}
 \item{TR}{The temporal resolution of the data, i.e. the time between volumes,
 in seconds. \code{TR} is required for detrending with \code{hpf}.}
 
-\item{hpf}{The frequency at which to apply a highpass filter to the data
-during pre-processing, in Hertz. Default: \code{0.01} Hertz. Set to \code{0}
-to disable the highpass filter.
+\item{hpf, lpf}{The frequencies at which to apply temporal filtering to the
+data during pre-processing, in Hertz. Set either to \code{NULL} to disable.
+Default: \code{0.01} Hz highpass filter, and \code{NULL} for the lowpass
+filter (disabled). Filtering is accomplished by nuisance regression of
+discrete cosine transform (DCT) bases.
 
 The highpass filter serves to detrend the data, since low-frequency
-variance is associated with noise. Highpass filtering is accomplished by
-nuisance regression of discrete cosine transform (DCT) bases.
+variance is associated with noise. The lowpass filter removes high-frequency
+variance, which is also thought to be from non-neuronal noise.
 
-Note the \code{TR} argument is required for highpass filtering. If
-\code{TR} is not provided, \code{hpf} will be ignored.}
+Note the \code{TR} argument is required for temporal filtering. If
+\code{TR} is not provided, \code{hpf} and \code{lpf} will be ignored.}
 }
 \value{
 Normalized BOLD data matrix (\eqn{V \times T})
@@ -61,3 +64,26 @@ Center the data across space and/or time, detrend, and scale, in that order.
 For dual regression, row centering is required and column centering is not
 recommended. Scaling and detrending depend on the user preference.
 }
+\section{Superseded}{
+
+
+\pkg{templateICAr} has been superseded by \pkg{BayesBrainMap}. For the core
+functions:
+
+\itemize{
+\item \code{estimate_template}: now \code{estimate_prior} in \pkg{BayesBrainMap}.
+\item \code{export_template}: now \code{export_prior} in \pkg{BayesBrainMap}.
+\item \code{templateICA}: now \code{fit_BBM} in \pkg{BayesBrainMap}.
+\item \code{activations}: now \code{engagements} in \pkg{BayesBrainMap}.
+}
+
+and for the helper functions:
+
+\itemize{
+\item \code{norm_BOLD}: updated and moved to \pkg{fMRItools}.
+\item \code{dual_reg}: updated and moved to \pkg{fMRItools}.
+\item \code{dual_reg_parc}: updated and moved to \pkg{fMRItools}.
+\item \code{dual_reg2}: updated in \pkg{BayesBrainMap}.
+}
+}
+

@@ -288,6 +288,8 @@ UT2mat <- function(x, diag=TRUE){
 #'  subjects in the same order. If \code{BOLD2} is not provided, \code{BOLD}
 #'  will be split in half; the first half will be the test data and the second
 #'  half will be the retest data.
+#' 
+#' @template superseded-by-BayesBrainMap
 #' @param GICA Group ICA maps in a format compatible with \code{BOLD}. Can also
 #'  be a (vectorized) numeric matrix (\eqn{V \times Q}) no matter the format of
 #'  \code{BOLD}. Its columns will be centered.
@@ -465,6 +467,15 @@ estimate_template <- function(
   varTol=1e-6, maskTol=.1, missingTol=.1,
   usePar=FALSE, wb_path=NULL,
   verbose=TRUE) {
+
+  .Deprecated(
+    new = "estimate_prior",
+    package = "BayesBrainMap",
+    msg = paste(
+      "'templateICA()' is deprecated and 'templateICAr' has been superseded",
+      "by 'BayesBrainMap'. Please use 'BayesBrainMap::estimate_prior()' instead."
+    )
+  )
 
   # Check arguments ------------------------------------------------------------
 

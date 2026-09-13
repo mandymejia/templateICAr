@@ -78,7 +78,7 @@ rm_nuisIC <- function(BOLD, DR=NULL, template_mean=NULL, Q2=NULL, Q2_max=NULL,
   }
 
   # i. PERFORM DUAL REGRESSION TO GET INITIAL ESTIMATE OF TEMPLATE ICS
-  if (is.null(DR)) { DR <- dual_reg(BOLD, template_mean) }
+  if (is.null(DR)) { DR <- dual_reg(BOLD, template_mean, scale="none") }
 
   # ii. SUBTRACT THOSE ESTIMATES FROM THE ORIGINAL DATA --> BOLD2
   BOLD2 <- BOLD - t(DR$A %*% DR$S) #data without template ICs

@@ -12,6 +12,8 @@ status](https://www.r-pkg.org/badges/version/templateICAr)](https://cran.r-proje
 coverage](https://codecov.io/gh/mandymejia/templateICAr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/templateICAr?branch=master)
 [![Lifecycle:
 deprecated](https://img.shields.io/badge/lifecycle-deprecated-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#deprecated)
+[![Lifecycle:
+superseded](https://img.shields.io/badge/lifecycle-superseded-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html#superseded)
 <!-- badges: end -->
 
 This package contains functions implementing the template ICA model
@@ -20,10 +22,7 @@ proposed in Mejia et al. (2020+). For both models, subject-level brain
 networks are estimated as deviations from known population-level
 networks, which can be estimated using standard ICA algorithms. Both
 models employ an expectation-maximization algorithm for estimation of
-the latent brain networks and unknown model parameters. Note, this
-package has been deprecated and replaced by
-[`BayesBrainMap`](https://github.com/mandymejia/BayesBrainMap), which
-includes model improvements and new names for the core functions.
+the latent brain networks and unknown model parameters.
 
 Template ICA consists of three steps. The main functions associated with
 each step are listed below.
@@ -33,6 +32,19 @@ each step are listed below.
 2.  Template ICA model estimation (single-subject): `templateICA`.
 3.  Identification of areas of engagement in each IC (or deviation from
     the template mean): `activations`.
+
+## Superseded by `BayesBrainMap`
+
+In 2026, this package was deprecated and superseded by
+[`BayesBrainMap`](https://github.com/mandymejia/BayesBrainMap), which
+includes model improvements and new names for the core functions:
+
+| `templateICAr`      | `BayesBrainMap`  |
+|---------------------|------------------|
+| `estimate_template` | `estimate_prior` |
+| `export_template`   | `export_prior`   |
+| `templateICA`       | `fit_BBM`        |
+| `activations`       | `engagements`    |
 
 ## Citation
 

@@ -3,6 +3,7 @@
 #' Wrapper to \code{dual_reg} used by `estimate_template`. The format of `BOLD`
 #'  (and `BOLD2`) must be provided, and `GICA` must be vectorized if applicable.
 #'
+#' @template superseded-by-BayesBrainMap
 #' @param BOLD,BOLD2 Subject-level fMRI data in one of the following formats:
 #'  a CIFTI file path, a \code{"xifti"} object, a NIFTI file path, a \code{"nifti"} object, or
 #'  \eqn{V \times T} numeric matrices, where \eqn{V} is the number of data locations and
@@ -276,13 +277,13 @@ dual_reg2 <- function(
   ) }
 
   DR_FUN <- if (GICA_parc) {
-    function(GICA, ...) { fMRItools::dual_reg_parc(parc=GICA, ...) }
+    function(GICA, ...) { dual_reg_parc(parc=GICA, ...) }
   } else {
     # Do twice to get timecourse estimate w/ subject maps, rather than w/ GICA (`A2`)
     function(GICA, parc_vals, ...) {
-      out <- fMRItools::dual_reg(GICA=GICA, ...)
+      out <- dual_reg(GICA=GICA, ...)
       GICA <- t(out$S)
-      out$A2 <- fMRItools::dual_reg(GICA=GICA, ...)$A
+      out$A2 <- dual_reg(GICA=GICA, ...)$A
       out
     }
   }

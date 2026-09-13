@@ -3,6 +3,7 @@
 #' Identify areas of activation in each independent component map from the
 #'  result of (spatial) template ICA.
 #'
+#' @template superseded-by-BayesBrainMap
 #' @param tICA Fitted (spatial) template ICA object from \code{\link{templateICA}}.
 #' @param u,z Set a threshold value for activation? A threshold value can be
 #'  specified directly with \code{u}, or a z-score-like threshold in terms of

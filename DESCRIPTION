@@ -42,7 +42,6 @@ LazyData: true
 Imports:
     abind,
     fMRItools (>= 0.5.3),
-    fMRItools (<= 0.7.2),
     fMRIscrub (>= 0.14.5),
     foreach,
     ica,
@@ -67,6 +66,6 @@ Suggests:
     INLA,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 URL: https://cran.r-project.org/package=BayesBrainMap
 BugReports: https://github.com/mandymejia/templateICAr/issues
+Config/roxygen2/version: 8.1.0
