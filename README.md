@@ -10,15 +10,20 @@ status](https://www.r-pkg.org/badges/version/templateICAr)](https://cran.r-proje
 [![R-CMD-check](https://github.com/mandymejia/templateICAr/workflows/R-CMD-check/badge.svg)](https://github.com/mandymejia/templateICAr/actions)
 [![Codecov test
 coverage](https://codecov.io/gh/mandymejia/templateICAr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/mandymejia/templateICAr?branch=master)
+[![Lifecycle:
+deprecated](https://img.shields.io/badge/lifecycle-deprecated-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#deprecated)
 <!-- badges: end -->
 
 This package contains functions implementing the template ICA model
 proposed in Mejia et al. (2019) and the spatial template ICA model
-proposed in proposed in Mejia et al. (2020+). For both models,
-subject-level brain networks are estimated as deviations from known
-population-level networks, which can be estimated using standard ICA
-algorithms. Both models employ an expectation-maximization algorithm for
-estimation of the latent brain networks and unknown model parameters.
+proposed in Mejia et al. (2020+). For both models, subject-level brain
+networks are estimated as deviations from known population-level
+networks, which can be estimated using standard ICA algorithms. Both
+models employ an expectation-maximization algorithm for estimation of
+the latent brain networks and unknown model parameters. Note, this
+package has been deprecated and replaced by
+[`BayesBrainMap`](https://github.com/mandymejia/BayesBrainMap), which
+includes model improvements and new names for the core functions.
 
 Template ICA consists of three steps. The main functions associated with
 each step are listed below.
@@ -33,9 +38,9 @@ each step are listed below.
 
 If you use `templateICAr` please cite the following papers:
 
-| Name                                                                  | APA Citation                                                                                                                                                                                                                                                                                 |
-|-----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Template ICA](https://doi.org/10.1080/01621459.2019.1679638)         | Mejia, A. F., Nebel, M. B., Wang, Y., Caffo, B. S., & Guo, Y. (2020). Template Independent Component Analysis: targeted and reliable estimation of subject-level brain networks using big data population priors. Journal of the American Statistical Association, 115(531), 1151-1177.      |
+| Name | APA Citation |
+|----|----|
+| [Template ICA](https://doi.org/10.1080/01621459.2019.1679638) | Mejia, A. F., Nebel, M. B., Wang, Y., Caffo, B. S., & Guo, Y. (2020). Template Independent Component Analysis: targeted and reliable estimation of subject-level brain networks using big data population priors. Journal of the American Statistical Association, 115(531), 1151-1177. |
 | [Spatial Template ICA](https://doi.org/10.1080/10618600.2022.2104289) | Mejia, A. F., Bolin, D., Yue, Y. R., Wang, J., Caffo, B. S., & Nebel, M. B. (2022). Template Independent Component Analysis with spatial priors for accurate subject-level brain network estimation and inference. Journal of Computational and Graphical Statistics, (just-accepted), 1-35. |
 
 You can also obtain citation information from within R like so:

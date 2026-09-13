@@ -25,13 +25,15 @@ Authors@R: c(
 Maintainer: Amanda Mejia <mandy.mejia@gmail.com>
 Description: Implements the template ICA (independent components analysis) model
     proposed in Mejia et al. (2020) <doi:10.1080/01621459.2019.1679638> and the 
-    spatial template ICA model proposed in proposed in Mejia et al. (2022)
+    spatial template ICA model proposed in Mejia et al. (2022)
     <doi:10.1080/10618600.2022.2104289>. Both models estimate subject-level 
     brain as deviations from known population-level networks, which are 
     estimated using standard ICA algorithms. Both models employ an 
     expectation-maximization algorithm for estimation of the latent brain 
     networks and unknown model parameters. Includes direct support for 'CIFTI',
-    'GIFTI', and 'NIFTI' neuroimaging file formats.
+    'GIFTI', and 'NIFTI' neuroimaging file formats. Note, this package has been 
+    deprecated and replaced by 'BayesBrainMap', which includes model 
+    improvements and new names for the core functions.
 Depends: R (>= 3.6.0)
 License: GPL-3
 Additional_repositories: https://inla.r-inla-download.org/R/testing
@@ -66,5 +68,5 @@ Suggests:
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-URL: https://github.com/mandymejia/templateICAr
+URL: https://cran.r-project.org/package=BayesBrainMap
 BugReports: https://github.com/mandymejia/templateICAr/issues
