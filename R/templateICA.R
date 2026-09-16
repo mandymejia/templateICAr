@@ -195,7 +195,7 @@
 #' @export
 #'
 # @importFrom INLA inla inla.spde.result inla.pardiso.check inla.setOption
-#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dual_reg dct_convert dct_bases
+#' @importFrom fMRItools infer_format_ifti_vec unmask_mat unvec_vol is_1 is_posNum dct_convert dct_bases
 #' @importFrom fMRIscrub flags_to_nuis_spikes
 #' @importFrom stats optim
 #' @importFrom matrixStats rowVars

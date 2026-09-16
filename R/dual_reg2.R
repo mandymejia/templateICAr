@@ -84,8 +84,6 @@
 #'  and \strong{A} matrices if \code{keepA}, or \code{NULL} if dual
 #'  regression was skipped due to too many masked data locations.
 #'
-#' @importFrom fMRItools dual_reg
-#'
 #' @keywords internal
 dual_reg2 <- function(
   BOLD, BOLD2=NULL,
