@@ -40,7 +40,7 @@ In 2026, this package was deprecated and superseded by [`BayesBrainMap`](https:/
 | `estimate_template` | `estimate_prior` |
 | `export_template` | `export_prior` |
 | `templateICA` | `fit_BBM` |
-| `activations` | `engagements` |
+| `activations` | `id_engagements` |
 
 ## Citation
 
