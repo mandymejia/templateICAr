@@ -44,7 +44,7 @@ includes model improvements and new names for the core functions:
 | `estimate_template` | `estimate_prior` |
 | `export_template`   | `export_prior`   |
 | `templateICA`       | `fit_BBM`        |
-| `activations`       | `engagements`    |
+| `activations`       | `id_engagements` |
 
 ## Citation
 
